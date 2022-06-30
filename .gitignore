@@ -1,0 +1,41 @@
+# Ignore config file
+src/instance/app.cfg
+*~
+
+venv-entity-api
+
+# Ignore copied files
+docker/entity-api/src
+docker/entity-api/VERSION
+docker/entity-api/BUILD
+
+# Ignore the generated BUILD file
+BUILD
+
+# Ignore the docker mounted BUILD and VERSION
+src/BUILD
+src/VERSION
+
+# Ignore __pycache__ directories in any path
+**/__pycache__
+
+# log files in any path
+**/*.log
+
+# Rotated log files
+**/*.log*
+
+# requests-cache generated sqlite
+**/*.sqlite
+
+#ignore eclipse files
+.project
+.pydevproject
+
+#ignore PyCharm files
+.idea/
+../.idea/
+venv
+
+#ignore test venv
+**/testenv/
