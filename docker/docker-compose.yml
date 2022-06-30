@@ -18,8 +18,8 @@ services:
       retries: 3
       start_period: 40s
     environment:
-      - HOST_GID=${HOST_GID:-1000}
-      - HOST_UID=${HOST_UID:-1000}
+      - HOST_GID=${HOST_GID:-1002}
+      - HOST_UID=${HOST_UID:-1002}
     init: true
     restart: always
     volumes:
@@ -32,9 +32,9 @@ services:
       # Mount conf.d on host machine to the nginx conf.d on container
       - "./entity-api/nginx/conf.d:/etc/nginx/conf.d"
     networks:
-      - gateway_hubmap
+      - sennet_docker_network
 
 networks:
   # This is the network created by gateway to enable communicaton between multiple docker-compose projects
-  gateway_hubmap:
+  sennet_docker_network:
     external: true
