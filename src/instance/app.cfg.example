@@ -15,19 +15,16 @@ NEO4J_PASSWORD = '123'
 # Don't use localhost since uuid-api is running on a different container
 # Point to remote URL for non-docker development
 # Works regardless of the trailing slash /
-# Use 'http://hubmap-auth:9999' for localhost docker deployment
 UUID_API_URL = 'http://uuid-api:8080'
 
-# URL for talking to Ingest API (default value used for PSC DEV)
-# Use INGEST_API_URL = 'http://hubmap-auth:4444' for localhost docker
+# URL for talking to Ingest API
 # Works regardless of the trailing slash
-INGEST_API_URL = 'https://ingest-api.dev.hubmapconsortium.org'
+INGEST_API_URL = 'http://ingest-api.8080'
 
 # URL for talking to Search API (default value used for docker deployment, no token needed)
 # Don't use localhost since search-api is running on a different container
 # Point to remote URL for non-docker development
 # Works regardless of the trailing slash /
-# Use 'http://hubmap-auth:6666' for localhost docker deployment
 SEARCH_API_URL = 'http://search-api:8080'
 
 #The Base URL to the Globus transfer application site
