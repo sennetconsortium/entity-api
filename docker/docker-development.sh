@@ -2,7 +2,7 @@
 
 # Print a new line and the banner
 echo
-echo "==================== Entity-API ===================="
+echo "==================== ENTITY-API ===================="
 
 # The `absent_or_newer` checks if the copied src at docker/some-api/src directory exists 
 # and if the source src directory is newer. 
