@@ -4,7 +4,7 @@
 HOST_GID=${HOST_GID}
 HOST_UID=${HOST_UID}
 
-echo "Starting entity-api container with the same host user UID: $HOST_UID and GID: $HOST_GID"
+echo "Started entity-api container with the same host user UID: $HOST_UID and GID: $HOST_GID"
 
 # Create a new user with the same host UID to run processes on container
 # The Filesystem doesn't really care what the user is called,
