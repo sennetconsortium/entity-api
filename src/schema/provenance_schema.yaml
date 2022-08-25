@@ -542,7 +542,10 @@ ENTITIES:
         description: "Lab provided, de-identified name for the source"
       open_consent:
         type: boolean
-        descrption: "True if the source was consented to allow public, open access to any data, identified or not, derived from the source's tissue.  Otherwise false."
+        description: "True if the source was consented to allow public, open access to any data, identified or not, derived from the source's tissue.  Otherwise false."
+      source_type:
+        type: string
+        description: "A high level description of where this source originates from."
 
 
   ############################################# Sample #############################################
@@ -565,25 +568,11 @@ ENTITIES:
         generated: true
         description: "One of the values: public, consortium, protected. Only Dataset may have protected value"
         before_create_trigger: set_data_access_level
-      specimen_type:
+      sample_category:
+#        TODO: Should this be immutable?
+#        immutable: true
         type: string
-        required_on_create: true # Only required for create via POST, not update via PUT
-        description: "A code representing the type of specimen.  Must be one of the codes specified in: [tissue sample types](https://github.com/hubmapconsortium/search-api/blob/master/src/search-schema/data/definitions/enums/tissue_sample_types.yaml)"
-        # Validate the given value against the definitions: https://github.com/hubmapconsortium/search-api/blob/master/src/search-schema/data/definitions/enums/tissue_sample_types.yaml
-        before_property_create_validators:
-          - validate_specimen_type
-        before_property_update_validators:
-          - validate_specimen_type
-      specimen_type_other:
-        type: string
-        description: "The user provided sample type if the 'other' sample_type is chosen."
-      tissue_type:
-        type: string
-        generated: true # Can not be updated via the PUT
-        auto_update: true # Will always update automatically if the entity gets updated
-        description: 'The type of the tissue based on the mapping between type (Block/Section/Suspension) and the specimen_type, default is Unknown'
-        before_create_trigger: set_tissue_type
-        before_update_trigger: set_tissue_type
+        description: 'The category of the sample (Block/Section/Suspension/Bodily Fluid/Organ/Organ Piece/Other)'
       portal_metadata_upload_files:
         type: json_string
         description: "A list of relative paths to metadata files"
