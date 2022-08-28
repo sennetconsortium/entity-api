@@ -548,7 +548,7 @@ def get_entity_provenance(id):
             # Skip Entity Lab nodes
             normalized_provenance_dict['nodes'].append(node_dict)
 
-    provenance_json = provenance.get_provenance_history(uuid, normalized_provenance_dict)
+    provenance_json = provenance.get_provenance_history(uuid, normalized_provenance_dict, auth_helper_instance)
 
     # Response with the provenance details
     return Response(response = provenance_json, mimetype = "application/json")

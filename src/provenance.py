@@ -3,11 +3,12 @@ import logging
 import datetime
 
 # HuBMAP commons
-from hubmap_commons import globus_groups
+from hubmap_commons.hm_auth import AuthHelper
+
 
 logger = logging.getLogger(__name__)
 
-HUBMAP_NAMESPACE = 'hubmap'
+SENNET_NAMESPACE = 'sennet'
 
 """
 Build the provenance document based on the W3C PROV-DM
@@ -25,10 +26,10 @@ Returns
 str
     A JSON string representation of the provenance document
 """
-def get_provenance_history(uuid, normalized_provenance_dict):
+def get_provenance_history(uuid, normalized_provenance_dict, auth_helper_instance):
     prov_doc = ProvDocument()
     # The 'prov' prefix is build-in namespace, no need to redefine here
-    prov_doc.add_namespace(HUBMAP_NAMESPACE, 'https://hubmapconsortium.org/')
+    prov_doc.add_namespace(SENNET_NAMESPACE, 'https://sennetconsortium.org/')
   
     # A bit validation
     if 'relationships' not in normalized_provenance_dict:
@@ -64,8 +65,8 @@ def get_provenance_history(uuid, normalized_provenance_dict):
 
             # Use 'created_by_user_sub' as agent ID if presents
             # Otherwise, fall back to use email by replacing @ and .
-            created_by_user_sub_prov_key = f'{HUBMAP_NAMESPACE}:userUUID'
-            created_by_user_email_prov_key = f'{HUBMAP_NAMESPACE}:userEmail'
+            created_by_user_sub_prov_key = f'{SENNET_NAMESPACE}:userUUID'
+            created_by_user_email_prov_key = f'{SENNET_NAMESPACE}:userEmail'
             if created_by_user_sub_prov_key in agent_record:
                 agent_id = agent_record[created_by_user_sub_prov_key]
             elif created_by_user_email_prov_key in agent_record:
@@ -77,7 +78,7 @@ def get_provenance_history(uuid, normalized_provenance_dict):
                 raise LookupError(msg)
 
             # Build the agent uri
-            agent_uri = build_uri(HUBMAP_NAMESPACE, 'agent', agent_id)
+            agent_uri = build_uri(SENNET_NAMESPACE, 'agent', agent_id)
 
             # Only add the same agent once
             # Multiple entities can be associated to the same agent
@@ -89,11 +90,11 @@ def get_provenance_history(uuid, normalized_provenance_dict):
 
             # Organization
             # Get the organization information from the entity node
-            org_record = get_organization_record(entity_node)
+            org_record = get_organization_record(entity_node, auth_helper_instance)
 
             # Build the organization uri
-            group_uuid_prov_key = f'{HUBMAP_NAMESPACE}:groupUUID'
-            org_uri = build_uri(HUBMAP_NAMESPACE, 'organization', org_record[group_uuid_prov_key])
+            group_uuid_prov_key = f'{SENNET_NAMESPACE}:groupUUID'
+            org_uri = build_uri(SENNET_NAMESPACE, 'organization', org_record[group_uuid_prov_key])
 
             # Only add the same organization once
             # Multiple entities can be associated to different agents who are from the same organization
@@ -104,7 +105,7 @@ def get_provenance_history(uuid, normalized_provenance_dict):
                 doc_org = org[0]
 
             # Build the activity uri
-            activity_uri = build_uri(HUBMAP_NAMESPACE, 'activities', activity_node['uuid'])
+            activity_uri = build_uri(SENNET_NAMESPACE, 'activities', activity_node['uuid'])
             
             # Register activity if not already registered
             activity = prov_doc.get_record(activity_uri)
@@ -120,7 +121,7 @@ def get_provenance_history(uuid, normalized_provenance_dict):
 
                 # Add prefix to all other attributes
                 for key in activity_node:
-                    prov_key = f'{HUBMAP_NAMESPACE}:{key}'
+                    prov_key = f'{SENNET_NAMESPACE}:{key}'
                     # Use datetime string instead of timestamp integer
                     if key == 'created_timestamp':
                         activity_attributes[prov_key] = activity_time
@@ -136,7 +137,7 @@ def get_provenance_history(uuid, normalized_provenance_dict):
                 doc_activity = activity[0]    
             
             # Build the entity uri
-            entity_uri = build_uri(HUBMAP_NAMESPACE, 'entities', entity_node['uuid'])
+            entity_uri = build_uri(SENNET_NAMESPACE, 'entities', entity_node['uuid'])
 
             # Register entity is not already registered
             if len(prov_doc.get_record(entity_uri)) == 0:
@@ -150,7 +151,7 @@ def get_provenance_history(uuid, normalized_provenance_dict):
                     # Entity property values can be list or dict, skip
                     # And list and dict are unhashable types when calling `prov_doc.entity()`
                     if not isinstance(entity_node[key], (list, dict)):
-                        prov_key = f'{HUBMAP_NAMESPACE}:{key}'
+                        prov_key = f'{SENNET_NAMESPACE}:{key}'
                         # Use datetime string instead of timestamp integer
                         if key in ['created_timestamp', 'last_modified_timestamp', 'published_timestamp']:
                             entity_attributes[prov_key] = activity_time
@@ -163,10 +164,10 @@ def get_provenance_history(uuid, normalized_provenance_dict):
         # Build activity uri and entity uri if not already built
         # For the Lab nodes
         if activity_uri is None:
-            activity_uri = build_uri(HUBMAP_NAMESPACE, 'activities', activity_node['uuid'])
+            activity_uri = build_uri(SENNET_NAMESPACE, 'activities', activity_node['uuid'])
 
         if entity_uri is None:
-            entity_uri = build_uri(HUBMAP_NAMESPACE, 'entities', entity_node['uuid'])
+            entity_uri = build_uri(SENNET_NAMESPACE, 'entities', entity_node['uuid'])
 
         # The following relationships apply to all node including Lab entity nodes
         # (Activity) - [ACTIVITY_OUTPUT] -> (Entity)
@@ -242,9 +243,9 @@ dict
     The prov dict for person 
 """
 def get_agent_record(node_dict):
-    created_by_user_displayname_prov_key = f'{HUBMAP_NAMESPACE}:userDisplayName'
-    created_by_user_email_prov_key = f'{HUBMAP_NAMESPACE}:userEmail'
-    created_by_user_sub_prov_key = f'{HUBMAP_NAMESPACE}:userUUID'
+    created_by_user_displayname_prov_key = f'{SENNET_NAMESPACE}:userDisplayName'
+    created_by_user_email_prov_key = f'{SENNET_NAMESPACE}:userEmail'
+    created_by_user_sub_prov_key = f'{SENNET_NAMESPACE}:userUUID'
 
     # Shared attribute
     agent_dict = {
@@ -271,22 +272,25 @@ Parameters
 node_dict : dict
     The entity dict
 
+auth_helper_instance: AuthHelper
+    The instance of auth helper class passed in   
+ 
 Returns
 -------
 dict
     The prov dict for organization 
 """
-def get_organization_record(node_dict):
+def get_organization_record(node_dict, auth_helper_instance):
     group = {}
 
     # Get the globus groups info based on the groups json file in commons package
-    globus_groups_info = globus_groups.get_globus_groups_info()
+    globus_groups_info = auth_helper_instance.get_globus_groups_info()
     groups_by_id_dict = globus_groups_info['by_id']
     groups_by_name_dict = globus_groups_info['by_name']
     
-    group_uuid_prov_key = f'{HUBMAP_NAMESPACE}:groupUUID'
+    group_uuid_prov_key = f'{SENNET_NAMESPACE}:groupUUID'
     # Return displayname (no dash, space separated) instead of name (dash-connected)
-    group_name_prov_key = f'{HUBMAP_NAMESPACE}:groupName'
+    group_name_prov_key = f'{SENNET_NAMESPACE}:groupName'
 
     # Shared attribute
     org_dict = {
