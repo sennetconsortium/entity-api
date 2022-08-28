@@ -16,7 +16,6 @@ from schema.schema_constants import SchemaConstants
 
 # HuBMAP commons
 from hubmap_commons.hm_auth import AuthHelper
-from hubmap_commons import globus_groups
 
 logger = logging.getLogger(__name__)
 
@@ -1320,7 +1319,7 @@ Get the group info (group_uuid and group_name) based on user's hmgroupids list
 
 Parameters
 ----------
-user_hmgroupids_list : list
+user_groupids_list : list
     A list of globus group uuids that the user has access to
 
 Returns
@@ -1328,7 +1327,9 @@ Returns
 dict
     The group info (group_uuid and group_name)
 """
-def get_entity_group_info(user_hmgroupids_list, default_group = None):
+def get_entity_group_info(user_groupids_list, default_group = None):
+    global _auth_helper
+    
     # Default
     group_info = {
         'uuid': '',
@@ -1336,7 +1337,7 @@ def get_entity_group_info(user_hmgroupids_list, default_group = None):
     }
 
     # Get the globus groups info based on the groups json file in commons package
-    globus_groups_info = globus_groups.get_globus_groups_info()
+    globus_groups_info = _auth_helper.get_globus_groups_info()
     groups_by_id_dict = globus_groups_info['by_id']
 
     # A list of data provider uuids
@@ -1346,7 +1347,7 @@ def get_entity_group_info(user_hmgroupids_list, default_group = None):
             data_provider_uuids.append(uuid_key)
 
     user_data_provider_uuids = []
-    for group_uuid in user_hmgroupids_list:
+    for group_uuid in user_groupids_list:
         if group_uuid in data_provider_uuids:
             user_data_provider_uuids.append(group_uuid)
 
@@ -1357,7 +1358,7 @@ def get_entity_group_info(user_hmgroupids_list, default_group = None):
         raise schema_errors.NoDataProviderGroupException(msg)
 
     if len(user_data_provider_uuids) > 1:
-        if not default_group is None and default_group in user_hmgroupids_list:
+        if not default_group is None and default_group in user_groupids_list:
             uuid = default_group
         else:
                 msg = "More than one data_provider groups found for this user and no group_uuid specified. Can't continue."
@@ -1384,8 +1385,10 @@ user_group_uuids: list
     An optional list of group uuids to check against, a subset of all the data provider group uuids
 """
 def validate_entity_group_uuid(group_uuid, user_group_uuids = None):
+    global _auth_helper
+    
     # Get the globus groups info based on the groups json file in commons package
-    globus_groups_info = globus_groups.get_globus_groups_info()
+    globus_groups_info = _auth_helper.get_globus_groups_info()
     groups_by_id_dict = globus_groups_info['by_id']
 
     # First make sure the group_uuid is one of the valid group UUIDs defiend in the json
@@ -1419,8 +1422,10 @@ str
     The group_name corresponding to this group_uuid
 """
 def get_entity_group_name(group_uuid):
+    global _auth_helper
+    
     # Get the globus groups info based on the groups json file in commons package
-    globus_groups_info = globus_groups.get_globus_groups_info()
+    globus_groups_info = _auth_helper.get_globus_groups_info()
     groups_by_id_dict = globus_groups_info['by_id']
     group_dict = groups_by_id_dict[group_uuid]
     group_name = group_dict['displayname']
