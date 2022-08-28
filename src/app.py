@@ -100,11 +100,7 @@ def http_internal_server_error(e):
 # Initialize AuthHelper class and ensure singleton
 try:
     if AuthHelper.isInitialized() == False:
-        auth_helper_instance = AuthHelper.create(app.config['APP_CLIENT_ID'],
-                                                 app.config['APP_CLIENT_SECRET'],
-                                                 globusGroups=None, 
-                                                 # Tell commons to load the SenNet groups json
-                                                 use_sennet_groups=True)
+        auth_helper_instance = AuthHelper.create(app.config['APP_CLIENT_ID'], app.config['APP_CLIENT_SECRET'])
 
         logger.info("Initialized AuthHelper class successfully :)")
     else:
