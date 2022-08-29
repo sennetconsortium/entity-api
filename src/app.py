@@ -310,7 +310,7 @@ def get_ancestor_organs(id):
     if normalized_entity_type not in supported_entity_types:
         bad_request_error(f"Unable to get the ancestor organs for this: {normalized_entity_type}, supported entity types: {COMMA_SEPARATOR.join(supported_entity_types)}")
 
-    if normalized_entity_type == 'Sample' and entity_dict['specimen_type'].lower() == 'organ':
+    if normalized_entity_type == 'Sample' and entity_dict['sample_category'].lower() == 'organ':
         bad_request_error("Unable to get the ancestor organ of an organ.")
 
     if normalized_entity_type == 'Dataset':
@@ -634,7 +634,7 @@ def get_entities_by_type(entity_type):
         entities_list = app_neo4j_queries.get_entities_by_type(neo4j_driver_instance, normalized_entity_type)
 
         # We'll return all the properties but skip these time-consuming ones
-        # Donor doesn't need to skip any
+        # Source doesn't need to skip any
         # Collection is not handled by this call
         properties_to_skip = [
             # Properties to skip for Sample
@@ -872,32 +872,20 @@ def create_entity(entity_type):
     # Sample and Dataset: additional validation, create entity, after_create_trigger
     # Collection and Source: create entity
     if normalized_entity_type == 'Sample':
-        # A bit more validation to ensure if `organ` code is set, the `specimen_type` must be set to "organ"
-        # Vise versa, if `specimen_type` is set to "organ", `organ` code is required
-        if ('specimen_type' in json_data_dict) and (json_data_dict['specimen_type'].lower() == 'organ'):
+        # A bit more validation to ensure if `organ` code is set, the `sample_category` must be set to "organ"
+        # Vise versa, if `sample_category` is set to "organ", `organ` code is required
+        if ('sample_category' in json_data_dict) and (json_data_dict['sample_category'].lower() == 'organ'):
             if ('organ' not in json_data_dict) or (json_data_dict['organ'].strip() == ''):
-                bad_request_error("A valid organ code is required when the specimen_type is organ")
+                bad_request_error("A valid organ code is required when the sample_category is organ")
         else:
             if 'organ' in json_data_dict:
-                bad_request_error("The specimen_type must be organ when an organ code is provided")
+                bad_request_error("The sample_category must be organ when an organ code is provided")
 
         # A bit more validation for new sample to be linked to existing source entity
         was_generated_by = json_data_dict['was_generated_by']
         # Check existence of the direct ancestor (either another Sample or Source)
         for was_generated_by in json_data_dict['was_generated_by']:
             was_generated_by_dict = query_target_entity(was_generated_by, user_token)
-
-        # Creating the ids require organ code to be specified for the samples to be created when the
-        # sample's direct ancestor is a Source.
-        # Must be one of the codes from: https://github.com/hubmapconsortium/search-api/blob/test-release/src/search-schema/data/definitions/enums/organ_types.yaml
-        if was_generated_by_dict['entity_type'] == 'Donor':
-            # `specimen_type` is required on create
-            if json_data_dict['specimen_type'].lower() != 'organ':
-                bad_request_error("The specimen_type must be organ since the direct ancestor is a Source")
-
-            # Currently we don't validate the provided organ code though
-            if ('organ' not in json_data_dict) or (json_data_dict['organ'].strip() == ''):
-                bad_request_error("A valid organ code is required when the direct ancestor is a Source")
 
         # Generate 'before_create_triiger' data and create the entity details in Neo4j
         merged_dict = create_entity_details(request, normalized_entity_type, user_token, json_data_dict)
@@ -919,7 +907,7 @@ def create_entity(entity_type):
             # an exisiting next revision
             # Only return a list of the uuids, no need to get back the list of dicts
             next_revisions_list = app_neo4j_queries.get_next_revisions(neo4j_driver_instance, previous_version_dict['uuid'], 'uuid')
-            
+
             # As long as the list is not empty, tell the users to use a different 'previous_revision_uuid'
             if next_revisions_list:
                 bad_request_error(f"The previous_revision_uuid specified for this dataset has already had a next revision")
@@ -934,7 +922,7 @@ def create_entity(entity_type):
     else:
         # Generate 'before_create_triiger' data and create the entity details in Neo4j
         merged_dict = create_entity_details(request, normalized_entity_type, user_token, json_data_dict)
-    
+
     # For Source: link to parent Lab node
     # For Sample: link to existing direct ancestor
     # For Dataset: link to direct ancestors
@@ -942,7 +930,7 @@ def create_entity(entity_type):
     after_create(normalized_entity_type, user_token, merged_dict)
 
     # By default we'll return all the properties but skip these time-consuming ones
-    # Donor doesn't need to skip any
+    # Source doesn't need to skip any
     properties_to_skip = []
 
     if normalized_entity_type == 'Sample':
@@ -1023,17 +1011,6 @@ def create_multiple_samples(count):
     # Check existence of the direct ancestor (either another Sample or Source) and get the first 'was_generated_by'
     was_generated_by_dict = query_target_entity(json_data_dict['was_generated_by'][0], user_token)
 
-    # Creating the ids require organ code to be specified for the samples to be created when the 
-    # sample's direct ancestor is a Source.
-    # Must be one of the codes from: https://github.com/sennetconsortium/search-api/blob/test-release/src/search-schema/data/definitions/enums/organ_types.yaml
-    if was_generated_by_dict['entity_type'] == 'Source':
-        # `specimen_type` is required on create
-        if json_data_dict['specimen_type'].lower() != 'organ':
-            bad_request_error("The specimen_type must be organ since the direct ancestor is a Source")
-
-        # Currently we don't validate the provided organ code though
-        if ('organ' not in json_data_dict) or (not json_data_dict['organ']):
-            bad_request_error("A valid organ code is required since the direct ancestor is a Source")
 
     # Generate 'before_create_triiger' data and create the entity details in Neo4j
     generated_ids_dict_list = create_multiple_samples_details(request, normalized_entity_type, user_token, json_data_dict, count)
@@ -1162,7 +1139,7 @@ def update_entity(id):
     # Validate request json against the yaml schema
     # Pass in the entity_dict for missing required key check, this is different from creating new entity
     try:
-        schema_manager.validate_json_data_against_schema(json_data_dict, normalized_entity_type, existing_entity_dict = entity_dict)
+        schema_manager.validate_json_data_against_schema('ENTITIES', json_data_dict, normalized_entity_type, existing_entity_dict = entity_dict)
     except schema_errors.SchemaValidationException as e:
         # No need to log the validation errors
         bad_request_error(str(e))
@@ -1197,7 +1174,7 @@ def update_entity(id):
         # Handle linkages update via `after_update_trigger` methods 
         if has_was_generated_by:
             after_update(normalized_entity_type, user_token, merged_updated_dict)
-    elif normalized_entity_type == 'Dataset':    
+    elif normalized_entity_type == 'Dataset':
         # A bit more validation if `was_generated_by` provided
         has_was_generated_by = False
         if ('was_generated_by' in json_data_dict) and (json_data_dict['was_generated_by']):
@@ -1206,7 +1183,7 @@ def update_entity(id):
             # Check existence of those source entities
             for was_generated_by in json_data_dict['was_generated_by']:
                 was_generated_by_dict = query_target_entity(was_generated_by, user_token)
-        
+
         # Generate 'before_update_trigger' data and update the entity details in Neo4j
         merged_updated_dict = update_object_details('ENTITIES', request, normalized_entity_type, user_token, json_data_dict, entity_dict)
 
@@ -1250,7 +1227,7 @@ def update_entity(id):
         merged_updated_dict = update_object_details('ENTITIES', request, normalized_entity_type, user_token, json_data_dict, entity_dict)
 
     # By default we'll return all the properties but skip these time-consuming ones
-    # Donor doesn't need to skip any
+    # Source doesn't need to skip any
     properties_to_skip = []
 
     if normalized_entity_type == 'Sample':
@@ -1907,7 +1884,7 @@ snid : str
 #         return resp
 #     else:
 #         return Response(f"{snid} not found.", 404)
-    
+
 """
 Get the Globus URL to the given Dataset or Upload
 
@@ -2234,7 +2211,7 @@ def retract_dataset(id):
     # Validate request json against the yaml schema
     # The given value of `sub_status` is being validated at this step
     try:
-        schema_manager.validate_json_data_against_schema(json_data_dict, normalized_entity_type, existing_entity_dict = entity_dict)
+        schema_manager.validate_json_data_against_schema('ENTITIES', json_data_dict, normalized_entity_type, existing_entity_dict = entity_dict)
     except schema_errors.SchemaValidationException as e:
         # No need to log the validation errors
         bad_request_error(str(e))
@@ -2444,6 +2421,7 @@ json
 tsv
     a text file of tab separated values where each row is a dataset and the columns include all its prov info
 """
+# TODO: This endpoint will not function properly in its current state
 @app.route('/datasets/prov-info', methods=['GET'])
 def get_prov_info():
     # String constants
@@ -2468,10 +2446,10 @@ def get_prov_info():
     HEADER_ORGAN_SUBMISSION_ID = 'organ_submission_id'
     HEADER_ORGAN_UUID = 'organ_uuid'
     HEADER_ORGAN_TYPE = 'organ_type'
-    HEADER_DONOR_HUBMAP_ID = 'donor_hubmap_id'
-    HEADER_DONOR_SUBMISSION_ID = 'donor_submission_id'
-    HEADER_DONOR_UUID = 'donor_uuid'
-    HEADER_DONOR_GROUP_NAME = 'donor_group_name'
+    HEADER_SOURCE_HUBMAP_ID = 'source_hubmap_id'
+    HEADER_SOURCE_SUBMISSION_ID = 'source_submission_id'
+    HEADER_SOURCE_UUID = 'source_uuid'
+    HEADER_SOURCE_GROUP_NAME = 'source_group_name'
     HEADER_RUI_LOCATION_HUBMAP_ID = 'rui_location_hubmap_id'
     HEADER_RUI_LOCATION_SUBMISSION_ID = 'rui_location_submission_id'
     HEADER_RUI_LOCATION_UUID = 'rui_location_uuid'
@@ -2493,8 +2471,8 @@ def get_prov_info():
         HEADER_DATASET_DATA_TYPES, HEADER_DATASET_PORTAL_URL, HEADER_FIRST_SAMPLE_HUBMAP_ID,
         HEADER_FIRST_SAMPLE_SUBMISSION_ID, HEADER_FIRST_SAMPLE_UUID, HEADER_FIRST_SAMPLE_TYPE,
         HEADER_FIRST_SAMPLE_PORTAL_URL, HEADER_ORGAN_HUBMAP_ID, HEADER_ORGAN_SUBMISSION_ID, HEADER_ORGAN_UUID,
-        HEADER_ORGAN_TYPE, HEADER_DONOR_HUBMAP_ID, HEADER_DONOR_SUBMISSION_ID, HEADER_DONOR_UUID,
-        HEADER_DONOR_GROUP_NAME, HEADER_RUI_LOCATION_HUBMAP_ID, HEADER_RUI_LOCATION_SUBMISSION_ID,
+        HEADER_ORGAN_TYPE, HEADER_SOURCE_HUBMAP_ID, HEADER_SOURCE_SUBMISSION_ID, HEADER_SOURCE_UUID,
+        HEADER_SOURCE_GROUP_NAME, HEADER_RUI_LOCATION_HUBMAP_ID, HEADER_RUI_LOCATION_SUBMISSION_ID,
         HEADER_RUI_LOCATION_UUID, HEADER_SAMPLE_METADATA_HUBMAP_ID, HEADER_SAMPLE_METADATA_SUBMISSION_ID,
         HEADER_SAMPLE_METADATA_UUID, HEADER_PROCESSED_DATASET_UUID, HEADER_PROCESSED_DATASET_HUBMAP_ID,
         HEADER_PROCESSED_DATASET_STATUS, HEADER_PROCESSED_DATASET_PORTAL_URL, HEADER_PREVIOUS_VERSION_HUBMAP_IDS
@@ -2666,26 +2644,26 @@ def get_prov_info():
                 internal_dict[HEADER_ORGAN_UUID] = ",".join(distinct_organ_uuid_list)
                 internal_dict[HEADER_ORGAN_TYPE] = ",".join(distinct_organ_type_list)
 
-        # distinct_donor properties are retrieved from its own dictionary
-        if dataset['distinct_donor'] is not None:
-            distinct_donor_hubmap_id_list = []
-            distinct_donor_submission_id_list = []
-            distinct_donor_uuid_list = []
-            distinct_donor_group_name_list = []
-            for item in dataset['distinct_donor']:
-                distinct_donor_hubmap_id_list.append(item['hubmap_id'])
-                distinct_donor_submission_id_list.append(item['submission_id'])
-                distinct_donor_uuid_list.append(item['uuid'])
-                distinct_donor_group_name_list.append(item['group_name'])
-            internal_dict[HEADER_DONOR_HUBMAP_ID] = distinct_donor_hubmap_id_list
-            internal_dict[HEADER_DONOR_SUBMISSION_ID] = distinct_donor_submission_id_list
-            internal_dict[HEADER_DONOR_UUID] = distinct_donor_uuid_list
-            internal_dict[HEADER_DONOR_GROUP_NAME] = distinct_donor_group_name_list
+        # distinct_source properties are retrieved from its own dictionary
+        if dataset['distinct_source'] is not None:
+            distinct_source_hubmap_id_list = []
+            distinct_source_submission_id_list = []
+            distinct_source_uuid_list = []
+            distinct_source_group_name_list = []
+            for item in dataset['distinct_source']:
+                distinct_source_hubmap_id_list.append(item['hubmap_id'])
+                distinct_source_submission_id_list.append(item['submission_id'])
+                distinct_source_uuid_list.append(item['uuid'])
+                distinct_source_group_name_list.append(item['group_name'])
+            internal_dict[HEADER_SOURCE_HUBMAP_ID] = distinct_source_hubmap_id_list
+            internal_dict[HEADER_SOURCE_SUBMISSION_ID] = distinct_source_submission_id_list
+            internal_dict[HEADER_SOURCE_UUID] = distinct_source_uuid_list
+            internal_dict[HEADER_SOURCE_GROUP_NAME] = distinct_source_group_name_list
             if return_json is False:
-                internal_dict[HEADER_DONOR_HUBMAP_ID] = ",".join(distinct_donor_hubmap_id_list)
-                internal_dict[HEADER_DONOR_SUBMISSION_ID] = ",".join(distinct_donor_submission_id_list)
-                internal_dict[HEADER_DONOR_UUID] = ",".join(distinct_donor_uuid_list)
-                internal_dict[HEADER_DONOR_GROUP_NAME] = ",".join(distinct_donor_group_name_list)
+                internal_dict[HEADER_SOURCE_HUBMAP_ID] = ",".join(distinct_source_hubmap_id_list)
+                internal_dict[HEADER_SOURCE_SUBMISSION_ID] = ",".join(distinct_source_submission_id_list)
+                internal_dict[HEADER_SOURCE_UUID] = ",".join(distinct_source_uuid_list)
+                internal_dict[HEADER_SOURCE_GROUP_NAME] = ",".join(distinct_source_group_name_list)
 
         # distinct_rui_sample properties are retrieved from its own dictionary
         if dataset['distinct_rui_sample'] is not None:
@@ -2847,10 +2825,10 @@ def get_prov_info_for_dataset(id):
     HEADER_ORGAN_SUBMISSION_ID = 'organ_submission_id'
     HEADER_ORGAN_UUID = 'organ_uuid'
     HEADER_ORGAN_TYPE = 'organ_type'
-    HEADER_DONOR_HUBMAP_ID = 'donor_hubmap_id'
-    HEADER_DONOR_SUBMISSION_ID = 'donor_submission_id'
-    HEADER_DONOR_UUID = 'donor_uuid'
-    HEADER_DONOR_GROUP_NAME = 'donor_group_name'
+    HEADER_SOURCE_HUBMAP_ID = 'source_hubmap_id'
+    HEADER_SOURCE_SUBMISSION_ID = 'source_submission_id'
+    HEADER_SOURCE_UUID = 'source_uuid'
+    HEADER_SOURCE_GROUP_NAME = 'source_group_name'
     HEADER_RUI_LOCATION_HUBMAP_ID = 'rui_location_hubmap_id'
     HEADER_RUI_LOCATION_SUBMISSION_ID = 'rui_location_submission_id'
     HEADER_RUI_LOCATION_UUID = 'rui_location_uuid'
@@ -2871,8 +2849,8 @@ def get_prov_info_for_dataset(id):
         HEADER_DATASET_DATA_TYPES, HEADER_DATASET_PORTAL_URL, HEADER_FIRST_SAMPLE_HUBMAP_ID,
         HEADER_FIRST_SAMPLE_SUBMISSION_ID, HEADER_FIRST_SAMPLE_UUID, HEADER_FIRST_SAMPLE_TYPE,
         HEADER_FIRST_SAMPLE_PORTAL_URL, HEADER_ORGAN_HUBMAP_ID, HEADER_ORGAN_SUBMISSION_ID, HEADER_ORGAN_UUID,
-        HEADER_ORGAN_TYPE, HEADER_DONOR_HUBMAP_ID, HEADER_DONOR_SUBMISSION_ID, HEADER_DONOR_UUID,
-        HEADER_DONOR_GROUP_NAME, HEADER_RUI_LOCATION_HUBMAP_ID, HEADER_RUI_LOCATION_SUBMISSION_ID,
+        HEADER_ORGAN_TYPE, HEADER_SOURCE_HUBMAP_ID, HEADER_SOURCE_SUBMISSION_ID, HEADER_SOURCE_UUID,
+        HEADER_SOURCE_GROUP_NAME, HEADER_RUI_LOCATION_HUBMAP_ID, HEADER_RUI_LOCATION_SUBMISSION_ID,
         HEADER_RUI_LOCATION_UUID, HEADER_SAMPLE_METADATA_HUBMAP_ID, HEADER_SAMPLE_METADATA_SUBMISSION_ID,
         HEADER_SAMPLE_METADATA_UUID, HEADER_PROCESSED_DATASET_UUID, HEADER_PROCESSED_DATASET_HUBMAP_ID,
         HEADER_PROCESSED_DATASET_STATUS, HEADER_PROCESSED_DATASET_PORTAL_URL
@@ -2985,25 +2963,25 @@ def get_prov_info_for_dataset(id):
             internal_dict[HEADER_ORGAN_SUBMISSION_ID] = ",".join(distinct_organ_submission_id_list)
             internal_dict[HEADER_ORGAN_UUID] = ",".join(distinct_organ_uuid_list)
             internal_dict[HEADER_ORGAN_TYPE] = ",".join(distinct_organ_type_list)
-    if dataset['distinct_donor'] is not None:
-        distinct_donor_hubmap_id_list = []
-        distinct_donor_submission_id_list = []
-        distinct_donor_uuid_list = []
-        distinct_donor_group_name_list = []
-        for item in dataset['distinct_donor']:
-            distinct_donor_hubmap_id_list.append(item['hubmap_id'])
-            distinct_donor_submission_id_list.append(item['submission_id'])
-            distinct_donor_uuid_list.append(item['uuid'])
-            distinct_donor_group_name_list.append(item['group_name'])
-        internal_dict[HEADER_DONOR_HUBMAP_ID] = distinct_donor_hubmap_id_list
-        internal_dict[HEADER_DONOR_SUBMISSION_ID] = distinct_donor_submission_id_list
-        internal_dict[HEADER_DONOR_UUID] = distinct_donor_uuid_list
-        internal_dict[HEADER_DONOR_GROUP_NAME] = distinct_donor_group_name_list
+    if dataset['distinct_source'] is not None:
+        distinct_source_hubmap_id_list = []
+        distinct_source_submission_id_list = []
+        distinct_source_uuid_list = []
+        distinct_source_group_name_list = []
+        for item in dataset['distinct_source']:
+            distinct_source_hubmap_id_list.append(item['hubmap_id'])
+            distinct_source_submission_id_list.append(item['submission_id'])
+            distinct_source_uuid_list.append(item['uuid'])
+            distinct_source_group_name_list.append(item['group_name'])
+        internal_dict[HEADER_SOURCE_HUBMAP_ID] = distinct_source_hubmap_id_list
+        internal_dict[HEADER_SOURCE_SUBMISSION_ID] = distinct_source_submission_id_list
+        internal_dict[HEADER_SOURCE_UUID] = distinct_source_uuid_list
+        internal_dict[HEADER_SOURCE_GROUP_NAME] = distinct_source_group_name_list
         if return_json is False:
-            internal_dict[HEADER_DONOR_HUBMAP_ID] = ",".join(distinct_donor_hubmap_id_list)
-            internal_dict[HEADER_DONOR_SUBMISSION_ID] = ",".join(distinct_donor_submission_id_list)
-            internal_dict[HEADER_DONOR_UUID] = ",".join(distinct_donor_uuid_list)
-            internal_dict[HEADER_DONOR_GROUP_NAME] = ",".join(distinct_donor_group_name_list)
+            internal_dict[HEADER_SOURCE_HUBMAP_ID] = ",".join(distinct_source_hubmap_id_list)
+            internal_dict[HEADER_SOURCE_SUBMISSION_ID] = ",".join(distinct_source_submission_id_list)
+            internal_dict[HEADER_SOURCE_UUID] = ",".join(distinct_source_uuid_list)
+            internal_dict[HEADER_SOURCE_GROUP_NAME] = ",".join(distinct_source_group_name_list)
     if dataset['distinct_rui_sample'] is not None:
         rui_location_hubmap_id_list = []
         rui_location_submission_id_list = []
@@ -3198,10 +3176,10 @@ def get_sample_prov_info():
     HEADER_SAMPLE_HUBMAP_ID = "sample_hubmap_id"
     HEADER_SAMPLE_SUBMISSION_ID = "sample_submission_id"
     HEADER_SAMPLE_TYPE = "sample_type"
-    HEADER_DONOR_UUID = "donor_uuid"
-    HEADER_DONOR_SUBMISSION_ID = "donor_submission_id"
-    HEADER_DONOR_HUBMAP_ID = "donor_hubmap_id"
-    HEADER_DONOR_HAS_METADATA = "donor_has_metadata"
+    HEADER_SOURCE_UUID = "source_uuid"
+    HEADER_SOURCE_SUBMISSION_ID = "source_submission_id"
+    HEADER_SOURCE_HUBMAP_ID = "source_hubmap_id"
+    HEADER_SOURCE_HAS_METADATA = "source_has_metadata"
     HEADER_ORGAN_UUID = "organ_uuid"
     HEADER_ORGAN_TYPE = "organ_type"
     HEADER_ORGAN_HUBMAP_ID = "organ_hubmap_id"
@@ -3268,9 +3246,9 @@ def get_sample_prov_info():
         if sample['sample_rui_info'] is not None:
             sample_has_rui_info = True
 
-        donor_has_metadata = False
-        if sample['donor_metadata'] is not None:
-            donor_has_metadata = True
+        source_has_metadata = False
+        if sample['source_metadata'] is not None:
+            source_has_metadata = True
 
         internal_dict = collections.OrderedDict()
         internal_dict[HEADER_SAMPLE_UUID] = sample['sample_uuid']
@@ -3284,10 +3262,10 @@ def get_sample_prov_info():
         internal_dict[HEADER_SAMPLE_HUBMAP_ID] = sample['sample_hubmap_id']
         internal_dict[HEADER_SAMPLE_SUBMISSION_ID] = sample['sample_submission_id']
         internal_dict[HEADER_SAMPLE_DIRECT_ANCESTOR_ENTITY_TYPE] = sample['sample_ancestor_entity']
-        internal_dict[HEADER_DONOR_UUID] = sample['donor_uuid']
-        internal_dict[HEADER_DONOR_HAS_METADATA] = donor_has_metadata
-        internal_dict[HEADER_DONOR_HUBMAP_ID] = sample['donor_hubmap_id']
-        internal_dict[HEADER_DONOR_SUBMISSION_ID] = sample['donor_submission_id']
+        internal_dict[HEADER_SOURCE_UUID] = sample['source_uuid']
+        internal_dict[HEADER_SOURCE_HAS_METADATA] = source_has_metadata
+        internal_dict[HEADER_SOURCE_HUBMAP_ID] = sample['source_hubmap_id']
+        internal_dict[HEADER_SOURCE_SUBMISSION_ID] = sample['source_submission_id']
         internal_dict[HEADER_ORGAN_UUID] = organ_uuid
         internal_dict[HEADER_ORGAN_TYPE] = organ_type
         internal_dict[HEADER_ORGAN_HUBMAP_ID] = organ_hubmap_id

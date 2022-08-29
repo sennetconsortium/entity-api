@@ -1246,8 +1246,8 @@ def create_sennet_ids(normalized_class, json_data_dict, user_token, user_info_di
             parent_id = json_data_dict['was_generated_by'][0]
             json_to_post['parent_ids'] = [parent_id]
 
-            # 'Sample.specimen_type' is marked as `required_on_create` in the schema yaml
-            if json_data_dict['specimen_type'].lower() == 'organ':
+            # 'Sample.sample_category' is marked as `required_on_create` in the schema yaml
+            if json_data_dict['sample_category'].lower() == 'organ':
                 # The 'organ' field containing the organ code is required in this case
                 json_to_post['organ_code'] = json_data_dict['organ']
         else:
@@ -1261,9 +1261,9 @@ def create_sennet_ids(normalized_class, json_data_dict, user_token, user_info_di
     logger.info("======create_sennet_ids() json_to_post to uuid-api======")
     logger.info(json_to_post)
 
-    uuid_url = _uuid_api_url + "/uuid"
+    # uuid_url = _uuid_api_url + "/uuid"
     # Disable ssl certificate verification
-    response = requests.post(url = uuid_url, headers = request_headers, json = json_to_post, verify = False, params = query_parms) 
+    response = requests.post(url = _uuid_api_url, headers = request_headers, json = json_to_post, verify = False, params = query_parms)
     
     # Invoke .raise_for_status(), an HTTPError will be raised with certain status codes
     response.raise_for_status()
@@ -1274,27 +1274,18 @@ def create_sennet_ids(normalized_class, json_data_dict, user_token, user_info_di
         """
         [{
             "uuid": "3bcc20f4f9ba19ed837136d19f530fbe",
-            "base_id": "965PRGB226",
+            "sennet_base_id": "965PRGB226",
             "sennet_id": "SN965.PRGB.226"
         }]
         """
 
-        # For Donor/Sample, submission_id will be added:
-        """
-        [{
-            "uuid": "c0276b5937ba8e0d7d1185020bade18f",
-            "hubmap_base_id": "535RWXB646",
-            "hubmap_id": "HBM535.RWXB.646",
-            "submission_id": "TTDCT0001"
-        }]
-        """
         ids_list = response.json()
 
         # Remove the "sennet_base_id" key from each dict in the list
         for d in ids_list:
             # Return None when the key is not in the dict
             # Will get keyError exception without the default value when the key is not found
-            d.pop('base_id')
+            d.pop('sennet_base_id')
 
         logger.info("======create_sennet_ids() generated ids from uuid-api======")
         logger.info(ids_list)
@@ -1387,7 +1378,7 @@ user_group_uuids: list
 """
 def validate_entity_group_uuid(group_uuid, user_group_uuids = None):
     global _auth_helper
-    
+
     # Get the globus groups info based on the groups json file in commons package
     globus_groups_info = _auth_helper.get_globus_groups_info()
     groups_by_id_dict = globus_groups_info['by_id']
@@ -1424,7 +1415,7 @@ str
 """
 def get_entity_group_name(group_uuid):
     global _auth_helper
-    
+
     # Get the globus groups info based on the groups json file in commons package
     globus_groups_info = _auth_helper.get_globus_groups_info()
     groups_by_id_dict = globus_groups_info['by_id']

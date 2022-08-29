@@ -155,7 +155,7 @@ doi_properties: &doi_properties
     type: list
     description: "A list of the people who created the entity with full name, email, ORCID iD, institution, etc.. This is analogus to the author list on a publication."
   contacts:
-    type: list 
+    type: list
     description: "A list of the people who are the main contacts to get information about the entity."
   # To-DO
   # creator_ids:
@@ -166,7 +166,7 @@ doi_properties: &doi_properties
   #   type: list
   #   description: "A list of ids (will need to decide on uuid or orcid id) referencing the people who are the main contacts about this entity"
 
-shared_entity_properties: &shared_entity_properties 
+shared_entity_properties: &shared_entity_properties
   ###### Last Modified Properties #######
   last_modified_timestamp:
     type: integer
@@ -284,7 +284,7 @@ ENTITIES:
         description: "True if the data contains any human genetic sequence information."
       status:
         type: string
-        before_property_update_validators: 
+        before_property_update_validators:
           - validate_application_header_before_property_update
           - validate_dataset_status_value
         generated: true
@@ -417,7 +417,7 @@ ENTITIES:
         # which are potentially updated by multiple triggers
         updated_peripherally: true
       thumbnail_file_to_add:
-        type: json_string 
+        type: json_string
         transient: true
         exposed: false
         description: 'Just a temporary file id. Provide as a json object with an temp_file_id like {"temp_file_id":"dzevgd6xjs4d5grmcp4n"}'
@@ -429,7 +429,7 @@ ENTITIES:
         updated_peripherally: true
       thumbnail_file_to_remove:
         # This is only valid on update via a PUT request
-        type: string 
+        type: string
         transient: true
         exposed: false
         description: 'The thumbnail image file previously uploaded to delete. Provide as a string of the file_uuid like: "232934234234234234234270c0ea6c51d604a850558ef2247d0b4"'
@@ -476,7 +476,7 @@ ENTITIES:
         before_create_trigger: set_data_access_level
       image_files:
         # This property has no before_create_trigger method, but will be created via `image_files_to_add` and updated via `image_files_to_delete`
-        type: list 
+        type: list
         generated: true # Disallow direct user input from create via POST, but can be used for update via PUT
         description: "List of uploaded image files and descriptions of the files. Stored in db as a stringfied json array."
         # Only file descriptions are allowed to be updated directly using this property
@@ -486,7 +486,7 @@ ENTITIES:
         # which are potentially updated by multiple triggers
         updated_peripherally: true
       image_files_to_add:
-        type: list 
+        type: list
         transient: true
         exposed: false
         description: 'List of temporary file ids with an optional description. Provide as a json array with an temp_file_id and description attribute for each element like {"files": [{"temp_file_id":"dzevgd6xjs4d5grmcp4n","description":"This is image file one"},{"temp_file_id":"yrahjadfhadf","description":"This is image file two"}]}'
@@ -497,7 +497,7 @@ ENTITIES:
         updated_peripherally: true
       image_files_to_remove:
         # This is only valid on update via a PUT request
-        type: list 
+        type: list
         transient: true
         exposed: false
         description: 'List of image files previously uploaded to delete. Provide as a json array of the file_uuids of the file like: ["232934234234234234234270c0ea6c51d604a850558ef2247d0b4", "230948203482234234234a57bfe9c056d08a0f8e6cd612baa3bfa"]'
@@ -528,7 +528,7 @@ ENTITIES:
         before_create_trigger: set_group_name
         #todo: map to provenance_group_name in ES - ? In the current version it's not mapped
       portal_metadata_upload_files:
-        type: json_string 
+        type: json_string
         description: "list of relative paths to metadata files"
         #todo: migrate to new attribute (set, maybe) representing a single uploaded sample_metadata.tsv file using the now file upload methods.  Leave this in place for now, but add new attribute(s) to support new methon.  Need to do a design session.
       next_identifier:
@@ -573,6 +573,7 @@ ENTITIES:
 #        immutable: true
         type: string
         description: 'The category of the sample (Block/Section/Suspension/Bodily Fluid/Organ/Organ Piece/Other)'
+        required_on_create: true
       portal_metadata_upload_files:
         type: json_string
         description: "A list of relative paths to metadata files"
@@ -636,7 +637,7 @@ ENTITIES:
         description: "The visit id for the source/patient when the sample was obtained."
       image_files:
         # This property has no before_create_trigger method, but will be created via `image_files_to_add` and updated via `image_files_to_remove`
-        type: list 
+        type: list
         generated: true # Disallow direct user input from create via POST, but can be used for update via PUT
         description: "List of uploaded image files and descriptions of the files. Stored in db as a stringfied json array."
         # Only file descriptions are allowed to be updated directly using this property
@@ -646,7 +647,7 @@ ENTITIES:
         # which are potentially updated by multiple triggers
         updated_peripherally: true
       image_files_to_add:
-        type: list 
+        type: list
         transient: true
         exposed: false
         description: 'List of temporary file ids with an optional description. Provide as a json array with an temp_file_id and description attribute for each element like {"files": [{"temp_file_id":"dzevgd6xjs4d5grmcp4n","description":"This is image file one"},{"temp_file_id":"yrahjadfhadf","description":"This is image file two"}]}'
@@ -657,7 +658,7 @@ ENTITIES:
         updated_peripherally: true
       image_files_to_remove:
         # This is only valid on update via a PUT request
-        type: list 
+        type: list
         transient: true
         exposed: false
         description: 'List of image files previously uploaded to delete. Provide as a json array of the file_uuids of the file like: ["232934234234234234234270c0ea6c51d604a850558ef2247d0b4", "230948203482234234234a57bfe9c056d08a0f8e6cd612baa3bfa"]'
@@ -667,7 +668,7 @@ ENTITIES:
         updated_peripherally: true
       metadata_files:
         # This property has no before_create_trigger method, but will be created via `metadata_files_to_add` and updated via `metadata_files_to_remove`
-        type: list 
+        type: list
         generated: true # Disallow direct user input from create via POST, but can be used for update via PUT
         description: "List of uploaded image files and descriptions of the files. Stored in db as a stringfied json array."
         # Only file descriptions are allowed to be updated directly using this property
@@ -677,7 +678,7 @@ ENTITIES:
         # which are potentially updated by multiple triggers
         updated_peripherally: true
       metadata_files_to_add:
-        type: list 
+        type: list
         transient: true
         exposed: false
         description: 'List of temporary file ids with an optional description. Provide as a json array with an temp_file_id and description attribute for each element like {"files": [{"temp_file_id":"dzevgd6xjs4d5grmcp4n","description":"This is image file one"},{"temp_file_id":"yrahjadfhadf","description":"This is image file two"}]}'
@@ -688,7 +689,7 @@ ENTITIES:
         updated_peripherally: true
       metadata_files_to_remove:
         # This is only valid on update via a PUT request
-        type: list 
+        type: list
         transient: true
         exposed: false
         description: 'List of image files previously uploaded to delete. Provide as a json array of the file_uuids of the file like: ["232934234234234234234270c0ea6c51d604a850558ef2247d0b4", "230948203482234234234a57bfe9c056d08a0f8e6cd612baa3bfa"]'
@@ -746,7 +747,7 @@ ENTITIES:
         required_on_create: true
         description: "Title of the datasets, a sentance or less"
       status:
-        before_property_update_validators: 
+        before_property_update_validators:
           - validate_application_header_before_property_update
           - validate_upload_status_value
         type: string
@@ -774,7 +775,7 @@ ENTITIES:
       #transient attribute used to pass in a list of dataset ids to be linked to the Submisison node
       #datasets will be added only via PUT/update, NEVER on POST/create
       dataset_uuids_to_link:
-        type: list 
+        type: list
         before_property_update_validators:
           - validate_no_duplicates_in_list
         generated: true # Disallow user input from request json when being created
@@ -782,10 +783,10 @@ ENTITIES:
         exposed: false
         description: 'List of datasets to add to the Upload. Provide as a json array of the dataset uuids like: ["232934234234234234234270c0ea6c51d604a850558ef2247d0b4", "230948203482234234234a57bfe9c056d08a0f8e6cd612baa3bfa"]'
         # Use after_update_trigger instead of before_update_trigger since we are not updating this property
-        after_update_trigger: link_datasets_to_upload 
+        after_update_trigger: link_datasets_to_upload
       #transient attribute used to pass in a list of dataset ids of datasets to be removed from a DataSubmisison
       dataset_uuids_to_unlink:
-        type: list 
+        type: list
         before_property_update_validators:
           - validate_no_duplicates_in_list
         generated: true # Disallow user input from request json when being created
@@ -793,7 +794,7 @@ ENTITIES:
         exposed: false
         description: 'List of datasets to remove from a Upload. Provide as a json array of the dataset uuids like: ["232934234234234234234270c0ea6c51d604a850558ef2247d0b4", "230948203482234234234a57bfe9c056d08a0f8e6cd612baa3bfa"]'
         # Use after_update_trigger instead of before_update_trigger since we are not updating this property
-        after_update_trigger: unlink_datasets_from_upload 
+        after_update_trigger: unlink_datasets_from_upload
       datasets:
         type: list
         generated: true # Disallow user input from request json when being created
