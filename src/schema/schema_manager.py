@@ -1261,8 +1261,9 @@ def create_sennet_ids(normalized_class, json_data_dict, user_token, user_info_di
     logger.info("======create_sennet_ids() json_to_post to uuid-api======")
     logger.info(json_to_post)
 
+    uuid_url = _uuid_api_url + "/uuid"
     # Disable ssl certificate verification
-    response = requests.post(url = _uuid_api_url, headers = request_headers, json = json_to_post, verify = False, params = query_parms) 
+    response = requests.post(url = uuid_url, headers = request_headers, json = json_to_post, verify = False, params = query_parms) 
     
     # Invoke .raise_for_status(), an HTTPError will be raised with certain status codes
     response.raise_for_status()
@@ -1273,7 +1274,7 @@ def create_sennet_ids(normalized_class, json_data_dict, user_token, user_info_di
         """
         [{
             "uuid": "3bcc20f4f9ba19ed837136d19f530fbe",
-            "sennet_base_id": "965PRGB226",
+            "base_id": "965PRGB226",
             "sennet_id": "SN965.PRGB.226"
         }]
         """
@@ -1293,7 +1294,7 @@ def create_sennet_ids(normalized_class, json_data_dict, user_token, user_info_di
         for d in ids_list:
             # Return None when the key is not in the dict
             # Will get keyError exception without the default value when the key is not found
-            d.pop('sennet_base_id')
+            d.pop('base_id')
 
         logger.info("======create_sennet_ids() generated ids from uuid-api======")
         logger.info(ids_list)
