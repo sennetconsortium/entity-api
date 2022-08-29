@@ -99,7 +99,7 @@ str: The 'sub' string
 def set_user_sub(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     if 'sub' not in new_data_dict:
         raise KeyError("Missing 'sub' key in 'new_data_dict' during calling 'set_user_sub()' trigger method.")
-    
+
     return property_key, new_data_dict['sub']
 
 """
@@ -126,7 +126,7 @@ str: The 'email' string
 def set_user_email(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     if 'email' not in new_data_dict:
         raise KeyError("Missing 'email' key in 'new_data_dict' during calling 'set_user_email()' trigger method.")
-    
+
     return property_key, new_data_dict['email']
 
 """
@@ -153,7 +153,7 @@ str: The 'name' string
 def set_user_displayname(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     if 'name' not in new_data_dict:
         raise KeyError("Missing 'name' key in 'new_data_dict' during calling 'set_user_displayname()' trigger method.")
-    
+
     return property_key, new_data_dict['name']
 
 """
@@ -180,7 +180,7 @@ str: The uuid created via uuid-api
 def set_uuid(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     if 'uuid' not in new_data_dict:
         raise KeyError("Missing 'uuid' key in 'new_data_dict' during calling 'set_uuid()' trigger method.")
-    
+
     return property_key, new_data_dict['uuid']
 
 """
@@ -207,7 +207,7 @@ str: The sennet_id/sennet_id created via uuid-api
 def set_sennet_id(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     if 'sennet_id' not in new_data_dict:
         raise KeyError("Missing 'sennet_id' key in 'new_data_dict' during calling 'set_sennet_id()' trigger method.")
-    
+
     return property_key, new_data_dict['sennet_id']
 
 
@@ -260,7 +260,7 @@ def set_data_access_level(property_key, normalized_type, user_token, existing_da
     else:
         # Default to consortium for Source/Sample
         data_access_level = SchemaConstants.ACCESS_LEVEL_CONSORTIUM
-        
+
         # public if any dataset below it in the provenance hierarchy is published
         # (i.e. Dataset.status == "Published")
         count = schema_neo4j_queries.count_attached_published_datasets(schema_manager.get_neo4j_driver_instance(), normalized_type, new_data_dict['uuid'])
@@ -353,13 +353,13 @@ str: The group name
 """
 def set_group_name(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     group_name = None
-    
+
     # If `group_uuid` is not already set, looks for membership in a single "data provider" group and sets to that. 
     # Otherwise if not set and no single "provider group" membership throws error.  
     # This field is also used to link (Neo4j relationship) to the correct Lab node on creation.
     if 'hmgroupids' not in new_data_dict:
         raise KeyError("Missing 'hmgroupids' key in 'new_data_dict' during calling 'set_group_name()' trigger method.")
-    
+
     try:
         default_group_uuid = None
         if 'group_uuid' in new_data_dict:
@@ -374,7 +374,7 @@ def set_group_name(property_key, normalized_type, user_token, existing_data_dict
         raise schema_errors.MultipleDataProviderGroupException(e)
 
     return property_key, group_name
-    
+
 
 ####################################################################################################
 ## Trigger methods shared by Source and Sample - DO NOT RENAME
@@ -488,11 +488,11 @@ def update_file_descriptions(property_key, normalized_type, user_token, existing
         raise KeyError(f"Missing '{property_key}' key in 'new_data_dict' during calling 'update_file_descriptions()' trigger method.")
 
     #If POST or PUT where the target doesn't exist create the file info array
-    #if generated_dict doesn't contain the property yet, copy it from the existing_data_dict 
+    #if generated_dict doesn't contain the property yet, copy it from the existing_data_dict
     #or if it doesn't exist in existing_data_dict create it
     if not property_key in generated_dict:
         if not property_key in existing_data_dict:
-            raise KeyError(f"Missing '{property_key}' key in 'existing_data_dict' during call to 'update_file_descriptions()' trigger method.")            
+            raise KeyError(f"Missing '{property_key}' key in 'existing_data_dict' during call to 'update_file_descriptions()' trigger method.")
         # Otherwise this is a PUT where the target array exists already
         else:
             # Note: The property, name specified by `target_property_key`, is stored in Neo4j as a string representation of the Python list
@@ -501,7 +501,7 @@ def update_file_descriptions(property_key, normalized_type, user_token, existing
             existing_files_list = schema_manager.convert_str_to_data(existing_data_dict[property_key])
     else:
         if not property_key in generated_dict:
-            raise KeyError(f"Missing '{property_key}' key in 'generated_dict' during calling 'update_file_descriptions()' trigger method.")            
+            raise KeyError(f"Missing '{property_key}' key in 'generated_dict' during calling 'update_file_descriptions()' trigger method.")
         existing_files_list = generated_dict[property_key]
 
     file_info_by_uuid_dict = {}
@@ -513,7 +513,7 @@ def update_file_descriptions(property_key, normalized_type, user_token, existing
 
     for file_info in new_data_dict[property_key]:
         file_uuid = file_info['file_uuid']
-        
+
         # Existence check in case the file uuid gets edited in the request
         if file_uuid in file_info_by_uuid_dict:
             # Keep filename and file_uuid unchanged
@@ -697,13 +697,13 @@ dict: A dict of associated Upload detail with all the normalized information
 """
 def get_dataset_upload(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     return_dict = None
-    
+
     if 'uuid' not in existing_data_dict:
         raise KeyError("Missing 'uuid' key in 'existing_data_dict' during calling 'get_dataset_upload()' trigger method.")
 
     # It could be None if the dataset doesn't in any Upload
     upload_dict = schema_neo4j_queries.get_dataset_upload(schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'])
-    
+
     if upload_dict:
         # Exclude datasets from each resulting Upload
         # We don't want to show too much nested information
@@ -776,10 +776,10 @@ str: The relative directory path
 def get_local_directory_rel_path(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     if 'uuid' not in existing_data_dict:
         raise KeyError("Missing 'uuid' key in 'existing_data_dict' during calling 'get_local_directory_rel_path()' trigger method.")
-    
+
     if 'data_access_level' not in existing_data_dict:
         raise KeyError("Missing 'data_access_level' key in 'existing_data_dict' during calling 'get_local_directory_rel_path()' trigger method.")
-    
+
     uuid = existing_data_dict['uuid']
 
     if (not 'group_uuid' in existing_data_dict) or (not existing_data_dict['group_uuid']):
@@ -882,7 +882,7 @@ def get_dataset_title(property_key, normalized_type, user_token, existing_data_d
     # Can we move organ_types.yaml to commons or make it an API call to avoid parsing the raw yaml?
     # Parse the organ description
     if organ_name is not None:
-        try: 
+        try:
             # The organ_name is the two-letter code only set if specimen_type == 'organ'
             # Convert the two-letter code to a description
             organ_desc = _get_organ_description(organ_name)
@@ -968,7 +968,7 @@ def get_previous_revision_uuid(property_key, normalized_type, user_token, existi
         raise KeyError("Missing 'uuid' key in 'existing_data_dict' during calling 'get_previous_revision_uuid()' trigger method.")
 
     previous_revision_uuid = schema_neo4j_queries.get_previous_revision_uuid(schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'])
-    
+
     # previous_revision_uuid can be None, but will be filtered out by 
     # schema_manager.normalize_entity_result_for_response()
     return property_key, previous_revision_uuid
@@ -1000,7 +1000,7 @@ def get_next_revision_uuid(property_key, normalized_type, user_token, existing_d
         raise KeyError("Missing 'uuid' key in 'existing_data_dict' during calling 'get_next_revision_uuid()' trigger method.")
 
     next_revision_uuid = schema_neo4j_queries.get_next_revision_uuid(schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'])
-    
+
     # next_revision_uuid can be None, but will be filtered out by 
     # schema_manager.normalize_entity_result_for_response()
     return property_key, next_revision_uuid
@@ -1052,7 +1052,7 @@ def commit_thumbnail_file(property_key, normalized_type, user_token, existing_da
 
         # Commit the thumbnail file via ingest-api call
         ingest_api_target_url = schema_manager.get_ingest_api_url() + '/file-commit'
-        
+
         # Example: {"temp_file_id":"dzevgd6xjs4d5grmcp4n"}
         thumbnail_file_dict = new_data_dict[property_key]
 
@@ -1067,7 +1067,7 @@ def commit_thumbnail_file(property_key, normalized_type, user_token, existing_da
         logger.info(f"Commit the uploaded thumbnail file of tmp file id {tmp_file_id} for entity {entity_uuid} via ingest-api call...")
 
         # Disable ssl certificate verification
-        response = requests.post(url = ingest_api_target_url, headers = schema_manager._create_request_headers(user_token), json = json_to_post, verify = False) 
+        response = requests.post(url = ingest_api_target_url, headers = schema_manager._create_request_headers(user_token), json = json_to_post, verify = False)
 
         if response.status_code != 200:
             msg = f"Failed to commit the thumbnail file of tmp file id {tmp_file_id} via ingest-api for entity uuid: {entity_uuid}"
@@ -1082,7 +1082,7 @@ def commit_thumbnail_file(property_key, normalized_type, user_token, existing_da
             'filename': file_uuid_info['filename'],
             'file_uuid': file_uuid_info['file_uuid']
         }
-  
+
         return generated_dict
     except schema_errors.FileUploadException as e:
         raise
@@ -1119,7 +1119,7 @@ dict: The updated generated dict
 def delete_thumbnail_file(property_key, normalized_type, user_token, existing_data_dict, new_data_dict, generated_dict):
     # The name of the property where the file information is stored
     target_property_key = 'thumbnail_file'
-    
+
     # Do nothing if no thumbnail file to delete 
     # is provided in the field specified by property_key
     if (not property_key in new_data_dict) or (not new_data_dict[property_key]):
@@ -1132,10 +1132,10 @@ def delete_thumbnail_file(property_key, normalized_type, user_token, existing_da
 
     # The property_key (`thumbnail_file_to_remove`) is just a file uuid string
     file_uuid = new_data_dict[property_key]
-    
+
     #If POST or PUT where the target doesn't exist create the file info dict
     #if generated_dict doesn't contain the property yet, copy it from the existing_data_dict
-    #if it isn't in the existing_dictionary throw and error 
+    #if it isn't in the existing_dictionary throw and error
     #or if it doesn't exist in existing_data_dict create it
     if not target_property_key in generated_dict:
         if not target_property_key in existing_data_dict:
@@ -1149,7 +1149,7 @@ def delete_thumbnail_file(property_key, normalized_type, user_token, existing_da
             file_info_dict = schema_manager.convert_str_to_data(existing_data_dict[target_property_key])
     else:
         file_info_dict = generated_dict[target_property_key]
-    
+
     # Remove the thumbnail file via ingest-api call
     ingest_api_target_url = schema_manager.get_ingest_api_url() + '/file-remove'
 
@@ -1164,7 +1164,7 @@ def delete_thumbnail_file(property_key, normalized_type, user_token, existing_da
     logger.info(f"Remove the uploaded thumbnail file {file_uuid} for entity {entity_uuid} via ingest-api call...")
 
     # Disable ssl certificate verification
-    response = requests.post(url = ingest_api_target_url, headers = schema_manager._create_request_headers(user_token), json = json_to_post, verify = False) 
+    response = requests.post(url = ingest_api_target_url, headers = schema_manager._create_request_headers(user_token), json = json_to_post, verify = False)
 
     # response.json() returns an empty array because
     # there's no thumbnail file left once the only one gets removed
@@ -1240,12 +1240,19 @@ def set_was_generated_by(property_key, normalized_type, user_token, existing_dat
     if 'uuid' not in existing_data_dict:
         raise KeyError("Missing 'uuid' key in 'existing_data_dict' during calling 'set_was_generated_by()' trigger method.")
 
-    if 'was_generated_by' not in existing_data_dict:
-        raise KeyError("Missing 'was_generated_by' key in 'existing_data_dict' during calling 'set_was_generated_by()' trigger method.")
-
     # Build a list of direct ancestor uuids
     # Only one uuid in the list in this case
-    direct_ancestor_uuids =  schema_manager.convert_str_to_data(existing_data_dict['was_generated_by'])
+    if normalized_type == 'Dataset':
+        if 'direct_ancestor_uuids' not in existing_data_dict:
+            raise KeyError(
+                "Missing 'direct_ancestor_uuids' key in 'existing_data_dict' during calling 'set_was_generated_by()' trigger method.")
+        direct_ancestor_uuids = existing_data_dict['direct_ancestor_uuids']
+    else:
+        if 'direct_ancestor_uuid' not in existing_data_dict:
+            raise KeyError(
+                "Missing 'direct_ancestor_uuid' key in 'existing_data_dict' during calling 'set_was_generated_by()' trigger method.")
+        direct_ancestor_uuids = [existing_data_dict['direct_ancestor_uuid']]
+
 
     # Generate property values for Activity node
     activity_data_dict = schema_manager.generate_activity_data(normalized_type, user_token, existing_data_dict)
@@ -1626,7 +1633,7 @@ str: The creation_action string
 def set_activity_creation_action(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     if 'normalized_entity_type' not in new_data_dict:
         raise KeyError("Missing 'normalized_entity_type' key in 'existing_data_dict' during calling 'set_activity_creation_action()' trigger method.")
-    
+
     return property_key, f"Create {new_data_dict['normalized_entity_type']} Activity"
 
 
@@ -1689,7 +1696,7 @@ def _commit_files(target_property_key, property_key, normalized_type, user_token
         return generated_dict
 
     #If POST or PUT where the target doesn't exist create the file info array
-    #if generated_dict doesn't contain the property yet, copy it from the existing_data_dict 
+    #if generated_dict doesn't contain the property yet, copy it from the existing_data_dict
     #or if it doesn't exist in existing_data_dict create it
     if not target_property_key in generated_dict:
         if not target_property_key in existing_data_dict:
@@ -1724,8 +1731,8 @@ def _commit_files(target_property_key, property_key, normalized_type, user_token
             logger.info(f"Commit the uploaded file of temp_file_id {temp_file_id} for entity {entity_uuid} via ingest-api call...")
 
             # Disable ssl certificate verification
-            response = requests.post(url = ingest_api_target_url, headers = schema_manager._create_request_headers(user_token), json = json_to_post, verify = False) 
-    
+            response = requests.post(url = ingest_api_target_url, headers = schema_manager._create_request_headers(user_token), json = json_to_post, verify = False)
+
             if response.status_code != 200:
                 msg = f"Failed to commit the file of temp_file_id {temp_file_id} via ingest-api for entity uuid: {entity_uuid}"
                 logger.error(msg)
@@ -1738,17 +1745,17 @@ def _commit_files(target_property_key, property_key, normalized_type, user_token
                 'filename': file_uuid_info['filename'],
                 'file_uuid': file_uuid_info['file_uuid']
             }
-            
+
             # The `description` is optional
             if 'description' in file_info:
-                file_info_to_add['description'] = file_info['description']    
-            
+                file_info_to_add['description'] = file_info['description']
+
             # Add to list
             files_info_list.append(file_info_to_add)
 
             # Update the target_property_key value
             generated_dict[target_property_key] = files_info_list
-            
+
         return generated_dict
     except schema_errors.FileUploadException as e:
         raise
@@ -1796,10 +1803,10 @@ def _delete_files(target_property_key, property_key, normalized_type, user_token
         raise KeyError(f"Missing 'uuid' key in 'existing_data_dict' during calling '_delete_files()' trigger method for property '{target_property_key}'.")
 
     entity_uuid = existing_data_dict['uuid']
-    
+
     #If POST or PUT where the target doesn't exist create the file info array
     #if generated_dict doesn't contain the property yet, copy it from the existing_data_dict
-    #if it isn't in the existing_dictionary throw and error 
+    #if it isn't in the existing_dictionary throw and error
     #or if it doesn't exist in existing_data_dict create it
     if not target_property_key in generated_dict:
         if not target_property_key in existing_data_dict:
@@ -1812,7 +1819,7 @@ def _delete_files(target_property_key, property_key, normalized_type, user_token
             files_info_list = schema_manager.convert_str_to_data(existing_data_dict[target_property_key])
     else:
         files_info_list = generated_dict[target_property_key]
-    
+
     file_uuids = []
     for file_uuid in new_data_dict[property_key]:
         file_uuids.append(file_uuid)
@@ -1829,7 +1836,7 @@ def _delete_files(target_property_key, property_key, normalized_type, user_token
     logger.info(f"Remove the uploaded files for entity {entity_uuid} via ingest-api call...")
 
     # Disable ssl certificate verification
-    response = requests.post(url = ingest_api_target_url, headers = schema_manager._create_request_headers(user_token), json = json_to_post, verify = False) 
+    response = requests.post(url = ingest_api_target_url, headers = schema_manager._create_request_headers(user_token), json = json_to_post, verify = False)
 
     if response.status_code != 200:
         msg = f"Failed to remove the files via ingest-api for entity uuid: {entity_uuid}"

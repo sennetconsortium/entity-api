@@ -882,18 +882,17 @@ def create_entity(entity_type):
                 bad_request_error("The sample_category must be organ when an organ code is provided")
 
         # A bit more validation for new sample to be linked to existing source entity
-        was_generated_by = json_data_dict['was_generated_by']
+        direct_ancestor_uuid = json_data_dict['direct_ancestor_uuid']
         # Check existence of the direct ancestor (either another Sample or Source)
-        for was_generated_by in json_data_dict['was_generated_by']:
-            was_generated_by_dict = query_target_entity(was_generated_by, user_token)
+        direct_ancestor_dict = query_target_entity(direct_ancestor_uuid, user_token)
 
         # Generate 'before_create_triiger' data and create the entity details in Neo4j
         merged_dict = create_entity_details(request, normalized_entity_type, user_token, json_data_dict)
     elif normalized_entity_type == 'Dataset':
-        # `was_generated_by` is required for creating new Dataset
+        # `direct_ancestor_uuids` is required for creating new Dataset
         # Check existence of those direct ancestors
-        for was_generated_by in json_data_dict['was_generated_by']:
-            was_generated_by_dict = query_target_entity(was_generated_by, user_token)
+        for direct_ancestor_uuid in json_data_dict['direct_ancestor_uuids']:
+            direct_ancestor_dict = query_target_entity(direct_ancestor_uuid, user_token)
 
         # Also check existence of the previous revision dataset if specified
         if 'previous_revision_uuid' in json_data_dict:
@@ -1007,9 +1006,9 @@ def create_multiple_samples(count):
         # No need to log the validation errors
         bad_request_error(str(e))
 
-    # `was_generated_by` is required on create
-    # Check existence of the direct ancestor (either another Sample or Source) and get the first 'was_generated_by'
-    was_generated_by_dict = query_target_entity(json_data_dict['was_generated_by'][0], user_token)
+    # `direct_ancestor_uuid` is required on create
+    # Check existence of the direct ancestor (either another Sample or Source) and get the first 'direct_ancestor_uuid'
+    direct_ancestor_uuid_dict = query_target_entity(json_data_dict['direct_ancestor_uuid'][0], user_token)
 
 
     # Generate 'before_create_triiger' data and create the entity details in Neo4j
@@ -1157,38 +1156,38 @@ def update_entity(id):
     # Collection and Source: update entity
     if normalized_entity_type == 'Sample':
         # A bit more validation for updating the sample and the linkage to existing source entity
-        has_was_generated_by = False
-        if ('was_generated_by' in json_data_dict) and json_data_dict['was_generated_by']:
-            has_was_generated_by = True
+        has_direct_ancestor_uuid = False
+        if ('direct_ancestor_uuid' in json_data_dict) and json_data_dict['direct_ancestor_uuid']:
+            has_direct_ancestor_uuid = True
 
-            was_generated_by = json_data_dict['was_generated_by']
+            direct_ancestor_uuid = json_data_dict['direct_ancestor_uuid']
             # Check existence of the source entity
-            was_generated_by_dict = query_target_entity(was_generated_by, user_token)
+            direct_ancestor_uuid_dict = query_target_entity(direct_ancestor_uuid, user_token)
             # Also make sure it's either another Sample or a Source
-            if was_generated_by_dict['entity_type'] not in ['Source', 'Sample']:
-                bad_request_error(f"The uuid: {was_generated_by} is not a Source neither a Sample, cannot be used as the direct ancestor of this Sample")
+            if direct_ancestor_uuid_dict['entity_type'] not in ['Source', 'Sample']:
+                bad_request_error(f"The uuid: {direct_ancestor_uuid} is not a Source neither a Sample, cannot be used as the direct ancestor of this Sample")
 
         # Generate 'before_update_triiger' data and update the entity details in Neo4j
         merged_updated_dict = update_object_details('ENTITIES', request, normalized_entity_type, user_token, json_data_dict, entity_dict)
 
         # Handle linkages update via `after_update_trigger` methods 
-        if has_was_generated_by:
+        if has_direct_ancestor_uuid:
             after_update(normalized_entity_type, user_token, merged_updated_dict)
     elif normalized_entity_type == 'Dataset':
-        # A bit more validation if `was_generated_by` provided
-        has_was_generated_by = False
-        if ('was_generated_by' in json_data_dict) and (json_data_dict['was_generated_by']):
-            has_was_generated_by = True
+        # A bit more validation if `direct_ancestor_uuids` provided
+        has_direct_ancestor_uuids = False
+        if ('direct_ancestor_uuids' in json_data_dict) and (json_data_dict['direct_ancestor_uuids']):
+            has_direct_ancestor_uuids = True
 
             # Check existence of those source entities
-            for was_generated_by in json_data_dict['was_generated_by']:
-                was_generated_by_dict = query_target_entity(was_generated_by, user_token)
+            for direct_ancestor_uuids in json_data_dict['direct_ancestor_uuids']:
+                direct_ancestor_uuids_dict = query_target_entity(direct_ancestor_uuids, user_token)
 
         # Generate 'before_update_trigger' data and update the entity details in Neo4j
         merged_updated_dict = update_object_details('ENTITIES', request, normalized_entity_type, user_token, json_data_dict, entity_dict)
 
         # Handle linkages update via `after_update_trigger` methods 
-        if has_was_generated_by:
+        if has_direct_ancestor_uuids:
             after_update(normalized_entity_type, user_token, merged_updated_dict)
     elif normalized_entity_type == 'Upload':
         has_dataset_uuids_to_link = False
@@ -3617,7 +3616,7 @@ def create_entity_details(request, normalized_entity_type, user_token, json_data
     # Create new entity
     try:
         # Important: `entity_dict` is the resulting neo4j dict, Python list and dicts are stored
-        # as string expression literals in it. That's why properties like entity_dict['was_generated_by']
+        # as string expression literals in it. That's why properties like entity_dict['direct_ancestor_uuid']
         # will need to use ast.literal_eval() in the schema_triggers.py
         entity_dict = app_neo4j_queries.create_entity(neo4j_driver_instance, normalized_entity_type, filtered_merged_dict)
     except TransactionError:
@@ -3633,7 +3632,7 @@ def create_entity_details(request, normalized_entity_type, user_token, json_data
     # Important: the same property keys in entity_dict will overwrite the same key in json_data_dict
     # and this is what we wanted. Adding json_data_dict back is to include those `transient` properties
     # provided in the JSON input but not stored in neo4j, and will be needed for after_create_trigger/after_update_trigger,
-    # e.g., `previous_revision_uuid`, `was_generated_by`
+    # e.g., `previous_revision_uuid`, `direct_ancestor_uuid`
     # Add user_info_dict because it may be used by after_update_trigger methods
     merged_final_dict = {**json_data_dict, **entity_dict, **user_info_dict}
 
@@ -3776,7 +3775,7 @@ def create_multiple_samples_details(request, normalized_entity_type, user_token,
     # Create new sample nodes and needed relationships as well as activity node in one transaction
     try:
         # No return value
-        app_neo4j_queries.create_multiple_samples(neo4j_driver_instance, samples_dict_list, activity_data_dict, json_data_dict['was_generated_by'][0])
+        app_neo4j_queries.create_multiple_samples(neo4j_driver_instance, samples_dict_list, activity_data_dict, json_data_dict['direct_ancestor_uuid'][0])
     except TransactionError:
         msg = "Failed to create multiple samples"
         # Log the full stack trace, prepend a line with our message
@@ -3890,7 +3889,7 @@ def update_object_details(provenance_type, request, normalized_entity_type, user
     # Important: the same property keys in entity_dict will overwrite the same key in json_data_dict
     # and this is what we wanted. Adding json_data_dict back is to include those `transient` properties
     # provided in the JSON input but not stored in neo4j, and will be needed for after_create_trigger/after_update_trigger,
-    # e.g., `previous_revision_uuid`, `was_generated_by`
+    # e.g., `previous_revision_uuid`, `direct_ancestor_uuid`
     # Add user_info_dict because it may be used by after_update_trigger methods
     merged_final_dict = {**json_data_dict, **updated_entity_dict, **user_info_dict}
 
@@ -3951,7 +3950,7 @@ def query_target_activity(id, user_token):
                 "23c0ffa90648358e06b7ac0c5673ccd2"
             ],
             "email": "marda@ufl.edu",
-            "sn_uuid": "1785aae4f0fb8f13a56d79957d1cbedf",
+            "uuid": "1785aae4f0fb8f13a56d79957d1cbedf",
             "sennet_id": "SNT966.VNKN.965",
             "submission_id": "UFL0007",
             "time_generated": "2020-10-19 15:52:02",
@@ -3962,7 +3961,7 @@ def query_target_activity(id, user_token):
         sennet_ids = schema_manager.get_sennet_ids(id, user_token)
 
         # Get the target uuid if all good
-        uuid = sennet_ids['sn_uuid']
+        uuid = sennet_ids['uuid']
         entity_dict = app_neo4j_queries.get_activity(neo4j_driver_instance, uuid)
 
         # The uuid exists via uuid-api doesn't mean it's also in Neo4j
@@ -4008,7 +4007,7 @@ def query_target_entity(id, user_token):
                 "23c0ffa90648358e06b7ac0c5673ccd2"
             ],
             "email": "marda@ufl.edu",
-            "sn_uuid": "1785aae4f0fb8f13a56d79957d1cbedf",
+            "uuid": "1785aae4f0fb8f13a56d79957d1cbedf",
             "sennet_id": "SNT966.VNKN.965",
             "submission_id": "UFL0007",
             "time_generated": "2020-10-19 15:52:02",
@@ -4019,7 +4018,7 @@ def query_target_entity(id, user_token):
         sennet_ids = schema_manager.get_sennet_ids(id)
 
         # Get the target uuid if all good
-        uuid = sennet_ids['sn_uuid']
+        uuid = sennet_ids['uuid']
         entity_dict = app_neo4j_queries.get_entity(neo4j_driver_instance, uuid)
 
         # The uuid exists via uuid-api doesn't mean it's also in Neo4j

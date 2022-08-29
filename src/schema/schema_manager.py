@@ -1241,9 +1241,9 @@ def create_sennet_ids(normalized_class, json_data_dict, user_token, user_info_di
             # Add the parent_id to the request json
             json_to_post['parent_ids'] = [parent_id]
         elif normalized_class == 'Sample':
-            # 'Sample.was_generated_by' is marked as `required_on_create` in the schema yaml
-            # The application-specific code should have already validated the 'was_generated_by'
-            parent_id = json_data_dict['was_generated_by'][0]
+            # 'Sample.direct_ancestor_uuid' is marked as `required_on_create` in the schema yaml
+            # The application-specific code should have already validated the 'direct_ancestor_uuid'
+            parent_id = json_data_dict['direct_ancestor_uuid']
             json_to_post['parent_ids'] = [parent_id]
 
             # 'Sample.sample_category' is marked as `required_on_create` in the schema yaml
@@ -1252,7 +1252,7 @@ def create_sennet_ids(normalized_class, json_data_dict, user_token, user_info_di
                 json_to_post['organ_code'] = json_data_dict['organ']
         else:
             # `Dataset.direct_ancestor_uuids` is `required_on_create` in yaml
-            json_to_post['parent_ids'] = json_data_dict['was_generated_by']
+            json_to_post['parent_ids'] = json_data_dict['direct_ancestor_uuids']
 
     request_headers = _create_request_headers(user_token)
 
@@ -1274,18 +1274,18 @@ def create_sennet_ids(normalized_class, json_data_dict, user_token, user_info_di
         """
         [{
             "uuid": "3bcc20f4f9ba19ed837136d19f530fbe",
-            "sennet_base_id": "965PRGB226",
+            "base_id": "965PRGB226",
             "sennet_id": "SN965.PRGB.226"
         }]
         """
 
         ids_list = response.json()
 
-        # Remove the "sennet_base_id" key from each dict in the list
+        # Remove the "base_id" key from each dict in the list
         for d in ids_list:
             # Return None when the key is not in the dict
             # Will get keyError exception without the default value when the key is not found
-            d.pop('sennet_base_id')
+            d.pop('base_id')
 
         logger.info("======create_sennet_ids() generated ids from uuid-api======")
         logger.info(ids_list)

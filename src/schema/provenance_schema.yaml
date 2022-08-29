@@ -323,25 +323,25 @@ ENTITIES:
       contributors:
         type: list
         description: "A list of people who contributed to the creation of this dataset.  Returned as an array of contributor where the structure of a contributor is"
-#      direct_ancestor_uuids:
-#        required_on_create: true # Only required for create via POST, not update via PUT
-#        type: list
-#        before_property_create_validators:
-#          - validate_no_duplicates_in_list
-#        before_property_update_validators:
-#          - validate_no_duplicates_in_list
-#        transient: true
-#        exposed: false
-#        description: "The uuids of source entities from which this new entity is derived.  Used to pass source entity ids in on POST or PUT calls used to create the linkages."
-#        # Note: link_dataset_to_direct_ancestors() will always delete all the old linkages first
-#        after_create_trigger: link_dataset_to_direct_ancestors
-#        after_update_trigger: link_dataset_to_direct_ancestors
-#      direct_ancestors:
-#        type: list
-#        description: "A list of direct parent ancensters (one level above) that the Dataset was derived from."
-#        generated: true
-#        transient: true
-#        on_read_trigger: get_dataset_direct_ancestors
+      direct_ancestor_uuids:
+        required_on_create: true # Only required for create via POST, not update via PUT
+        type: list
+        before_property_create_validators:
+          - validate_no_duplicates_in_list
+        before_property_update_validators:
+          - validate_no_duplicates_in_list
+        transient: true
+        exposed: false
+        description: "The uuids of source entities from which this new entity is derived.  Used to pass source entity ids in on POST or PUT calls used to create the linkages."
+        # Note: link_dataset_to_direct_ancestors() will always delete all the old linkages first
+        after_create_trigger: set_was_generated_by
+        after_update_trigger: set_was_generated_by
+      direct_ancestors:
+        type: list
+        description: "A list of direct parent ancensters (one level above) that the Dataset was derived from."
+        generated: true
+        transient: true
+        on_read_trigger: get_dataset_direct_ancestors
       published_timestamp:
         type: integer
         immutable: true
@@ -602,21 +602,21 @@ ENTITIES:
       organ_other:
         type: string
         description: The organ type provided by the user if "other" organ type is selected
-#      direct_ancestor_uuid:
-#        type: string
-#        required_on_create: true # Creating the sennet ids via uuid-api requires `parent_ids`
-#        transient: true
-#        exposed: false
-#        description: "The uuid of source entity from which this new entity is derived from. Used on creation or edit to create an action and relationship to the ancestor.  The direct ancestor must be a Source or Sample.  If the direct ancestor is a Source, the sample must be of type organ."
-#        # Note: link_sample_to_direct_ancestor() will always delete all the old linkages first
-#        after_create_trigger: link_sample_to_direct_ancestor
-#        after_update_trigger: link_sample_to_direct_ancestor
-#      direct_ancestor:
-#        type: json_string # dict
-#        generated: true
-#        transient: true
-#        on_read_trigger: get_sample_direct_ancestor
-#        description: "The entitiy directly above this sample in the provenance graph (direct parent)."
+      direct_ancestor_uuid:
+        type: string
+        required_on_create: true # Creating the sennet ids via uuid-api requires `parent_ids`
+        transient: true
+        exposed: false
+        description: "The uuid of source entity from which this new entity is derived from. Used on creation or edit to create an action and relationship to the ancestor.  The direct ancestor must be a Source or Sample.  If the direct ancestor is a Source, the sample must be of type organ."
+        # Note: link_sample_to_direct_ancestor() will always delete all the old linkages first
+        after_create_trigger: set_was_generated_by
+        after_update_trigger: set_was_generated_by
+      direct_ancestor:
+        type: json_string # dict
+        generated: true
+        transient: true
+        on_read_trigger: get_sample_direct_ancestor
+        description: "The entitiy directly above this sample in the provenance graph (direct parent)."
       lab_tissue_sample_id:
         type: string
         description: "Lab specific id for the sample."
