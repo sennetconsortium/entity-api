@@ -2,6 +2,8 @@
 src/instance/app.cfg
 *~
 
+.settings
+
 venv-entity-api
 
 .DS_Store
