@@ -856,7 +856,7 @@ def create_entity(entity_type):
 
     # Validate request json against the yaml schema
     try:
-        schema_manager.validate_json_data_against_schema(json_data_dict, normalized_entity_type)
+        schema_manager.validate_json_data_against_schema('ENTITIES', json_data_dict, normalized_entity_type)
     except schema_errors.SchemaValidationException as e:
         # No need to log the validation errors
         bad_request_error(str(e))
@@ -864,7 +864,7 @@ def create_entity(entity_type):
     # Execute property level validators defined in schema yaml before entity property creation
     # Use empty dict {} to indicate there's no existing_data_dict
     try:
-        schema_manager.execute_property_level_validators('before_property_create_validators', normalized_entity_type, request, {}, json_data_dict)
+        schema_manager.execute_property_level_validators('ENTITIES', 'before_property_create_validators', normalized_entity_type, request, {}, json_data_dict)
     # Currently only ValueError
     except ValueError as e:
         bad_request_error(e)
@@ -1014,7 +1014,7 @@ def create_multiple_samples(count):
 
     # Validate request json against the yaml schema
     try:
-        schema_manager.validate_json_data_against_schema(json_data_dict, normalized_entity_type)
+        schema_manager.validate_json_data_against_schema('ENTITIES', json_data_dict, normalized_entity_type)
     except schema_errors.SchemaValidationException as e:
         # No need to log the validation errors
         bad_request_error(str(e))
@@ -3634,7 +3634,7 @@ def create_entity_details(request, normalized_entity_type, user_token, json_data
     # and properties with None value
     # Meaning the returned target property key is different from the original key
     # in the trigger method, e.g., Source.image_files_to_add
-    filtered_merged_dict = schema_manager.remove_transient_and_none_values(merged_dict, normalized_entity_type)
+    filtered_merged_dict = schema_manager.remove_transient_and_none_values('ENTITIES', merged_dict, normalized_entity_type)
 
     # Create new entity
     try:
