@@ -19,7 +19,7 @@ UUID_API_URL = 'http://uuid-api:8080'
 
 # URL for talking to Ingest API
 # Works regardless of the trailing slash
-INGEST_API_URL = 'http://ingest-api.8080'
+INGEST_API_URL = 'http://ingest-api:8080'
 
 # URL for talking to Search API (default value used for docker deployment, no token needed)
 # Don't use localhost since search-api is running on a different container
