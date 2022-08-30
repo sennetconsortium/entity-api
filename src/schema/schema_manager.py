@@ -641,9 +641,15 @@ def validate_json_data_against_schema(provenance_type, json_data_dict, normalize
         # Check if keys in request json are immutable 
         immutable_keys = []
         for key in json_data_keys:
-            if ('immutable' in properties[key]) and properties[key]['immutable']:
-                if properties[key]:
-                    immutable_keys.append(key)
+            if normalized_entity_type == 'Sample' or normalized_entity_type == 'Dataset' or normalized_entity_type == 'Source':
+                if key != 'protocol_url':
+                    if ('immutable' in properties[key]) and properties[key]['immutable']:
+                        if properties[key]:
+                            immutable_keys.append(key)
+            else:
+                if ('immutable' in properties[key]) and properties[key]['immutable']:
+                    if properties[key]:
+                        immutable_keys.append(key)
 
         if len(immutable_keys) > 0:
             # No need to log the validation errors

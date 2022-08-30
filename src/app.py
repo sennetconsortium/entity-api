@@ -1145,7 +1145,7 @@ def update_entity(id):
 
     # Execute property level validators defined in schema yaml before entity property update
     try:
-        schema_manager.execute_property_level_validators('before_property_update_validators', normalized_entity_type, request, entity_dict, json_data_dict)
+        schema_manager.execute_property_level_validators('ENTITIES', 'before_property_update_validators', normalized_entity_type, request, entity_dict, json_data_dict)
     except (schema_errors.MissingApplicationHeaderException,
             schema_errors.InvalidApplicationHeaderException,
             KeyError,
@@ -2217,7 +2217,7 @@ def retract_dataset(id):
 
     # Execute property level validators defined in schema yaml before entity property update
     try:
-        schema_manager.execute_property_level_validators('before_property_update_validators', normalized_entity_type, request, entity_dict, json_data_dict)
+        schema_manager.execute_property_level_validators('ENTITIES', 'before_property_update_validators', normalized_entity_type, request, entity_dict, json_data_dict)
     except (schema_errors.MissingApplicationHeaderException,
             schema_errors.InvalidApplicationHeaderException,
             KeyError,
