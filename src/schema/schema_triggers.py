@@ -1204,12 +1204,13 @@ def set_was_attributed_to(property_key, normalized_type, user_token, existing_da
     if 'uuid' not in existing_data_dict:
         raise KeyError("Missing 'uuid' key in 'existing_data_dict' during calling 'set_was_attributed_to()' trigger method.")
 
-    if 'was_attributed_to' not in existing_data_dict:
-        raise KeyError("Missing 'was_attributed_to' key in 'existing_data_dict' during calling 'set_was_attributed_to()' trigger method.")
+    if 'group_uuid' not in existing_data_dict:
+        raise KeyError("Missing 'group_uuid' key in 'existing_data_dict' during calling 'set_was_attributed_to()' trigger method.")
 
     # Build a list of direct ancestor uuids
     # Only one uuid in the list in this case
-    direct_ancestor_uuids =  schema_manager.convert_str_to_data(existing_data_dict['was_attributed_to'])
+    direct_ancestor_uuids = [existing_data_dict['group_uuid']]
+    # direct_ancestor_uuids =  schema_manager.convert_str_to_data(existing_data_dict['was_attributed_to'])
 
     try:
         # Create a linkage
