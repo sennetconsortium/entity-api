@@ -1638,6 +1638,34 @@ def set_activity_creation_action(property_key, normalized_type, user_token, exis
     return property_key, f"Create {new_data_dict['normalized_entity_type']} Activity"
 
 
+"""
+Trigger event method of passing the protocol_url from the entity to the activity
+
+Parameters
+----------
+property_key : str
+    The target property key of the value to be generated
+normalized_type : str
+    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+user_token: str
+    The user's globus nexus token
+existing_data_dict : dict
+    A dictionary that contains all existing entity properties
+new_data_dict : dict
+    A merged dictionary that contains all possible input data to be used
+
+Returns
+-------
+str: The target property key
+str: The protocol_url string
+"""
+def set_activity_protocol_url(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    if 'protocol_url' not in new_data_dict:
+        raise KeyError("Missing 'protocol_url' key in 'existing_data_dict' during calling 'set_activity_creation_action()' trigger method.")
+
+    return property_key, new_data_dict['protocol_url']
+
+
 ####################################################################################################
 ## Internal functions
 ####################################################################################################
