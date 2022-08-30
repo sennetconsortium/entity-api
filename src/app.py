@@ -3403,7 +3403,7 @@ def user_in_sennet_read_group(request):
         # when the token in request is a groups token
         user_info = schema_manager.get_user_info(request)
         # TODO: Need to update these types of checks after SenNet gets its own auth
-        sennet_read_group_uuid = auth_helper_instance.groupNameToId('HuBMAP-READ')['uuid']
+        sennet_read_group_uuid = auth_helper_instance.get_default_read_group_uuid()
     except Exception as e:
         # Log the full stack trace, prepend a line with our message
         logger.exception(e)
