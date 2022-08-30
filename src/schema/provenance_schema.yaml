@@ -118,6 +118,8 @@ ACTIVITIES:
       protocol_url:
         type: string
         description: "The protocols.io doi url pointing the protocol describing the source selection, inclusion/exclusion criteria"
+        before_create_trigger: set_activity_protocol_url
+        before_update_trigger: set_activity_protocol_url
 #TODO: We will possibly create additional activity types with different attributes
 
 ####################################################################################################
@@ -155,7 +157,7 @@ doi_properties: &doi_properties
     type: list
     description: "A list of the people who created the entity with full name, email, ORCID iD, institution, etc.. This is analogus to the author list on a publication."
   contacts:
-    type: list 
+    type: list
     description: "A list of the people who are the main contacts to get information about the entity."
   # To-DO
   # creator_ids:
@@ -166,7 +168,7 @@ doi_properties: &doi_properties
   #   type: list
   #   description: "A list of ids (will need to decide on uuid or orcid id) referencing the people who are the main contacts about this entity"
 
-shared_entity_properties: &shared_entity_properties 
+shared_entity_properties: &shared_entity_properties
   ###### Last Modified Properties #######
   last_modified_timestamp:
     type: integer
@@ -284,7 +286,7 @@ ENTITIES:
         description: "True if the data contains any human genetic sequence information."
       status:
         type: string
-        before_property_update_validators: 
+        before_property_update_validators:
           - validate_application_header_before_property_update
           - validate_dataset_status_value
         generated: true
@@ -323,25 +325,25 @@ ENTITIES:
       contributors:
         type: list
         description: "A list of people who contributed to the creation of this dataset.  Returned as an array of contributor where the structure of a contributor is"
-#      direct_ancestor_uuids:
-#        required_on_create: true # Only required for create via POST, not update via PUT
-#        type: list
-#        before_property_create_validators:
-#          - validate_no_duplicates_in_list
-#        before_property_update_validators:
-#          - validate_no_duplicates_in_list
-#        transient: true
-#        exposed: false
-#        description: "The uuids of source entities from which this new entity is derived.  Used to pass source entity ids in on POST or PUT calls used to create the linkages."
-#        # Note: link_dataset_to_direct_ancestors() will always delete all the old linkages first
-#        after_create_trigger: link_dataset_to_direct_ancestors
-#        after_update_trigger: link_dataset_to_direct_ancestors
-#      direct_ancestors:
-#        type: list
-#        description: "A list of direct parent ancensters (one level above) that the Dataset was derived from."
-#        generated: true
-#        transient: true
-#        on_read_trigger: get_dataset_direct_ancestors
+      direct_ancestor_uuids:
+        required_on_create: true # Only required for create via POST, not update via PUT
+        type: list
+        before_property_create_validators:
+          - validate_no_duplicates_in_list
+        before_property_update_validators:
+          - validate_no_duplicates_in_list
+        transient: true
+        exposed: false
+        description: "The uuids of source entities from which this new entity is derived.  Used to pass source entity ids in on POST or PUT calls used to create the linkages."
+        # Note: link_dataset_to_direct_ancestors() will always delete all the old linkages first
+        after_create_trigger: set_was_generated_by
+        after_update_trigger: set_was_generated_by
+      direct_ancestors:
+        type: list
+        description: "A list of direct parent ancensters (one level above) that the Dataset was derived from."
+        generated: true
+        transient: true
+        on_read_trigger: get_dataset_direct_ancestors
       published_timestamp:
         type: integer
         immutable: true
@@ -417,7 +419,7 @@ ENTITIES:
         # which are potentially updated by multiple triggers
         updated_peripherally: true
       thumbnail_file_to_add:
-        type: json_string 
+        type: json_string
         transient: true
         exposed: false
         description: 'Just a temporary file id. Provide as a json object with an temp_file_id like {"temp_file_id":"dzevgd6xjs4d5grmcp4n"}'
@@ -429,7 +431,7 @@ ENTITIES:
         updated_peripherally: true
       thumbnail_file_to_remove:
         # This is only valid on update via a PUT request
-        type: string 
+        type: string
         transient: true
         exposed: false
         description: 'The thumbnail image file previously uploaded to delete. Provide as a string of the file_uuid like: "232934234234234234234270c0ea6c51d604a850558ef2247d0b4"'
@@ -476,7 +478,7 @@ ENTITIES:
         before_create_trigger: set_data_access_level
       image_files:
         # This property has no before_create_trigger method, but will be created via `image_files_to_add` and updated via `image_files_to_delete`
-        type: list 
+        type: list
         generated: true # Disallow direct user input from create via POST, but can be used for update via PUT
         description: "List of uploaded image files and descriptions of the files. Stored in db as a stringfied json array."
         # Only file descriptions are allowed to be updated directly using this property
@@ -486,7 +488,7 @@ ENTITIES:
         # which are potentially updated by multiple triggers
         updated_peripherally: true
       image_files_to_add:
-        type: list 
+        type: list
         transient: true
         exposed: false
         description: 'List of temporary file ids with an optional description. Provide as a json array with an temp_file_id and description attribute for each element like {"files": [{"temp_file_id":"dzevgd6xjs4d5grmcp4n","description":"This is image file one"},{"temp_file_id":"yrahjadfhadf","description":"This is image file two"}]}'
@@ -497,7 +499,7 @@ ENTITIES:
         updated_peripherally: true
       image_files_to_remove:
         # This is only valid on update via a PUT request
-        type: list 
+        type: list
         transient: true
         exposed: false
         description: 'List of image files previously uploaded to delete. Provide as a json array of the file_uuids of the file like: ["232934234234234234234270c0ea6c51d604a850558ef2247d0b4", "230948203482234234234a57bfe9c056d08a0f8e6cd612baa3bfa"]'
@@ -518,7 +520,7 @@ ENTITIES:
         description: "The uuid of globus group which the user who created this entity is a member of.  This is required on Create/POST if the user creating the Source is a member of more than one write group.  This property cannot be set via PUT (only on Create/POST)."
         before_create_trigger: set_group_uuid #method that, if group_uuid is not already set looks for membership in a single "data provider" group and sets to that. Otherwise if not set and no single "provider group" membership throws error.  This field is also used to link (Neo4j relationship) to the correct Lab node on creation.
         # Note: link_source_to_lab() will always delete all the old linkages first
-#        after_create_trigger: link_source_to_lab
+        after_create_trigger: set_was_attributed_to
       # Must set in neo4j
       group_name:
         type: string
@@ -528,7 +530,7 @@ ENTITIES:
         before_create_trigger: set_group_name
         #todo: map to provenance_group_name in ES - ? In the current version it's not mapped
       portal_metadata_upload_files:
-        type: json_string 
+        type: json_string
         description: "list of relative paths to metadata files"
         #todo: migrate to new attribute (set, maybe) representing a single uploaded sample_metadata.tsv file using the now file upload methods.  Leave this in place for now, but add new attribute(s) to support new methon.  Need to do a design session.
       next_identifier:
@@ -573,6 +575,7 @@ ENTITIES:
 #        immutable: true
         type: string
         description: 'The category of the sample (Block/Section/Suspension/Bodily Fluid/Organ/Organ Piece/Other)'
+        required_on_create: true
       portal_metadata_upload_files:
         type: json_string
         description: "A list of relative paths to metadata files"
@@ -601,21 +604,21 @@ ENTITIES:
       organ_other:
         type: string
         description: The organ type provided by the user if "other" organ type is selected
-#      direct_ancestor_uuid:
-#        type: string
-#        required_on_create: true # Creating the sennet ids via uuid-api requires `parent_ids`
-#        transient: true
-#        exposed: false
-#        description: "The uuid of source entity from which this new entity is derived from. Used on creation or edit to create an action and relationship to the ancestor.  The direct ancestor must be a Source or Sample.  If the direct ancestor is a Source, the sample must be of type organ."
-#        # Note: link_sample_to_direct_ancestor() will always delete all the old linkages first
-#        after_create_trigger: link_sample_to_direct_ancestor
-#        after_update_trigger: link_sample_to_direct_ancestor
-#      direct_ancestor:
-#        type: json_string # dict
-#        generated: true
-#        transient: true
-#        on_read_trigger: get_sample_direct_ancestor
-#        description: "The entitiy directly above this sample in the provenance graph (direct parent)."
+      direct_ancestor_uuid:
+        type: string
+        required_on_create: true # Creating the sennet ids via uuid-api requires `parent_ids`
+        transient: true
+        exposed: false
+        description: "The uuid of source entity from which this new entity is derived from. Used on creation or edit to create an action and relationship to the ancestor.  The direct ancestor must be a Source or Sample.  If the direct ancestor is a Source, the sample must be of type organ."
+        # Note: link_sample_to_direct_ancestor() will always delete all the old linkages first
+        after_create_trigger: set_was_generated_by
+        after_update_trigger: set_was_generated_by
+      direct_ancestor:
+        type: json_string # dict
+        generated: true
+        transient: true
+        on_read_trigger: get_sample_direct_ancestor
+        description: "The entitiy directly above this sample in the provenance graph (direct parent)."
       lab_tissue_sample_id:
         type: string
         description: "Lab specific id for the sample."
@@ -636,7 +639,7 @@ ENTITIES:
         description: "The visit id for the source/patient when the sample was obtained."
       image_files:
         # This property has no before_create_trigger method, but will be created via `image_files_to_add` and updated via `image_files_to_remove`
-        type: list 
+        type: list
         generated: true # Disallow direct user input from create via POST, but can be used for update via PUT
         description: "List of uploaded image files and descriptions of the files. Stored in db as a stringfied json array."
         # Only file descriptions are allowed to be updated directly using this property
@@ -646,7 +649,7 @@ ENTITIES:
         # which are potentially updated by multiple triggers
         updated_peripherally: true
       image_files_to_add:
-        type: list 
+        type: list
         transient: true
         exposed: false
         description: 'List of temporary file ids with an optional description. Provide as a json array with an temp_file_id and description attribute for each element like {"files": [{"temp_file_id":"dzevgd6xjs4d5grmcp4n","description":"This is image file one"},{"temp_file_id":"yrahjadfhadf","description":"This is image file two"}]}'
@@ -657,7 +660,7 @@ ENTITIES:
         updated_peripherally: true
       image_files_to_remove:
         # This is only valid on update via a PUT request
-        type: list 
+        type: list
         transient: true
         exposed: false
         description: 'List of image files previously uploaded to delete. Provide as a json array of the file_uuids of the file like: ["232934234234234234234270c0ea6c51d604a850558ef2247d0b4", "230948203482234234234a57bfe9c056d08a0f8e6cd612baa3bfa"]'
@@ -667,7 +670,7 @@ ENTITIES:
         updated_peripherally: true
       metadata_files:
         # This property has no before_create_trigger method, but will be created via `metadata_files_to_add` and updated via `metadata_files_to_remove`
-        type: list 
+        type: list
         generated: true # Disallow direct user input from create via POST, but can be used for update via PUT
         description: "List of uploaded image files and descriptions of the files. Stored in db as a stringfied json array."
         # Only file descriptions are allowed to be updated directly using this property
@@ -677,7 +680,7 @@ ENTITIES:
         # which are potentially updated by multiple triggers
         updated_peripherally: true
       metadata_files_to_add:
-        type: list 
+        type: list
         transient: true
         exposed: false
         description: 'List of temporary file ids with an optional description. Provide as a json array with an temp_file_id and description attribute for each element like {"files": [{"temp_file_id":"dzevgd6xjs4d5grmcp4n","description":"This is image file one"},{"temp_file_id":"yrahjadfhadf","description":"This is image file two"}]}'
@@ -688,7 +691,7 @@ ENTITIES:
         updated_peripherally: true
       metadata_files_to_remove:
         # This is only valid on update via a PUT request
-        type: list 
+        type: list
         transient: true
         exposed: false
         description: 'List of image files previously uploaded to delete. Provide as a json array of the file_uuids of the file like: ["232934234234234234234270c0ea6c51d604a850558ef2247d0b4", "230948203482234234234a57bfe9c056d08a0f8e6cd612baa3bfa"]'
@@ -746,7 +749,7 @@ ENTITIES:
         required_on_create: true
         description: "Title of the datasets, a sentance or less"
       status:
-        before_property_update_validators: 
+        before_property_update_validators:
           - validate_application_header_before_property_update
           - validate_upload_status_value
         type: string
@@ -774,7 +777,7 @@ ENTITIES:
       #transient attribute used to pass in a list of dataset ids to be linked to the Submisison node
       #datasets will be added only via PUT/update, NEVER on POST/create
       dataset_uuids_to_link:
-        type: list 
+        type: list
         before_property_update_validators:
           - validate_no_duplicates_in_list
         generated: true # Disallow user input from request json when being created
@@ -782,10 +785,10 @@ ENTITIES:
         exposed: false
         description: 'List of datasets to add to the Upload. Provide as a json array of the dataset uuids like: ["232934234234234234234270c0ea6c51d604a850558ef2247d0b4", "230948203482234234234a57bfe9c056d08a0f8e6cd612baa3bfa"]'
         # Use after_update_trigger instead of before_update_trigger since we are not updating this property
-        after_update_trigger: link_datasets_to_upload 
+        after_update_trigger: link_datasets_to_upload
       #transient attribute used to pass in a list of dataset ids of datasets to be removed from a DataSubmisison
       dataset_uuids_to_unlink:
-        type: list 
+        type: list
         before_property_update_validators:
           - validate_no_duplicates_in_list
         generated: true # Disallow user input from request json when being created
@@ -793,7 +796,7 @@ ENTITIES:
         exposed: false
         description: 'List of datasets to remove from a Upload. Provide as a json array of the dataset uuids like: ["232934234234234234234270c0ea6c51d604a850558ef2247d0b4", "230948203482234234234a57bfe9c056d08a0f8e6cd612baa3bfa"]'
         # Use after_update_trigger instead of before_update_trigger since we are not updating this property
-        after_update_trigger: unlink_datasets_from_upload 
+        after_update_trigger: unlink_datasets_from_upload
       datasets:
         type: list
         generated: true # Disallow user input from request json when being created

@@ -227,7 +227,7 @@ list
 def get_ancestor_organs(neo4j_driver, entity_uuid):
     results = []
 
-    query = (f"MATCH (e:Entity {{uuid:'{entity_uuid}'}})-[*]->(organ:Sample {{specimen_type:'organ'}}) "
+    query = (f"MATCH (e:Entity {{uuid:'{entity_uuid}'}})-[*]->(organ:Sample {{sample_category:'organ'}}) "
              # COLLECT() returns a list
              # apoc.coll.toSet() reruns a set containing unique nodes
              f"RETURN apoc.coll.toSet(COLLECT(organ)) AS {record_field_name}")
@@ -940,7 +940,7 @@ uuid : str
 """
 def get_associated_organs_from_dataset(neo4j_driver, dataset_uuid):
     results = []
-    query = (f"MATCH (ds:Dataset)-[*]->(organ:Sample {{specimen_type:'organ'}}) "
+    query = (f"MATCH (ds:Dataset)-[*]->(organ:Sample {{sample_category:'organ'}}) "
              f"WHERE ds.uuid='{dataset_uuid}'"
              f"RETURN apoc.coll.toSet(COLLECT(organ)) AS {record_field_name}")
 
@@ -1011,7 +1011,7 @@ def get_prov_info(neo4j_driver, param_dict, published_only):
              f" {rui_info_query_string}"
              f" {rui_info_where_clause}"
              f" WITH ds, FIRSTSAMPLE, DONOR, REVISIONS, METASAMPLE, collect(distinct ruiSample) as RUISAMPLE"
-             f" {organ_query_string} (donor)-[:ACTIVITY_INPUT]->(oa)-[:ACTIVITY_OUTPUT]->(organ:Sample {{specimen_type:'organ'}})-[*]->(ds)"
+             f" {organ_query_string} (donor)-[:ACTIVITY_INPUT]->(oa)-[:ACTIVITY_OUTPUT]->(organ:Sample {{sample_category:'organ'}})-[*]->(ds)"
              f" {organ_where_clause}"
              f" WITH ds, FIRSTSAMPLE, DONOR, REVISIONS, METASAMPLE, RUISAMPLE, COLLECT(DISTINCT organ) AS ORGAN "
              f" OPTIONAL MATCH (ds)-[:ACTIVITY_INPUT]->(a3)-[:ACTIVITY_OUTPUT]->(processed_dataset:Dataset)"
@@ -1109,7 +1109,7 @@ def get_individual_prov_info(neo4j_driver, dataset_uuid):
              f" OPTIONAL MATCH (ds)<-[*]-(ruiSample:Sample)"
              f" WHERE NOT ruiSample.rui_location IS NULL AND NOT TRIM(ruiSample.rui_location) = ''"
              f" WITH ds, FIRSTSAMPLE, DONOR, METASAMPLE, COLLECT(distinct ruiSample) AS RUISAMPLE"
-             f" OPTIONAL match (donor)-[:ACTIVITY_INPUT]->(oa)-[:ACTIVITY_OUTPUT]->(organ:Sample {{specimen_type:'organ'}})-[*]->(ds)"
+             f" OPTIONAL match (donor)-[:ACTIVITY_INPUT]->(oa)-[:ACTIVITY_OUTPUT]->(organ:Sample {{sample_category:'organ'}})-[*]->(ds)"
              f" WITH ds, FIRSTSAMPLE, DONOR, METASAMPLE, RUISAMPLE, COLLECT(distinct organ) AS ORGAN "
              f" OPTIONAL MATCH (ds)-[:ACTIVITY_INPUT]->(a3)-[:ACTIVITY_OUTPUT]->(processed_dataset:Dataset)"
              f" WITH ds, FIRSTSAMPLE, DONOR, METASAMPLE, RUISAMPLE, ORGAN, COLLECT(distinct processed_dataset) AS PROCESSED_DATASET"
@@ -1178,7 +1178,7 @@ def get_individual_prov_info(neo4j_driver, dataset_uuid):
 
 """
 Returns group_name, data_types, and status for every primary dataset. Also returns the organ type for the closest 
-sample above the dataset in the provenance where {specimen_type: 'organ'}.  
+sample above the dataset in the provenance where {sample_category: 'organ'}.  
 
 Parameters
 ----------
@@ -1188,7 +1188,7 @@ neo4j_driver : neo4j.Driver object
 # TODO: This function has not been tested to work with SenNet provenance
 def get_sankey_info(neo4j_driver):
     query = (f"MATCH (ds:Dataset)<-[]-(a)<-[]-(:Sample)"
-             f"MATCH (donor)-[:ACTIVITY_INPUT]->(oa)-[:ACTIVITY_OUTPUT]->(organ:Sample {{specimen_type:'organ'}})-[*]->(ds)"
+             f"MATCH (donor)-[:ACTIVITY_INPUT]->(oa)-[:ACTIVITY_OUTPUT]->(organ:Sample {{sample_category:'organ'}})-[*]->(ds)"
              f"RETURN distinct ds.group_name, organ.organ, ds.data_types, ds.status, ds. uuid order by ds.group_name")
     logger.info("======get_sankey_info() query======")
     logger.info(query)
@@ -1240,12 +1240,12 @@ def get_sample_prov_info(neo4j_driver, param_dict):
         f" MATCH (s:Sample)<-[*]-(d:Donor)"
         f" {group_uuid_query_string}"
         f" WITH s, d"
-        f" OPTIONAL MATCH (s)<-[*]-(organ:Sample{{specimen_type: 'organ'}})"
+        f" OPTIONAL MATCH (s)<-[*]-(organ:Sample{{sample_category: 'organ'}})"
         f" WITH s, organ, d"
         f" MATCH (s)<-[]-()<-[]-(da)"
         f" RETURN s.uuid, s.lab_tissue_sample_id, s.group_name, s.created_by_user_email, s.metadata, s.rui_location,"
-        f" d.uuid, d.metadata, organ.uuid, organ.specimen_type, organ.metadata, da.uuid, da.entity_type, "
-        f"s.specimen_type, organ.organ, s.organ, s.hubmap_id, s.submission_id, organ.hubmap_id, organ.submission_id, "
+        f" d.uuid, d.metadata, organ.uuid, organ.sample_category, organ.metadata, da.uuid, da.entity_type, "
+        f"s.sample_category, organ.organ, s.organ, s.hubmap_id, s.submission_id, organ.hubmap_id, organ.submission_id, "
         f"d.hubmap_id, d.submission_id"
     )
 
@@ -1276,7 +1276,7 @@ def get_sample_prov_info(neo4j_driver, param_dict):
             record_dict['organ_metadata'] = record_contents[10]
             record_dict['sample_ancestor_id'] = record_contents[11]
             record_dict['sample_ancestor_entity'] = record_contents[12]
-            record_dict['sample_specimen_type'] = record_contents[13]
+            record_dict['sample_sample_category'] = record_contents[13]
             record_dict['organ_organ_type'] = record_contents[14]
             record_dict['sample_organ'] = record_contents[15]
             record_dict['sample_hubmap_id'] = record_contents[16]

@@ -296,7 +296,8 @@ def generate_triggered_data(trigger_type, normalized_class, user_token, existing
                         trigger_generated_data_dict = trigger_method_to_call(key, normalized_class, user_token, existing_data_dict, new_data_dict, trigger_generated_data_dict)
                     else:  
                         target_key, target_value = trigger_method_to_call(key, normalized_class, user_token, existing_data_dict, new_data_dict)
-                        trigger_generated_data_dict[target_key] = target_value
+                        if target_value is not None:
+                            trigger_generated_data_dict[target_key] = target_value
 
                         # Meanwhile, set the original property as None if target_key is different
                         # This is especially important when the returned target_key is different from the original key
@@ -392,7 +393,7 @@ def remove_transient_and_none_values(provenance_type, merged_dict, normalized_en
     for k, v in merged_dict.items():
         # Only keep the properties that don't have `transitent` flag or are marked as `transitent: false`
         # and at the same time the property value is not None
-        if normalized_entity_type == 'Sample' or normalized_entity_type == 'Dataset' or normalized_entity_type == 'Source':
+        if normalized_entity_type == 'Sample' or normalized_entity_type == 'Source':
             if k != 'protocol_url':
                 if (('transient' not in properties[k]) or ('transient' in properties[k] and not properties[k]['transient'])) and (v is not None):
                     filtered_dict[k] = v
@@ -607,7 +608,7 @@ def validate_json_data_against_schema(provenance_type, json_data_dict, normalize
     unsupported_keys = []
     for key in json_data_keys:
         if key not in schema_keys:
-            if normalized_entity_type == 'Sample' or normalized_entity_type == 'Dataset' or normalized_entity_type == 'Source':
+            if normalized_entity_type == 'Sample' or normalized_entity_type == 'Source':
                 if key != 'protocol_url':
                     unsupported_keys.append(key)
             else:
@@ -622,7 +623,7 @@ def validate_json_data_against_schema(provenance_type, json_data_dict, normalize
     generated_keys = []
     if not existing_entity_dict:
         for key in json_data_keys:
-            if normalized_entity_type == 'Sample' or normalized_entity_type == 'Dataset' or normalized_entity_type == 'Source':
+            if normalized_entity_type == 'Sample' or normalized_entity_type == 'Source':
                 if key != 'protocol_url':
                     if ('generated' in properties[key]) and properties[key]['generated']:
                         if properties[key]:
@@ -641,9 +642,15 @@ def validate_json_data_against_schema(provenance_type, json_data_dict, normalize
         # Check if keys in request json are immutable 
         immutable_keys = []
         for key in json_data_keys:
-            if ('immutable' in properties[key]) and properties[key]['immutable']:
-                if properties[key]:
-                    immutable_keys.append(key)
+            if normalized_entity_type == 'Sample' or normalized_entity_type == 'Source':
+                if key != 'protocol_url':
+                    if ('immutable' in properties[key]) and properties[key]['immutable']:
+                        if properties[key]:
+                            immutable_keys.append(key)
+            else:
+                if ('immutable' in properties[key]) and properties[key]['immutable']:
+                    if properties[key]:
+                        immutable_keys.append(key)
 
         if len(immutable_keys) > 0:
             # No need to log the validation errors
@@ -677,7 +684,7 @@ def validate_json_data_against_schema(provenance_type, json_data_dict, normalize
     # Verify data type of each key
     invalid_data_type_keys = []
     for key in json_data_keys:
-        if normalized_entity_type == 'Sample' or normalized_entity_type == 'Dataset' or normalized_entity_type == 'Source':
+        if normalized_entity_type == 'Sample' or normalized_entity_type == 'Source':
             if key != 'protocol_url':
                 # boolean starts with bool, string starts with str, integer starts with int, list is list
                 if (properties[key]['type'] in ['string', 'integer', 'list', 'boolean']) and (not properties[key]['type'].startswith(type(json_data_dict[key]).__name__)):
@@ -1101,7 +1108,7 @@ dict
 def get_sennet_ids(id):
     global _uuid_api_url
 
-    target_url = _uuid_api_url + '/' + id
+    target_url = _uuid_api_url + '/uuid/' + id
 
     # Function cache to improve performance
     response = make_request_get(target_url, internal_token_used = True)
@@ -1241,18 +1248,18 @@ def create_sennet_ids(normalized_class, json_data_dict, user_token, user_info_di
             # Add the parent_id to the request json
             json_to_post['parent_ids'] = [parent_id]
         elif normalized_class == 'Sample':
-            # 'Sample.was_generated_by' is marked as `required_on_create` in the schema yaml
-            # The application-specific code should have already validated the 'was_generated_by'
-            parent_id = json_data_dict['was_generated_by'][0]
+            # 'Sample.direct_ancestor_uuid' is marked as `required_on_create` in the schema yaml
+            # The application-specific code should have already validated the 'direct_ancestor_uuid'
+            parent_id = json_data_dict['direct_ancestor_uuid']
             json_to_post['parent_ids'] = [parent_id]
 
-            # 'Sample.specimen_type' is marked as `required_on_create` in the schema yaml
-            if json_data_dict['specimen_type'].lower() == 'organ':
+            # 'Sample.sample_category' is marked as `required_on_create` in the schema yaml
+            if json_data_dict['sample_category'].lower() == 'organ':
                 # The 'organ' field containing the organ code is required in this case
                 json_to_post['organ_code'] = json_data_dict['organ']
         else:
             # `Dataset.direct_ancestor_uuids` is `required_on_create` in yaml
-            json_to_post['parent_ids'] = json_data_dict['was_generated_by']
+            json_to_post['parent_ids'] = json_data_dict['direct_ancestor_uuids']
 
     request_headers = _create_request_headers(user_token)
 
@@ -1261,8 +1268,9 @@ def create_sennet_ids(normalized_class, json_data_dict, user_token, user_info_di
     logger.info("======create_sennet_ids() json_to_post to uuid-api======")
     logger.info(json_to_post)
 
+    uuid_url = _uuid_api_url + "/uuid"
     # Disable ssl certificate verification
-    response = requests.post(url = _uuid_api_url, headers = request_headers, json = json_to_post, verify = False, params = query_parms) 
+    response = requests.post(url = uuid_url, headers = request_headers, json = json_to_post, verify = False, params = query_parms)
     
     # Invoke .raise_for_status(), an HTTPError will be raised with certain status codes
     response.raise_for_status()
@@ -1273,27 +1281,18 @@ def create_sennet_ids(normalized_class, json_data_dict, user_token, user_info_di
         """
         [{
             "uuid": "3bcc20f4f9ba19ed837136d19f530fbe",
-            "sennet_base_id": "965PRGB226",
+            "base_id": "965PRGB226",
             "sennet_id": "SN965.PRGB.226"
         }]
         """
 
-        # For Donor/Sample, submission_id will be added:
-        """
-        [{
-            "uuid": "c0276b5937ba8e0d7d1185020bade18f",
-            "hubmap_base_id": "535RWXB646",
-            "hubmap_id": "HBM535.RWXB.646",
-            "submission_id": "TTDCT0001"
-        }]
-        """
         ids_list = response.json()
 
-        # Remove the "sennet_base_id" key from each dict in the list
+        # Remove the "base_id" key from each dict in the list
         for d in ids_list:
             # Return None when the key is not in the dict
             # Will get keyError exception without the default value when the key is not found
-            d.pop('sennet_base_id')
+            d.pop('base_id')
 
         logger.info("======create_sennet_ids() generated ids from uuid-api======")
         logger.info(ids_list)
@@ -1386,7 +1385,7 @@ user_group_uuids: list
 """
 def validate_entity_group_uuid(group_uuid, user_group_uuids = None):
     global _auth_helper
-    
+
     # Get the globus groups info based on the groups json file in commons package
     globus_groups_info = _auth_helper.get_globus_groups_info()
     groups_by_id_dict = globus_groups_info['by_id']
@@ -1423,7 +1422,7 @@ str
 """
 def get_entity_group_name(group_uuid):
     global _auth_helper
-    
+
     # Get the globus groups info based on the groups json file in commons package
     globus_groups_info = _auth_helper.get_globus_groups_info()
     groups_by_id_dict = globus_groups_info['by_id']

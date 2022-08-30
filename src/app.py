@@ -310,7 +310,7 @@ def get_ancestor_organs(id):
     if normalized_entity_type not in supported_entity_types:
         bad_request_error(f"Unable to get the ancestor organs for this: {normalized_entity_type}, supported entity types: {COMMA_SEPARATOR.join(supported_entity_types)}")
 
-    if normalized_entity_type == 'Sample' and entity_dict['specimen_type'].lower() == 'organ':
+    if normalized_entity_type == 'Sample' and entity_dict['sample_category'].lower() == 'organ':
         bad_request_error("Unable to get the ancestor organ of an organ.")
 
     if normalized_entity_type == 'Dataset':
@@ -634,7 +634,7 @@ def get_entities_by_type(entity_type):
         entities_list = app_neo4j_queries.get_entities_by_type(neo4j_driver_instance, normalized_entity_type)
 
         # We'll return all the properties but skip these time-consuming ones
-        # Donor doesn't need to skip any
+        # Source doesn't need to skip any
         # Collection is not handled by this call
         properties_to_skip = [
             # Properties to skip for Sample
@@ -856,7 +856,7 @@ def create_entity(entity_type):
 
     # Validate request json against the yaml schema
     try:
-        schema_manager.validate_json_data_against_schema(json_data_dict, normalized_entity_type)
+        schema_manager.validate_json_data_against_schema('ENTITIES', json_data_dict, normalized_entity_type)
     except schema_errors.SchemaValidationException as e:
         # No need to log the validation errors
         bad_request_error(str(e))
@@ -864,7 +864,7 @@ def create_entity(entity_type):
     # Execute property level validators defined in schema yaml before entity property creation
     # Use empty dict {} to indicate there's no existing_data_dict
     try:
-        schema_manager.execute_property_level_validators('before_property_create_validators', normalized_entity_type, request, {}, json_data_dict)
+        schema_manager.execute_property_level_validators('ENTITIES', 'before_property_create_validators', normalized_entity_type, request, {}, json_data_dict)
     # Currently only ValueError
     except ValueError as e:
         bad_request_error(e)
@@ -872,40 +872,27 @@ def create_entity(entity_type):
     # Sample and Dataset: additional validation, create entity, after_create_trigger
     # Collection and Source: create entity
     if normalized_entity_type == 'Sample':
-        # A bit more validation to ensure if `organ` code is set, the `specimen_type` must be set to "organ"
-        # Vise versa, if `specimen_type` is set to "organ", `organ` code is required
-        if ('specimen_type' in json_data_dict) and (json_data_dict['specimen_type'].lower() == 'organ'):
+        # A bit more validation to ensure if `organ` code is set, the `sample_category` must be set to "organ"
+        # Vise versa, if `sample_category` is set to "organ", `organ` code is required
+        if ('sample_category' in json_data_dict) and (json_data_dict['sample_category'].lower() == 'organ'):
             if ('organ' not in json_data_dict) or (json_data_dict['organ'].strip() == ''):
-                bad_request_error("A valid organ code is required when the specimen_type is organ")
+                bad_request_error("A valid organ code is required when the sample_category is organ")
         else:
             if 'organ' in json_data_dict:
-                bad_request_error("The specimen_type must be organ when an organ code is provided")
+                bad_request_error("The sample_category must be organ when an organ code is provided")
 
         # A bit more validation for new sample to be linked to existing source entity
-        was_generated_by = json_data_dict['was_generated_by']
+        direct_ancestor_uuid = json_data_dict['direct_ancestor_uuid']
         # Check existence of the direct ancestor (either another Sample or Source)
-        for was_generated_by in json_data_dict['was_generated_by']:
-            was_generated_by_dict = query_target_entity(was_generated_by, user_token)
-
-        # Creating the ids require organ code to be specified for the samples to be created when the
-        # sample's direct ancestor is a Source.
-        # Must be one of the codes from: https://github.com/hubmapconsortium/search-api/blob/test-release/src/search-schema/data/definitions/enums/organ_types.yaml
-        if was_generated_by_dict['entity_type'] == 'Donor':
-            # `specimen_type` is required on create
-            if json_data_dict['specimen_type'].lower() != 'organ':
-                bad_request_error("The specimen_type must be organ since the direct ancestor is a Source")
-
-            # Currently we don't validate the provided organ code though
-            if ('organ' not in json_data_dict) or (json_data_dict['organ'].strip() == ''):
-                bad_request_error("A valid organ code is required when the direct ancestor is a Source")
+        direct_ancestor_dict = query_target_entity(direct_ancestor_uuid, user_token)
 
         # Generate 'before_create_triiger' data and create the entity details in Neo4j
         merged_dict = create_entity_details(request, normalized_entity_type, user_token, json_data_dict)
     elif normalized_entity_type == 'Dataset':
-        # `was_generated_by` is required for creating new Dataset
+        # `direct_ancestor_uuids` is required for creating new Dataset
         # Check existence of those direct ancestors
-        for was_generated_by in json_data_dict['was_generated_by']:
-            was_generated_by_dict = query_target_entity(was_generated_by, user_token)
+        for direct_ancestor_uuid in json_data_dict['direct_ancestor_uuids']:
+            direct_ancestor_dict = query_target_entity(direct_ancestor_uuid, user_token)
 
         # Also check existence of the previous revision dataset if specified
         if 'previous_revision_uuid' in json_data_dict:
@@ -919,7 +906,7 @@ def create_entity(entity_type):
             # an exisiting next revision
             # Only return a list of the uuids, no need to get back the list of dicts
             next_revisions_list = app_neo4j_queries.get_next_revisions(neo4j_driver_instance, previous_version_dict['uuid'], 'uuid')
-            
+
             # As long as the list is not empty, tell the users to use a different 'previous_revision_uuid'
             if next_revisions_list:
                 bad_request_error(f"The previous_revision_uuid specified for this dataset has already had a next revision")
@@ -934,7 +921,7 @@ def create_entity(entity_type):
     else:
         # Generate 'before_create_triiger' data and create the entity details in Neo4j
         merged_dict = create_entity_details(request, normalized_entity_type, user_token, json_data_dict)
-    
+
     # For Source: link to parent Lab node
     # For Sample: link to existing direct ancestor
     # For Dataset: link to direct ancestors
@@ -942,7 +929,7 @@ def create_entity(entity_type):
     after_create(normalized_entity_type, user_token, merged_dict)
 
     # By default we'll return all the properties but skip these time-consuming ones
-    # Donor doesn't need to skip any
+    # Source doesn't need to skip any
     properties_to_skip = []
 
     if normalized_entity_type == 'Sample':
@@ -1014,26 +1001,15 @@ def create_multiple_samples(count):
 
     # Validate request json against the yaml schema
     try:
-        schema_manager.validate_json_data_against_schema(json_data_dict, normalized_entity_type)
+        schema_manager.validate_json_data_against_schema('ENTITIES', json_data_dict, normalized_entity_type)
     except schema_errors.SchemaValidationException as e:
         # No need to log the validation errors
         bad_request_error(str(e))
 
-    # `was_generated_by` is required on create
-    # Check existence of the direct ancestor (either another Sample or Source) and get the first 'was_generated_by'
-    was_generated_by_dict = query_target_entity(json_data_dict['was_generated_by'][0], user_token)
+    # `direct_ancestor_uuid` is required on create
+    # Check existence of the direct ancestor (either another Sample or Source) and get the first 'direct_ancestor_uuid'
+    direct_ancestor_uuid_dict = query_target_entity(json_data_dict['direct_ancestor_uuid'][0], user_token)
 
-    # Creating the ids require organ code to be specified for the samples to be created when the 
-    # sample's direct ancestor is a Source.
-    # Must be one of the codes from: https://github.com/sennetconsortium/search-api/blob/test-release/src/search-schema/data/definitions/enums/organ_types.yaml
-    if was_generated_by_dict['entity_type'] == 'Source':
-        # `specimen_type` is required on create
-        if json_data_dict['specimen_type'].lower() != 'organ':
-            bad_request_error("The specimen_type must be organ since the direct ancestor is a Source")
-
-        # Currently we don't validate the provided organ code though
-        if ('organ' not in json_data_dict) or (not json_data_dict['organ']):
-            bad_request_error("A valid organ code is required since the direct ancestor is a Source")
 
     # Generate 'before_create_triiger' data and create the entity details in Neo4j
     generated_ids_dict_list = create_multiple_samples_details(request, normalized_entity_type, user_token, json_data_dict, count)
@@ -1162,14 +1138,14 @@ def update_entity(id):
     # Validate request json against the yaml schema
     # Pass in the entity_dict for missing required key check, this is different from creating new entity
     try:
-        schema_manager.validate_json_data_against_schema(json_data_dict, normalized_entity_type, existing_entity_dict = entity_dict)
+        schema_manager.validate_json_data_against_schema('ENTITIES', json_data_dict, normalized_entity_type, existing_entity_dict = entity_dict)
     except schema_errors.SchemaValidationException as e:
         # No need to log the validation errors
         bad_request_error(str(e))
 
     # Execute property level validators defined in schema yaml before entity property update
     try:
-        schema_manager.execute_property_level_validators('before_property_update_validators', normalized_entity_type, request, entity_dict, json_data_dict)
+        schema_manager.execute_property_level_validators('ENTITIES', 'before_property_update_validators', normalized_entity_type, request, entity_dict, json_data_dict)
     except (schema_errors.MissingApplicationHeaderException,
             schema_errors.InvalidApplicationHeaderException,
             KeyError,
@@ -1180,38 +1156,38 @@ def update_entity(id):
     # Collection and Source: update entity
     if normalized_entity_type == 'Sample':
         # A bit more validation for updating the sample and the linkage to existing source entity
-        has_was_generated_by = False
-        if ('was_generated_by' in json_data_dict) and json_data_dict['was_generated_by']:
-            has_was_generated_by = True
+        has_direct_ancestor_uuid = False
+        if ('direct_ancestor_uuid' in json_data_dict) and json_data_dict['direct_ancestor_uuid']:
+            has_direct_ancestor_uuid = True
 
-            was_generated_by = json_data_dict['was_generated_by']
+            direct_ancestor_uuid = json_data_dict['direct_ancestor_uuid']
             # Check existence of the source entity
-            was_generated_by_dict = query_target_entity(was_generated_by, user_token)
+            direct_ancestor_uuid_dict = query_target_entity(direct_ancestor_uuid, user_token)
             # Also make sure it's either another Sample or a Source
-            if was_generated_by_dict['entity_type'] not in ['Source', 'Sample']:
-                bad_request_error(f"The uuid: {was_generated_by} is not a Source neither a Sample, cannot be used as the direct ancestor of this Sample")
+            if direct_ancestor_uuid_dict['entity_type'] not in ['Source', 'Sample']:
+                bad_request_error(f"The uuid: {direct_ancestor_uuid} is not a Source neither a Sample, cannot be used as the direct ancestor of this Sample")
 
         # Generate 'before_update_triiger' data and update the entity details in Neo4j
         merged_updated_dict = update_object_details('ENTITIES', request, normalized_entity_type, user_token, json_data_dict, entity_dict)
 
         # Handle linkages update via `after_update_trigger` methods 
-        if has_was_generated_by:
+        if has_direct_ancestor_uuid:
             after_update(normalized_entity_type, user_token, merged_updated_dict)
-    elif normalized_entity_type == 'Dataset':    
-        # A bit more validation if `was_generated_by` provided
-        has_was_generated_by = False
-        if ('was_generated_by' in json_data_dict) and (json_data_dict['was_generated_by']):
-            has_was_generated_by = True
+    elif normalized_entity_type == 'Dataset':
+        # A bit more validation if `direct_ancestor_uuids` provided
+        has_direct_ancestor_uuids = False
+        if ('direct_ancestor_uuids' in json_data_dict) and (json_data_dict['direct_ancestor_uuids']):
+            has_direct_ancestor_uuids = True
 
             # Check existence of those source entities
-            for was_generated_by in json_data_dict['was_generated_by']:
-                was_generated_by_dict = query_target_entity(was_generated_by, user_token)
-        
+            for direct_ancestor_uuids in json_data_dict['direct_ancestor_uuids']:
+                direct_ancestor_uuids_dict = query_target_entity(direct_ancestor_uuids, user_token)
+
         # Generate 'before_update_trigger' data and update the entity details in Neo4j
         merged_updated_dict = update_object_details('ENTITIES', request, normalized_entity_type, user_token, json_data_dict, entity_dict)
 
         # Handle linkages update via `after_update_trigger` methods 
-        if has_was_generated_by:
+        if has_direct_ancestor_uuids:
             after_update(normalized_entity_type, user_token, merged_updated_dict)
     elif normalized_entity_type == 'Upload':
         has_dataset_uuids_to_link = False
@@ -1250,7 +1226,7 @@ def update_entity(id):
         merged_updated_dict = update_object_details('ENTITIES', request, normalized_entity_type, user_token, json_data_dict, entity_dict)
 
     # By default we'll return all the properties but skip these time-consuming ones
-    # Donor doesn't need to skip any
+    # Source doesn't need to skip any
     properties_to_skip = []
 
     if normalized_entity_type == 'Sample':
@@ -1907,7 +1883,7 @@ snid : str
 #         return resp
 #     else:
 #         return Response(f"{snid} not found.", 404)
-    
+
 """
 Get the Globus URL to the given Dataset or Upload
 
@@ -2234,14 +2210,14 @@ def retract_dataset(id):
     # Validate request json against the yaml schema
     # The given value of `sub_status` is being validated at this step
     try:
-        schema_manager.validate_json_data_against_schema(json_data_dict, normalized_entity_type, existing_entity_dict = entity_dict)
+        schema_manager.validate_json_data_against_schema('ENTITIES', json_data_dict, normalized_entity_type, existing_entity_dict = entity_dict)
     except schema_errors.SchemaValidationException as e:
         # No need to log the validation errors
         bad_request_error(str(e))
 
     # Execute property level validators defined in schema yaml before entity property update
     try:
-        schema_manager.execute_property_level_validators('before_property_update_validators', normalized_entity_type, request, entity_dict, json_data_dict)
+        schema_manager.execute_property_level_validators('ENTITIES', 'before_property_update_validators', normalized_entity_type, request, entity_dict, json_data_dict)
     except (schema_errors.MissingApplicationHeaderException,
             schema_errors.InvalidApplicationHeaderException,
             KeyError,
@@ -2444,6 +2420,7 @@ json
 tsv
     a text file of tab separated values where each row is a dataset and the columns include all its prov info
 """
+# TODO: This endpoint will not function properly in its current state
 @app.route('/datasets/prov-info', methods=['GET'])
 def get_prov_info():
     # String constants
@@ -2468,10 +2445,10 @@ def get_prov_info():
     HEADER_ORGAN_SUBMISSION_ID = 'organ_submission_id'
     HEADER_ORGAN_UUID = 'organ_uuid'
     HEADER_ORGAN_TYPE = 'organ_type'
-    HEADER_DONOR_HUBMAP_ID = 'donor_hubmap_id'
-    HEADER_DONOR_SUBMISSION_ID = 'donor_submission_id'
-    HEADER_DONOR_UUID = 'donor_uuid'
-    HEADER_DONOR_GROUP_NAME = 'donor_group_name'
+    HEADER_SOURCE_HUBMAP_ID = 'source_hubmap_id'
+    HEADER_SOURCE_SUBMISSION_ID = 'source_submission_id'
+    HEADER_SOURCE_UUID = 'source_uuid'
+    HEADER_SOURCE_GROUP_NAME = 'source_group_name'
     HEADER_RUI_LOCATION_HUBMAP_ID = 'rui_location_hubmap_id'
     HEADER_RUI_LOCATION_SUBMISSION_ID = 'rui_location_submission_id'
     HEADER_RUI_LOCATION_UUID = 'rui_location_uuid'
@@ -2493,8 +2470,8 @@ def get_prov_info():
         HEADER_DATASET_DATA_TYPES, HEADER_DATASET_PORTAL_URL, HEADER_FIRST_SAMPLE_HUBMAP_ID,
         HEADER_FIRST_SAMPLE_SUBMISSION_ID, HEADER_FIRST_SAMPLE_UUID, HEADER_FIRST_SAMPLE_TYPE,
         HEADER_FIRST_SAMPLE_PORTAL_URL, HEADER_ORGAN_HUBMAP_ID, HEADER_ORGAN_SUBMISSION_ID, HEADER_ORGAN_UUID,
-        HEADER_ORGAN_TYPE, HEADER_DONOR_HUBMAP_ID, HEADER_DONOR_SUBMISSION_ID, HEADER_DONOR_UUID,
-        HEADER_DONOR_GROUP_NAME, HEADER_RUI_LOCATION_HUBMAP_ID, HEADER_RUI_LOCATION_SUBMISSION_ID,
+        HEADER_ORGAN_TYPE, HEADER_SOURCE_HUBMAP_ID, HEADER_SOURCE_SUBMISSION_ID, HEADER_SOURCE_UUID,
+        HEADER_SOURCE_GROUP_NAME, HEADER_RUI_LOCATION_HUBMAP_ID, HEADER_RUI_LOCATION_SUBMISSION_ID,
         HEADER_RUI_LOCATION_UUID, HEADER_SAMPLE_METADATA_HUBMAP_ID, HEADER_SAMPLE_METADATA_SUBMISSION_ID,
         HEADER_SAMPLE_METADATA_UUID, HEADER_PROCESSED_DATASET_UUID, HEADER_PROCESSED_DATASET_HUBMAP_ID,
         HEADER_PROCESSED_DATASET_STATUS, HEADER_PROCESSED_DATASET_PORTAL_URL, HEADER_PREVIOUS_VERSION_HUBMAP_IDS
@@ -2666,26 +2643,26 @@ def get_prov_info():
                 internal_dict[HEADER_ORGAN_UUID] = ",".join(distinct_organ_uuid_list)
                 internal_dict[HEADER_ORGAN_TYPE] = ",".join(distinct_organ_type_list)
 
-        # distinct_donor properties are retrieved from its own dictionary
-        if dataset['distinct_donor'] is not None:
-            distinct_donor_hubmap_id_list = []
-            distinct_donor_submission_id_list = []
-            distinct_donor_uuid_list = []
-            distinct_donor_group_name_list = []
-            for item in dataset['distinct_donor']:
-                distinct_donor_hubmap_id_list.append(item['hubmap_id'])
-                distinct_donor_submission_id_list.append(item['submission_id'])
-                distinct_donor_uuid_list.append(item['uuid'])
-                distinct_donor_group_name_list.append(item['group_name'])
-            internal_dict[HEADER_DONOR_HUBMAP_ID] = distinct_donor_hubmap_id_list
-            internal_dict[HEADER_DONOR_SUBMISSION_ID] = distinct_donor_submission_id_list
-            internal_dict[HEADER_DONOR_UUID] = distinct_donor_uuid_list
-            internal_dict[HEADER_DONOR_GROUP_NAME] = distinct_donor_group_name_list
+        # distinct_source properties are retrieved from its own dictionary
+        if dataset['distinct_source'] is not None:
+            distinct_source_hubmap_id_list = []
+            distinct_source_submission_id_list = []
+            distinct_source_uuid_list = []
+            distinct_source_group_name_list = []
+            for item in dataset['distinct_source']:
+                distinct_source_hubmap_id_list.append(item['hubmap_id'])
+                distinct_source_submission_id_list.append(item['submission_id'])
+                distinct_source_uuid_list.append(item['uuid'])
+                distinct_source_group_name_list.append(item['group_name'])
+            internal_dict[HEADER_SOURCE_HUBMAP_ID] = distinct_source_hubmap_id_list
+            internal_dict[HEADER_SOURCE_SUBMISSION_ID] = distinct_source_submission_id_list
+            internal_dict[HEADER_SOURCE_UUID] = distinct_source_uuid_list
+            internal_dict[HEADER_SOURCE_GROUP_NAME] = distinct_source_group_name_list
             if return_json is False:
-                internal_dict[HEADER_DONOR_HUBMAP_ID] = ",".join(distinct_donor_hubmap_id_list)
-                internal_dict[HEADER_DONOR_SUBMISSION_ID] = ",".join(distinct_donor_submission_id_list)
-                internal_dict[HEADER_DONOR_UUID] = ",".join(distinct_donor_uuid_list)
-                internal_dict[HEADER_DONOR_GROUP_NAME] = ",".join(distinct_donor_group_name_list)
+                internal_dict[HEADER_SOURCE_HUBMAP_ID] = ",".join(distinct_source_hubmap_id_list)
+                internal_dict[HEADER_SOURCE_SUBMISSION_ID] = ",".join(distinct_source_submission_id_list)
+                internal_dict[HEADER_SOURCE_UUID] = ",".join(distinct_source_uuid_list)
+                internal_dict[HEADER_SOURCE_GROUP_NAME] = ",".join(distinct_source_group_name_list)
 
         # distinct_rui_sample properties are retrieved from its own dictionary
         if dataset['distinct_rui_sample'] is not None:
@@ -2847,10 +2824,10 @@ def get_prov_info_for_dataset(id):
     HEADER_ORGAN_SUBMISSION_ID = 'organ_submission_id'
     HEADER_ORGAN_UUID = 'organ_uuid'
     HEADER_ORGAN_TYPE = 'organ_type'
-    HEADER_DONOR_HUBMAP_ID = 'donor_hubmap_id'
-    HEADER_DONOR_SUBMISSION_ID = 'donor_submission_id'
-    HEADER_DONOR_UUID = 'donor_uuid'
-    HEADER_DONOR_GROUP_NAME = 'donor_group_name'
+    HEADER_SOURCE_HUBMAP_ID = 'source_hubmap_id'
+    HEADER_SOURCE_SUBMISSION_ID = 'source_submission_id'
+    HEADER_SOURCE_UUID = 'source_uuid'
+    HEADER_SOURCE_GROUP_NAME = 'source_group_name'
     HEADER_RUI_LOCATION_HUBMAP_ID = 'rui_location_hubmap_id'
     HEADER_RUI_LOCATION_SUBMISSION_ID = 'rui_location_submission_id'
     HEADER_RUI_LOCATION_UUID = 'rui_location_uuid'
@@ -2871,8 +2848,8 @@ def get_prov_info_for_dataset(id):
         HEADER_DATASET_DATA_TYPES, HEADER_DATASET_PORTAL_URL, HEADER_FIRST_SAMPLE_HUBMAP_ID,
         HEADER_FIRST_SAMPLE_SUBMISSION_ID, HEADER_FIRST_SAMPLE_UUID, HEADER_FIRST_SAMPLE_TYPE,
         HEADER_FIRST_SAMPLE_PORTAL_URL, HEADER_ORGAN_HUBMAP_ID, HEADER_ORGAN_SUBMISSION_ID, HEADER_ORGAN_UUID,
-        HEADER_ORGAN_TYPE, HEADER_DONOR_HUBMAP_ID, HEADER_DONOR_SUBMISSION_ID, HEADER_DONOR_UUID,
-        HEADER_DONOR_GROUP_NAME, HEADER_RUI_LOCATION_HUBMAP_ID, HEADER_RUI_LOCATION_SUBMISSION_ID,
+        HEADER_ORGAN_TYPE, HEADER_SOURCE_HUBMAP_ID, HEADER_SOURCE_SUBMISSION_ID, HEADER_SOURCE_UUID,
+        HEADER_SOURCE_GROUP_NAME, HEADER_RUI_LOCATION_HUBMAP_ID, HEADER_RUI_LOCATION_SUBMISSION_ID,
         HEADER_RUI_LOCATION_UUID, HEADER_SAMPLE_METADATA_HUBMAP_ID, HEADER_SAMPLE_METADATA_SUBMISSION_ID,
         HEADER_SAMPLE_METADATA_UUID, HEADER_PROCESSED_DATASET_UUID, HEADER_PROCESSED_DATASET_HUBMAP_ID,
         HEADER_PROCESSED_DATASET_STATUS, HEADER_PROCESSED_DATASET_PORTAL_URL
@@ -2985,25 +2962,25 @@ def get_prov_info_for_dataset(id):
             internal_dict[HEADER_ORGAN_SUBMISSION_ID] = ",".join(distinct_organ_submission_id_list)
             internal_dict[HEADER_ORGAN_UUID] = ",".join(distinct_organ_uuid_list)
             internal_dict[HEADER_ORGAN_TYPE] = ",".join(distinct_organ_type_list)
-    if dataset['distinct_donor'] is not None:
-        distinct_donor_hubmap_id_list = []
-        distinct_donor_submission_id_list = []
-        distinct_donor_uuid_list = []
-        distinct_donor_group_name_list = []
-        for item in dataset['distinct_donor']:
-            distinct_donor_hubmap_id_list.append(item['hubmap_id'])
-            distinct_donor_submission_id_list.append(item['submission_id'])
-            distinct_donor_uuid_list.append(item['uuid'])
-            distinct_donor_group_name_list.append(item['group_name'])
-        internal_dict[HEADER_DONOR_HUBMAP_ID] = distinct_donor_hubmap_id_list
-        internal_dict[HEADER_DONOR_SUBMISSION_ID] = distinct_donor_submission_id_list
-        internal_dict[HEADER_DONOR_UUID] = distinct_donor_uuid_list
-        internal_dict[HEADER_DONOR_GROUP_NAME] = distinct_donor_group_name_list
+    if dataset['distinct_source'] is not None:
+        distinct_source_hubmap_id_list = []
+        distinct_source_submission_id_list = []
+        distinct_source_uuid_list = []
+        distinct_source_group_name_list = []
+        for item in dataset['distinct_source']:
+            distinct_source_hubmap_id_list.append(item['hubmap_id'])
+            distinct_source_submission_id_list.append(item['submission_id'])
+            distinct_source_uuid_list.append(item['uuid'])
+            distinct_source_group_name_list.append(item['group_name'])
+        internal_dict[HEADER_SOURCE_HUBMAP_ID] = distinct_source_hubmap_id_list
+        internal_dict[HEADER_SOURCE_SUBMISSION_ID] = distinct_source_submission_id_list
+        internal_dict[HEADER_SOURCE_UUID] = distinct_source_uuid_list
+        internal_dict[HEADER_SOURCE_GROUP_NAME] = distinct_source_group_name_list
         if return_json is False:
-            internal_dict[HEADER_DONOR_HUBMAP_ID] = ",".join(distinct_donor_hubmap_id_list)
-            internal_dict[HEADER_DONOR_SUBMISSION_ID] = ",".join(distinct_donor_submission_id_list)
-            internal_dict[HEADER_DONOR_UUID] = ",".join(distinct_donor_uuid_list)
-            internal_dict[HEADER_DONOR_GROUP_NAME] = ",".join(distinct_donor_group_name_list)
+            internal_dict[HEADER_SOURCE_HUBMAP_ID] = ",".join(distinct_source_hubmap_id_list)
+            internal_dict[HEADER_SOURCE_SUBMISSION_ID] = ",".join(distinct_source_submission_id_list)
+            internal_dict[HEADER_SOURCE_UUID] = ",".join(distinct_source_uuid_list)
+            internal_dict[HEADER_SOURCE_GROUP_NAME] = ",".join(distinct_source_group_name_list)
     if dataset['distinct_rui_sample'] is not None:
         rui_location_hubmap_id_list = []
         rui_location_submission_id_list = []
@@ -3198,10 +3175,10 @@ def get_sample_prov_info():
     HEADER_SAMPLE_HUBMAP_ID = "sample_hubmap_id"
     HEADER_SAMPLE_SUBMISSION_ID = "sample_submission_id"
     HEADER_SAMPLE_TYPE = "sample_type"
-    HEADER_DONOR_UUID = "donor_uuid"
-    HEADER_DONOR_SUBMISSION_ID = "donor_submission_id"
-    HEADER_DONOR_HUBMAP_ID = "donor_hubmap_id"
-    HEADER_DONOR_HAS_METADATA = "donor_has_metadata"
+    HEADER_SOURCE_UUID = "source_uuid"
+    HEADER_SOURCE_SUBMISSION_ID = "source_submission_id"
+    HEADER_SOURCE_HUBMAP_ID = "source_hubmap_id"
+    HEADER_SOURCE_HAS_METADATA = "source_has_metadata"
     HEADER_ORGAN_UUID = "organ_uuid"
     HEADER_ORGAN_TYPE = "organ_type"
     HEADER_ORGAN_HUBMAP_ID = "organ_hubmap_id"
@@ -3268,9 +3245,9 @@ def get_sample_prov_info():
         if sample['sample_rui_info'] is not None:
             sample_has_rui_info = True
 
-        donor_has_metadata = False
-        if sample['donor_metadata'] is not None:
-            donor_has_metadata = True
+        source_has_metadata = False
+        if sample['source_metadata'] is not None:
+            source_has_metadata = True
 
         internal_dict = collections.OrderedDict()
         internal_dict[HEADER_SAMPLE_UUID] = sample['sample_uuid']
@@ -3284,10 +3261,10 @@ def get_sample_prov_info():
         internal_dict[HEADER_SAMPLE_HUBMAP_ID] = sample['sample_hubmap_id']
         internal_dict[HEADER_SAMPLE_SUBMISSION_ID] = sample['sample_submission_id']
         internal_dict[HEADER_SAMPLE_DIRECT_ANCESTOR_ENTITY_TYPE] = sample['sample_ancestor_entity']
-        internal_dict[HEADER_DONOR_UUID] = sample['donor_uuid']
-        internal_dict[HEADER_DONOR_HAS_METADATA] = donor_has_metadata
-        internal_dict[HEADER_DONOR_HUBMAP_ID] = sample['donor_hubmap_id']
-        internal_dict[HEADER_DONOR_SUBMISSION_ID] = sample['donor_submission_id']
+        internal_dict[HEADER_SOURCE_UUID] = sample['source_uuid']
+        internal_dict[HEADER_SOURCE_HAS_METADATA] = source_has_metadata
+        internal_dict[HEADER_SOURCE_HUBMAP_ID] = sample['source_hubmap_id']
+        internal_dict[HEADER_SOURCE_SUBMISSION_ID] = sample['source_submission_id']
         internal_dict[HEADER_ORGAN_UUID] = organ_uuid
         internal_dict[HEADER_ORGAN_TYPE] = organ_type
         internal_dict[HEADER_ORGAN_HUBMAP_ID] = organ_hubmap_id
@@ -3426,7 +3403,7 @@ def user_in_sennet_read_group(request):
         # when the token in request is a groups token
         user_info = schema_manager.get_user_info(request)
         # TODO: Need to update these types of checks after SenNet gets its own auth
-        sennet_read_group_uuid = auth_helper_instance.groupNameToId('HuBMAP-READ')['uuid']
+        sennet_read_group_uuid = auth_helper_instance.get_default_read_group_uuid()
     except Exception as e:
         # Log the full stack trace, prepend a line with our message
         logger.exception(e)
@@ -3634,12 +3611,12 @@ def create_entity_details(request, normalized_entity_type, user_token, json_data
     # and properties with None value
     # Meaning the returned target property key is different from the original key
     # in the trigger method, e.g., Source.image_files_to_add
-    filtered_merged_dict = schema_manager.remove_transient_and_none_values(merged_dict, normalized_entity_type)
+    filtered_merged_dict = schema_manager.remove_transient_and_none_values('ENTITIES', merged_dict, normalized_entity_type)
 
     # Create new entity
     try:
         # Important: `entity_dict` is the resulting neo4j dict, Python list and dicts are stored
-        # as string expression literals in it. That's why properties like entity_dict['was_generated_by']
+        # as string expression literals in it. That's why properties like entity_dict['direct_ancestor_uuid']
         # will need to use ast.literal_eval() in the schema_triggers.py
         entity_dict = app_neo4j_queries.create_entity(neo4j_driver_instance, normalized_entity_type, filtered_merged_dict)
     except TransactionError:
@@ -3655,7 +3632,7 @@ def create_entity_details(request, normalized_entity_type, user_token, json_data
     # Important: the same property keys in entity_dict will overwrite the same key in json_data_dict
     # and this is what we wanted. Adding json_data_dict back is to include those `transient` properties
     # provided in the JSON input but not stored in neo4j, and will be needed for after_create_trigger/after_update_trigger,
-    # e.g., `previous_revision_uuid`, `was_generated_by`
+    # e.g., `previous_revision_uuid`, `direct_ancestor_uuid`
     # Add user_info_dict because it may be used by after_update_trigger methods
     merged_final_dict = {**json_data_dict, **entity_dict, **user_info_dict}
 
@@ -3798,7 +3775,7 @@ def create_multiple_samples_details(request, normalized_entity_type, user_token,
     # Create new sample nodes and needed relationships as well as activity node in one transaction
     try:
         # No return value
-        app_neo4j_queries.create_multiple_samples(neo4j_driver_instance, samples_dict_list, activity_data_dict, json_data_dict['was_generated_by'][0])
+        app_neo4j_queries.create_multiple_samples(neo4j_driver_instance, samples_dict_list, activity_data_dict, json_data_dict['direct_ancestor_uuid'][0])
     except TransactionError:
         msg = "Failed to create multiple samples"
         # Log the full stack trace, prepend a line with our message
@@ -3912,7 +3889,7 @@ def update_object_details(provenance_type, request, normalized_entity_type, user
     # Important: the same property keys in entity_dict will overwrite the same key in json_data_dict
     # and this is what we wanted. Adding json_data_dict back is to include those `transient` properties
     # provided in the JSON input but not stored in neo4j, and will be needed for after_create_trigger/after_update_trigger,
-    # e.g., `previous_revision_uuid`, `was_generated_by`
+    # e.g., `previous_revision_uuid`, `direct_ancestor_uuid`
     # Add user_info_dict because it may be used by after_update_trigger methods
     merged_final_dict = {**json_data_dict, **updated_entity_dict, **user_info_dict}
 
@@ -3973,7 +3950,7 @@ def query_target_activity(id, user_token):
                 "23c0ffa90648358e06b7ac0c5673ccd2"
             ],
             "email": "marda@ufl.edu",
-            "sn_uuid": "1785aae4f0fb8f13a56d79957d1cbedf",
+            "uuid": "1785aae4f0fb8f13a56d79957d1cbedf",
             "sennet_id": "SNT966.VNKN.965",
             "submission_id": "UFL0007",
             "time_generated": "2020-10-19 15:52:02",
@@ -3984,7 +3961,7 @@ def query_target_activity(id, user_token):
         sennet_ids = schema_manager.get_sennet_ids(id, user_token)
 
         # Get the target uuid if all good
-        uuid = sennet_ids['sn_uuid']
+        uuid = sennet_ids['uuid']
         entity_dict = app_neo4j_queries.get_activity(neo4j_driver_instance, uuid)
 
         # The uuid exists via uuid-api doesn't mean it's also in Neo4j
@@ -4030,7 +4007,7 @@ def query_target_entity(id, user_token):
                 "23c0ffa90648358e06b7ac0c5673ccd2"
             ],
             "email": "marda@ufl.edu",
-            "sn_uuid": "1785aae4f0fb8f13a56d79957d1cbedf",
+            "uuid": "1785aae4f0fb8f13a56d79957d1cbedf",
             "sennet_id": "SNT966.VNKN.965",
             "submission_id": "UFL0007",
             "time_generated": "2020-10-19 15:52:02",
@@ -4041,7 +4018,7 @@ def query_target_entity(id, user_token):
         sennet_ids = schema_manager.get_sennet_ids(id)
 
         # Get the target uuid if all good
-        uuid = sennet_ids['sn_uuid']
+        uuid = sennet_ids['uuid']
         entity_dict = app_neo4j_queries.get_entity(neo4j_driver_instance, uuid)
 
         # The uuid exists via uuid-api doesn't mean it's also in Neo4j
