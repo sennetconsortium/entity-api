@@ -296,7 +296,8 @@ def generate_triggered_data(trigger_type, normalized_class, user_token, existing
                         trigger_generated_data_dict = trigger_method_to_call(key, normalized_class, user_token, existing_data_dict, new_data_dict, trigger_generated_data_dict)
                     else:  
                         target_key, target_value = trigger_method_to_call(key, normalized_class, user_token, existing_data_dict, new_data_dict)
-                        trigger_generated_data_dict[target_key] = target_value
+                        if target_value is not None:
+                            trigger_generated_data_dict[target_key] = target_value
 
                         # Meanwhile, set the original property as None if target_key is different
                         # This is especially important when the returned target_key is different from the original key
@@ -392,7 +393,7 @@ def remove_transient_and_none_values(provenance_type, merged_dict, normalized_en
     for k, v in merged_dict.items():
         # Only keep the properties that don't have `transitent` flag or are marked as `transitent: false`
         # and at the same time the property value is not None
-        if normalized_entity_type == 'Sample' or normalized_entity_type == 'Dataset' or normalized_entity_type == 'Source':
+        if normalized_entity_type == 'Sample' or normalized_entity_type == 'Source':
             if k != 'protocol_url':
                 if (('transient' not in properties[k]) or ('transient' in properties[k] and not properties[k]['transient'])) and (v is not None):
                     filtered_dict[k] = v
@@ -607,7 +608,7 @@ def validate_json_data_against_schema(provenance_type, json_data_dict, normalize
     unsupported_keys = []
     for key in json_data_keys:
         if key not in schema_keys:
-            if normalized_entity_type == 'Sample' or normalized_entity_type == 'Dataset' or normalized_entity_type == 'Source':
+            if normalized_entity_type == 'Sample' or normalized_entity_type == 'Source':
                 if key != 'protocol_url':
                     unsupported_keys.append(key)
             else:
@@ -622,7 +623,7 @@ def validate_json_data_against_schema(provenance_type, json_data_dict, normalize
     generated_keys = []
     if not existing_entity_dict:
         for key in json_data_keys:
-            if normalized_entity_type == 'Sample' or normalized_entity_type == 'Dataset' or normalized_entity_type == 'Source':
+            if normalized_entity_type == 'Sample' or normalized_entity_type == 'Source':
                 if key != 'protocol_url':
                     if ('generated' in properties[key]) and properties[key]['generated']:
                         if properties[key]:
@@ -641,7 +642,7 @@ def validate_json_data_against_schema(provenance_type, json_data_dict, normalize
         # Check if keys in request json are immutable 
         immutable_keys = []
         for key in json_data_keys:
-            if normalized_entity_type == 'Sample' or normalized_entity_type == 'Dataset' or normalized_entity_type == 'Source':
+            if normalized_entity_type == 'Sample' or normalized_entity_type == 'Source':
                 if key != 'protocol_url':
                     if ('immutable' in properties[key]) and properties[key]['immutable']:
                         if properties[key]:
@@ -683,7 +684,7 @@ def validate_json_data_against_schema(provenance_type, json_data_dict, normalize
     # Verify data type of each key
     invalid_data_type_keys = []
     for key in json_data_keys:
-        if normalized_entity_type == 'Sample' or normalized_entity_type == 'Dataset' or normalized_entity_type == 'Source':
+        if normalized_entity_type == 'Sample' or normalized_entity_type == 'Source':
             if key != 'protocol_url':
                 # boolean starts with bool, string starts with str, integer starts with int, list is list
                 if (properties[key]['type'] in ['string', 'integer', 'list', 'boolean']) and (not properties[key]['type'].startswith(type(json_data_dict[key]).__name__)):

@@ -1660,10 +1660,13 @@ str: The target property key
 str: The protocol_url string
 """
 def set_activity_protocol_url(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
-    if 'protocol_url' not in new_data_dict:
-        raise KeyError("Missing 'protocol_url' key in 'existing_data_dict' during calling 'set_activity_creation_action()' trigger method.")
+    if new_data_dict['entity_type'] == 'Dataset':
+        return property_key, None
+    else:
+        if 'protocol_url' not in new_data_dict:
+            raise KeyError("Missing 'protocol_url' key in 'existing_data_dict' during calling 'set_activity_creation_action()' trigger method.")
 
-    return property_key, new_data_dict['protocol_url']
+        return property_key, new_data_dict['protocol_url']
 
 
 ####################################################################################################
