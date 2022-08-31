@@ -20,7 +20,7 @@ from hubmap_commons.hm_auth import AuthHelper
 logger = logging.getLogger(__name__)
 
 # Suppress InsecureRequestWarning warning when requesting status on https with ssl cert verify disabled
-requests.packages.urllib3.disable_warnings(category = InsecureRequestWarning)
+requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
 
 # In Python, "privacy" depends on "consenting adults'" levels of agreement, we can't force it.
 # A single leading underscore means you're not supposed to access it "from the outside"
@@ -33,7 +33,6 @@ _neo4j_driver = None
 
 # For handling cached requests to uuid-api and external static resources (github raw yaml files)
 request_cache = {}
-
 
 ####################################################################################################
 ## Provenance yaml schema initialization
@@ -50,7 +49,9 @@ valid_yaml_file : file
 neo4j_session_context : neo4j.Session object
     The neo4j database session
 """
-def initialize(valid_yaml_file, 
+
+
+def initialize(valid_yaml_file,
                uuid_api_url,
                ingest_api_url,
                search_api_url,
@@ -91,6 +92,8 @@ Returns
 dict
     A dict containing the schema details
 """
+
+
 def load_provenance_schema(valid_yaml_file):
     with open(valid_yaml_file) as file:
         schema_dict = yaml.safe_load(file)
@@ -112,6 +115,8 @@ Returns
 list
     A list of types
 """
+
+
 def get_all_types():
     global _schema
 
@@ -130,12 +135,15 @@ Returns
 list
     A list of entity types
 """
+
+
 def get_all_entity_types():
     global _schema
 
     dict_keys = _schema['ENTITIES'].keys()
     # Need convert the dict_keys object to a list
     return list(dict_keys)
+
 
 """
 Generating triggered data based on the target events and methods
@@ -160,7 +168,10 @@ Returns
 dict
     A dictionary of trigger event methods generated data
 """
-def generate_triggered_data(trigger_type, normalized_class, user_token, existing_data_dict, new_data_dict, properties_to_skip = []):
+
+
+def generate_triggered_data(trigger_type, normalized_class, user_token, existing_data_dict, new_data_dict,
+                            properties_to_skip=[]):
     global _schema
 
     schema_section = None
@@ -204,7 +215,7 @@ def generate_triggered_data(trigger_type, normalized_class, user_token, existing
                     try:
                         # Get the target trigger method defined in the schema_triggers.py module
                         trigger_method_to_call = getattr(schema_triggers, trigger_method_name)
-                        
+
                         logger.info(f"To run {trigger_type}: {trigger_method_name} defined for {normalized_class}")
 
                         # No return values for 'after_create_trigger' and 'after_update_trigger'
@@ -236,21 +247,24 @@ def generate_triggered_data(trigger_type, normalized_class, user_token, existing
                         # Will set the trigger return value as the property value by default
                         # Unless the return value is to be assigned to another property different target key
 
-                        #the updated_peripherally tag is a temporary measure to correctly handle any attributes
-                        #which are potentially updated by multiple triggers
-                        #we keep the state of the attribute(s) directly in the trigger_generated_data_dict
-                        #dictionary, which is used to track and save all changes from triggers in general
-                        #the trigger methods for the 'updated_peripherally' attributes take an extra argument,
-                        #the trigger_generated_data_dict, and must initialize this dictionary with the value for
-                        #the attribute from the existing_data_dict as well as make any updates to this attribute
-                        #within this dictionary and return it so it can be saved in the scope of this loop and
-                        #passed to other 'updated_peripherally' triggers
+                        # the updated_peripherally tag is a temporary measure to correctly handle any attributes
+                        # which are potentially updated by multiple triggers
+                        # we keep the state of the attribute(s) directly in the trigger_generated_data_dict
+                        # dictionary, which is used to track and save all changes from triggers in general
+                        # the trigger methods for the 'updated_peripherally' attributes take an extra argument,
+                        # the trigger_generated_data_dict, and must initialize this dictionary with the value for
+                        # the attribute from the existing_data_dict as well as make any updates to this attribute
+                        # within this dictionary and return it so it can be saved in the scope of this loop and
+                        # passed to other 'updated_peripherally' triggers
                         if 'updated_peripherally' in properties[key] and properties[key]['updated_peripherally']:
-                            trigger_generated_data_dict = trigger_method_to_call(key, normalized_class, user_token, existing_data_dict, new_data_dict, trigger_generated_data_dict)
+                            trigger_generated_data_dict = trigger_method_to_call(key, normalized_class, user_token,
+                                                                                 existing_data_dict, new_data_dict,
+                                                                                 trigger_generated_data_dict)
                         else:
-                            target_key, target_value = trigger_method_to_call(key, normalized_class, user_token, existing_data_dict, new_data_dict)
+                            target_key, target_value = trigger_method_to_call(key, normalized_class, user_token,
+                                                                              existing_data_dict, new_data_dict)
                             trigger_generated_data_dict[target_key] = target_value
-                            
+
                             # Meanwhile, set the original property as None if target_key is different
                             # This is especially important when the returned target_key is different from the original key
                             # Because we'll be merging this trigger_generated_data_dict with the original user input
@@ -282,20 +296,23 @@ def generate_triggered_data(trigger_type, normalized_class, user_token, existing
 
                     # Will set the trigger return value as the property value by default
                     # Unless the return value is to be assigned to another property different target key
-                    
-                    #the updated_peripherally tag is a temporary measure to correctly handle any attributes
-                    #which are potentially updated by multiple triggers
-                    #we keep the state of the attribute(s) directly in the trigger_generated_data_dict
-                    #dictionary, which is used to track and save all changes from triggers in general
-                    #the trigger methods for the 'updated_peripherally' attributes take an extra argument,
-                    #the trigger_generated_data_dict, and must initialize this dictionary with the value for
-                    #the attribute from the existing_data_dict as well as make any updates to this attribute
-                    #within this dictionary and return it so it can be saved in the scope of this loop and
-                    #passed to other 'updated_peripherally' triggers                    
+
+                    # the updated_peripherally tag is a temporary measure to correctly handle any attributes
+                    # which are potentially updated by multiple triggers
+                    # we keep the state of the attribute(s) directly in the trigger_generated_data_dict
+                    # dictionary, which is used to track and save all changes from triggers in general
+                    # the trigger methods for the 'updated_peripherally' attributes take an extra argument,
+                    # the trigger_generated_data_dict, and must initialize this dictionary with the value for
+                    # the attribute from the existing_data_dict as well as make any updates to this attribute
+                    # within this dictionary and return it so it can be saved in the scope of this loop and
+                    # passed to other 'updated_peripherally' triggers
                     if 'updated_peripherally' in properties[key] and properties[key]['updated_peripherally']:
-                        trigger_generated_data_dict = trigger_method_to_call(key, normalized_class, user_token, existing_data_dict, new_data_dict, trigger_generated_data_dict)
-                    else:  
-                        target_key, target_value = trigger_method_to_call(key, normalized_class, user_token, existing_data_dict, new_data_dict)
+                        trigger_generated_data_dict = trigger_method_to_call(key, normalized_class, user_token,
+                                                                             existing_data_dict, new_data_dict,
+                                                                             trigger_generated_data_dict)
+                    else:
+                        target_key, target_value = trigger_method_to_call(key, normalized_class, user_token,
+                                                                          existing_data_dict, new_data_dict)
                         if target_value is not None:
                             trigger_generated_data_dict[target_key] = target_value
 
@@ -338,10 +355,11 @@ def generate_triggered_data(trigger_type, normalized_class, user_token, existing
                         # Assign the error message as the value of this property
                         # No need to raise exception
                         trigger_generated_data_dict[key] = msg
-    
+
     # Return after for loop
     return trigger_generated_data_dict
-    
+
+
 """
 Filter out the merged dict by getting rid of properties with None values
 This method is used by get_complete_entity_result() for the 'on_read_trigger'
@@ -356,12 +374,14 @@ Returns
 dict
     A filtered dict that removed all properties with None values
 """
+
+
 def remove_none_values(merged_dict):
     filtered_dict = {}
     for k, v in merged_dict.items():
         # Only keep the properties whose value is not None
         if v is not None:
-            filtered_dict[k] = v 
+            filtered_dict[k] = v
 
     return filtered_dict
 
@@ -384,6 +404,8 @@ Returns
 dict
     A filtered dict that removed all transient properties and the ones with None values
 """
+
+
 def remove_transient_and_none_values(provenance_type, merged_dict, normalized_entity_type):
     global _schema
 
@@ -395,7 +417,8 @@ def remove_transient_and_none_values(provenance_type, merged_dict, normalized_en
         # and at the same time the property value is not None
         if normalized_entity_type == 'Sample' or normalized_entity_type == 'Source':
             if k != 'protocol_url':
-                if (('transient' not in properties[k]) or ('transient' in properties[k] and not properties[k]['transient'])) and (v is not None):
+                if (('transient' not in properties[k]) or (
+                        'transient' in properties[k] and not properties[k]['transient'])) and (v is not None):
                     filtered_dict[k] = v
         else:
             if (('transient' not in properties[k]) or (
@@ -422,14 +445,17 @@ Returns
 dict
     A dictionary of complete entity with all the generated 'on_read_trigger' data
 """
-def get_complete_entity_result(token, entity_dict, properties_to_skip = []):
+
+
+def get_complete_entity_result(token, entity_dict, properties_to_skip=[]):
     # In case entity_dict is None or 
     # an incorrectly created entity that doesn't have the `entity_type` property
     if entity_dict and ('entity_type' in entity_dict):
         # No error handling here since if a 'on_read_trigger' method failed, 
         # the property value will be the error message
         # Pass {} since no new_data_dict for 'on_read_trigger'
-        generated_on_read_trigger_data_dict = generate_triggered_data('on_read_trigger', entity_dict['entity_type'], token, entity_dict, {}, properties_to_skip)
+        generated_on_read_trigger_data_dict = generate_triggered_data('on_read_trigger', entity_dict['entity_type'],
+                                                                      token, entity_dict, {}, properties_to_skip)
 
         # Merge the entity info and the generated on read data into one dictionary
         complete_entity_dict = {**entity_dict, **generated_on_read_trigger_data_dict}
@@ -458,7 +484,9 @@ Returns
 list
     A list a complete entity dictionaries with all the normalized information
 """
-def get_complete_entities_list(token, entities_list, properties_to_skip = []):
+
+
+def get_complete_entities_list(token, entities_list, properties_to_skip=[]):
     complete_entities_list = []
 
     for entity_dict in entities_list:
@@ -466,6 +494,7 @@ def get_complete_entities_list(token, entities_list, properties_to_skip = []):
         complete_entities_list.append(complete_entity_dict)
 
     return complete_entities_list
+
 
 """
 Normalize the activity result by filtering out properties that are not defined in the yaml schema
@@ -483,7 +512,9 @@ Returns
 dict
     A dictionary of activity information with keys that are all normalized
 """
-def normalize_activity_result_for_response(activity_dict, properties_to_exclude = []):
+
+
+def normalize_activity_result_for_response(activity_dict, properties_to_exclude=[]):
     global _schema
 
     properties = _schema['ACTIVITIES']['Activity']['properties']
@@ -518,7 +549,10 @@ Returns
 dict
     A entity dictionary with keys that are all normalized
 """
-def normalize_object_result_for_response(provenance_type, entity_dict, properties_to_exclude = []):
+
+
+def normalize_object_result_for_response(provenance_type, entity_dict, properties_to_exclude=[],
+                                         properties_to_include=[]):
     global _schema
 
     normalized_entity = {}
@@ -536,11 +570,19 @@ def normalize_object_result_for_response(provenance_type, entity_dict, propertie
     for key in entity_dict:
         # Only return the properties defined in the schema yaml
         # Exclude additional properties if specified
-        if (key in properties) and (key not in properties_to_exclude):
+        if (key in properties) and (key not in properties_to_exclude) or (key in properties_to_include):
+            if key in properties_to_include:
+                # Add the target key with correct value of data type to the normalized_entity dict
+                normalized_entity[key] = entity_dict[key]
+
+                # Final step: remove properties with empty string value, empty dict {}, and empty list []
+                if (isinstance(normalized_entity[key], (str, dict, list)) and (not normalized_entity[key])):
+                    normalized_entity.pop(key)
+
             # Skip properties with None value and the ones that are marked as not to be exposed.
             # By default, all properties are exposed if not marked as `exposed: false`
             # It's still possible to see `exposed: true` marked explictly
-            if (entity_dict[key] is not None) and ('exposed' not in properties[key]) or (
+            elif (entity_dict[key] is not None) and ('exposed' not in properties[key]) or (
                     ('exposed' in properties[key]) and properties[key]['exposed']):
                 if entity_dict[key] and (properties[key]['type'] in ['list', 'json_string']):
                     # Safely evaluate a string containing a Python dict or list literal
@@ -574,11 +616,13 @@ Returns
 list
     A list of normalzied entity dictionaries
 """
-def normalize_entities_list_for_response(entities_list, properties_to_exclude = []):
+
+
+def normalize_entities_list_for_response(entities_list, properties_to_exclude=[], properties_to_include=[]):
     normalized_entities_list = []
 
     for entity_dict in entities_list:
-        normalized_entity_dict = normalize_object_result_for_response('ENTITIES', entity_dict, properties_to_exclude)
+        normalized_entity_dict = normalize_object_result_for_response('ENTITIES', entity_dict, properties_to_exclude, properties_to_include)
         normalized_entities_list.append(normalized_entity_dict)
 
     return normalized_entities_list
@@ -596,7 +640,9 @@ normalized_entity_type : str
 existing_entity_dict : dict
     Entity dict for creating new entity, otherwise pass in the existing entity dict for update validation
 """
-def validate_json_data_against_schema(provenance_type, json_data_dict, normalized_entity_type, existing_entity_dict = {}):
+
+
+def validate_json_data_against_schema(provenance_type, json_data_dict, normalized_entity_type, existing_entity_dict={}):
     global _schema
 
     properties = _schema[provenance_type][normalized_entity_type]['properties']
@@ -616,7 +662,8 @@ def validate_json_data_against_schema(provenance_type, json_data_dict, normalize
 
     if len(unsupported_keys) > 0:
         # No need to log the validation errors
-        raise schema_errors.SchemaValidationException(f"Unsupported keys in request json: {separator.join(unsupported_keys)}")
+        raise schema_errors.SchemaValidationException(
+            f"Unsupported keys in request json: {separator.join(unsupported_keys)}")
 
     # Check if keys in request json are the ones to be auto generated
     # Disallow direct creation via POST, but allow update via PUT
@@ -635,7 +682,8 @@ def validate_json_data_against_schema(provenance_type, json_data_dict, normalize
 
     if len(generated_keys) > 0:
         # No need to log the validation errors
-        raise schema_errors.SchemaValidationException(f"Auto generated keys are not allowed in request json: {separator.join(generated_keys)}")
+        raise schema_errors.SchemaValidationException(
+            f"Auto generated keys are not allowed in request json: {separator.join(generated_keys)}")
 
     # Checks for entity update via HTTP PUT
     if existing_entity_dict:
@@ -654,32 +702,38 @@ def validate_json_data_against_schema(provenance_type, json_data_dict, normalize
 
         if len(immutable_keys) > 0:
             # No need to log the validation errors
-            raise schema_errors.SchemaValidationException(f"Immutable keys are not allowed in request json: {separator.join(immutable_keys)}")
-        
+            raise schema_errors.SchemaValidationException(
+                f"Immutable keys are not allowed in request json: {separator.join(immutable_keys)}")
+
     # Check if any schema keys that are `required_on_create: true` but missing from POST request on creating new entity
     # No need to check on entity update
-    if not existing_entity_dict:    
+    if not existing_entity_dict:
         missing_required_keys_on_create = []
         empty_value_of_required_keys_on_create = []
         for key in schema_keys:
             # By default, the schema treats all entity properties as optional on creation. 
             # Use `required_on_create: true` to mark a property as required for creating a new entity
-            if ('required_on_create' in properties[key]) and properties[key]['required_on_create'] and ('trigger' not in properties[key]):
+            if ('required_on_create' in properties[key]) and properties[key]['required_on_create'] and (
+                    'trigger' not in properties[key]):
                 if key not in json_data_keys:
                     missing_required_keys_on_create.append(key)
                 else:
                     # Empty values or None(null in request json) of required keys are invalid too
                     # The data type check will be handled later regardless of it's required or not
-                    if (json_data_dict[key] is None) or (isinstance(json_data_dict[key], (list, dict)) and (not json_data_dict[key])) or (isinstance(json_data_dict[key], str) and (not json_data_dict[key].strip())):
+                    if (json_data_dict[key] is None) or (
+                            isinstance(json_data_dict[key], (list, dict)) and (not json_data_dict[key])) or (
+                            isinstance(json_data_dict[key], str) and (not json_data_dict[key].strip())):
                         empty_value_of_required_keys_on_create.append(key)
 
         if len(missing_required_keys_on_create) > 0:
             # No need to log the validation errors
-            raise schema_errors.SchemaValidationException(f"Missing required keys in request json: {separator.join(missing_required_keys_on_create)}")
+            raise schema_errors.SchemaValidationException(
+                f"Missing required keys in request json: {separator.join(missing_required_keys_on_create)}")
 
         if len(empty_value_of_required_keys_on_create) > 0:
             # No need to log the validation errors
-            raise schema_errors.SchemaValidationException(f"Required keys in request json with empty values: {separator.join(empty_value_of_required_keys_on_create)}")
+            raise schema_errors.SchemaValidationException(
+                f"Required keys in request json with empty values: {separator.join(empty_value_of_required_keys_on_create)}")
 
     # Verify data type of each key
     invalid_data_type_keys = []
@@ -687,22 +741,24 @@ def validate_json_data_against_schema(provenance_type, json_data_dict, normalize
         if normalized_entity_type == 'Sample' or normalized_entity_type == 'Source':
             if key != 'protocol_url':
                 # boolean starts with bool, string starts with str, integer starts with int, list is list
-                if (properties[key]['type'] in ['string', 'integer', 'list', 'boolean']) and (not properties[key]['type'].startswith(type(json_data_dict[key]).__name__)):
+                if (properties[key]['type'] in ['string', 'integer', 'list', 'boolean']) and (
+                        not properties[key]['type'].startswith(type(json_data_dict[key]).__name__)):
                     invalid_data_type_keys.append(key)
                 # Handling json_string as dict
                 if (properties[key]['type'] == 'json_string') and (not isinstance(json_data_dict[key], dict)):
                     invalid_data_type_keys.append(key)
         else:
-            if (properties[key]['type'] in ['string', 'integer', 'list', 'boolean']) and (not properties[key]['type'].startswith(type(json_data_dict[key]).__name__)):
+            if (properties[key]['type'] in ['string', 'integer', 'list', 'boolean']) and (
+                    not properties[key]['type'].startswith(type(json_data_dict[key]).__name__)):
                 invalid_data_type_keys.append(key)
             if (properties[key]['type'] == 'json_string') and (not isinstance(json_data_dict[key], dict)):
                 invalid_data_type_keys.append(key)
 
-
     if len(invalid_data_type_keys) > 0:
         # No need to log the validation errors
-        raise schema_errors.SchemaValidationException(f"Keys in request json with invalid data types: {separator.join(invalid_data_type_keys)}")
-    
+        raise schema_errors.SchemaValidationException(
+            f"Keys in request json with invalid data types: {separator.join(invalid_data_type_keys)}")
+
 
 """
 Execute the entity level validator of the given type defined in the schema yaml 
@@ -718,6 +774,8 @@ normalized_entity_type : str
 request: Flask request object
     The instance of Flask request passed in from application request
 """
+
+
 def execute_entity_level_validator(validator_type, normalized_entity_type, request):
     global _schema
 
@@ -728,14 +786,15 @@ def execute_entity_level_validator(validator_type, normalized_entity_type, reque
     entity = _schema['ENTITIES'][normalized_entity_type]
 
     for key in entity:
-         if validator_type == key:
+        if validator_type == key:
             validator_method_name = entity[validator_type]
 
             try:
                 # Get the target validator method defined in the schema_validators.py module
                 validator_method_to_call = getattr(schema_validators, validator_method_name)
-                
-                logger.info(f"To run {validator_type}: {validator_method_name} defined for entity {normalized_entity_type}")
+
+                logger.info(
+                    f"To run {validator_type}: {validator_method_name} defined for entity {normalized_entity_type}")
 
                 validator_method_to_call(normalized_entity_type, request)
             except schema_errors.MissingApplicationHeaderException as e:
@@ -765,7 +824,10 @@ existing_data_dict : dict
 new_data_dict : dict
     The json data in request body, already after the regular validations
 """
-def execute_property_level_validators(provenance_type, validator_type, normalized_entity_type, request, existing_data_dict, new_data_dict):
+
+
+def execute_property_level_validators(provenance_type, validator_type, normalized_entity_type, request,
+                                      existing_data_dict, new_data_dict):
     global _schema
 
     schema_section = None
@@ -787,8 +849,9 @@ def execute_property_level_validators(provenance_type, validator_type, normalize
                 try:
                     # Get the target validator method defined in the schema_validators.py module
                     validator_method_to_call = getattr(schema_validators, validator_method_name)
-                    
-                    logger.info(f"To run {validator_type}: {validator_method_name} defined for entity {normalized_entity_type} on property {key}")
+
+                    logger.info(
+                        f"To run {validator_type}: {validator_method_name} defined for entity {normalized_entity_type} on property {key}")
 
                     validator_method_to_call(key, normalized_entity_type, request, existing_data_dict, new_data_dict)
                 except schema_errors.MissingApplicationHeaderException as e:
@@ -811,6 +874,8 @@ Returns
 list
     A list of entity types
 """
+
+
 def get_derivation_source_entity_types():
     global _schema
 
@@ -822,6 +887,7 @@ def get_derivation_source_entity_types():
 
     return derivation_source_entity_types
 
+
 """
 Get a list of entity types that can be used as derivation target in the schmea yaml
 
@@ -830,6 +896,8 @@ Returns
 list
     A list of entity types
 """
+
+
 def get_derivation_target_entity_types():
     global _schema
 
@@ -840,6 +908,7 @@ def get_derivation_target_entity_types():
             derivation_target_entity_types.append(entity_type)
 
     return derivation_target_entity_types
+
 
 """
 Lowercase and captalize the entity type string
@@ -856,9 +925,12 @@ Returns
 string
     One of the normalized entity types: Dataset, Collection, Sample, Source
 """
+
+
 def normalize_entity_type(entity_type):
     normalized_entity_type = entity_type.lower().capitalize()
     return normalized_entity_type
+
 
 """
 Lowercase and capitalize the status string unless its "qa", then make it capitalized.
@@ -873,12 +945,15 @@ Returns
 string
     One of the normalized status types: New|Processing|QA|Published|Error|Hold|Invalid
 """
+
+
 def normalize_status(status):
     if status.lower() == "qa":
         normalized_status = "QA"
     else:
         normalized_status = status.lower().capitalize()
     return normalized_status
+
 
 """
 Validate the provided trigger type
@@ -888,11 +963,13 @@ Parameters
 trigger_type : str
     One of the trigger types: on_create_trigger, on_update_trigger, on_read_trigger
 """
+
+
 def validate_trigger_type(trigger_type):
-    accepted_trigger_types = ['on_read_trigger', 
-                              'before_create_trigger', 
-                              'before_update_trigger', 
-                              'after_create_trigger', 
+    accepted_trigger_types = ['on_read_trigger',
+                              'before_create_trigger',
+                              'before_update_trigger',
+                              'after_create_trigger',
                               'after_update_trigger']
     separator = ', '
 
@@ -902,6 +979,7 @@ def validate_trigger_type(trigger_type):
         logger.exception(msg)
         raise ValueError(msg)
 
+
 """
 Validate the provided entity level validator type
 
@@ -910,6 +988,8 @@ Parameters
 validator_type : str
     One of the validator types: before_entity_create_validator
 """
+
+
 def validate_entity_level_validator_type(validator_type):
     accepted_validator_types = ['before_entity_create_validator']
     separator = ', '
@@ -920,6 +1000,7 @@ def validate_entity_level_validator_type(validator_type):
         logger.exception(msg)
         raise ValueError(msg)
 
+
 """
 Validate the provided property level validator type
 
@@ -928,6 +1009,8 @@ Parameters
 validator_type : str
     One of the validator types: before_property_create_validators|before_property_update_validators
 """
+
+
 def validate_property_level_validator_type(validator_type):
     accepted_validator_types = ['before_property_create_validators', 'before_property_update_validators']
     separator = ', '
@@ -938,6 +1021,7 @@ def validate_property_level_validator_type(validator_type):
         logger.exception(msg)
         raise ValueError(msg)
 
+
 """
 Validate the normalized entity class
 
@@ -946,6 +1030,8 @@ Parameters
 normalized_entity_type : str
     The normalized entity class: Collection|Source|Sample|Dataset
 """
+
+
 def validate_normalized_entity_type(normalized_entity_type):
     separator = ', '
     accepted_entity_types = get_all_entity_types()
@@ -957,6 +1043,7 @@ def validate_normalized_entity_type(normalized_entity_type):
         logger.exception(msg)
         raise schema_errors.InvalidNormalizedEntityTypeException(msg)
 
+
 """
 Validate the normalized class
 
@@ -965,6 +1052,8 @@ Parameters
 normalized_class : str
     The normalized class: Activity|Collection|Source|Sample|Dataset
 """
+
+
 def validate_normalized_class(normalized_class):
     separator = ', '
     accepted_types = get_all_types()
@@ -985,12 +1074,16 @@ Parameters
 normalized_target_entity_type : str
     The normalized target entity class
 """
+
+
 def validate_target_entity_type_for_derivation(normalized_target_entity_type):
     separator = ', '
     accepted_target_entity_types = get_derivation_target_entity_types()
 
     if normalized_target_entity_type not in accepted_target_entity_types:
-        bad_request_error(f"Invalid target entity type specified for creating the derived entity. Accepted types: {separator.join(accepted_target_entity_types)}")
+        bad_request_error(
+            f"Invalid target entity type specified for creating the derived entity. Accepted types: {separator.join(accepted_target_entity_types)}")
+
 
 """
 Validate the source and target entity types for creating derived entity
@@ -1000,12 +1093,15 @@ Parameters
 normalized_source_entity_type : str
     The normalized source entity class
 """
+
+
 def validate_source_entity_type_for_derivation(normalized_source_entity_type):
     separator = ', '
     accepted_source_entity_types = get_derivation_source_entity_types()
 
     if normalized_source_entity_type not in accepted_source_entity_types:
-        bad_request_error(f"Invalid source entity class specified for creating the derived entity. Accepted types: {separator.join(accepted_source_entity_types)}")
+        bad_request_error(
+            f"Invalid source entity class specified for creating the derived entity. Accepted types: {separator.join(accepted_source_entity_types)}")
 
 
 ####################################################################################################
@@ -1044,6 +1140,8 @@ dict
         "snscopes": ["urn:globus:auth:scope:nexus.api.globus.org:groups"],
     }
 """
+
+
 def get_user_info(request):
     global _auth_helper
 
@@ -1105,13 +1203,15 @@ dict
         "user_id": "694c6f6a-1deb-41a6-880f-d1ad8af3705f"
     }
 """
+
+
 def get_sennet_ids(id):
     global _uuid_api_url
 
     target_url = _uuid_api_url + '/uuid/' + id
 
     # Function cache to improve performance
-    response = make_request_get(target_url, internal_token_used = True)
+    response = make_request_get(target_url, internal_token_used=True)
 
     # Invoke .raise_for_status(), an HTTPError will be raised with certain status codes
     response.raise_for_status()
@@ -1174,7 +1274,9 @@ Returns
 list
     The list of new ids dicts, the number of dicts is based on the count
 """
-def create_sennet_ids(normalized_class, json_data_dict, user_token, user_info_dict, count = 1):
+
+
+def create_sennet_ids(normalized_class, json_data_dict, user_token, user_info_dict, count=1):
     global _uuid_api_url
 
     """
@@ -1207,7 +1309,8 @@ def create_sennet_ids(normalized_class, json_data_dict, user_token, user_info_di
             # Otherwise if not set and no single "provider group" membership throws error.  
             # This field is also used to link (Neo4j relationship) to the correct Lab node on creation.
             if 'hmgroupids' not in user_info_dict:
-                raise KeyError("Missing 'hmgroupids' key in 'user_info_dict' when calling 'create_sennet_ids()' to create new ids for this Source.")
+                raise KeyError(
+                    "Missing 'hmgroupids' key in 'user_info_dict' when calling 'create_sennet_ids()' to create new ids for this Source.")
 
             user_group_uuids = user_info_dict['hmgroupids']
 
@@ -1232,7 +1335,8 @@ def create_sennet_ids(normalized_class, json_data_dict, user_token, user_info_di
                 # Otherwise if not set and no single "provider group" membership throws error.  
                 # This field is also used to link (Neo4j relationship) to the correct Lab node on creation.
                 if 'hmgroupids' not in user_info_dict:
-                    raise KeyError("Missing 'hmgroupids' key in 'user_info_dict' when calling 'create_sennet_ids()' to create new ids for this Source.")
+                    raise KeyError(
+                        "Missing 'hmgroupids' key in 'user_info_dict' when calling 'create_sennet_ids()' to create new ids for this Source.")
 
                 try:
                     group_info = get_entity_group_info(user_info_dict['hmgroupids'])
@@ -1270,11 +1374,11 @@ def create_sennet_ids(normalized_class, json_data_dict, user_token, user_info_di
 
     uuid_url = _uuid_api_url + "/uuid"
     # Disable ssl certificate verification
-    response = requests.post(url = uuid_url, headers = request_headers, json = json_to_post, verify = False, params = query_parms)
-    
+    response = requests.post(url=uuid_url, headers=request_headers, json=json_to_post, verify=False, params=query_parms)
+
     # Invoke .raise_for_status(), an HTTPError will be raised with certain status codes
     response.raise_for_status()
-    
+
     if response.status_code == 200:
         # For Collection/Dataset/Activity/Upload, no submission_id gets 
         # generated, the uuid-api response looks like:
@@ -1313,6 +1417,7 @@ def create_sennet_ids(normalized_class, json_data_dict, user_token, user_info_di
         # Also bubble up the error message from uuid-api
         raise requests.exceptions.RequestException(response.text)
 
+
 """
 Get the group info (group_uuid and group_name) based on user's hmgroupids list
 
@@ -1326,9 +1431,11 @@ Returns
 dict
     The group info (group_uuid and group_name)
 """
-def get_entity_group_info(user_groupids_list, default_group = None):
+
+
+def get_entity_group_info(user_groupids_list, default_group=None):
     global _auth_helper
-    
+
     # Default
     group_info = {
         'uuid': '',
@@ -1360,10 +1467,10 @@ def get_entity_group_info(user_groupids_list, default_group = None):
         if not default_group is None and default_group in user_groupids_list:
             uuid = default_group
         else:
-                msg = "More than one data_provider groups found for this user and no group_uuid specified. Can't continue."
-                # Log the full stack trace, prepend a line with our message
-                logger.exception(msg)
-                raise schema_errors.MultipleDataProviderGroupException(msg)
+            msg = "More than one data_provider groups found for this user and no group_uuid specified. Can't continue."
+            # Log the full stack trace, prepend a line with our message
+            logger.exception(msg)
+            raise schema_errors.MultipleDataProviderGroupException(msg)
     else:
         # By now only one data provider group found, this is what we want
         uuid = user_data_provider_uuids[0]
@@ -1383,7 +1490,9 @@ group_uuid : str
 user_group_uuids: list
     An optional list of group uuids to check against, a subset of all the data provider group uuids
 """
-def validate_entity_group_uuid(group_uuid, user_group_uuids = None):
+
+
+def validate_entity_group_uuid(group_uuid, user_group_uuids=None):
     global _auth_helper
 
     # Get the globus groups info based on the groups json file in commons package
@@ -1420,6 +1529,8 @@ Returns
 str
     The group_name corresponding to this group_uuid
 """
+
+
 def get_entity_group_name(group_uuid):
     global _auth_helper
 
@@ -1450,6 +1561,8 @@ Returns
 -------
 dict: A dict of gnerated Activity data
 """
+
+
 def generate_activity_data(normalized_entity_type, user_token, user_info_dict):
     # Activity is not an Entity
     normalized_activity_type = 'Activity'
@@ -1460,11 +1573,13 @@ def generate_activity_data(normalized_entity_type, user_token, user_info_dict):
 
     # Create new ids for the Activity node
     # This resulting list has only one dict
-    new_ids_dict_list = create_sennet_ids(normalized_activity_type, json_data_dict = None, user_token = user_token, user_info_dict = None)
+    new_ids_dict_list = create_sennet_ids(normalized_activity_type, json_data_dict=None, user_token=user_token,
+                                          user_info_dict=None)
     data_dict_for_activity = {**user_info_dict, **normalized_entity_type_dict, **new_ids_dict_list[0]}
 
     # Generate property values for Activity node
-    generated_activity_data_dict = generate_triggered_data('before_create_trigger', normalized_activity_type, user_token, {}, data_dict_for_activity)
+    generated_activity_data_dict = generate_triggered_data('before_create_trigger', normalized_activity_type,
+                                                           user_token, {}, data_dict_for_activity)
 
     return generated_activity_data_dict
 
@@ -1477,6 +1592,8 @@ Returns
 str
     The ingest-api URL
 """
+
+
 def get_ingest_api_url():
     global _ingest_api_url
 
@@ -1491,6 +1608,8 @@ Returns
 str
     The search-api URL
 """
+
+
 def get_search_api_url():
     global _search_api_url
 
@@ -1505,6 +1624,8 @@ Returns
 AuthHelper
     The AuthHelper instance
 """
+
+
 def get_auth_helper_instance():
     global _auth_helper
 
@@ -1519,10 +1640,13 @@ Returns
 neo4j.Driver
     The neo4j.Driver instance
 """
+
+
 def get_neo4j_driver_instance():
     global _neo4j_driver
 
     return _neo4j_driver
+
 
 """
 Convert a string representation of the Python list/dict (either nested or not) to a Python list/dict
@@ -1539,6 +1663,8 @@ Returns
 list or dict
     The real Python list or dict after evaluation
 """
+
+
 def convert_str_to_data(data_str):
     if isinstance(data_str, str):
         # ast uses compile to compile the source string (which must be an expression) into an AST
@@ -1574,6 +1700,8 @@ Returns
 dict
     The headers dict to be used by requests
 """
+
+
 def _create_request_headers(user_token):
     auth_header_name = 'Authorization'
     auth_scheme = 'Bearer'
@@ -1599,7 +1727,9 @@ Returns
 flask.Response
     The response object
 """
-def make_request_get(target_url, internal_token_used = False):
+
+
+def make_request_get(target_url, internal_token_used=False):
     response = None
 
     current_datetime = datetime.now()
@@ -1607,12 +1737,14 @@ def make_request_get(target_url, internal_token_used = False):
 
     # Use the cached response of the given url if exists and valid
     # Otherwise make a fresh request and add the response to the cache pool
-    if (target_url in request_cache) and (current_timestamp <= request_cache[target_url]['created_timestamp'] + SchemaConstants.REQUEST_CACHE_TTL):
+    if (target_url in request_cache) and (
+            current_timestamp <= request_cache[target_url]['created_timestamp'] + SchemaConstants.REQUEST_CACHE_TTL):
         logger.info(f'Useing the cached HTTP response of GET {target_url} at time {current_datetime}')
 
         response = request_cache[target_url]['response']
     else:
-        logger.info(f'Cache not found or expired. Making a new HTTP request of GET {target_url} at time {current_datetime}')
+        logger.info(
+            f'Cache not found or expired. Making a new HTTP request of GET {target_url} at time {current_datetime}')
 
         if internal_token_used:
             # Use modified version of globus app secret from configuration as the internal token
@@ -1620,9 +1752,9 @@ def make_request_get(target_url, internal_token_used = False):
             request_headers = _create_request_headers(auth_helper_instance.getProcessSecret())
 
             # Disable ssl certificate verification
-            response = requests.get(url = target_url, headers = request_headers, verify = False)
+            response = requests.get(url=target_url, headers=request_headers, verify=False)
         else:
-            response = requests.get(url = target_url, verify = False)
+            response = requests.get(url=target_url, verify=False)
 
         # Add or update cache
         new_datetime = datetime.now()
