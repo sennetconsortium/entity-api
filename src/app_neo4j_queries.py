@@ -204,10 +204,11 @@ def get_entities_by_type(neo4j_driver, entity_type, property_key=None):
                 # Convert the list of nodes to a list of dicts
                 results = _nodes_to_dicts(record[record_field_name])
 
-    for index, result in enumerate(results):
-        protocol_url = get_activity_protocol(neo4j_driver, result['uuid'])
-        if protocol_url != {}:
-            result['protocol_url'] = protocol_url
+    if not property_key:
+        for index, result in enumerate(results):
+            protocol_url = get_activity_protocol(neo4j_driver, result['uuid'])
+            if protocol_url != {}:
+                result['protocol_url'] = protocol_url
 
     return results
 
