@@ -7,7 +7,6 @@ logger = logging.getLogger(__name__)
 # The filed name of the single result record
 record_field_name = 'result'
 
-
 ####################################################################################################
 ## Directly called by app.py
 ####################################################################################################
@@ -25,6 +24,8 @@ Returns
 bool
     True if is connected, otherwise error
 """
+
+
 def check_connection(neo4j_driver):
     query = (f"RETURN 1 AS {record_field_name}")
 
@@ -80,6 +81,45 @@ def get_activity(neo4j_driver, uuid):
 
     return result
 
+
+"""
+Get the protocol_url from a related activity node
+
+Parameters
+----------
+neo4j_driver : neo4j.Driver object
+    The neo4j database connection pool
+uuid : str
+    The uuid of entity that connects to the activity that contains the protocol_url
+
+Returns
+-------
+str
+    The protocol_url property
+"""
+
+
+def get_activity_protocol(neo4j_driver, uuid):
+    result = {}
+
+    query = (f"MATCH (e:Entity)-[:WAS_GENERATED_BY]->(a:Activity)"
+             f"WHERE e.uuid = '{uuid}' "
+             f"RETURN a.protocol_url AS protocol_url")
+
+    logger.debug("======get_activity() query======")
+    logger.debug(query)
+
+    with neo4j_driver.session() as session:
+        record = session.read_transaction(_execute_readonly_tx, query)
+
+        if record is not None:
+            if record[0] is not None:
+                if record:
+                    result = record[0]
+
+    return result
+
+
 """
 Get target entity dict
 
@@ -95,6 +135,8 @@ Returns
 dict
     A dictionary of entity details returned from the Cypher query
 """
+
+
 def get_entity(neo4j_driver, uuid):
     result = {}
 
@@ -114,6 +156,7 @@ def get_entity(neo4j_driver, uuid):
 
     return result
 
+
 """
 Get all the entity nodes for the given entity type
 
@@ -131,7 +174,9 @@ Returns
 list
     A list of entity dicts of the given type returned from the Cypher query
 """
-def get_entities_by_type(neo4j_driver, entity_type, property_key = None):
+
+
+def get_entities_by_type(neo4j_driver, entity_type, property_key=None):
     results = []
 
     if property_key:
@@ -159,7 +204,13 @@ def get_entities_by_type(neo4j_driver, entity_type, property_key = None):
                 # Convert the list of nodes to a list of dicts
                 results = _nodes_to_dicts(record[record_field_name])
 
+    for index, result in enumerate(results):
+        protocol_url = get_activity_protocol(neo4j_driver, result['uuid'])
+        if protocol_url != {}:
+            result['protocol_url'] = protocol_url
+
     return results
+
 
 """
 Get all the public collection nodes
@@ -176,7 +227,9 @@ Returns
 list
     A list of public collections returned from the Cypher query
 """
-def get_public_collections(neo4j_driver, property_key = None):
+
+
+def get_public_collections(neo4j_driver, property_key=None):
     results = []
 
     if property_key:
@@ -224,6 +277,8 @@ Returns
 list
     A list of organs that are ancestors of the given entity returned from the Cypher query
 """
+
+
 def get_ancestor_organs(neo4j_driver, entity_uuid):
     results = []
 
@@ -261,13 +316,15 @@ Returns
 dict
     A dictionary of newly created entity details returned from the Cypher query
 """
+
+
 def create_entity(neo4j_driver, entity_type, entity_data_dict):
     node_properties_map = _build_properties_map(entity_data_dict)
 
-    query = (# Always define the Entity label in addition to the target `entity_type` label
-             f"CREATE (e:Entity:{entity_type}) "
-             f"SET e = {node_properties_map} "
-             f"RETURN e AS {record_field_name}")
+    query = (  # Always define the Entity label in addition to the target `entity_type` label
+        f"CREATE (e:Entity:{entity_type}) "
+        f"SET e = {node_properties_map} "
+        f"RETURN e AS {record_field_name}")
 
     logger.info("======create_entity() query======")
     logger.info(query)
@@ -317,6 +374,8 @@ activity_dict : dict
 direct_ancestor_uuid : str
     The uuid of the direct ancestor to be linked to
 """
+
+
 def create_multiple_samples(neo4j_driver, samples_dict_list, activity_data_dict, direct_ancestor_uuid):
     try:
         with neo4j_driver.session() as session:
@@ -381,6 +440,8 @@ Returns
 dict
     A dictionary of updated entity details returned from the Cypher query
 """
+
+
 def update_entity(neo4j_driver, entity_type, entity_data_dict, uuid):
     node_properties_map = _build_properties_map(entity_data_dict)
 
@@ -440,7 +501,9 @@ Returns
 list
     A list of unique ancestor dictionaries returned from the Cypher query
 """
-def get_ancestors(neo4j_driver, uuid, property_key = None):
+
+
+def get_ancestors(neo4j_driver, uuid, property_key=None):
     results = []
 
     if property_key:
@@ -474,6 +537,7 @@ def get_ancestors(neo4j_driver, uuid, property_key = None):
 
     return results
 
+
 """
 Get all descendants by uuid
 
@@ -491,7 +555,9 @@ Returns
 dict
     A list of unique desendant dictionaries returned from the Cypher query
 """
-def get_descendants(neo4j_driver, uuid, property_key = None):
+
+
+def get_descendants(neo4j_driver, uuid, property_key=None):
     results = []
 
     if property_key:
@@ -525,6 +591,7 @@ def get_descendants(neo4j_driver, uuid, property_key = None):
 
     return results
 
+
 """
 Get all parents by uuid
 
@@ -542,7 +609,9 @@ Returns
 dict
     A list of unique parent dictionaries returned from the Cypher query
 """
-def get_parents(neo4j_driver, uuid, property_key = None):
+
+
+def get_parents(neo4j_driver, uuid, property_key=None):
     results = []
 
     if property_key:
@@ -576,6 +645,7 @@ def get_parents(neo4j_driver, uuid, property_key = None):
 
     return results
 
+
 """
 Get all children by uuid
 
@@ -593,7 +663,9 @@ Returns
 dict
     A list of unique child dictionaries returned from the Cypher query
 """
-def get_children(neo4j_driver, uuid, property_key = None):
+
+
+def get_children(neo4j_driver, uuid, property_key=None):
     results = []
 
     if property_key:
@@ -628,7 +700,6 @@ def get_children(neo4j_driver, uuid, property_key = None):
     return results
 
 
-
 """
 Get all revisions for a given dataset uuid and sort them in descending order based on their creation time
 
@@ -644,6 +715,8 @@ Returns
 dict
     A list of all the unique revision datasets in DESC order
 """
+
+
 def get_sorted_revisions(neo4j_driver, uuid):
     results = []
 
@@ -686,7 +759,9 @@ Returns
 dict
     A list of unique previous revisions dictionaries returned from the Cypher query
 """
-def get_previous_revisions(neo4j_driver, uuid, property_key = None):
+
+
+def get_previous_revisions(neo4j_driver, uuid, property_key=None):
     results = []
 
     if property_key:
@@ -736,7 +811,9 @@ Returns
 dict
     A list of unique next revisions dictionaries returned from the Cypher query
 """
-def get_next_revisions(neo4j_driver, uuid, property_key = None):
+
+
+def get_next_revisions(neo4j_driver, uuid, property_key=None):
     results = []
 
     if property_key:
@@ -781,6 +858,8 @@ collection_uuid : str
 entitiy_uuids_list : list
     A list of entity uuids to be linked to collection
 """
+
+
 def add_entities_to_collection(neo4j_driver, collection_uuid, entitiy_uuids_list):
     # Join the list of uuids and wrap each string in single quote
     joined_str = ', '.join("'{0}'".format(dataset_uuid) for dataset_uuid in entitiy_uuids_list)
@@ -830,6 +909,8 @@ uuid : str
 depth : int
     The maximum number of hops in the traversal
 """
+
+
 def get_provenance(neo4j_driver, uuid, depth):
     # max_level_str is the string used to put a limit on the number of levels to traverse
     max_level_str = ''
@@ -865,7 +946,9 @@ uuid : str
 public : bool
     If get back the latest public revision dataset or the real one
 """
-def get_dataset_latest_revision(neo4j_driver, uuid, public = False):
+
+
+def get_dataset_latest_revision(neo4j_driver, uuid, public=False):
     # Defaut the latest revision to this entity itself
     result = get_entity(neo4j_driver, uuid)
 
@@ -906,6 +989,8 @@ neo4j_driver : neo4j.Driver object
 uuid : str
     The uuid of target dataset
 """
+
+
 def get_dataset_revision_number(neo4j_driver, uuid):
     revision_number = 1
 
@@ -938,6 +1023,8 @@ neo4j_driver : neo4j.Driver object
 uuid : str
     The uuid of the target entity: Dataset
 """
+
+
 def get_associated_organs_from_dataset(neo4j_driver, dataset_uuid):
     results = []
     query = (f"MATCH (ds:Dataset)-[*]->(organ:Sample {{sample_category:'organ'}}) "
@@ -973,6 +1060,8 @@ published_only : boolean
     If a user does not have a token with HuBMAP-Read Group access, published_only is set to true. This will cause only 
     datasets with status = 'Published' to be included in the result.
 """
+
+
 # TODO: This function has not been tested to work with SenNet provenance
 def get_prov_info(neo4j_driver, param_dict, published_only):
     group_uuid_query_string = ''
@@ -1099,23 +1188,26 @@ neo4j_driver : neo4j.Driver object
 dataset_uuid : string
     the uuid of the desired dataset
 """
+
+
 # TODO: This function has not been tested to work with SenNet provenance
 def get_individual_prov_info(neo4j_driver, dataset_uuid):
-    query = (f"MATCH (ds:Dataset {{uuid: '{dataset_uuid}'}})<-[:ACTIVITY_OUTPUT]-(a)<-[:ACTIVITY_INPUT]-(firstSample:Sample)<-[*]-(donor:Donor)"
-             f" WITH ds, COLLECT(distinct donor) AS DONOR, COLLECT(distinct firstSample) AS FIRSTSAMPLE"
-             f" OPTIONAL MATCH (ds)<-[*]-(metaSample:Sample)"
-             f" WHERE NOT metaSample.metadata IS NULL AND NOT TRIM(metaSample.metadata) = ''"
-             f" WITH ds, FIRSTSAMPLE, DONOR, COLLECT(distinct metaSample) AS METASAMPLE"
-             f" OPTIONAL MATCH (ds)<-[*]-(ruiSample:Sample)"
-             f" WHERE NOT ruiSample.rui_location IS NULL AND NOT TRIM(ruiSample.rui_location) = ''"
-             f" WITH ds, FIRSTSAMPLE, DONOR, METASAMPLE, COLLECT(distinct ruiSample) AS RUISAMPLE"
-             f" OPTIONAL match (donor)-[:ACTIVITY_INPUT]->(oa)-[:ACTIVITY_OUTPUT]->(organ:Sample {{sample_category:'organ'}})-[*]->(ds)"
-             f" WITH ds, FIRSTSAMPLE, DONOR, METASAMPLE, RUISAMPLE, COLLECT(distinct organ) AS ORGAN "
-             f" OPTIONAL MATCH (ds)-[:ACTIVITY_INPUT]->(a3)-[:ACTIVITY_OUTPUT]->(processed_dataset:Dataset)"
-             f" WITH ds, FIRSTSAMPLE, DONOR, METASAMPLE, RUISAMPLE, ORGAN, COLLECT(distinct processed_dataset) AS PROCESSED_DATASET"
-             f" RETURN ds.uuid, FIRSTSAMPLE, DONOR, RUISAMPLE, ORGAN, ds.hubmap_id, ds.status, ds.group_name,"
-             f" ds.group_uuid, ds.created_timestamp, ds.created_by_user_email, ds.last_modified_timestamp, "
-             f" ds.last_modified_user_email, ds.lab_dataset_id, ds.data_types, METASAMPLE, PROCESSED_DATASET")
+    query = (
+        f"MATCH (ds:Dataset {{uuid: '{dataset_uuid}'}})<-[:ACTIVITY_OUTPUT]-(a)<-[:ACTIVITY_INPUT]-(firstSample:Sample)<-[*]-(donor:Donor)"
+        f" WITH ds, COLLECT(distinct donor) AS DONOR, COLLECT(distinct firstSample) AS FIRSTSAMPLE"
+        f" OPTIONAL MATCH (ds)<-[*]-(metaSample:Sample)"
+        f" WHERE NOT metaSample.metadata IS NULL AND NOT TRIM(metaSample.metadata) = ''"
+        f" WITH ds, FIRSTSAMPLE, DONOR, COLLECT(distinct metaSample) AS METASAMPLE"
+        f" OPTIONAL MATCH (ds)<-[*]-(ruiSample:Sample)"
+        f" WHERE NOT ruiSample.rui_location IS NULL AND NOT TRIM(ruiSample.rui_location) = ''"
+        f" WITH ds, FIRSTSAMPLE, DONOR, METASAMPLE, COLLECT(distinct ruiSample) AS RUISAMPLE"
+        f" OPTIONAL match (donor)-[:ACTIVITY_INPUT]->(oa)-[:ACTIVITY_OUTPUT]->(organ:Sample {{sample_category:'organ'}})-[*]->(ds)"
+        f" WITH ds, FIRSTSAMPLE, DONOR, METASAMPLE, RUISAMPLE, COLLECT(distinct organ) AS ORGAN "
+        f" OPTIONAL MATCH (ds)-[:ACTIVITY_INPUT]->(a3)-[:ACTIVITY_OUTPUT]->(processed_dataset:Dataset)"
+        f" WITH ds, FIRSTSAMPLE, DONOR, METASAMPLE, RUISAMPLE, ORGAN, COLLECT(distinct processed_dataset) AS PROCESSED_DATASET"
+        f" RETURN ds.uuid, FIRSTSAMPLE, DONOR, RUISAMPLE, ORGAN, ds.hubmap_id, ds.status, ds.group_name,"
+        f" ds.group_uuid, ds.created_timestamp, ds.created_by_user_email, ds.last_modified_timestamp, "
+        f" ds.last_modified_user_email, ds.lab_dataset_id, ds.data_types, METASAMPLE, PROCESSED_DATASET")
 
     logger.info("======get_prov_info() query======")
     logger.info(query)
@@ -1185,6 +1277,8 @@ Parameters
 neo4j_driver : neo4j.Driver object
     The neo4j database connection pool
 """
+
+
 # TODO: This function has not been tested to work with SenNet provenance
 def get_sankey_info(neo4j_driver):
     query = (f"MATCH (ds:Dataset)<-[]-(a)<-[]-(:Sample)"
@@ -1210,7 +1304,8 @@ def get_sankey_info(neo4j_driver):
             data_types_list = json.loads(data_types_list)
             data_types = data_types_list[0]
             if (len(data_types_list)) > 1:
-                if (data_types_list[0] == "scRNAseq-10xGenomics-v3" and data_types_list[1] == "snATACseq") or (data_types_list[1] == "scRNAseq-10xGenomics-v3" and data_types_list[0] == "snATACseq"):
+                if (data_types_list[0] == "scRNAseq-10xGenomics-v3" and data_types_list[1] == "snATACseq") or (
+                        data_types_list[1] == "scRNAseq-10xGenomics-v3" and data_types_list[0] == "snATACseq"):
                     data_types = "scRNA-seq (10x Genomics v3),snATAC-seq"
             record_dict['dataset_data_types'] = data_types
             record_dict['dataset_status'] = record_contents[3]
@@ -1231,6 +1326,8 @@ neo4j_driver : neo4j.Driver object
 param_dict : dictionary
     dictionary containing any filters to be applied in the samples-prov-info query
 """
+
+
 # TODO: This function has not been tested to work with SenNet provenance
 def get_sample_prov_info(neo4j_driver, param_dict):
     group_uuid_query_string = ''
@@ -1289,6 +1386,7 @@ def get_sample_prov_info(neo4j_driver, param_dict):
             list_of_dictionaries.append(record_dict)
     return list_of_dictionaries
 
+
 ####################################################################################################
 ## Internal Functions
 ####################################################################################################
@@ -1307,6 +1405,8 @@ str
     A string representation of the node properties map containing 
     key-value pairs to be used in Cypher clause
 """
+
+
 def _build_properties_map(entity_data_dict):
     separator = ', '
     node_properties_list = []
@@ -1357,10 +1457,13 @@ Returns
 neo4j.Record or None
     A single record returned from the Cypher query
 """
+
+
 def _execute_readonly_tx(tx, query):
     result = tx.run(query)
     record = result.single()
     return record
+
 
 """
 Create a relationship from the source node to the target node in neo4j
@@ -1379,6 +1482,8 @@ direction: str
     The relationship direction from source node to target node: outgoing `->` or incoming `<-`
     Neo4j CQL CREATE command supports only directional relationships
 """
+
+
 def _create_relationship_tx(tx, source_node_uuid, target_node_uuid, relationship, direction):
     incoming = "-"
     outgoing = "-"
@@ -1413,6 +1518,8 @@ Returns
 dict
     A dictionary of target entity containing all property key/value pairs
 """
+
+
 def _node_to_dict(entity_node):
     entity_dict = {}
 
@@ -1420,6 +1527,7 @@ def _node_to_dict(entity_node):
         entity_dict.setdefault(key, value)
 
     return entity_dict
+
 
 """
 Convert the list of neo4j nodes into a list of Python dicts
@@ -1434,6 +1542,8 @@ Returns
 list
     A list of target entity dicts containing all property key/value pairs
 """
+
+
 def _nodes_to_dicts(nodes):
     dicts = []
 
@@ -1459,6 +1569,8 @@ Returns
 neo4j.node
     A neo4j node instance of the newly created entity node
 """
+
+
 def _create_activity_tx(tx, activity_data_dict):
     node_properties_map = _build_properties_map(activity_data_dict)
 
