@@ -154,6 +154,10 @@ def get_entity(neo4j_driver, uuid):
             # Convert the neo4j node into Python dict
             result = _node_to_dict(record[record_field_name])
 
+    protocol_url = get_activity_protocol(neo4j_driver, result['uuid'])
+    if protocol_url != {}:
+        result['protocol_url'] = protocol_url
+
     return result
 
 

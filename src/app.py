@@ -422,7 +422,8 @@ def get_entity_by_id(id):
                 complete_dict.pop(property_to_pop)
 
     # Also normalize the result based on schema
-    final_result = schema_manager.normalize_object_result_for_response('ENTITIES', complete_dict)
+    final_result = schema_manager.normalize_object_result_for_response('ENTITIES', complete_dict,
+                                                                       properties_to_include=['protocol_url'])
 
     # Result filtering based on query string
     # The `data_access_level` property is available in all entities Source/Sample/Dataset
