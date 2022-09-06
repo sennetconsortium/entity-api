@@ -1212,10 +1212,13 @@ def set_was_attributed_to(property_key, normalized_type, user_token, existing_da
     direct_ancestor_uuids = [existing_data_dict['group_uuid']]
     # direct_ancestor_uuids =  schema_manager.convert_str_to_data(existing_data_dict['was_attributed_to'])
 
+    activity_data_dict = schema_manager.generate_activity_data(normalized_type, user_token, existing_data_dict)
+
+
     try:
         # Create a linkage
         # between the Entity node and the parent Agent node in neo4j
-        schema_neo4j_queries.link_entity_to_agent(schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'], direct_ancestor_uuids)
+        schema_neo4j_queries.link_entity_to_agent(schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'], direct_ancestor_uuids, activity_data_dict)
     except TransactionError:
         # No need to log
         raise

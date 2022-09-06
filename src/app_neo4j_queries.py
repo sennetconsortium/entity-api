@@ -102,7 +102,7 @@ str
 def get_activity_protocol(neo4j_driver, uuid):
     result = {}
 
-    query = (f"MATCH (e:Entity)-[:WAS_GENERATED_BY]->(a:Activity)"
+    query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(a:Activity)"
              f"WHERE e.uuid = '{uuid}' "
              f"RETURN a.protocol_url AS protocol_url")
 
