@@ -1663,7 +1663,7 @@ str: The target property key
 str: The protocol_url string
 """
 def set_activity_protocol_url(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
-    if new_data_dict['entity_type'] == 'Dataset':
+    if 'entity_type' in new_data_dict and new_data_dict['entity_type'] == 'Dataset':
         return property_key, None
     else:
         if 'protocol_url' not in new_data_dict:

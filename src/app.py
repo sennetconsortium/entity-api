@@ -1050,10 +1050,13 @@ def update_activity(id):
     # Get target entity and return as a dict if exists
     activity_dict = query_target_activity(id, user_token)
 
+    normalized_dict = schema_manager.normalize_object_result_for_response('ACTIVITIES', json_data_dict)
+
+
     # Validate request json against the yaml schema
     # Pass in the entity_dict for missing required key check, this is different from creating new entity
     try:
-        schema_manager.validate_json_data_against_schema('ACTIVITIES', json_data_dict, "Activity",
+        schema_manager.validate_json_data_against_schema('ACTIVITIES', normalized_dict, "Activity",
                                                          existing_entity_dict=activity_dict)
     except schema_errors.SchemaValidationException as e:
         # No need to log the validation errors
@@ -1062,7 +1065,7 @@ def update_activity(id):
     # Execute property level validators defined in schema yaml before entity property update
     try:
         schema_manager.execute_property_level_validators('ACTIVITIES','before_property_update_validators', "Activity",
-                                                         request, activity_dict, json_data_dict)
+                                                         request, activity_dict, normalized_dict)
     except (schema_errors.MissingApplicationHeaderException,
             schema_errors.InvalidApplicationHeaderException,
             KeyError,
@@ -1070,7 +1073,7 @@ def update_activity(id):
         bad_request_error(e)
 
     # Generate 'before_update_trigger' data and update the entity details in Neo4j
-    merged_updated_dict = update_object_details('ACTIVITIES', request, "Activity", user_token, json_data_dict,
+    merged_updated_dict = update_object_details('ACTIVITIES', request, "Activity", user_token, normalized_dict,
                                                 activity_dict)
 
     # We'll need to return all the properties including those
@@ -1081,7 +1084,7 @@ def update_activity(id):
     normalized_complete_dict = schema_manager.normalize_object_result_for_response('ACTIVITIES', complete_dict)
 
     # Also reindex the updated entity node in elasticsearch via search-api
-    reindex_entity(activity_dict['uuid'], user_token)
+    # reindex_entity(activity_dict['uuid'], user_token)
 
     return jsonify(normalized_complete_dict)
 
@@ -1262,6 +1265,13 @@ def update_entity(id):
 
     # Will also filter the result based on schema
     normalized_complete_dict = schema_manager.normalize_object_result_for_response('ENTITIES', complete_dict)
+
+
+    if 'protocol_url' in json_data_dict:
+        # protocol_url = json_data_dict['protocol_url']
+        activity_dict = query_activity_was_generated_by(id, user_token)
+        # request.json = {'protocol_url': protocol_url}
+        update_activity(activity_dict['uuid'])
 
     # How to handle reindex collection?
     # Also reindex the updated entity node in elasticsearch via search-api
@@ -3958,7 +3968,7 @@ def query_target_activity(id, user_token):
             "user_id": "694c6f6a-1deb-41a6-880f-d1ad8af3705f"
         }
         """
-        sennet_ids = schema_manager.get_sennet_ids(id, user_token)
+        sennet_ids = schema_manager.get_sennet_ids(id)
 
         # Get the target uuid if all good
         uuid = sennet_ids['uuid']
@@ -4026,6 +4036,47 @@ def query_target_entity(id, user_token):
             not_found_error(f"Entity of id: {id} not found in Neo4j")
 
         return entity_dict
+    except requests.exceptions.RequestException as e:
+        # Due to the use of response.raise_for_status() in schema_manager.get_sennet_ids()
+        # we can access the status codes from the exception
+        status_code = e.response.status_code
+
+        if status_code == 400:
+            bad_request_error(e.response.text)
+        if status_code == 404:
+            not_found_error(e.response.text)
+        else:
+            internal_server_error(e.response.text)
+
+
+"""
+Get target entity dict
+
+Parameters
+----------
+id : str
+    The uuid or sennet_id of target entity
+user_token: str
+    The user's globus nexus token from the incoming request
+
+Returns
+-------
+dict
+    A dictionary of activity details returned from neo4j
+"""
+def query_activity_was_generated_by(id, user_token):
+    try:
+        sennet_ids = schema_manager.get_sennet_ids(id)
+
+        # Get the target uuid if all good
+        uuid = sennet_ids['uuid']
+        activity_dict = app_neo4j_queries.get_activity_was_generated_by(neo4j_driver_instance, uuid)
+
+        # The uuid exists via uuid-api doesn't mean it's also in Neo4j
+        if not activity_dict:
+            not_found_error(f"Activity connected to id: {id} not found in Neo4j")
+
+        return activity_dict
     except requests.exceptions.RequestException as e:
         # Due to the use of response.raise_for_status() in schema_manager.get_sennet_ids()
         # we can access the status codes from the exception
