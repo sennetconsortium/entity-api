@@ -46,6 +46,43 @@ def check_connection(neo4j_driver):
 
 
 """
+Get the activity connected to the given entity by the relationship WAS_GENERATED_BY
+
+Parameters
+----------
+neo4j_driver : neo4j.Driver object
+    The neo4j database connection pool
+uuid : str
+    The uuid of the entity connected to the requested actitivty  
+
+Returns
+-------
+dict
+    A dictionary of activity details returned from the Cypher query
+"""
+
+
+def get_activity_was_generated_by(neo4j_driver, uuid):
+    result = {}
+
+    query = (f"MATCH (e:Entity)-[:WAS_GENERATED_BY]->(a:Activity)"
+             f"WHERE e.uuid = '{uuid}' "
+             f"RETURN a AS {record_field_name}")
+
+    logger.debug("======get_activity() query======")
+    logger.debug(query)
+
+    with neo4j_driver.session() as session:
+        record = session.read_transaction(_execute_readonly_tx, query)
+
+        if record and record[record_field_name]:
+            # Convert the neo4j node into Python dict
+            result = _node_to_dict(record[record_field_name])
+
+    return result
+
+
+"""
 Get target activity dict
 
 Parameters
