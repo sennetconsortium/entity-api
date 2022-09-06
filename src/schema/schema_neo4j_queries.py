@@ -183,13 +183,24 @@ direct_ancestor_uuids : list
 """
 
 
-def link_entity_to_agent(neo4j_driver, entity_uuid, direct_ancestor_uuids):
+def link_entity_to_agent(neo4j_driver, entity_uuid, direct_ancestor_uuids, activity_data_dict):
     try:
         with neo4j_driver.session() as session:
             tx = session.begin_transaction()
 
             # First delete all the old linkages between this entity and its direct ancestors
             _delete_entity_agent_linkages_tx(tx, entity_uuid)
+            _delete_activity_node_and_linkages_tx(tx, entity_uuid)
+
+            # Get the activity uuid
+            activity_uuid = activity_data_dict['uuid']
+
+            # Create the Acvitity node
+            _create_activity_tx(tx, activity_data_dict)
+
+            # Create relationship from this Activity node to the target entity node
+            _create_relationship_tx(tx, activity_uuid, entity_uuid, 'WAS_GENERATED_BY', '<-')
+
 
             # Create relationship from each ancestor entity node to this node
             for direct_ancestor_uuid in direct_ancestor_uuids:
