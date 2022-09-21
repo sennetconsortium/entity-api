@@ -512,6 +512,7 @@ ENTITIES:
         description: "Source metadata coded as described here: <get source metadata doc from Chuck>"
       lab_source_id:
         type: string
+        required_on_create: true
         description: "A lab specific identifier for the source."
       # A user who is a member of multiple groups HAS to send in the group_uuid 
       group_uuid:
@@ -547,6 +548,7 @@ ENTITIES:
         description: "True if the source was consented to allow public, open access to any data, identified or not, derived from the source's tissue.  Otherwise false."
       source_type:
         type: string
+        required_on_create: true
         description: "A high level description of where this source originates from."
 
 
@@ -571,8 +573,6 @@ ENTITIES:
         description: "One of the values: public, consortium, protected. Only Dataset may have protected value"
         before_create_trigger: set_data_access_level
       sample_category:
-#        TODO: Should this be immutable?
-#        immutable: true
         type: string
         description: 'The category of the sample (Block/Section/Suspension/Bodily Fluid/Organ/Organ Piece/Other)'
         required_on_create: true
