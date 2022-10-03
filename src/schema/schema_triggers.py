@@ -866,35 +866,40 @@ def get_dataset_title(property_key, normalized_type, user_token, existing_data_d
     race = None
     sex = None
 
+    # TODO: At some point we will want to re-enable this
     # Parse assay_type from the Dataset
-    try:
-        # Note: The existing_data_dict['data_types'] is stored in Neo4j as a string representation of the Python list
-        # It's not stored in Neo4j as a json string! And we can't store it as a json string 
-        # due to the way that Cypher handles single/double quotes.
-        data_types_list = schema_manager.convert_str_to_data(existing_data_dict['data_types'])
-        assay_type_desc = _get_assay_type_description(data_types_list)
-    except requests.exceptions.RequestException as e:
-        raise requests.exceptions.RequestException(e)
+    # try:
+    #     # Note: The existing_data_dict['data_types'] is stored in Neo4j as a string representation of the Python list
+    #     # It's not stored in Neo4j as a json string! And we can't store it as a json string
+    #     # due to the way that Cypher handles single/double quotes.
+    #     data_types_list = schema_manager.convert_str_to_data(existing_data_dict['data_types'])
+    #     assay_type_desc = _get_assay_type_description(data_types_list)
+    # except requests.exceptions.RequestException as e:
+    #     raise requests.exceptions.RequestException(e)
+
+    assay_type_desc = schema_manager.convert_str_to_data(existing_data_dict['data_types'])[0]
 
     # Get the sample organ name and source metadata information of this dataset
     organ_name, source_metadata = schema_neo4j_queries.get_dataset_organ_and_source_info(schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'])
 
     # Can we move organ_types.yaml to commons or make it an API call to avoid parsing the raw yaml?
     # Parse the organ description
-    if organ_name is not None:
-        try:
-            # The organ_name is the two-letter code only set if specimen_type == 'organ'
-            # Convert the two-letter code to a description
-            organ_desc = _get_organ_description(organ_name)
-        except (yaml.YAMLError, requests.exceptions.RequestException) as e:
-            raise Exception(e)
+    # TODO: Add back organ/sample_category description
+    organ_desc = organ_name
+    # if organ_name is not None:
+    #     try:
+    #         # The organ_name is the two-letter code only set if specimen_type == 'organ'
+    #         # Convert the two-letter code to a description
+    #         organ_desc = _get_organ_description(organ_name)
+    #     except (yaml.YAMLError, requests.exceptions.RequestException) as e:
+    #         raise Exception(e)
 
     # Parse age, race, and sex
     if source_metadata is not None:
         # Note: The donor_metadata is stored in Neo4j as a string representation of the Python dict
         # It's not stored in Neo4j as a json string! And we can't store it as a json string
         # due to the way that Cypher handles single/double quotes.
-        ancestor_metadata_dict = schema_manager.convert_str_to_data(donor_metadata)
+        ancestor_metadata_dict = schema_manager.convert_str_to_data(source_metadata)
 
         data_list = []
 

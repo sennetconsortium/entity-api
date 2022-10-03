@@ -74,7 +74,7 @@ str: The source metadata (string representation of a Python dict)
 """
 def get_dataset_organ_and_source_info(neo4j_driver, uuid):
     organ_name = None
-    source_metadata = None
+    donor_metadata = None
 
     with neo4j_driver.session() as session:
         # Old time-consuming single query, it takes a significant amounts of DB hits
@@ -98,8 +98,8 @@ def get_dataset_organ_and_source_info(neo4j_driver, uuid):
 
         # To improve the query performance, we implement the two-step queries to drastically reduce the DB hits
         sample_query = (f"MATCH (e:Dataset)-[:USED|WAS_GENERATED_BY*]->(s:Sample) "
-                        f"WHERE e.uuid='{uuid}' AND s.specimen_type='organ' AND EXISTS(s.organ) "
-                        f"RETURN DISTINCT s.organ AS organ_name, s.uuid AS sample_uuid")
+                        f"WHERE e.uuid='{uuid}' AND EXISTS(s.sample_category)"
+                        f"RETURN DISTINCT s.sample_category AS sample_category, s.organ AS organ_name, s.uuid AS sample_uuid")
 
         logger.info("======get_dataset_organ_and_donor_info() sample_query======")
         logger.info(sample_query)
@@ -107,12 +107,16 @@ def get_dataset_organ_and_source_info(neo4j_driver, uuid):
         sample_record = session.read_transaction(_execute_readonly_tx, sample_query)
 
         if sample_record:
-            organ_name = sample_record['organ_name']
+            if sample_record['organ_name'] is None:
+                organ_name = sample_record['sample_category']
+            else:
+                organ_name = sample_record['organ_name']
+
             sample_uuid = sample_record['sample_uuid']
 
             # TODO: Need to test this. WAS_GENERATED_BY and USED might need to be swapped
-            donor_query = (f"MATCH (s:Sample)->[:WAS_GENERATED_BY]-(a:Activity)->[:USED]-(d:Source) "
-                           f"WHERE s.uuid='{sample_uuid}' AND s.specimen_type='organ' AND EXISTS(s.organ) "
+            donor_query = (f"MATCH (s:Sample)-[:USED|WAS_GENERATED_BY*]->(d:Source) "
+                           f"WHERE s.uuid='{sample_uuid}' AND EXISTS(s.sample_category) "
                            f"RETURN DISTINCT d.metadata AS donor_metadata")
 
             logger.info("======get_dataset_organ_and_donor_info() donor_query======")
@@ -123,7 +127,7 @@ def get_dataset_organ_and_source_info(neo4j_driver, uuid):
             if donor_record:
                 donor_metadata = donor_record['donor_metadata']
 
-    return organ_name, source_metadata
+    return organ_name, donor_metadata
 
 
 """
@@ -421,7 +425,7 @@ def get_next_revision_uuid(neo4j_driver, uuid):
 
     return result
 
-    
+
 """
 Get a list of associated collection uuids for a given dataset
 
@@ -569,7 +573,7 @@ def link_datasets_to_upload(neo4j_driver, upload_uuid, dataset_uuids_list):
                      f"WHERE s.uuid = '{upload_uuid}' AND d.uuid IN {dataset_uuids_list_str} "
                      # Use MERGE instead of CREATE to avoid creating the existing relationship multiple times
                      # MERGE creates the relationship only if there is no existing relationship
-                     f"MERGE (s)<-[r:IN_UPLOAD]-(d)") 
+                     f"MERGE (s)<-[r:IN_UPLOAD]-(d)")
 
             logger.info("======link_datasets_to_upload() query======")
             logger.info(query)
@@ -615,7 +619,7 @@ def unlink_datasets_from_upload(neo4j_driver, upload_uuid, dataset_uuids_list):
 
             query = (f"MATCH (s:Upload)<-[r:IN_UPLOAD]-(d:Dataset) "
                      f"WHERE s.uuid = '{upload_uuid}' AND d.uuid IN {dataset_uuids_list_str} "
-                     f"DELETE r") 
+                     f"DELETE r")
 
             logger.info("======unlink_datasets_from_upload() query======")
             logger.info(query)
@@ -706,8 +710,8 @@ def count_attached_published_datasets(neo4j_driver, entity_type, uuid):
 
         # logger.info("======count_attached_published_datasets() resulting count======")
         # logger.info(count)
-        
-        return count               
+
+        return count
 
 """
 Update the dataset and its ancestors' data_access_level for a given dataset.
@@ -732,7 +736,7 @@ def update_dataset_and_ancestors_data_access_level(neo4j_driver, uuid, data_acce
 
     logger.info("======update_dataset_and_ancestors_data_access_level() query======")
     logger.info(query)
-    
+
     try:
         with neo4j_driver.session() as session:
             tx = session.begin_transaction()
@@ -801,7 +805,7 @@ def get_sample_direct_ancestor(neo4j_driver, uuid, property_key = None):
 
     return result
 
-    
+
 ####################################################################################################
 ## Internal Functions
 ####################################################################################################
@@ -997,7 +1001,7 @@ def _create_relationship_tx(tx, source_node_uuid, target_node_uuid, relationship
     query = (f"MATCH (s), (t) "
              f"WHERE s.uuid = '{source_node_uuid}' AND t.uuid = '{target_node_uuid}' "
              f"CREATE (s){incoming}[r:{relationship}]{outgoing}(t) "
-             f"RETURN type(r) AS {record_field_name}") 
+             f"RETURN type(r) AS {record_field_name}")
 
     logger.info("======_create_relationship_tx() query======")
     logger.info(query)
