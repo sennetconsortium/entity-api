@@ -19,11 +19,10 @@ cd docker
 ./docker-development.sh [check|config|build|start|stop|down]
 ```
 
-## Docker build for deployment on TEST/STAGE/PROD
+## Docker build for deployment on PROD
 
 ```
 cd docker
-export ENTITY_API_VERSION=a.b.c (replace with the actual released version number)
 ./docker-deployment.sh [start|stop|down]
 ```
 
