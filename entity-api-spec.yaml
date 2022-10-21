@@ -1,16 +1,13 @@
 openapi: 3.0.0
 info:
-  description: 'The HuBMAP Entity API is a standard RESTful web service with create, update and read operations for the standard HuBMAP provenance graph entities.'
-  version: 2.0.21
-  title: HuBMAP Entity API
+  description: The SenNet Entity API is a standard RESTful web service with create, update and read operations for the standard SenNet provenance graph entities.
+  version: 1.0.0
+  title: SenNet Entity API
   contact:
-    name: HuBMAP Help Desk
-    email: help@hubmapconsortium.org
-  license:
-    name: MIT License
-    url: 'https://github.com/hubmapconsortium/entity-api/blob/master/license.txt'
+    name: SenNet Help Desk
+    email: help@sennetconsortium.org
 servers:
-  - url: 'https://entity.api.hubmapconsortium.org'
+  - url: https://entity.api.sennetconsortium.org
 components:
   securitySchemes:
     bearerAuth:
@@ -19,6 +16,56 @@ components:
       in: header
       description: Globus bearer token to authorize requests. Have to use apiKey to pass AWS API Gateway import validation
   schemas:
+    Activity:
+      type: object
+      properties:
+        created_timestamp:
+          type: integer
+          readOnly: true
+          description: The timestamp of when the node was created.  The format is an integer representing milliseconds since midnight Jan 1, 1970
+        created_by_user_displayname:
+          type: string
+          readOnly: true
+          description: The name of the person or process authenticated when creating the object
+        created_by_user_email:
+          type: string
+          readOnly: true
+          description: The email address of the person or process authenticated when creating the object.
+        created_by_user_sub:
+          type: string
+          readOnly: true
+          description: The subject id as provided by the authorization mechanism for the person or process authenticated when creating the object.
+        uuid:
+          type: string
+          readOnly: true
+          description: The SenNet unique identifier, intended for internal software use only.  This is a 32 digit hexadecimal uuid e.g. 461bbfdc353a2673e381f632510b0f17
+        sennet_id:
+          type: string
+          readOnly: true
+          description: A SenNet Consortium wide unique identifier randomly generated in the format SNT###.ABCD.### for every entity.
+        started_at_time:
+          type: integer
+          readOnly: true
+          description: The time and date of when the activity was started. The format is a datetime, e.g. 2012-04-25T01:30:00Z
+        ended_at_time:
+          type: integer
+          readOnly: true
+          description: The time and date of when the activity was ended.  The format is a datetime, e.g. 2012-04-25T01:30:00Z
+        was_associated_with:
+          type: string
+          readOnly: true
+          description: An activity association is an assignment of responsibility to an agent for an activity, indicating that the agent had a role in the activity.
+        used:
+          type: string
+          readOnly: true
+          description: Usage is the beginning of utilizing an entity by an activity.
+        creation_action:
+          type: string
+          readOnly: true
+          description: The activity that was performed
+        protocol_url:
+          type: string
+          description: "The protocols.io doi url pointing the protocol describing the donor selection, inclusion/exclusion criteria"
     Person:
       type: object
       properties:
@@ -37,246 +84,129 @@ components:
         affiliation:
           type: string
           description: The institution that the person is affiliated with.
-    Antibody:
-      type: object
-      properties:
-        antibody_name:
-          type: string
-          description: "The name of the antibody."
-        channel_id:
-          type: string
-          description: "The assay specific identifier for the channel corresponding to the antibody."
-        conjugated_cat_number:
-          type: string
-          description: "An antibody may be conjugated to a fluorescent tag or a metal tag for detection. Conjugated antibodies may be purchased from commercial providers. Blank if not applicable."
-        conjugated_tag:
-          type: string
-          description: "An antibody may be conjugated to a fluorescent tag or a metal tag for detection. Conjugated antibodies may be purchased from commercial providers. Blank if not applicable."
-        dilution:
-          type: string
-          description: "The dilition ratio, e.g. 1/200 for the antibody.  Blank if not applicable."
-        lot_number:
-          type: string
-          description: "The antibody lot number from the vendor."
-        rr_id:
-          type: string
-          description: "The unique antibody identifier from the Antibody Registry (https://antibodyregistry.org). "
-        uniprot_accession_number:
-          type: string
-          description: "The unique identifier for the target protein in the UniProt database (https://www.uniprot.org)."
-    DonorMetadata:
-      type: object
-      properties:
-        code:
-          type: string
-          description: "This is a Code from a source vocabulary in the HuBMAP Knowledge Graph, currently limited to UMLS source vocabulary terms."
-        sab:
-          type: string
-          description: "This is the source vocabulary in the HuBMAP Knowledge Graph.  Currently limited to UMLS source vocabularies."
-        concept_id:
-          type: string
-          description: "This is the Concept ID from the HuBMAP Knowledge Graph.  Currently limited to UMLS concepts."
-        data_type:
-          type: string
-          enum:
-            - Nominal
-            - Numeric
-          description: "This is the data type of thw record. Numeric types will generally have non-null data_value. Nominal types will generally have null data_value."
-        data_value:
-          type: string
-          description: "The data value of the record."
-        numeric_operator:
-          type: string
-          enum:
-            - EQ
-            - GT
-            - LT
-          description: "This is the numeric operator for the data value .This enables inputing thresholds and ranges for data values by using greater than or less than."
-        units:
-          type: string
-          description: "This are the units for the data value."
-        preferred_term:
-          type: string
-          description: "This is the preferred display term for the item. It may or may not correspond to a term in UMLS for this concept."
-        grouping_concept:
-          type: string
-          description: "This is the Concept ID from the HuBMAP Knowledge Graph, currently limited to UMLS concetps, that is to be used for grouping the record."
-        grouping_concept_preferred_term:
-          type: string
-          description: "This is the preferred display term for the facet in which this record should be counted for faceted search in the portal. It may or may not correspond to a term in UMLS for the grouping concept."
-        grouping_code:
-          type: string
-          description: "This is a Code from a source vocabulary in the HuBMAP Knowledge Graph, currently limited to UMLS vocabulary codes. This code corresponds to the grouping_concept."
-        grouping_sab:
-          type: string
-          description: "This is a grouping for the source vocabulary in the HuBMAP Knowledge Graph, currently limited to UMLS source vocabularies.. This sab corresponds to the grouping_code."
-        graph_version:
-          type: string
-          description: "This is the version of the HuBMAP Knowledge Graph that the Concept appears in, currently the version of UMLS that is used."
-        start_datetime:
-          type: integer
-          description: "This is the approximate time difference in seconds between the procurement and the start of this event (this is to construct time series records of clinical data for event-level data not donor-level data). An empty or zero value designates missing data or that this field is not applicable for the concept."
-        end_datetime:
-          type: integer
-          description: "This is the approximate time difference in seconds between the procurement and the end of this event (this is to construct time series records of clinical data for event-level data not donor-level data). An epty of zero value designates missing data or that this field is not applicable for the concept"
-    SampleMetadata:
-      type: object
-      description: "The sample specific metadata derived from the uploaded sample_metadata.tsv file. Returned as a json object."
-      properties:
-        sample_id:
-          type: string
-          description: "The HuBMAP Identifier for the sample."
-        vital_state:
-          type: string
-          enum:
-            - living
-            - deceased
-          description: "The vital state of the donor who the tissue sample came from."
-        health_status:
-          type: string
-          enum:
-            - cancer
-            - "relatively healthy"
-            - "chronic illness"
-          description: "Donor from which the tissue sample came from's baseline physical condition prior to immediate event leading to organ/tissue acquisition. For example, if a relatively healthy patient suffers trauma, and as a result of reparative surgery, a tissue sample is collected, the subject will be deemed 'relatively healthy'. Likewise, a relatively healthy subject may have experienced trauma leading to brain death. As a result of organ donation, a sample is collected. In this scenario, the subject is deemed 'relatively healthy'."
-        organ_condition:
-          type: string
-          enum:
-            - healthy
-            - diseased
-          description: "Health status of the organ at the time of tissue sample recovery."
-        procedure_date:
-          type: string
-          description: "The date at which the organ from which the tissue sample came from was procurred, in the format YYYY-MM-DD"
-        perfusion_solution:
-          type: string
-          enum:
-            - UWS
-            - HTK
-            - Belzer MPS/KPS
-            - Formalin
-            - Unknown
-            - None
-          description: "Health status of the organ at the time of sample recovery."
-        pathologist_report:
-          type: string
-          description: "Further details on organ level QC checks."
-        warm_ischemia_time_value:
-          type: integer
-          description: "Time interval between cessation of blood flow and cooling to 4C. Blank if not applicable."
-        warm_ischemia_time_unit:
-          type: string
-          description: "Time units that the warm_ischemia_time_value is reported in. Blank if not applicable"
-        cold_ischemia_time_value:
-          type: integer
-          description: "Time interval on ice to the start of preservation protocol. Blank if not applicable."
-        cold_ischemia_time_unit:
-          type: string
-          description: "Time units that the cold_ischemia_time_value is reported in. Blank if not applicable."
-        specimen_preservation_temperature:
-          type: string
-          description: "The temperature of the medium during the preservation process. Reported as preservation method, temperature and units, e.g. Freezer (-80 Celsius)"
-        specimen_quality_criteria:
-          type: string
-          description: "RIN score. e.g. RIN: 8.7"
-        specimen_tumor_distance_value:
-          type: string
-          description: "If surgical sample from a tumor biopsy, how far from the tumor was the sample obtained from. Typically a number of centimeters. Blank if not applicable or unknown."
-        specimen_tumor_distance_unit:
-          type: string
-          description: ""
-    File:
-      type: object
-      properties:
-        filename:
-          type: string
-          description: "The name of the file."
-        description:
-          type: string
-          description: "A description of the file. The Dataset.thumbnail_file does not have this file description."
-        file_uuid:
-          type: string
-          description: "The HuBMAP unique identifier for the file."
-    Donor:
+    Lab:
       type: object
       properties:
         created_timestamp:
           type: integer
           readOnly: true
-          description: "The timestamp of when the node was created.  The format is an integer representing milliseconds since midnight Jan 1, 1970"
+          description: The timestamp of when the node was created.  The format is an integer representing milliseconds since midnight Jan 1, 1970
         created_by_user_displayname:
           type: string
           readOnly: true
-          description: "The name of the person or process authenticated when creating the object"
+          description: The name of the person or process authenticated when creating the object
         created_by_user_email:
           type: string
           readOnly: true
-          description: "The email address of the person or process authenticated when creating the object."
+          description: The email address of the person or process authenticated when creating the object.
         created_by_user_sub:
           type: string
           readOnly: true
-          description: "The subject id as provided by the authorization mechanism for the person or process authenticated when creating the object."
+          description: The subject id as provided by the authorization mechanism for the person or process authenticated when creating the object.
         uuid:
           type: string
           readOnly: true
-          description: "The HuBMAP unique identifier, intended for internal software use only.  This is a 32 digit hexadecimal uuid e.g. 461bbfdc353a2673e381f632510b0f17"
-        hubmap_id:
+          description: The SenNet unique identifier, intended for internal software use only.  This is a 32 digit hexadecimal uuid e.g. 461bbfdc353a2673e381f632510b0f17
+        sennet_id:
           type: string
           readOnly: true
-          description: "A HuBMAP Consortium wide unique identifier randomly generated in the format HBM###.ABCD.### for every entity."
+          description: A SenNet Consortium wide unique identifier randomly generated in the format SNT###.ABCD.### for every entity.
+        acted_on_behalf_of:
+          type: string
+          readOnly: true
+          description: Delegation is the assignment of authority and responsibility to an agent (by itself or by another agent) to carry out a specific activity as a delegate or representative, while the agent it acts on behalf of retains some responsibility for the outcome of the delegated work.
+    File:
+      type: object
+      properties:
+        filename:
+          type: string
+          description: The name of the file.
+        description:
+          type: string
+          description: A description of the file. The Dataset.thumbnail_file does not have this file description.
+        file_uuid:
+          type: string
+          description: The SenNet unique identifier for the file.
+    Source:
+      type: object
+      properties:
+        created_timestamp:
+          type: integer
+          readOnly: true
+          description: The timestamp of when the node was created.  The format is an integer representing milliseconds since midnight Jan 1, 1970
+        created_by_user_displayname:
+          type: string
+          readOnly: true
+          description: The name of the person or process authenticated when creating the object
+        created_by_user_email:
+          type: string
+          readOnly: true
+          description: The email address of the person or process authenticated when creating the object.
+        created_by_user_sub:
+          type: string
+          readOnly: true
+          description: The subject id as provided by the authorization mechanism for the person or process authenticated when creating the object.
+        uuid:
+          type: string
+          readOnly: true
+          description: The SenNet unique identifier, intended for internal software use only.  This is a 32 digit hexadecimal uuid e.g. 461bbfdc353a2673e381f632510b0f17
+        sennet_id:
+          type: string
+          readOnly: true
+          description: A SenNet Consortium wide unique identifier randomly generated in the format SNT###.ABCD.### for every entity.
         last_modified_timestamp:
           type: integer
           readOnly: true
-          description: "The timestamp of when the object was last modified.  The format is an integer representing milliseconds since midnight, Jan 1, 1970"
+          description: The timestamp of when the object was last modified.  The format is an integer representing milliseconds since midnight, Jan 1, 1970
         last_modified_user_sub:
           type: string
           readOnly: true
-          description: "The subject id of the user who last modified the entity as provided by the authorization mechanism for the person or process authenticated when the object was modified."
+          description: The subject id of the user who last modified the entity as provided by the authorization mechanism for the person or process authenticated when the object was modified.
         last_modified_user_email:
           type: string
           readOnly: true
-          description: "The email address of the person or process which authenticated when the object was last modified."
+          description: The email address of the person or process which authenticated when the object was last modified.
         last_modified_user_displayname:
           type: string
           readOnly: true
-          description: "The name of the person or process which authenticated when the object was last modified."
+          description: The name of the person or process which authenticated when the object was last modified.
         entity_type:
           type: string
           readOnly: true
-          description: "One of the normalized entity types: Dataset, Collection, Sample, Donor, Upload"
+          description: 'One of the normalized entity types: Dataset, Collection, Sample, Source, Upload'
         registered_doi:
           type: string
-          description: "The doi of a the registered entity. e.g. 10.35079/hbm289.pcbm.487.  This is set during the publication process and currently available for certain Collections and Datasets."
+          description: The doi of a the registered entity. e.g. 10.35079/snt289.pcbm.487.  This is set during the publication process and currently available for certain Collections and Datasets.
         doi_url:
           type: string
           readOnly: true
-          description: "The url from the doi registry for this entity. e.g. https://doi.org/10.35079/hbm289.pcbm.487"
+          description: The url from the doi registry for this entity. e.g. https://doi.org/10.35079/snt289.pcbm.487
         creators:
           type: array
           items:
             $ref: '#/components/schemas/Person'
-          description: "A list of the people who created the entity with full name, email, ORCID iD, institution, etc.. This is analogus to the author list on a publication."
+          description: A list of the people who created the entity with full name, email, ORCID iD, institution, etc.. This is analogus to the author list on a publication.
         contacts:
           type: array
           items:
             $ref: '#/components/schemas/Person'
-          description: "A list of the people who are the main contacts to get information about the entity."
+          description: A list of the people who are the main contacts to get information about the entity.
         description:
           type: string
-          description: "Free text description of the donor"
+          description: Free text description of the source
         data_access_level:
           type: string
           readOnly: true
           enum:
             - consortium
             - public
-          description: "One of the values: public, consortium"
+          description: 'One of the values: public, consortium'
         image_files:
           readOnly: true
           type: array
           items:
             $ref: '#/components/schemas/File'
-          description: "List of uploaded image files and descriptions of the files. Stored in db as a stringfied json array."
+          description: List of uploaded image files and descriptions of the files. Stored in db as a stringfied json array.
         image_files_to_add:
           writeOnly: true
           type: array
@@ -291,245 +221,150 @@ components:
             type: string
             format: file_uuid
           description: 'List of image files previously uploaded to delete. Provide as a json array of the file_uuids of the file like: ["232934234234234234234270c0ea6c51d604a850558ef2247d0b4", "230948203482234234234a57bfe9c056d08a0f8e6cd612baa3bfa"]'
-        metadata:
-          type: object
-          properties:
-            organ_donor_data:
-              type: array
-              description: "Information about the donor who's organ(s) was/were used.  The organ was obtained via an organ donation program from a deceaced donor. Only living_donor_data or organ_donor_data, not both can be defined for a single donor."
-              items:
-                $ref: '#/components/schemas/DonorMetadata'
-            living_donor_data:
-              type: array
-              description: "Information about the donor who's tissue was used.  The tissue was obtained during a procedure. Only living_donor_data or organ_donor_data, not both can be defined for a single donor."
-              items:
-                $ref: '#/components/schemas/DonorMetadata'
-          description: "Donor metadata as an array of UMLS codes and descriptions"
-        protocol_url:
+        lab_source_id:
           type: string
-          description: "The protocols.io doi url pointing the protocol describing the donor selection, inclusion/exclusion criteria"
-        lab_donor_id:
-          type: string
-          description: "A lab specific identifier for the donor."
-        submission_id:
-          readOnly: true
-          type: string
-          description: "The hubmap internal id with embedded semantic information e.g.: VAN0003. This id is generated at creation time which tracks the lab, donor, organ and sample hierarchy per the following: https://docs.google.com/document/d/1DjHgmqWF1VA5-3mfzLFNfabbzmc8KLSG9xWx1DDLlzo/edit?usp=sharing"
+          description: A lab specific identifier for the source.
         group_uuid:
           type: string
-          description: "The uuid of globus group which the user who created this entity is a member of.  This is required on Create/POST if the user creating the Donor is a member of more than one write group.  This property cannot be set via PUT (only on Create/POST)."
+          description: The uuid of globus group which the user who created this entity is a member of.  This is required on Create/POST if the user creating the Source is a member of more than one write group.  This property cannot be set via PUT (only on Create/POST).
         group_name:
           readOnly: true
           type: string
-          description: "The displayname of globus group which the user who created this entity is a member of"
+          description: The displayname of globus group which the user who created this entity is a member of
         label:
           type: string
-          description: "Lab provided, de-identified name for the donor"
+          description: Lab provided, de-identified name for the source
+        source_type:
+          type: string
+          description: A high level description of where this source originates from.
     Sample:
       type: object
       properties:
         created_timestamp:
           type: integer
           readOnly: true
-          description: "The timestamp of when the node was created.  The format is an integer representing milliseconds since midnight Jan 1, 1970"
+          description: The timestamp of when the node was created.  The format is an integer representing milliseconds since midnight Jan 1, 1970
         created_by_user_displayname:
           type: string
           readOnly: true
-          description: "The name of the person or process authenticated when creating the object"
+          description: The name of the person or process authenticated when creating the object
         created_by_user_email:
           type: string
           readOnly: true
-          description: "The email address of the person or process authenticated when creating the object."
+          description: The email address of the person or process authenticated when creating the object.
         created_by_user_sub:
           type: string
           readOnly: true
-          description: "The subject id as provided by the authorization mechanism for the person or process authenticated when creating the object."
+          description: The subject id as provided by the authorization mechanism for the person or process authenticated when creating the object.
         uuid:
           type: string
           readOnly: true
-          description: "The HuBMAP unique identifier, intended for internal software use only.  This is a 32 digit hexadecimal uuid e.g. 461bbfdc353a2673e381f632510b0f17"
-        hubmap_id:
+          description: The SenNet unique identifier, intended for internal software use only.  This is a 32 digit hexadecimal uuid e.g. 461bbfdc353a2673e381f632510b0f17
+        sennet_id:
           type: string
           readOnly: true
-          description: "A HuBMAP Consortium wide unique identifier randomly generated in the format HBM###.ABCD.### for every entity."
+          description: A SenNet Consortium wide unique identifier randomly generated in the format SNT###.ABCD.### for every entity.
         last_modified_timestamp:
           type: integer
           readOnly: true
-          description: "The timestamp of when the object was last modified.  The format is an integer representing milliseconds since midnight, Jan 1, 1970"
+          description: The timestamp of when the object was last modified.  The format is an integer representing milliseconds since midnight, Jan 1, 1970
         last_modified_user_sub:
           type: string
           readOnly: true
-          description: "The subject id of the user who last modified the entity as provided by the authorization mechanism for the person or process authenticated when the object was modified."
+          description: The subject id of the user who last modified the entity as provided by the authorization mechanism for the person or process authenticated when the object was modified.
         last_modified_user_email:
           type: string
           readOnly: true
-          description: "The email address of the person or process which authenticated when the object was last modified."
+          description: The email address of the person or process which authenticated when the object was last modified.
         last_modified_user_displayname:
           type: string
           readOnly: true
-          description: "The name of the person or process which authenticated when the object was last modified."
+          description: The name of the person or process which authenticated when the object was last modified.
         entity_type:
           type: string
           readOnly: true
-          description: "One of the normalized entity types: Dataset, Collection, Sample, Donor"
+          description: 'One of the normalized entity types: Dataset, Collection, Sample, Source'
         registered_doi:
           type: string
-          description: "The doi of a the registered entity. e.g. 10.35079/hbm289.pcbm.487.  This is set during the publication process and currently available for certain Collections and Datasets."
+          description: The doi of a the registered entity. e.g. 10.35079/snt289.pcbm.487.  This is set during the publication process and currently available for certain Collections and Datasets.
         doi_url:
           type: string
           readOnly: true
-          description: "The url from the doi registry for this entity. e.g. https://doi.org/10.35079/hbm289.pcbm.487"
+          description: The url from the doi registry for this entity. e.g. https://doi.org/10.35079/snt289.pcbm.487
         creators:
           type: array
           items:
             $ref: '#/components/schemas/Person'
-          description: "A list of the people who created the entity with full name, email, ORCID iD, institution, etc.. This is analogus to the author list on a publication."
+          description: A list of the people who created the entity with full name, email, ORCID iD, institution, etc.. This is analogus to the author list on a publication.
         contacts:
           type: array
           items:
             $ref: '#/components/schemas/Person'
-          description: "A list of the people who are the main contacts to get information about the entity."
+          description: A list of the people who are the main contacts to get information about the entity.
         description:
           type: string
-          description: "Free text description of the sample"
+          description: Free text description of the sample
         data_access_level:
           type: string
           enum:
             - consortium
             - public
-          description: "One of the values: public, consortium."
-        specimen_type:
-          type: string
-          enum:
-            - atacseq
-            - biopsy
-            - blood
-            - cell_lysate
-            - clarity_hydrogel
-            - codex
-            - cryosections_curls_from_fresh_frozen_oct
-            - cryosections_curls_rnalater
-            - ffpe_block
-            - ffpe_slide
-            - fixed_frozen_section_slide
-            - fixed_tissue_piece
-            - flash_frozen_liquid_nitrogen
-            - formalin_fixed_oct_block
-            - fresh_frozen_oct_block
-            - fresh_frozen_section_slide
-            - fresh_frozen_tissue
-            - fresh_frozen_tissue_section
-            - fresh_tissue
-            - frozen_cell_pellet_buffy_coat
-            - gdna
-            - module
-            - nuclei
-            - nuclei_rnalater
-            - organ
-            - organ_piece
-            - other
-            - pbmc
-            - pfa_fixed_frozen_oct_block
-            - plasma
-            - protein
-            - ran_poly_a_enriched
-            - rna_total
-            - rnalater_treated_and_stored
-            - rnaseq
-            - scatacseq
-            - scrnaseq
-            - segment
-            - seqfish
-            - sequence_library
-            - serum
-            - single_cell_cryopreserved
-            - snatacseq
-            - snrnaseq
-            - tissue_lysate
-            - wgs
-          description: "A code representing the type of specimen.  Must be one of the codes specified in: [tissue sample types](https://github.com/hubmapconsortium/search-api/blob/master/src/search-schema/data/definitions/enums/tissue_sample_types.yaml)"
-        specimen_type_other:
-          type: string
-          description: "The user provided sample type if the 'other' sample_type is chosen."
-        protocol_url:
-          type: string
-          description: "The protocols.io doi url pointing the protocol under wich the sample was obtained and/or prepared."
+          description: 'One of the values: public, consortium.'
         group_uuid:
           type: string
-          description: "The uuid of globus group which the user who created this entity is a member of.  This is required on Create/POST if the user creating the Donor is a member of more than one write group.  This property cannot be set via PUT (only on Create/POST)."
+          description: The uuid of globus group which the user who created this entity is a member of.  This is required on Create/POST if the user creating the Source is a member of more than one write group.  This property cannot be set via PUT (only on Create/POST).
         group_name:
           readOnly: true
           type: string
-          description: "The displayname of globus group which the user who created this entity is a member of"
+          description: The displayname of globus group which the user who created this entity is a member of
+        sample_category:
+          type: string
+          description: The category of the sample (Block/Section/Suspension/Bodily Fluid/Organ/Organ Piece/Other)
         organ:
           type: string
           enum:
             - AO
-            - BL
             - BD
-            - BM
             - BR
-            - LF
-            - RF
-            - HT
-            - LB
-            - LE
+            - BS
             - LI
-            - LK
-            - LL
-            - LN
             - LV
-            - LY
+            - LL
+            - RL
+            - LK
+            - RK
+            - MU
             - LO
             - RO
-            - OT
-            - PA
-            - PL
-            - RB
-            - RE
-            - RK
-            - RL
-            - RN
-            - SI
             - SK
-            - SP
-            - ST
-            - TH
-            - TR
-            - UR
-            - UT
-          description: "Organ code specifier, only set if sample_type == organ.  Valid values found in: [organ types](https://github.com/hubmapconsortium/search-api/blob/master/src/search-schema/data/definitions/enums/organ_types.yaml)"
+            - OT
+          description: 'Organ code specifier, only set if sample_type == organ.  Valid values found in: [organ types](https://github.com/sennetconsortium/search-api/blob/master/src/search-schema/data/definitions/enums/organ_types.yaml)'
         organ_other:
           type: string
           description: The organ type provided by the user if "other" organ type is selected
         direct_ancestor_uuid:
           type: string
           writeOnly: true
-          description: "The uuid of source entity from which this new entity is derived from. Used on creation or edit to create an action and relationship to the ancestor.  The direct ancestor must be a Donor or Sample.  If the direct ancestor is a Donor, the sample must be of type organ."
+          description: The uuid of source entity from which this new entity is derived from. Used on creation or edit to create an action and relationship to the ancestor.  The direct ancestor must be a Source or Sample.  If the direct ancestor is a Source, the sample must be of type organ.
         direct_ancestor:
           readOnly: true
           type: object
-          description: "The entitiy directly above this sample in the provenance graph (direct parent)."
-        submission_id:
-          type: string
-          description: "The hubmap internal id with embedded semantic information e.g.: VAN0003-LK-1-10.  This id is generated at creation time which tracks the lab, donor, organ and sample hierarchy per the following: https://docs.google.com/document/d/1DjHgmqWF1VA5-3mfzLFNfabbzmc8KLSG9xWx1DDLlzo/edit?usp=sharing"
+          description: The entitiy directly above this sample in the provenance graph (direct parent).
         lab_tissue_sample_id:
           type: string
-          description: "Lab specific id for the sample."
-        metadata:
-          $ref: '#/components/schemas/SampleMetadata'
+          description: Lab specific id for the sample.
         rui_location:
           type: object
-          description: "The sample location and orientation in the ancestor organ as specified in the RUI tool. Returned as a json object."
+          description: The sample location and orientation in the ancestor organ as specified in the RUI tool. Returned as a json object.
         visit:
           type: string
-          description: "The visit id for the donor/patient when the sample was obtained."
+          description: The visit id for the source/patient when the sample was obtained.
         image_files:
           readOnly: true
           type: array
           items:
             $ref: '#/components/schemas/File'
-          description: "List of uploaded image files and descriptions of the files. Stored in db as a stringfied json array."
+          description: List of uploaded image files and descriptions of the files. Stored in db as a stringfied json array.
         image_files_to_add:
           writeOnly: true
           type: array
@@ -549,7 +384,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/File'
-          description: "List of uploaded image files and descriptions of the files. Stored in db as a stringfied json array."
+          description: List of uploaded image files and descriptions of the files. Stored in db as a stringfied json array.
         metadata_files_to_add:
           type: array
           items:
@@ -568,163 +403,127 @@ components:
         created_timestamp:
           type: integer
           readOnly: true
-          description: "The timestamp of when the node was created.  The format is an integer representing milliseconds since midnight Jan 1, 1970"
+          description: The timestamp of when the node was created.  The format is an integer representing milliseconds since midnight Jan 1, 1970
         created_by_user_displayname:
           type: string
           readOnly: true
-          description: "The name of the person or process authenticated when creating the object"
+          description: The name of the person or process authenticated when creating the object
         created_by_user_email:
           type: string
           readOnly: true
-          description: "The email address of the person or process authenticated when creating the object."
+          description: The email address of the person or process authenticated when creating the object.
         created_by_user_sub:
           type: string
           readOnly: true
-          description: "The subject id as provided by the authorization mechanism for the person or process authenticated when creating the object."
+          description: The subject id as provided by the authorization mechanism for the person or process authenticated when creating the object.
         uuid:
           type: string
           readOnly: true
-          description: "The HuBMAP unique identifier, intended for internal software use only.  This is a 32 digit hexadecimal uuid e.g. 461bbfdc353a2673e381f632510b0f17"
-        hubmap_id:
+          description: The SenNet unique identifier, intended for internal software use only.  This is a 32 digit hexadecimal uuid e.g. 461bbfdc353a2673e381f632510b0f17
+        sennet_id:
           type: string
           readOnly: true
-          description: "A HuBMAP Consortium wide unique identifier randomly generated in the format HBM###.ABCD.### for every entity."
+          description: A SenNet Consortium wide unique identifier randomly generated in the format SNT###.ABCD.### for every entity.
         last_modified_timestamp:
           type: integer
           readOnly: true
-          description: "The timestamp of when the object was last modified.  The format is an integer representing milliseconds since midnight, Jan 1, 1970"
+          description: The timestamp of when the object was last modified.  The format is an integer representing milliseconds since midnight, Jan 1, 1970
         last_modified_user_sub:
           type: string
           readOnly: true
-          description: "The subject id of the user who last modified the entity as provided by the authorization mechanism for the person or process authenticated when the object was modified."
+          description: The subject id of the user who last modified the entity as provided by the authorization mechanism for the person or process authenticated when the object was modified.
         last_modified_user_email:
           type: string
           readOnly: true
-          description: "The email address of the person or process which authenticated when the object was last modified."
+          description: The email address of the person or process which authenticated when the object was last modified.
         last_modified_user_displayname:
           type: string
           readOnly: true
-          description: "The name of the person or process which authenticated when the object was last modified."
+          description: The name of the person or process which authenticated when the object was last modified.
         entity_type:
           type: string
           readOnly: true
-          description: "One of the normalized entity types: Dataset, Collection, Sample, Donor"
+          description: 'One of the normalized entity types: Dataset, Collection, Sample, Source'
         registered_doi:
           type: string
-          description: "The doi of a the registered entity. e.g. 10.35079/hbm289.pcbm.487.  This is set during the publication process and currently available for certain Collections and Datasets."
+          description: The doi of a the registered entity. e.g. 10.35079/snt289.pcbm.487.  This is set during the publication process and currently available for certain Collections and Datasets.
         doi_url:
           type: string
           readOnly: true
-          description: "The url from the doi registry for this entity. e.g. https://doi.org/10.35079/hbm289.pcbm.487"
+          description: The url from the doi registry for this entity. e.g. https://doi.org/10.35079/snt289.pcbm.487
         creators:
           type: array
           items:
             $ref: '#/components/schemas/Person'
-          description: "A list of the people who created the entity with full name, email, ORCID iD, institution, etc.. This is analogus to the author list on a publication."
+          description: A list of the people who created the entity with full name, email, ORCID iD, institution, etc.. This is analogus to the author list on a publication.
         contacts:
           type: array
           items:
             $ref: '#/components/schemas/Person'
-          description: "A list of the people who are the main contacts to get information about the entity."
-        antibodies:
-          type: array
-          items:
-            $ref: '#/components/schemas/Antibody'
-          description: "A list of antibodies used in the assay that created the dataset"
+          description: A list of the people who are the main contacts to get information about the entity.
         description:
           type: string
-          description: "Free text description of the dataset"
+          description: Free text description of the dataset
         data_access_level:
           type: string
           readOnly: true
           enum:
             - public
             - consortium
-          description: "One of the values: public, consortium."
+          description: 'One of the values: public, consortium.'
         contains_human_genetic_sequences:
           type: boolean
-          description: "True if the data contains any human genetic sequence information. Can only be set at CREATE/POST time"
+          description: True if the data contains any human genetic sequence information. Can only be set at CREATE/POST time
         status:
-              type: string
-              enum:
-                - New
-                - Processing
-                - QA
-                - Published
-                - Error
-                - Hold
-                - Invalid
-              description: "One of: New|Processing|QA|Published|Error|Hold|Invalid"
+          type: string
+          enum:
+            - New
+            - Processing
+            - QA
+            - Published
+            - Error
+            - Hold
+            - Invalid
+          description: 'One of: New|Processing|QA|Published|Error|Hold|Invalid'
         title:
           type: string
-          description: "The dataset title."
+          description: The dataset title.
         data_types:
           type: array
           items:
             type: string
             enum:
-              - AF
-              - ATACseq-bulk
-              - bulk_atacseq
-              - cell-dive
+              - Bulk RNA-seq
+              - CITE-seq
               - CODEX
-              - codex_cytokit
-              - DART-FISH
-              - image_pyramid
-              - IMC
-              - 3D-IMC
-              - lc-ms_label-free
-              - lc-ms_labeled
-              - lc-ms-ms_label-free
-              - lc-ms-ms_labeled
-              - LC-MS-untargeted
-              - Lightsheet
-              - MALDI-IMS-neg
-              - MALDI-IMS-pos
-              - MxIF
-              - PAS
-              - bulk-RNA
-              - salmon_rnaseq_bulk
-              - SNAREseq
-              - sc_atac_seq_snare_lab
-              - sc_atac_seq_snare
-              - scRNA-Seq-10x
-              - salmon_rnaseq_10x
-              - sc_rna_seq_snare_lab
-              - salmon_rnaseq_snareseq
-              - sciATACseq
-              - sc_atac_seq_sci
-              - sciRNAseq
-              - salmon_rnaseq_sciseq
-              - seqFish
-              - seqFish_lab_processed
-              - snATACseq
-              - sn_atac_seq
-              - snRNAseq
-              - salmon_sn_rnaseq_10x
-              - Slide-seq
-              - Targeted-Shotgun-LC-MS
-              - TMT-LC-MS
-              - WGS
-          description: "The data or assay types contained in this dataset as a json array of strings.  Each is an assay code from [assay types](https://github.com/hubmapconsortium/search-api/blob/master/src/search-schema/data/definitions/enums/assay_types.yaml)."
+              - CosMX
+              - DBiT-seq
+              - FACS
+              - GeoMX
+              - LC-MS
+              - MIBI
+              - Mint-ChIP
+              - Multiplexed
+              - SASP
+              - scRNA-seq
+              - snATAC-seq
+              - snRNA-seq
+              - Stained Slides
+              - Visium
+              - Other
+          description: The data or assay types contained in this dataset as a json array of strings.  Each is an assay code from [assay types](https://github.com/sennetconsortium/search-api/blob/master/src/search-schema/data/definitions/enums/assay_types.yaml).
         collections:
           readOnly: true
           type: array
           items:
             $ref: '#/components/schemas/Collection'
-          description: "A list of collections that this dataset belongs to."
-        upload:
-          readOnly: true
-          type: array
-          items:
-            $ref: '#/components/schemas/Upload'
-          description: "The Data Upload that this dataset is associated with."
+          description: A list of collections that this dataset belongs to.
         contributors:
           readOnly: true
           type: array
           items:
             $ref: '#/components/schemas/Person'
-          description: "A list of people who contributed to the creation of this dataset.  Returned as an array of contributor where the structure of a contributor is"
+          description: A list of people who contributed to the creation of this dataset.  Returned as an array of contributor where the structure of a contributor is
         direct_ancestors:
           readOnly: true
           type: array
@@ -732,44 +531,44 @@ components:
             anyOf:
               - $ref: '#/components/schemas/Sample'
               - $ref: '#/components/schemas/Dataset'
-          description: "A list of direct parent ancensters (one level above) that the Dataset was derived from."
+          description: A list of direct parent ancensters (one level above) that the Dataset was derived from.
         published_timestamp:
           readOnly: true
           type: integer
-          description: "The timestamp of when the dataset was published.  The format is an integer representing milliseconds since midnight, Jan 1, 1970."
+          description: The timestamp of when the dataset was published.  The format is an integer representing milliseconds since midnight, Jan 1, 1970.
         published_user_displayname:
           readOnly: true
           type: string
-          description: "The name of the authenticated user or process that published the data."
+          description: The name of the authenticated user or process that published the data.
         published_user_sub:
           readOnly: true
           type: string
-          description: "The subject id for the user who published the data as provided by the authorization mechanism for the person or process authenticated when the dataset was publised."
+          description: The subject id for the user who published the data as provided by the authorization mechanism for the person or process authenticated when the dataset was publised.
         published_user_email:
           readOnly: true
           type: string
-          description: "The email address of the user who published the provided by the authorization mechanism for the person or process authenticated when published."
+          description: The email address of the user who published the provided by the authorization mechanism for the person or process authenticated when published.
         ingest_metadata:
           type: object
-          description: "The metadata returned from the ingest pipeline processing at data submission time.  Provided as json."
+          description: The metadata returned from the ingest pipeline processing at data submission time.  Provided as json.
         local_directory_rel_path:
           type: string
           readOnly: true
-          description: "The path on the local HIVE file system, relative to the base data directory, where the data is stored."
+          description: The path on the local HIVE file system, relative to the base data directory, where the data is stored.
         group_uuid:
           type: string
-          description: "The uuid of globus group which the user who created this entity is a member of.  This is required on Create/POST if the user creating the Donor is a member of more than one write group.  This property cannot be set via PUT (only on Create/POST)."
+          description: The uuid of globus group which the user who created this entity is a member of.  This is required on Create/POST if the user creating the Source is a member of more than one write group.  This property cannot be set via PUT (only on Create/POST).
         group_name:
           type: string
           readOnly: true
-          description: "The displayname of globus group which the user who created this entity is a member of"
+          description: The displayname of globus group which the user who created this entity is a member of
         previous_revision_uuid:
           type: string
-          description: "The uuid of previous revision dataset. Can only be set at Create/POST time."
+          description: The uuid of previous revision dataset. Can only be set at Create/POST time.
         next_revision_uuid:
           type: string
           readOnly: true
-          description: "The uuid of next revision dataset"
+          description: The uuid of next revision dataset
         thumbnail_file:
           readOnly: true
           description: 'The dataset thumbnail file detail. Stored in db as a stringfied json, e.g., {"filename": "thumbnail.jpg", "file_uuid": "c35002f9c3d49f8b77e1e2cd4a01803d"}'
@@ -777,188 +576,104 @@ components:
           writeOnly: true
           type: string
           format: temp_file_id
-          description: 'Just a temporary file id. Provide as a json object with an temp_file_id like {"temp_file_id":"dzevgd6xjs4d5grmcp4n"}'
+          description: Just a temporary file id. Provide as a json object with an temp_file_id like {"temp_file_id":"dzevgd6xjs4d5grmcp4n"}
         thumbnail_file_to_remove:
           writeOnly: true
           type: string
           format: file_uuid
           description: 'The thumbnail image file previously uploaded to delete. Provide as a string of the file_uuid like: "c35002f9c3d49f8b77e1e2cd4a01803d"'
-    Upload:
-      type: object
-      properties:
-        created_timestamp:
-          type: integer
-          readOnly: true
-          description: "The timestamp of when the node was created.  The format is an integer representing milliseconds since midnight Jan 1, 1970"
-        created_by_user_displayname:
-          type: string
-          readOnly: true
-          description: "The name of the person or process authenticated when creating the object"
-        created_by_user_email:
-          type: string
-          readOnly: true
-          description: "The email address of the person or process authenticated when creating the object."
-        created_by_user_sub:
-          type: string
-          readOnly: true
-          description: "The subject id as provided by the authorization mechanism for the person or process authenticated when creating the object."
-        uuid:
-          type: string
-          readOnly: true
-          description: "The HuBMAP unique identifier, intended for internal software use only.  This is a 32 digit hexadecimal uuid e.g. 461bbfdc353a2673e381f632510b0f17"
-        hubmap_id:
-          type: string
-          readOnly: true
-          description: "A HuBMAP Consortium wide unique identifier randomly generated in the format HBM###.ABCD.### for every entity."
-        last_modified_timestamp:
-          type: integer
-          readOnly: true
-          description: "The timestamp of when the object was last modified.  The format is an integer representing milliseconds since midnight, Jan 1, 1970"
-        last_modified_user_sub:
-          type: string
-          readOnly: true
-          description: "The subject id of the user who last modified the entity as provided by the authorization mechanism for the person or process authenticated when the object was modified."
-        last_modified_user_email:
-          type: string
-          readOnly: true
-          description: "The email address of the person or process which authenticated when the object was last modified."
-        last_modified_user_displayname:
-          type: string
-          readOnly: true
-          description: "The name of the person or process which authenticated when the object was last modified."
-        entity_type:
-          type: string
-          readOnly: true
-          description: "One of the normalized entity types: Dataset, Collection, Sample, Donor, Upload"
-        description:
-          type: string
-          description: "Free text description of the data being submitted."
-        title:
-          type: string
-          description: "Title of the datasets, a sentance or less"
-        status:
-          type: string
-          description: "One of: New|Valid|Invalid|Error|Submitted"
-        validation_message:
-          type: string
-          description: A message from the validataion tools describing what is invalid with the upload.
-        group_uuid:
-          type: string
-          description: "The uuid of globus group which the user who created this entity is a member of.  This is required on Create/POST if the user creating the Donor is a member of more than one write group.  This property cannot be set via PUT (only on Create/POST)."
-        group_name:
-          type: string
-          readOnly: true
-          description: "The displayname of globus group which the user who created this entity is a member of"
-        dataset_uuids_to_link:
-          type: array
-          items:
-            type: string
-          writeOnly: true
-          description: 'List of datasets to add to the Upload. Provide as a json array of the dataset uuids like: ["232934234234234234234270c0ea6c51d604a850558ef2247d0b4", "230948203482234234234a57bfe9c056d08a0f8e6cd612baa3bfa"]'
-        dataset_uuids_to_unlink:
-          type: array
-          items:
-            type: string
-          writeOnly: true
-          description: 'List of datasets to remove from a Upload. Provide as a json array of the dataset uuids like: ["232934234234234234234270c0ea6c51d604a850558ef2247d0b4", "230948203482234234234a57bfe9c056d08a0f8e6cd612baa3bfa"]'
-        datasets:
-          type: array
-          items:
-            $ref: '#/components/schemas/Dataset'
-          readOnly: true
-          description: "The datasets that are contained in this Upload."
     Collection:
       type: object
       properties:
         created_timestamp:
           type: integer
           readOnly: true
-          description: "The timestamp of when the node was created.  The format is an integer representing milliseconds since midnight Jan 1, 1970"
+          description: The timestamp of when the node was created.  The format is an integer representing milliseconds since midnight Jan 1, 1970
         created_by_user_displayname:
           type: string
           readOnly: true
-          description: "The name of the person or process authenticated when creating the object"
+          description: The name of the person or process authenticated when creating the object
         created_by_user_email:
           type: string
           readOnly: true
-          description: "The email address of the person or process authenticated when creating the object."
+          description: The email address of the person or process authenticated when creating the object.
         created_by_user_sub:
           type: string
           readOnly: true
-          description: "The subject id as provided by the authorization mechanism for the person or process authenticated when creating the object."
+          description: The subject id as provided by the authorization mechanism for the person or process authenticated when creating the object.
         uuid:
           type: string
           readOnly: true
-          description: "The HuBMAP unique identifier, intended for internal software use only.  This is a 32 digit hexadecimal uuid e.g. 461bbfdc353a2673e381f632510b0f17"
-        hubmap_id:
+          description: The SenNet unique identifier, intended for internal software use only.  This is a 32 digit hexadecimal uuid e.g. 461bbfdc353a2673e381f632510b0f17
+        sennet_id:
           type: string
           readOnly: true
-          description: "A HuBMAP Consortium wide unique identifier randomly generated in the format HBM###.ABCD.### for every entity."
+          description: A SenNet Consortium wide unique identifier randomly generated in the format SNT###.ABCD.### for every entity.
         last_modified_timestamp:
           type: integer
           readOnly: true
-          description: "The timestamp of when the object was last modified.  The format is an integer representing milliseconds since midnight, Jan 1, 1970"
+          description: The timestamp of when the object was last modified.  The format is an integer representing milliseconds since midnight, Jan 1, 1970
         last_modified_user_sub:
           type: string
           readOnly: true
-          description: "The subject id of the user who last modified the entity as provided by the authorization mechanism for the person or process authenticated when the object was modified."
+          description: The subject id of the user who last modified the entity as provided by the authorization mechanism for the person or process authenticated when the object was modified.
         last_modified_user_email:
           type: string
           readOnly: true
-          description: "The email address of the person or process which authenticated when the object was last modified."
+          description: The email address of the person or process which authenticated when the object was last modified.
         last_modified_user_displayname:
           type: string
           readOnly: true
-          description: "The name of the person or process which authenticated when the object was last modified."
+          description: The name of the person or process which authenticated when the object was last modified.
         entity_type:
           type: string
           readOnly: true
-          description: "One of the normalized entity types: Dataset, Collection, Sample, Donor"
+          description: 'One of the normalized entity types: Dataset, Collection, Sample, Source'
         registered_doi:
           type: string
-          description: "The doi of a the registered entity. e.g. 10.35079/hbm289.pcbm.487.  This is set during the publication process and currently available for certain Collections and Datasets."
+          description: The doi of a the registered entity. e.g. 10.35079/snt289.pcbm.487.  This is set during the publication process and currently available for certain Collections and Datasets.
         doi_url:
           type: string
           readOnly: true
-          description: "The url from the doi registry for this entity. e.g. https://doi.org/10.35079/hbm289.pcbm.487"
+          description: The url from the doi registry for this entity. e.g. https://doi.org/10.35079/snt289.pcbm.487
         creators:
           type: array
           items:
             $ref: '#/components/schemas/Person'
-          description: "A list of the people who created the entity with full name, email, ORCID iD, institution, etc.. This is analogus to the author list on a publication."
+          description: A list of the people who created the entity with full name, email, ORCID iD, institution, etc.. This is analogus to the author list on a publication.
         contacts:
           type: array
           items:
             $ref: '#/components/schemas/Person'
-          description: "A list of the people who are the main contacts to get information about the entity."
+          description: A list of the people who are the main contacts to get information about the entity.
         title:
           type: string
-          description: "The title of the Collection"
+          description: The title of the Collection
         datasets:
           type: array
           readOnly: true
           items:
             $ref: '#/components/schemas/Dataset'
-          description: "The datasets that are contained in the Collection."
+          description: The datasets that are contained in the Collection.
 paths:
-  '/entities/{id}':
+  /entities/{id}:
     get:
-      summary: Retrieve a provenance entity by id.  Entity types of Donor, Sample and Datasets.
+      summary: Retrieve a provenance entity by id.  Entity types of Source, Sample and Datasets.
       parameters:
         - name: id
           in: path
-          description: The unique identifier of entity.  This identifier can be either an HuBMAP ID (e.g. HBM123.ABCD.456) or UUID (32 digit hexadecimal number)
+          description: The unique identifier of entity.  This identifier can be either an SenNet ID (e.g. SNT123.ABCD.456) or UUID (32 digit hexadecimal number)
           required: true
           schema:
             type: string
       responses:
         '200':
-          description: The json of the **[Donor](http://somewhere.org)**, **[Sample](http://somewhere.org)** or **[Dataset](http://somewhere.org)**
+          description: The json of the **[Source](http://somewhere.org)**, **[Sample](http://somewhere.org)** or **[Dataset](http://somewhere.org)**
           content:
             application/json:
               schema:
                 oneOf:
-                  - $ref: '#/components/schemas/Donor'
+                  - $ref: '#/components/schemas/Source'
                   - $ref: '#/components/schemas/Sample'
                   - $ref: '#/components/schemas/Dataset'
         '400':
@@ -972,11 +687,11 @@ paths:
         '500':
           description: An unexpected error occurred.
     put:
-      summary: 'Update the properties of a given Donor, Sample, Dataset or Upload'
+      summary: Update the properties of a given Source, Sample, Dataset or Upload
       parameters:
         - name: id
           in: path
-          description: The HuBMAP ID (e.g. HBM123.ABCD.456) or UUID of target entity
+          description: The SenNet ID (e.g. SNT123.ABCD.456) or UUID of target entity
           required: true
           schema:
             type: string
@@ -985,7 +700,7 @@ paths:
           application/json:
             schema:
               oneOf:
-                - $ref: '#/components/schemas/Donor'
+                - $ref: '#/components/schemas/Source'
                 - $ref: '#/components/schemas/Sample'
                 - $ref: '#/components/schemas/Dataset'
       responses:
@@ -995,7 +710,7 @@ paths:
             application/json:
               schema:
                 oneOf:
-                  - $ref: '#/components/schemas/Donor'
+                  - $ref: '#/components/schemas/Source'
                   - $ref: '#/components/schemas/Sample'
                   - $ref: '#/components/schemas/Dataset'
         '400':
@@ -1006,7 +721,7 @@ paths:
           description: The target entity could not be found
         '500':
           description: Internal error
-  '/entity-types':
+  /entity-types:
     get:
       summary: Get a list of all the available entity types defined in the schema yaml
       responses:
@@ -1024,13 +739,13 @@ paths:
           description: THe user is not authorized to use this method
         '500':
           description: Internal error
-  '/ancestors/{id}':
+  /ancestors/{id}:
     get:
       summary: Get the ancestor list for an Entity.  The ancestors are the nodes connected "upstream" from the current node.  This list traverses all the levels in the graph.
       parameters:
         - name: id
           in: path
-          description: The unique identifier of entity.  This identifier can be either an HuBMAP ID (e.g. HBM123.ABCD.456) or UUID
+          description: The unique identifier of entity.  This identifier can be either an SenNet ID (e.g. SNT123.ABCD.456) or UUID
           required: true
           schema:
             type: string
@@ -1043,10 +758,9 @@ paths:
                 type: array
                 items:
                   anyOf:
-                    - $ref: '#/components/schemas/Donor'
+                    - $ref: '#/components/schemas/Source'
                     - $ref: '#/components/schemas/Sample'
                     - $ref: '#/components/schemas/Dataset'
-
         '400':
           description: Invalid or misformatted entity identifier
         '401':
@@ -1057,13 +771,13 @@ paths:
           description: The target entity could not be found
         '500':
           description: Internal error
-  '/descendants/{id}':
+  /descendants/{id}:
     get:
       summary: Get the descendant list for an Entity.  The descendants are the nodes "downstream" from the current node.  This list traverses all the levels in the graph. Returns all descendants as an array of Entities.
       parameters:
         - name: id
           in: path
-          description: The unique identifier of entity.  This identifier can be either an HuBMAP ID (e.g. HBM123.ABCD.456) or UUID
+          description: The unique identifier of entity.  This identifier can be either an SenNet ID (e.g. SNT123.ABCD.456) or UUID
           required: true
           schema:
             type: string
@@ -1088,13 +802,13 @@ paths:
           description: The target entity could not be found
         '500':
           description: Internal error
-  '/parents/{id}':
+  /parents/{id}:
     get:
       summary: Get the immediate parent list for an Entity.  The parents are the nodes connected one level "upstream" from the current node.  This list only goes to the next higher level in the graph.
       parameters:
         - name: id
           in: path
-          description: The unique identifier of entity.  This identifier can be either an HuBMAP ID (e.g. HBM123.ABCD.456) or UUID
+          description: The unique identifier of entity.  This identifier can be either an SenNet ID (e.g. SNT123.ABCD.456) or UUID
           required: true
           schema:
             type: string
@@ -1107,7 +821,7 @@ paths:
                 type: array
                 items:
                   anyOf:
-                    - $ref: '#/components/schemas/Donor'
+                    - $ref: '#/components/schemas/Source'
                     - $ref: '#/components/schemas/Sample'
                     - $ref: '#/components/schemas/Dataset'
         '400':
@@ -1120,13 +834,13 @@ paths:
           description: The target entity could not be found
         '500':
           description: Internal error
-  '/children/{id}':
+  /children/{id}:
     get:
       summary: Get the list of children directly connected to an Entity.  The children are the nodes one level below the current node.  This list only returns the items one level below in the graph.
       parameters:
         - name: id
           in: path
-          description: The unique identifier of entity.  This identifier can be either an HuBMAP ID (e.g. HBM123.ABCD.456) or UUID
+          description: The unique identifier of entity.  This identifier can be either an SenNet ID (e.g. SNT123.ABCD.456) or UUID
           required: true
           schema:
             type: string
@@ -1151,13 +865,13 @@ paths:
           description: The target entity could not be found
         '500':
           description: Internal error
-  '/entities/{id}/provenance':
+  /entities/{id}/provenance:
     get:
-      summary: 'Get Provenance Data for Entity.  This returns a PROV JSON compliant representation of the entity''s provenance. Refer to this document for more information regarding [PROV JSON format](https://www.w3.org/Submission/2013/SUBM-prov-json-20130424/)'
+      summary: Get Provenance Data for Entity.  This returns a PROV JSON compliant representation of the entity's provenance. Refer to this document for more information regarding [PROV JSON format](https://www.w3.org/Submission/2013/SUBM-prov-json-20130424/)
       parameters:
         - name: id
           in: path
-          description: The unique identifier of entity.  This identifier can be either an HuBMAP ID (e.g. HBM123.ABCD.456) or UUID
+          description: The unique identifier of entity.  This identifier can be either an SenNet ID (e.g. SNT123.ABCD.456) or UUID
           required: true
           schema:
             type: string
@@ -1176,13 +890,13 @@ paths:
           description: The target entity could not be found
         '500':
           description: Internal error
-  '/entities/{id}/ancestor-organs':
+  /entities/{id}/ancestor-organs:
     get:
       summary: Retrievea list of ancestor organ(s) of a given uuid
       parameters:
         - name: id
           in: path
-          description: The unique identifier of entity.  This identifier can be either an HuBMAP ID (e.g. HBM123.ABCD.456) or UUID
+          description: The unique identifier of entity.  This identifier can be either an SenNet ID (e.g. SNT123.ABCD.456) or UUID
           required: true
           schema:
             type: string
@@ -1205,13 +919,13 @@ paths:
           description: The target entity could not be found
         '500':
           description: Internal error
-  '/collections/{id}':
+  /collections/{id}:
     get:
-      summary: 'Returns the information of the Collection specified by the uuid with all connected datasets. If a valid token is provided with group membership in the HuBMAP-Read group any collection matching the id will be returned.  Otherwise if no token is provided or a valid token with no HuBMAP-Read group membership then only a public collection will be returned.  Public collections are defined as being published via a DOI (collection.doi_registered == true) and at least one of the connected datasets is public (dataset.metadata.data_access_level == ''public''). For public collections only connected datasets that are public are returned with it.'
+      summary: Returns the information of the Collection specified by the uuid with all connected datasets. If a valid token is provided with group membership in the SenNet-Read group any collection matching the id will be returned.  Otherwise if no token is provided or a valid token with no SenNet-Read group membership then only a public collection will be returned.  Public collections are defined as being published via a DOI (collection.doi_registered == true) and at least one of the connected datasets is public (dataset.metadata.data_access_level == 'public'). For public collections only connected datasets that are public are returned with it.
       parameters:
         - name: id
           in: path
-          description: The unique identifier of entity.  This identifier can be either an HuBMAP ID (e.g. HBM123.ABCD.456) or UUID
+          description: The unique identifier of entity.  This identifier can be either an SenNet ID (e.g. SNT123.ABCD.456) or UUID
           required: true
           schema:
             type: string
@@ -1232,13 +946,13 @@ paths:
           description: The target entity could not be found
         '500':
           description: Internal error
-  '/entities/new/{entity_type}':
+  /entities/{entity_type}:
     post:
       summary: Create a new entity of the target type
       parameters:
         - name: entity_type
           in: path
-          description: 'One of the target entity types (case-insensitive since will be normalized): Donor, Sample, Dataset, Upload'
+          description: 'One of the target entity types (case-insensitive since will be normalized): Source, Sample, Dataset, Upload'
           required: true
           schema:
             type: string
@@ -1247,10 +961,9 @@ paths:
           application/json:
             schema:
               oneOf:
-                - $ref: '#/components/schemas/Donor'
+                - $ref: '#/components/schemas/Source'
                 - $ref: '#/components/schemas/Sample'
                 - $ref: '#/components/schemas/Dataset'
-                - $ref: '#/components/schemas/Upload'
       responses:
         '200':
           description: The entity was successfully created and is returned
@@ -1260,10 +973,9 @@ paths:
                 type: array
                 items:
                   anyOf:
-                    - $ref: '#/components/schemas/Donor'
+                    - $ref: '#/components/schemas/Source'
                     - $ref: '#/components/schemas/Sample'
                     - $ref: '#/components/schemas/Dataset'
-                    - $ref: '#/components/schemas/Upload'
         '400':
           description: Invalid entity type provided
         '401':
@@ -1272,9 +984,9 @@ paths:
           description: The user is not authorized to create the entity
         '500':
           description: Internal error
-  '/entities/multiple-samples/{count}':
+  /entities/multiple-samples/{count}:
     post:
-      summary: "Create multiple samples from the same source entity. 'count' samples will be generated each with individual uuids, hubmap_ids and submission_ids."
+      summary: Create multiple samples from the same source entity. 'count' samples will be generated each with individual uuids and sennet_ids.
       parameters:
         - name: count
           in: path
@@ -1284,7 +996,7 @@ paths:
             type: string
       responses:
         '200':
-          description: The samples were successfully created.  An array of objects each containing a uuid, hubmap_id and submission_id associated with each newly created sample.
+          description: The samples were successfully created.  An array of objects each containing a uuid and sennet_id associated with each newly created sample.
           content:
             application/json:
               schema:
@@ -1292,9 +1004,7 @@ paths:
                 items:
                   type: object
                   properties:
-                    hubmap_id:
-                      type: string
-                    submission_id:
+                    sennet_id:
                       type: string
                     uuid:
                       type: string
@@ -1304,9 +1014,9 @@ paths:
           description: The user's token has expired or the user did not supply a valid token
         '500':
           description: Internal error
-  '/collections/{id}/add-datasets':
+  /collections/{id}/add-entities:
     put:
-      summary: Link the given list of datasets to the target collection
+      summary: Link the given list of entities to the target collection
       parameters:
         - name: id
           in: path
@@ -1322,18 +1032,18 @@ paths:
         '401':
           description: The user's token has expired or the user did not supply a valid token
         '403':
-          description: The user is not authorized to add datasets to the collection
+          description: The user is not authorized to add entities to the collection
         '404':
           description: The target entity could not be found
         '500':
           description: Internal error
-  '/doi/redirect/{id}':
+  /doi/redirect/{id}:
     get:
       summary: Redirect a request from a doi service
       parameters:
         - name: id
           in: path
-          description: The HuBMAP ID (e.g. HBM123.ABCD.456) or UUID of the target collection
+          description: The SenNet ID (e.g. SNT123.ABCD.456) or UUID of the target collection
           required: true
           schema:
             type: string
@@ -1344,13 +1054,13 @@ paths:
           description: Invalid or misformatted collection identifier
         '500':
           description: Internal error
-  '/entities/{id}/globus-url':
+  /entities/{id}/globus-url:
     get:
       summary: Get the Globus URL to the given Dataset or Upload entity
       parameters:
         - name: id
           in: path
-          description: The HuBMA`P ID (e.g. HBM123.ABCD.456) or UUID of the given ntity
+          description: The HuBMA`P ID (e.g. SNT123.ABCD.456) or UUID of the given ntity
           required: true
           schema:
             type: string
@@ -1372,13 +1082,13 @@ paths:
           description: The target entity could not be found
         '500':
           description: Internal error
-  '/datasets/{id}/latest-revision':
+  /datasets/{id}/latest-revision:
     get:
-      summary: 'Retrive the latest (newest) revision of a given Dataset. Public/Consortium access rules apply - if no token/consortium access then must be for a public dataset and the returned Dataset must be the latest public version. If the given dataset itself is the latest revision, meaning it has no next revisions, this dataset gets returned.'
+      summary: Retrive the latest (newest) revision of a given Dataset. Public/Consortium access rules apply - if no token/consortium access then must be for a public dataset and the returned Dataset must be the latest public version. If the given dataset itself is the latest revision, meaning it has no next revisions, this dataset gets returned.
       parameters:
         - name: id
           in: path
-          description: The unique identifier of entity.  This identifier can be either an HuBMAP ID (e.g. HBM123.ABCD.456) or UUID
+          description: The unique identifier of entity.  This identifier can be either an SenNet ID (e.g. SNT123.ABCD.456) or UUID
           required: true
           schema:
             type: string
@@ -1399,13 +1109,13 @@ paths:
           description: The target dataset could not be found
         '500':
           description: Internal error
-  '/datasets/{id}/revision':
+  /datasets/{id}/revision:
     get:
-      summary: 'Retrive the calculated revision number of a Dataset. The calculated revision is number is based on the [:REVISION_OF] relationships to the oldest dataset in a revision chain. Where the oldest dataset = 1 and each newer version is incremented by one (1, 2, 3 ...). Public/Consortium access rules apply, if is for a non-public dataset and no token or a token without membership in HuBMAP-Read group is sent with the request then a 403 response should be returned.'
+      summary: Retrive the calculated revision number of a Dataset. The calculated revision is number is based on the [:REVISION_OF] relationships to the oldest dataset in a revision chain. Where the oldest dataset = 1 and each newer version is incremented by one (1, 2, 3 ...). Public/Consortium access rules apply, if is for a non-public dataset and no token or a token without membership in SenNet-Read group is sent with the request then a 403 response should be returned.
       parameters:
         - name: id
           in: path
-          description: The unique identifier of entity.  This identifier can be either an HuBMAP ID (e.g. HBM123.ABCD.456) or UUID
+          description: The unique identifier of entity.  This identifier can be either an SenNet ID (e.g. SNT123.ABCD.456) or UUID
           required: true
           schema:
             type: string
@@ -1422,13 +1132,13 @@ paths:
           description: The target dataset could not be found
         '500':
           description: Internal error
-  '/datasets/{id}/revisions':
+  /datasets/{id}/revisions:
     get:
-      summary: 'From a given ID of a versioned dataset, retrieve a list of every dataset in the chain ordered from most recent to oldest. The revision number, as well as the dataset uuid will be included. An optional parameter ?include_dataset=true will include the full dataset for each revision as well. Public/Consortium access rules apply, if is for a non-public dataset and no token or a token without membership in HuBMAP-Read group is sent with the request then a 403 response should be returned. If the given id is published, but later revisions are not and the user is not in HuBMAP-Read group, only published revisions will be returned. The field next_revision_uuid will not be returned if the next revision is unpublished'
+      summary: From a given ID of a versioned dataset, retrieve a list of every dataset in the chain ordered from most recent to oldest. The revision number, as well as the dataset uuid will be included. An optional parameter ?include_dataset=true will include the full dataset for each revision as well. Public/Consortium access rules apply, if is for a non-public dataset and no token or a token without membership in SenNet-Read group is sent with the request then a 403 response should be returned. If the given id is published, but later revisions are not and the user is not in SenNet-Read group, only published revisions will be returned. The field next_revision_uuid will not be returned if the next revision is unpublished
       parameters:
         - name: id
           in: path
-          description: The unique identifier of entity.  This identifier can be either an HuBMAP ID (e.g. HBM123.ABCD.456) or UUID
+          description: The unique identifier of entity.  This identifier can be either an SenNet ID (e.g. SNT123.ABCD.456) or UUID
           required: true
           schema:
             type: string
@@ -1438,7 +1148,9 @@ paths:
           required: false
           schema:
             type: string
-            enum: ['true', 'false']
+            enum:
+              - 'true'
+              - 'false'
       responses:
         '200':
           description: The list of revised datasets that the referenced dataset is a member of including the index number of the revision, where 1 is the oldest version of any revision chain
@@ -1465,13 +1177,13 @@ paths:
           description: The target dataset could not be found
         '500':
           description: Internal error
-  '/datasets/{id}/retract':
+  /datasets/{id}/retract:
     put:
-      summary: 'Retracts a dataset after it has been published. Requires a json body with a single field {retraction_reason: string}. The dataset for the given id is modified to include this new retraction_reason field and sets the dataset property sub_status to Retracted. The complete modified dataset is returned. Requires that the dataset being retracted has already been published (dataset.status == Published. Requires a user token with membership in the HuBMAP-Data-Admin group otherwise then a 403 will be returned.'
+      summary: 'Retracts a dataset after it has been published. Requires a json body with a single field {retraction_reason: string}. The dataset for the given id is modified to include this new retraction_reason field and sets the dataset property sub_status to Retracted. The complete modified dataset is returned. Requires that the dataset being retracted has already been published (dataset.status == Published. Requires a user token with membership in the SenNet-Data-Admin group otherwise then a 403 will be returned.'
       parameters:
         - name: id
           in: path
-          description: The unique identifier of entity. This identifier can be either a HubMAP ID (e.g. HBM123.ABCD.456) or UUID
+          description: The unique identifier of entity. This identifier can be either a HubMAP ID (e.g. SNT123.ABCD.456) or UUID
           required: true
           schema:
             type: string
@@ -1484,7 +1196,7 @@ paths:
               properties:
                 retraction_reason:
                   type: string
-                  description: Free text describing why the dataset was retracted 
+                  description: Free text describing why the dataset was retracted
       responses:
         '200':
           description: The complete dataset with modified sub_status and retraction_reason
@@ -1493,22 +1205,24 @@ paths:
         '401':
           description: The user's token has expired or the user did not supply a valid token
         '403':
-          description: The user is not authorized to query the retract the given dataset.  The user must be a member of the HuBMAP-Data-Admin group
+          description: The user is not authorized to query the retract the given dataset.  The user must be a member of the SenNet-Data-Admin group
         '404':
           description: The target dataset could not be found
         '500':
           description: Internal error
-  '/datasets/prov-info':
+  /datasets/prov-info:
     get:
-      summary: 'returns ALL provenance information for ALL datasets in a default table/tsv format or optionally a json format when an optional ?format=json parameter is provided'
+      summary: returns ALL provenance information for ALL datasets in a default table/tsv format or optionally a json format when an optional ?format=json parameter is provided
       parameters:
         - name: format
           in: query
-          description: "A case insensitive string. Any value besides 'json' will have no effect. If the string is 'json', provenance info will be returned as a json. Otherwise, it will be returned as a tsv file"
+          description: A case insensitive string. Any value besides 'json' will have no effect. If the string is 'json', provenance info will be returned as a json. Otherwise, it will be returned as a tsv file
           required: false
           schema:
             type: string
-            enum: [ 'json', 'tsv' ]
+            enum:
+              - json
+              - tsv
         - name: group_uuid
           in: query
           description: The uuid of the group
@@ -1521,7 +1235,9 @@ paths:
           required: false
           schema:
             type: string
-            enum: [ 'true', 'false' ]
+            enum:
+              - 'true'
+              - 'false'
         - name: organ
           in: query
           description: Case insensitive string for 2 character organ code. Values must be present on organ yaml or a 400 exception is raised
@@ -1534,7 +1250,10 @@ paths:
           required: false
           schema:
             type: string
-            enum: [ 'qa', 'new', 'published', ]
+            enum:
+              - qa
+              - new
+              - published
       responses:
         '200':
           description: all provenance information for every dataset in the database either as a json list or as a tsv file to be downloaded
@@ -1549,9 +1268,9 @@ paths:
                   dataset_uuid:
                     type: string
                     description: The uuid of the dataset
-                  dataset_hubmap_id:
+                  dataset_sennet_id:
                     type: string
-                    description: The HuBMAP ID of the dataset like HBM123.ABCD.456
+                    description: The SenNet ID of the dataset like SNT123.ABCD.456
                   dataset_status:
                     type: string
                     description: status of the dataset New, QA, Published, etc ...
@@ -1582,11 +1301,11 @@ paths:
                   dataset_portl_url:
                     type: string
                     description: the url to open the dataset in the data portal
-                  first_sample_hubmap_id:
+                  first_sample_sennet_id:
                     type: array
                     items:
                       type: string
-                      description: HuBMAP ID of the tissue sample nearest to this dataset in the provenance chain
+                      description: SenNet ID of the tissue sample nearest to this dataset in the provenance chain
                   first_sample_submission_id:
                     type: array
                     items:
@@ -1607,11 +1326,11 @@ paths:
                     items:
                       type: string
                       description: The URL to the data portal for this sample nearest to this dataset in the provenance chain
-                  organ_hubmap_id:
+                  organ_sennet_id:
                     type: array
                     items:
                       type: string
-                      description: HuBMAP ID of the organ associated to this dataset in the provenance chain
+                      description: SenNet ID of the organ associated to this dataset in the provenance chain
                   organ_submission_id:
                     type: array
                     items:
@@ -1627,31 +1346,31 @@ paths:
                     items:
                       type: string
                       description: The organ type of the organ associated to this dataset in the provenance chain (return the organ code resolved to the organ name via the organ.yaml file)
-                  donor_hubmap_id:
+                  source_sennet_id:
                     type: array
                     items:
                       type: string
-                      description: The HuBMAP ID of the donor associated to this dataset in the provenance chain
-                  donor:submission_id:
+                      description: The SenNet ID of the source associated to this dataset in the provenance chain
+                  source:submission_id:
                     type: array
                     items:
                       type: string
-                      description: The Submission ID of the donor associated to this dataset in the provenance chain
-                  donor_uuid:
+                      description: The Submission ID of the source associated to this dataset in the provenance chain
+                  source_uuid:
                     type: array
                     items:
                       type: string
-                      description: The UUID of the donor associated to this dataset in the provenance chain
-                  donor_group_name:
+                      description: The UUID of the source associated to this dataset in the provenance chain
+                  source_group_name:
                     type: array
                     items:
                       type: string
-                      description: The name of the HuBMAP group where this donor originated (resolved to the group name from the group_uuid property resolved to displayname via the groups mapping file
-                  rui_location_hubmap_id:
+                      description: The name of the SenNet group where this source originated (resolved to the group name from the group_uuid property resolved to displayname via the groups mapping file
+                  rui_location_sennet_id:
                     type: array
                     items:
                       type: string
-                      description: The HuBMAP ID of the tissue sample that contains RUI location json for this dataset
+                      description: The SenNet ID of the tissue sample that contains RUI location json for this dataset
                   rui_location_submission_id:
                     type: array
                     items:
@@ -1662,11 +1381,11 @@ paths:
                     items:
                       type: string
                       description: The uuid of the tissue sample that contains RUI location json for this dataset
-                  sample_metadata_hubmap_id:
+                  sample_metadata_sennet_id:
                     type: array
                     items:
                       type: string
-                      description: The HuBMAP ID of tissue sample(s) containing sample metadata
+                      description: The SenNet ID of tissue sample(s) containing sample metadata
                   sample_metadata_submission_id:
                     type: array
                     items:
@@ -1683,24 +1402,25 @@ paths:
           description: THe user is not authorized to use this method
         '500':
           description: Internal error
-
-  '/datasets/{id}/prov-info':
+  /datasets/{id}/prov-info:
     get:
-      summary: 'returns aLL provenance information for a single dataset in a default table/tsv format or optionally a json format when an optional ?format=json parameter is provided'
+      summary: returns aLL provenance information for a single dataset in a default table/tsv format or optionally a json format when an optional ?format=json parameter is provided
       parameters:
         - name: id
           in: path
-          description: he unique identifier of entity.  This identifier can be either an HuBMAP ID (e.g. HBM123.ABCD.456) or UUID (32 digit hexadecimal number)
+          description: he unique identifier of entity.  This identifier can be either an SenNet ID (e.g. SNT123.ABCD.456) or UUID (32 digit hexadecimal number)
           required: true
           schema:
             type: string
         - name: format
           in: query
-          description: "A case insensitive string. Any value besides 'json' will have no effect. If the string is 'json', provenance info will be returned as a json. Otherwise, it will be returned as a tsv file"
+          description: A case insensitive string. Any value besides 'json' will have no effect. If the string is 'json', provenance info will be returned as a json. Otherwise, it will be returned as a tsv file
           required: false
           schema:
             type: string
-            enum: [ 'json', 'tsv' ]
+            enum:
+              - json
+              - tsv
       responses:
         '200':
           description: all provenance information for the given dataset either as a json list or as a tsv file to be downloaded
@@ -1715,9 +1435,9 @@ paths:
                   dataset_uuid:
                     type: string
                     description: The uuid of the dataset
-                  dataset_hubmap_id:
+                  dataset_sennet_id:
                     type: string
-                    description: The HuBMAP ID of the dataset like HBM123.ABCD.456
+                    description: The SenNet ID of the dataset like SNT123.ABCD.456
                   dataset_status:
                     type: string
                     description: status of the dataset New, QA, Published, etc ...
@@ -1748,11 +1468,11 @@ paths:
                   dataset_portl_url:
                     type: string
                     description: the url to open the dataset in the data portal
-                  first_sample_hubmap_id:
+                  first_sample_sennet_id:
                     type: array
                     items:
                       type: string
-                      description: HuBMAP ID of the tissue sample nearest to this dataset in the provenance chain
+                      description: SenNet ID of the tissue sample nearest to this dataset in the provenance chain
                   first_sample_submission_id:
                     type: array
                     items:
@@ -1773,11 +1493,11 @@ paths:
                     items:
                       type: string
                       description: The URL to the data portal for this sample nearest to this dataset in the provenance chain
-                  organ_hubmap_id:
+                  organ_sennet_id:
                     type: array
                     items:
                       type: string
-                      description: HuBMAP ID of the organ associated to this dataset in the provenance chain
+                      description: SenNet ID of the organ associated to this dataset in the provenance chain
                   organ_submission_id:
                     type: array
                     items:
@@ -1793,31 +1513,31 @@ paths:
                     items:
                       type: string
                       description: The organ type of the organ associated to this dataset in the provenance chain (return the organ code resolved to the organ name via the organ.yaml file)
-                  donor_hubmap_id:
+                  source_sennet_id:
                     type: array
                     items:
                       type: string
-                      description: The HuBMAP ID of the donor associated to this dataset in the provenance chain
-                  donor:submission_id:
+                      description: The SenNet ID of the source associated to this dataset in the provenance chain
+                  source:submission_id:
                     type: array
                     items:
                       type: string
-                      description: The Submission ID of the donor associated to this dataset in the provenance chain
-                  donor_uuid:
+                      description: The Submission ID of the source associated to this dataset in the provenance chain
+                  source_uuid:
                     type: array
                     items:
                       type: string
-                      description: The UUID of the donor associated to this dataset in the provenance chain
-                  donor_group_name:
+                      description: The UUID of the source associated to this dataset in the provenance chain
+                  source_group_name:
                     type: array
                     items:
                       type: string
-                      description: The name of the HuBMAP group where this donor originated (resolved to the group name from the group_uuid property resolved to displayname via the groups mapping file
-                  rui_location_hubmap_id:
+                      description: The name of the SenNet group where this source originated (resolved to the group name from the group_uuid property resolved to displayname via the groups mapping file
+                  rui_location_sennet_id:
                     type: array
                     items:
                       type: string
-                      description: The HuBMAP ID of the tissue sample that contains RUI location json for this dataset
+                      description: The SenNet ID of the tissue sample that contains RUI location json for this dataset
                   rui_location_submission_id:
                     type: array
                     items:
@@ -1828,11 +1548,11 @@ paths:
                     items:
                       type: string
                       description: The uuid of the tissue sample that contains RUI location json for this dataset
-                  sample_metadata_hubmap_id:
+                  sample_metadata_sennet_id:
                     type: array
                     items:
                       type: string
-                      description: The HuBMAP ID of tissue sample(s) containing sample metadata
+                      description: The SenNet ID of tissue sample(s) containing sample metadata
                   sample_metadata_submission_id:
                     type: array
                     items:
@@ -1849,7 +1569,7 @@ paths:
           description: THe user is not authorized to use this method
         '500':
           description: Internal error
-  '/datasets/sankey_data':
+  /datasets/sankey_data:
     get:
       summary: Retrieves the information needed to generate the sankey on software-docs as a json.
       responses:
@@ -1872,12 +1592,11 @@ paths:
                   dataset_status:
                     type: string
                     description: status of the dataset New, QA, Published, etc ...
-
         '500':
           description: Internal error
-  '/samples/prov-info':
+  /samples/prov-info:
     get:
-      summary: 'returns aLL provenance information for a each sample in a json format'
+      summary: returns aLL provenance information for a each sample in a json format
       parameters:
         - name: group_uuid
           in: query
@@ -1907,19 +1626,19 @@ paths:
                     description: identifier used by the data provider
                   sample_ancestor_id:
                     type: string
-                    description: uuid of the donor or sample nearest to this dataset in the provenance chain
+                    description: uuid of the source or sample nearest to this dataset in the provenance chain
                   sample_ancestor_entity:
                     type: string
-                    description: the entity type of the nearest ancestor to the sample. Will be a donor or another sample
+                    description: the entity type of the nearest ancestor to the sample. Will be a source or another sample
                   organ_uuid:
                     type: string
                     description: UUID of the organ associated to this sample in the provenance chain. If the sample is itself an organ, the id will be the same as sample uuid.
                   organ_type:
                     type: string
                     description: The organ type of the organ associated to this sample in the provenance chain (return the organ code resolved to the organ name via the organ.yaml file)
-                  donor_uuid:
+                  source_uuid:
                     type: string
-                    description: The UUID of the donor associated to this sample in the provenance chain
+                    description: The UUID of the source associated to this sample in the provenance chain
                   sample_has_rui_info:
                     type: boolean
                     description: True or false value corresponding to whether the sample has rui_location info.
@@ -1929,9 +1648,9 @@ paths:
                   organ_has_metadata:
                     type: string
                     description: True or false value corresponding to whether the organ has metadata info
-                  donor_has_metadata:
+                  source_has_metadata:
                     type: string
-                    description: True or false value corresponding to whether the donor has metadata info
+                    description: True or false value corresponding to whether the source has metadata info
         '401':
           description: The user's token has expired or the user did not supply a valid token
         '403':
