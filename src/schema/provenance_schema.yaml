@@ -310,6 +310,9 @@ ENTITIES:
         type: list
         required_on_create: true # Only required for create via POST, not update via PUT
         description: "The data or assay types contained in this dataset as a json array of strings.  Each is an assay code from [assay types](https://github.com/sennetconsortium/search-api/blob/master/src/search-schema/data/definitions/enums/assay_types.yaml)."
+      data_types_other:
+        type: string
+        description: The data type provided by the user if "other" data type is selected
       collections:
         type: list
         transient: true
