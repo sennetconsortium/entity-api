@@ -509,12 +509,43 @@ def get_entity_provenance(id):
     neo4j_result = app_neo4j_queries.get_provenance(neo4j_driver_instance, uuid, depth)
     raw_provenance_dict = dict(neo4j_result['json'])
 
+    raw_descendants_dict = None
+    if bool(request.args):
+        # The parsed query string value is a string 'true'
+        return_descendants = request.args.get('return_descendants')
+
+        if (return_descendants is not None) and (return_descendants.lower() == 'true'):
+            neo4j_result_descendants = app_neo4j_queries.get_provenance(neo4j_driver_instance, uuid, depth, True)
+            raw_descendants_dict = dict(neo4j_result_descendants['json'])
+
     # Normalize the raw provenance nodes based on the yaml schema
     normalized_provenance_dict = {
         'relationships': raw_provenance_dict['relationships'],
         'nodes': []
     }
 
+    build_nodes(raw_provenance_dict, normalized_provenance_dict, token)
+    provenance_json = provenance.get_provenance_history(uuid, normalized_provenance_dict, auth_helper_instance)
+
+    if raw_descendants_dict:
+        normalized_provenance_descendants_dict = {
+            'relationships': raw_descendants_dict['relationships'],
+            'nodes': []
+        }
+
+        build_nodes(raw_descendants_dict, normalized_provenance_descendants_dict, token)
+        provenance_json_descendants = provenance.get_provenance_history(uuid, normalized_provenance_descendants_dict,
+                                                                        auth_helper_instance)
+
+        provenance_json = json.loads(provenance_json)
+        provenance_json['descendants'] = json.loads(provenance_json_descendants)
+        provenance_json = json.dumps(provenance_json)
+
+    # Response with the provenance details
+    return Response(response = provenance_json, mimetype = "application/json")
+
+
+def build_nodes(raw_provenance_dict, normalized_provenance_dict, token):
     for node_dict in raw_provenance_dict['nodes']:
         # The schema yaml doesn't handle Lab nodes, just leave it as is
         if (node_dict['label'] == 'Entity') and (node_dict['entity_type'] != 'Lab'):
@@ -548,10 +579,6 @@ def get_entity_provenance(id):
             # Skip Entity Lab nodes
             normalized_provenance_dict['nodes'].append(node_dict)
 
-    provenance_json = provenance.get_provenance_history(uuid, normalized_provenance_dict, auth_helper_instance)
-
-    # Response with the provenance details
-    return Response(response = provenance_json, mimetype = "application/json")
 
 """
 Show all the supported entity types
