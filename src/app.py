@@ -19,6 +19,7 @@ import time
 # Local modules
 import app_neo4j_queries
 import provenance
+from constraints_helper import ConstraintsHelper
 from schema import schema_manager
 from schema import schema_errors
 from schema import schema_triggers
@@ -106,6 +107,21 @@ try:
         auth_helper_instance = AuthHelper.instance()
 except Exception:
     msg = "Failed to initialize the AuthHelper class"
+    # Log the full stack trace, prepend a line with our message
+    logger.exception(msg)
+
+
+####################################################################################################
+## Constraint Helper Initialization
+####################################################################################################
+
+try:
+    with open('schema/entity-constraints.yaml', 'r') as file:
+        constraints_yaml = yaml.safe_load(file)
+    constraint_helper = ConstraintsHelper(constraints_yaml)
+    logger.info("Initialized constraints_helper module successfully :)")
+except Exception:
+    msg = "Failed to initialize the constraints_helper module"
     # Log the full stack trace, prepend a line with our message
     logger.exception(msg)
 
@@ -3286,6 +3302,10 @@ def get_sample_prov_info():
     return jsonify(sample_prov_list)
 
 
+@app.route('/constraints', methods=['GET'])
+def get_constraints():
+    constraints = ConstraintsHelper.get_constraints()
+    return jsonify(constraints)
 ####################################################################################################
 ## Internal Functions
 ####################################################################################################
