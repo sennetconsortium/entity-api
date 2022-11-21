@@ -3304,8 +3304,10 @@ def get_sample_prov_info():
 
 @app.route('/constraints', methods=['GET'])
 def get_constraints():
-    constraints = ConstraintsHelper.get_constraints()
+    constraints = constraint_helper.get_constraints()
     return jsonify(constraints)
+
+
 ####################################################################################################
 ## Internal Functions
 ####################################################################################################
