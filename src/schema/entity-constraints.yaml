@@ -5,33 +5,33 @@ prov_constraints:
         ancestor:
           entity_type: Source
         descendant:
-          entity_type: Sample
-          field_values:
-              - field_value:
-                  name: sample_category
-                  values: [organ]
+            entity_type: Sample
+            field_values:
+                - field_value:
+                    name: sample_category
+                    values: [organ]
     - entity_constraint:
         description: "A tissue block can be a descendant of an Organ"
         ancestor:
             entity_type: Sample
             field_values:
-            - field_value:
-                name: sample_category
-                values: [organ]
+                - field_value:
+                    name: sample_category
+                    values: [organ]
         descendant:
             entity_type: Sample
             field_values:
-             - field_value:
-                 name: sample_category
-                 values: [block]
+                - field_value:
+                    name: sample_category
+                    values: [block]
     - entity_constraint:
         description: "A tissue section can be a descendant of a tissue block"
         ancestor:
             entity_type: Sample
-        field_values:
-            - field_value:
-                name: sample_category
-                values: [block]
+            field_values:
+                - field_value:
+                    name: sample_category
+                    values: [block]
         descendant:
              entity_type: Sample
              field_values:
@@ -42,10 +42,10 @@ prov_constraints:
         description: "A suspension can be a descendant of a tissue section"
         ancestor:
             entity_type: Sample
-        field_values:
-            - field_value:
-                name: sample_category
-                values: [section]
+            field_values:
+                - field_value:
+                    name: sample_category
+                    values: [section]
         descendant:
             entity_type: Sample
             field_values:
@@ -56,16 +56,16 @@ prov_constraints:
         description: "A tissue block can be the descendant of another block"
         ancestor:
             entity_type: Sample
-        field_values:
-            - field_value:
-                name: sample_category
-                values: [block]
+            field_values:
+                - field_value:
+                    name: sample_category
+                    values: [block]
         descendant:
             entity_type: Sample
             field_values:
-            - field_value:
-                name: sample_category
-                values: [block]
+                - field_value:
+                    name: sample_category
+                    values: [block]
     - entity_constraint:
         description: "A suspension can be the descendant of a tissue block"
         ancestor:
@@ -77,27 +77,27 @@ prov_constraints:
         descendant:
             entity_type: Sample
             field_values:
-            - field_value:
-                name: sample_category
-                values: [suspension]
+                - field_value:
+                    name: sample_category
+                    values: [suspension]
     - entity_constraint:
         description: "A Dataset can be the descendant of a tissue section"
         ancestor:
             entity_type: Sample
             field_values:
-            - field_value:
-                name: sample_category
-                values: [section]
+                - field_value:
+                    name: sample_category
+                    values: [section]
         descendant:
             entity_type: Dataset
     - entity_constraint:
         description: "A Dataset can be the descendant of a suspension"
         ancestor:
             entity_type: Sample
-        field_values:
-            - field_value:
-                name: sample_category
-                values: [suspension]
+            field_values:
+                - field_value:
+                    name: sample_category
+                    values: [suspension]
         descendant:
             entity_type: Dataset
     - entity_constraint:
@@ -110,17 +110,17 @@ prov_constraints:
         description: "A Dataset from a Lightsheet assay can be the descendant of a block"
         ancestor:
             entity_type: Sample
-        sample_category: block
-        field_values:
-            - field_value:
-                name: sample_category
-                values: [block]
+            sample_category: block
+            field_values:
+                - field_value:
+                    name: sample_category
+                    values: [block]
         descendant:
             entity_type: Dataset
             field_values:
-            - field_value:
-                name: data_types
-                values: [lightsheet]
+                - field_value:
+                    name: data_types
+                    values: [lightsheet]
     - entity_constraint:
         description: "A suspension can be the direct descendant of an organ of type blood"
         ancestor:
@@ -135,6 +135,6 @@ prov_constraints:
         descendant:
             entity_type: Sample
             field_values:
-            - field_value:
-                name: sample_category
-                values: [suspension]
+                - field_value:
+                    name: sample_category
+                    values: [suspension]
