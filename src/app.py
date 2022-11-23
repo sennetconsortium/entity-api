@@ -3434,55 +3434,89 @@ def validate_constraints():
         descendant_data_type = descendant['data_type']
 
     is_valid = False
-
     for each in constraints['prov_constraints']:
-        ancestor_field_values = None
-        descendant_field_values = None
+        ancestor_field_values = []
+        descendant_field_values = []
         constraint_ancestor = each['entity_constraint']['ancestor']
         constraint_descendant = each['entity_constraint']['descendant']
-        if constraint_ancestor['entity_type'] != ancestor_entity_type:
+        if constraint_ancestor['entity_type'].lower() != ancestor_entity_type:
             continue
-        if constraint_descendant['entity_type'] != descendant_entity_type:
+        if constraint_descendant['entity_type'].lower() != descendant_entity_type:
             continue
         if constraint_ancestor.get('field_values') is not None:
             ancestor_field_values = constraint_ancestor['field_values']
+            return str(type(ancestor_field_values))
         if constraint_descendant.get('field_values') is not None:
             descendant_field_values = constraint_descendant['field_values']
-        field_is_valid = True
+        ancestor_field_is_valid = True
+        descendant_field_is_valid = True
         for each in ancestor_field_values:
             data_types = None
             sample_category = None
             organ = None
-            field_value = each['field_value']
-            field_name = field_value['name']
+            field = each['field_value']
+            field_name = field['name']
             if field_name == "data_types":
-                data_types = field_value['data_types']
+                data_types = field['values']
             if field_name == "organ":
-                organ = field_value['organ']
+                organ = field['values']
             if field_name == "sample_category":
-                sample_category = field_value['sample_category']
+                sample_category = field['values']
             if data_types is not None:
                 if ancestor_data_type is None:
-                    field_is_valid = False
+                    ancestor_field_is_valid = False
                     continue
-                if ancestor_data_type != data_types:
-                    field_is_valid = False
+                if ancestor_data_type not in data_types:
+                    ancestor_field_is_valid = False
                     continue
             if sample_category is not None:
                 if ancestor_sample_category is None:
-                    field_is_valid = False
+                    ancestor_field_is_valid = False
                     continue
-                if ancestor_sample_category != sample_category:
-                    field_is_valid = False
+                if ancestor_sample_category not in sample_category:
+                    ancestor_field_is_valid = False
                     continue
             if organ is not None:
                 if ancestor_organ is None:
-                    field_is_valid = False
+                    ancestor_field_is_valid = False
                     continue
-                if ancestor_organ != organ:
-                    field_is_valid = False
+                if ancestor_organ not in organ:
+                    ancestor_field_is_valid = False
                     continue
-        if field_is_valid:
+        for each in descendant_field_values:
+            data_types = None
+            sample_category = None
+            organ = None
+            field = each['field_value']
+            field_name = field['name']
+            if field_name == "data_types":
+                data_types = field['values']
+            if field_name == "organ":
+                organ = field['values']
+            if field_name == "sample_category":
+                sample_category = field['values']
+            if data_types is not None:
+                if descendant_data_type is None:
+                    descendant_field_is_valid = False
+                    continue
+                if descendant_data_type not in data_types:
+                    descendant_field_is_valid = False
+                    continue
+            if sample_category is not None:
+                if descendant_sample_category is None:
+                    descendant_field_is_valid = False
+                    continue
+                if descendant_sample_category not in sample_category:
+                    descendant_field_is_valid = False
+                    continue
+            if organ is not None:
+                if descendant_organ is None:
+                    descendant_field_is_valid = False
+                    continue
+                if descendant_organ not in organ:
+                    descendant_field_is_valid = False
+                    continue
+        if ancestor_field_is_valid and descendant_field_is_valid:
             is_valid = True
     if is_valid:
         return json.dumps(True)
