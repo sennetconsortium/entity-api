@@ -116,7 +116,7 @@ except Exception:
 ####################################################################################################
 
 try:
-    with open('schema/entity-constraints.yaml', 'r') as file:
+    with open('schema/entity-constraints-ui.yaml', 'r') as file:
         constraints_yaml = yaml.safe_load(file)
     constraint_helper = ConstraintsHelper(constraints_yaml)
     logger.info("Initialized constraints_helper module successfully :)")
@@ -3332,7 +3332,27 @@ def get_sample_prov_info():
 @app.route('/constraints', methods=['GET'])
 def get_constraints():
     constraints = constraint_helper.get_constraints()
-    return jsonify(constraints)
+    payload = request.get_json()
+    if 'entity_type' not in payload:
+        bad_request_error('Invalid entity_type (null) specified. Valid entity_types are source, sample, dataset')
+
+    entity_type = payload['entity_type']
+    if entity_type not in ['source', 'sample', 'dataset']:
+        bad_request_error(f'Invalid entity_type ({entity_type}) specified. Valid entity_types are source, sample, '
+                          f'dataset')
+
+    for c in constraints['prov_constraints']:
+        constraint = c['constraint']
+        ancestor = constraint['ancestor']
+        if ancestor == payload:
+            descendants = constraint['allowable_descendants']
+            result = []
+            for d in descendants:
+                field = d['field']
+                result.append(field)
+            return jsonify(result)
+
+    return bad_request_error(f"Didn't find an ancestor constraint with the given payload : {payload}")
 
 
 ####################################################################################################
