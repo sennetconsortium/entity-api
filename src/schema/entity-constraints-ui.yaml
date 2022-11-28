@@ -1,0 +1,69 @@
+---
+description: "This file populates the dropdowns on the SenNet UI based on what ancestor the user picks. For example, the user is registering a Sample and picks a Source as an ancestor. The UI will only show the allowable descendants listed under the source constraint"
+prov_constraints:
+    - constraint:
+        description: "An Organ can be a descendant of a Source"
+        ancestor:
+            entity_type: source
+        allowable_descendants:
+            - field:
+                  entity_type: sample
+                  sample_category: [organ]
+    - constraint:
+        description: "A tissue block can be a descendant of an Organ"
+        ancestor:
+            entity_type: sample
+            sample_category: organ
+        allowable_descendants:
+            - field:
+                  entity_type: sample
+                  sample_category: [block]
+    - constraint:
+        description: "A tissue section, tissue block, suspension, and lightsheet can be a descendant of a tissue block"
+        ancestor:
+            entity_type: sample
+            sample_category: block
+        allowable_descendants:
+            - field:
+                  entity_type: sample
+                  sample_category: [ section, block, suspension ]
+            - field:
+                  entity_type: dataset
+                  data_type: [lightsheet]
+    - constraint:
+        description: "A suspension and dataset can be a descendant of a tissue section"
+        ancestor:
+            entity_type: sample
+            sample_category: section
+        allowable_descendants:
+            - field:
+                  entity_type: sample
+                  sample_category: [ suspension ]
+            - field:
+                  entity_type: dataset
+    - constraint:
+        description: "A Dataset can be the descendant of a suspension"
+        ancestor:
+            entity_type: sample
+            sample_category: suspension
+        allowable_descendants:
+            - field:
+                  entity_type: dataset
+    - constraint:
+        description: "A Dataset can be the descendant of another Dataset"
+        ancestor:
+            entity_type: dataset
+        allowable_descendants:
+            - field:
+                  entity_type: dataset
+    - constraint:
+        description: "A suspension can be the direct descendant of an organ of type blood"
+        ancestor:
+            entity_type: sample
+            sample_category: organ
+            value: blood
+        allowable_descendants:
+            - field:
+                  entity_type: sample
+                  sample_category: [suspension]
+
