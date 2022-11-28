@@ -3385,6 +3385,7 @@ Boolean
 """
 @app.route('/constraints/validate', methods=['POST'])
 def validate_constraints():
+    error_msg = []
     constraints = constraint_helper.get_constraints()
     all_valid = True
 
@@ -3393,25 +3394,31 @@ def validate_constraints():
 
     # Parse incoming json string into json data(python dict object)
     json_data_dict = request.get_json()
+    row = 0
     for entry in json_data_dict:
+        row = row + 1
         if "ancestor" not in entry or "descendant" not in entry:
-            bad_request_error("Request Json must contain 'ancestor' and 'descendant'")
+            all_valid = False
+            error_msg.append(f"{row}: Request Json must contain 'ancestor' and 'descendant")
 
         ancestor = entry['ancestor']
         descendant = entry['descendant']
 
         if not isinstance(ancestor, dict) or not isinstance(descendant, dict):
-            bad_request_error("Values for 'ancestor' and 'descendant' must be json")
+            all_valid = False
+            error_msg.append(f"{row}: Values for 'ancestor' and 'descendant' must be json")
 
         if "entity_type" not in ancestor or "entity_type" not in descendant:
-            bad_request_error("'ancestor' and 'descendant' must contain the field 'entity_type'")
+            all_valid = False
+            error_msg.append(f"{row}: 'ancestor' and 'descendant' must contain the field 'entity_type'")
 
         ancestor_entity_type = ancestor['entity_type'].lower()
         descendant_entity_type = descendant['entity_type'].lower()
 
         valid_entity_types = ['source', 'dataset', 'sample']
         if ancestor_entity_type not in valid_entity_types or descendant_entity_type not in valid_entity_types:
-            bad_request_error(f"allowed entity types are: {valid_entity_types}")
+            all_valid = False
+            error_msg.append(f"{row}: allowed entity types are: {valid_entity_types}")
 
         ancestor_sample_category = None
         descendant_sample_category = None
@@ -3520,10 +3527,11 @@ def validate_constraints():
                 is_valid = True
         if is_valid == False:
             all_valid = False
+            error_msg.append(f"{row}: Ancestor and descendant match none of the constraints found in https://raw.githubusercontent.com/sennetconsortium/entity-api/main/src/schema/entity-constraints.yaml")
     if all_valid == True:
-        return json.dumps(True)
+        return Response({"status": "success"}, 200)
     else:
-        return json.dumps(False)
+        return Response(error_msg, 400)
 
 
 
