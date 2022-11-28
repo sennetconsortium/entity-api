@@ -3407,11 +3407,12 @@ def validate_constraints():
         if not isinstance(ancestor, dict) or not isinstance(descendant, dict):
             all_valid = False
             error_msg.append(f"{row}: Values for 'ancestor' and 'descendant' must be json")
+            continue
 
         if "entity_type" not in ancestor or "entity_type" not in descendant:
             all_valid = False
             error_msg.append(f"{row}: 'ancestor' and 'descendant' must contain the field 'entity_type'")
-
+            continue
         ancestor_entity_type = ancestor['entity_type'].lower()
         descendant_entity_type = descendant['entity_type'].lower()
 
@@ -3424,8 +3425,8 @@ def validate_constraints():
         descendant_sample_category = None
         ancestor_organ = None
         descendant_organ = None
-        ancestor_data_type = None
-        descendant_data_type = None
+        ancestor_data_types = None
+        descendant_data_types = None
 
 
         if "sample_category" in ancestor:
@@ -3436,11 +3437,18 @@ def validate_constraints():
             ancestor_organ = ancestor['organ']
         if "organ" in descendant:
             descendant_organ = descendant['organ']
-        if "data_type" in ancestor:
-            ancestor_data_type = ancestor['data_type']
-        if "data_type" in descendant:
-            descendant_data_type = descendant['data_type']
-
+        if "data_types" in ancestor:
+            ancestor_data_types = ancestor['data_types']
+            if not isinstance(ancestor_data_types, list):
+                all_valid = False
+                error_msg.append(f"{row}: 'If data_types is present in ancestor, value must be a list'")
+                continue
+        if "data_types" in descendant:
+            descendant_data_types = descendant['data_types']
+            if not isinstance(descendant_data_types, list):
+                all_valid = False
+                error_msg.append(f"{row}: 'If data_types is present in descendant, value must be a list")
+                continue
         is_valid = False
         for each in constraints['prov_constraints']:
             ancestor_field_values = []
@@ -3470,14 +3478,14 @@ def validate_constraints():
                 if field_name == "sample_category":
                     sample_category = field['values']
                 if data_types is not None:
-                    if ancestor_data_type is None:
+                    if ancestor_data_types is None:
                         ancestor_field_is_valid = False
                         continue
-                    invalid = True
+                    invalid = False
                     for each in data_types:
-                        if each in ancestor_data_type:
-                            invalid = False
-                    if invalid is False:
+                        if each not in ancestor_data_types:
+                            invalid = True
+                    if invalid is True:
                         ancestor_field_is_valid = False
                         continue
                 if sample_category is not None:
@@ -3507,15 +3515,15 @@ def validate_constraints():
                 if field_name == "sample_category":
                     sample_category = field['values']
                 if data_types is not None:
-                    if descendant_data_type is None:
+                    if descendant_data_types is None:
                         descendant_field_is_valid = False
                         continue
-                    invalid = True
+                    invalid = False
                     for each in data_types:
-                        if each in ancestor_data_type:
-                            invalid = False
-                    if invalid is False:
-                        ancestor_field_is_valid = False
+                        if each not in descendant_data_types:
+                            invalid = True
+                    if invalid is True:
+                        descendant_field_is_valid = False
                         continue
                 if sample_category is not None:
                     if descendant_sample_category is None:
