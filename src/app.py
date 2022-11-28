@@ -3529,9 +3529,9 @@ def validate_constraints():
             all_valid = False
             error_msg.append(f"{row}: Ancestor and descendant match none of the constraints found in https://raw.githubusercontent.com/sennetconsortium/entity-api/main/src/schema/entity-constraints.yaml")
     if all_valid == True:
-        return Response({"status": "success"}, 200)
+        return jsonify({"status": "success"}), 200
     else:
-        return Response(error_msg, 400)
+        return jsonify(error_msg), 400
 
 
 
