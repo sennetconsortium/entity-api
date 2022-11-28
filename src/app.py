@@ -3400,10 +3400,10 @@ def validate_constraints():
         if "ancestor" not in entry or "descendant" not in entry:
             all_valid = False
             error_msg.append(f"{row}: Request Json must contain 'ancestor' and 'descendant")
+            continue
 
         ancestor = entry['ancestor']
         descendant = entry['descendant']
-
         if not isinstance(ancestor, dict) or not isinstance(descendant, dict):
             all_valid = False
             error_msg.append(f"{row}: Values for 'ancestor' and 'descendant' must be json")
@@ -3473,7 +3473,11 @@ def validate_constraints():
                     if ancestor_data_type is None:
                         ancestor_field_is_valid = False
                         continue
-                    if ancestor_data_type not in data_types:
+                    invalid = True
+                    for each in data_types:
+                        if each in ancestor_data_type:
+                            invalid = False
+                    if invalid is False:
                         ancestor_field_is_valid = False
                         continue
                 if sample_category is not None:
@@ -3506,8 +3510,12 @@ def validate_constraints():
                     if descendant_data_type is None:
                         descendant_field_is_valid = False
                         continue
-                    if descendant_data_type not in data_types:
-                        descendant_field_is_valid = False
+                    invalid = True
+                    for each in data_types:
+                        if each in ancestor_data_type:
+                            invalid = False
+                    if invalid is False:
+                        ancestor_field_is_valid = False
                         continue
                 if sample_category is not None:
                     if descendant_sample_category is None:
