@@ -3337,6 +3337,10 @@ def get_constraints():
         bad_request_error('Invalid entity_type (null) specified. Valid entity_types are source, sample, dataset')
 
     entity_type = payload['entity_type']
+
+    if entity_type == 'sample' and 'sample_category' not in payload:
+        bad_request_error('Invalid sample_category (null) specified. sample_category is required when the entity_type is sample')
+
     if entity_type not in ['source', 'sample', 'dataset']:
         bad_request_error(f'Invalid entity_type ({entity_type}) specified. Valid entity_types are source, sample, '
                           f'dataset')
@@ -3352,7 +3356,7 @@ def get_constraints():
                 result.append(field)
             return jsonify(result)
 
-    return bad_request_error(f"Didn't find an ancestor constraint with the given payload : {payload}")
+    return not_found_error(f"Didn't find an ancestor constraint with the given payload : {payload}")
 
 
 ####################################################################################################
