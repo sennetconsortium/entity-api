@@ -61,7 +61,7 @@ prov_constraints:
         ancestor:
             entity_type: sample
             sample_category: organ
-            value: blood
+            value: BD
         allowable_descendants:
             - field:
                   entity_type: sample
