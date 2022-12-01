@@ -3332,7 +3332,7 @@ def get_sample_prov_info():
     return jsonify(sample_prov_list)
 
 
-@app.route('/constraints', methods=['GET'])
+@app.route('/constraints', methods=['POST'])
 def get_constraints():
     constraints = constraint_helper_ui.get_constraints()
     payload = request.get_json()
