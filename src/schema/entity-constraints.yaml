@@ -110,7 +110,6 @@ prov_constraints:
         description: "A Dataset from a Lightsheet assay can be the descendant of a block"
         ancestor:
             entity_type: Sample
-            sample_category: block
             field_values:
                 - field_value:
                     name: sample_category
