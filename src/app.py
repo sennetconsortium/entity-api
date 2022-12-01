@@ -116,9 +116,12 @@ except Exception:
 ####################################################################################################
 
 try:
-    with open('schema/entity-constraints-ui.yaml', 'r') as file:
-        constraints_yaml = yaml.safe_load(file)
-    constraint_helper = ConstraintsHelper(constraints_yaml)
+    with open('schema/entity-constraints-ui.yaml', 'r') as ui_file:
+        constraints_ui_yaml = yaml.safe_load(ui_file)
+    constraint_helper_ui = ConstraintsHelper(constraints_ui_yaml)
+    with open('schema/entity-constraints.yaml', 'r') as api_file:
+        constraints_yaml = yaml.safe_load(api_file)
+    constraint_helper_api = ConstraintsHelper(constraints_yaml)
     logger.info("Initialized constraints_helper module successfully :)")
 except Exception:
     msg = "Failed to initialize the constraints_helper module"
@@ -3329,26 +3332,9 @@ def get_sample_prov_info():
     return jsonify(sample_prov_list)
 
 
-
-"""
-Get the entity-constraint schema
-
-Authentication
--------
-No token is required
-
-Query Parameters
--------
-N/A
-
-Returns
--------
-json
-    json representation of the entity-constraints yaml 
-"""
 @app.route('/constraints', methods=['GET'])
 def get_constraints():
-    constraints = constraint_helper.get_constraints()
+    constraints = constraint_helper_ui.get_constraints()
     payload = request.get_json()
     if 'entity_type' not in payload:
         bad_request_error('Invalid entity_type (null) specified. Valid entity_types are source, sample, dataset')
@@ -3410,7 +3396,7 @@ Boolean
 @app.route('/constraints/validate', methods=['POST'])
 def validate_constraints():
     error_msg = []
-    constraints = constraint_helper.get_constraints()
+    constraints = constraint_helper_api.get_constraints()
     all_valid = True
 
     # Always expect a json body
