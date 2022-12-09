@@ -19,6 +19,7 @@ import time
 # Local modules
 import app_neo4j_queries
 import provenance
+from constraints_helper import ConstraintsHelper
 from schema import schema_manager
 from schema import schema_errors
 from schema import schema_triggers
@@ -106,6 +107,21 @@ try:
         auth_helper_instance = AuthHelper.instance()
 except Exception:
     msg = "Failed to initialize the AuthHelper class"
+    # Log the full stack trace, prepend a line with our message
+    logger.exception(msg)
+
+
+####################################################################################################
+## Constraint Helper Initialization
+####################################################################################################
+
+try:
+    with open('schema/entity-constraints-ui.yaml', 'r') as file:
+        constraints_yaml = yaml.safe_load(file)
+    constraint_helper = ConstraintsHelper(constraints_yaml)
+    logger.info("Initialized constraints_helper module successfully :)")
+except Exception:
+    msg = "Failed to initialize the constraints_helper module"
     # Log the full stack trace, prepend a line with our message
     logger.exception(msg)
 
@@ -3311,6 +3327,36 @@ def get_sample_prov_info():
         # Each sample's dictionary is added to the list to be returned
         sample_prov_list.append(internal_dict)
     return jsonify(sample_prov_list)
+
+
+@app.route('/constraints', methods=['POST'])
+def get_constraints():
+    constraints = constraint_helper.get_constraints()
+    payload = request.get_json()
+    if 'entity_type' not in payload:
+        bad_request_error('Invalid entity_type (null) specified. Valid entity_types are source, sample, dataset')
+
+    entity_type = payload['entity_type']
+
+    if entity_type == 'sample' and 'sample_category' not in payload:
+        bad_request_error('Invalid sample_category (null) specified. sample_category is required when the entity_type is sample')
+
+    if entity_type not in ['source', 'sample', 'dataset']:
+        bad_request_error(f'Invalid entity_type ({entity_type}) specified. Valid entity_types are source, sample, '
+                          f'dataset')
+
+    for c in constraints['prov_constraints']:
+        constraint = c['constraint']
+        ancestor = constraint['ancestor']
+        if ancestor == payload:
+            descendants = constraint['allowable_descendants']
+            result = []
+            for d in descendants:
+                field = d['field']
+                result.append(field)
+            return jsonify(result)
+
+    return not_found_error(f"Didn't find an ancestor constraint with the given payload : {payload}")
 
 
 ####################################################################################################
