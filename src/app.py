@@ -116,9 +116,12 @@ except Exception:
 ####################################################################################################
 
 try:
-    with open('schema/entity-constraints-ui.yaml', 'r') as file:
-        constraints_yaml = yaml.safe_load(file)
-    constraint_helper = ConstraintsHelper(constraints_yaml)
+    with open('schema/entity-constraints-ui.yaml', 'r') as ui_file:
+        constraints_ui_yaml = yaml.safe_load(ui_file)
+    constraint_helper_ui = ConstraintsHelper(constraints_ui_yaml)
+    with open('schema/entity-constraints.yaml', 'r') as api_file:
+        constraints_yaml = yaml.safe_load(api_file)
+    constraint_helper_api = ConstraintsHelper(constraints_yaml)
     logger.info("Initialized constraints_helper module successfully :)")
 except Exception:
     msg = "Failed to initialize the constraints_helper module"
@@ -3331,7 +3334,7 @@ def get_sample_prov_info():
 
 @app.route('/constraints', methods=['POST'])
 def get_constraints():
-    constraints = constraint_helper.get_constraints()
+    constraints = constraint_helper_ui.get_constraints()
     payload = request.get_json()
     if 'entity_type' not in payload:
         bad_request_error('Invalid entity_type (null) specified. Valid entity_types are source, sample, dataset')
@@ -3357,6 +3360,206 @@ def get_constraints():
             return jsonify(result)
 
     return not_found_error(f"Didn't find an ancestor constraint with the given payload : {payload}")
+
+
+"""
+Validate whether an ancestor and descendant comply with the constraints found in entity-constraints.yaml
+
+Authentication
+-------
+No token is required
+
+Query Paramters
+-------
+N/A
+
+Request Body
+-------
+Requires a json list in the request body matching the following example
+Example:
+            [{
+<required>      "ancestor": {
+<required>            "entity_type": "sample",
+<optional>            "sample_category": "block",
+<optional>            "organ": "lung",
+                 },
+<required>      "descendant": {
+<required>           "entity_type": "dataset",
+<optional>           "data_type": "lightsheet"
+                 }
+             }]
+
+Returns
+--------
+Boolean                   
+"""
+@app.route('/constraints/validate', methods=['POST'])
+def validate_constraints():
+    error_msg = []
+    constraints = constraint_helper_api.get_constraints()
+    all_valid = True
+
+    # Always expect a json body
+    require_json(request)
+
+    # Parse incoming json string into json data(python dict object)
+    json_data_dict = request.get_json()
+    row = 0
+    for entry in json_data_dict:
+        row = row + 1
+        if "ancestor" not in entry or "descendant" not in entry:
+            all_valid = False
+            error_msg.append(f"{row}: Request Json must contain 'ancestor' and 'descendant")
+            continue
+
+        ancestor = entry['ancestor']
+        descendant = entry['descendant']
+        if not isinstance(ancestor, dict) or not isinstance(descendant, dict):
+            all_valid = False
+            error_msg.append(f"{row}: Values for 'ancestor' and 'descendant' must be json")
+            continue
+
+        if "entity_type" not in ancestor or "entity_type" not in descendant:
+            all_valid = False
+            error_msg.append(f"{row}: 'ancestor' and 'descendant' must contain the field 'entity_type'")
+            continue
+        ancestor_entity_type = ancestor['entity_type'].lower()
+        descendant_entity_type = descendant['entity_type'].lower()
+
+        valid_entity_types = ['source', 'dataset', 'sample']
+        if ancestor_entity_type not in valid_entity_types or descendant_entity_type not in valid_entity_types:
+            all_valid = False
+            error_msg.append(f"{row}: allowed entity types are: {valid_entity_types}")
+
+        ancestor_sample_category = None
+        descendant_sample_category = None
+        ancestor_organ = None
+        descendant_organ = None
+        ancestor_data_types = None
+        descendant_data_types = None
+
+
+        if "sample_category" in ancestor:
+            ancestor_sample_category = ancestor['sample_category']
+        if "sample_category" in descendant:
+            descendant_sample_category = descendant['sample_category']
+        if "organ" in ancestor:
+            ancestor_organ = ancestor['organ']
+        if "organ" in descendant:
+            descendant_organ = descendant['organ']
+        if "data_types" in ancestor:
+            ancestor_data_types = ancestor['data_types']
+            if not isinstance(ancestor_data_types, list):
+                all_valid = False
+                error_msg.append(f"{row}: 'If data_types is present in ancestor, value must be a list'")
+                continue
+        if "data_types" in descendant:
+            descendant_data_types = descendant['data_types']
+            if not isinstance(descendant_data_types, list):
+                all_valid = False
+                error_msg.append(f"{row}: 'If data_types is present in descendant, value must be a list")
+                continue
+        is_valid = False
+        for each in constraints['prov_constraints']:
+            ancestor_field_values = []
+            descendant_field_values = []
+            constraint_ancestor = each['entity_constraint']['ancestor']
+            constraint_descendant = each['entity_constraint']['descendant']
+            if constraint_ancestor['entity_type'].lower() != ancestor_entity_type:
+                continue
+            if constraint_descendant['entity_type'].lower() != descendant_entity_type:
+                continue
+            if constraint_ancestor.get('field_values') is not None:
+                ancestor_field_values = constraint_ancestor['field_values']
+            if constraint_descendant.get('field_values') is not None:
+                descendant_field_values = constraint_descendant['field_values']
+            ancestor_field_is_valid = True
+            descendant_field_is_valid = True
+            for each in ancestor_field_values:
+                data_types = None
+                sample_category = None
+                organ = None
+                field = each['field_value']
+                field_name = field['name']
+                if field_name == "data_types":
+                    data_types = field['values']
+                if field_name == "organ":
+                    organ = field['values']
+                if field_name == "sample_category":
+                    sample_category = field['values']
+                if data_types is not None:
+                    if ancestor_data_types is None:
+                        ancestor_field_is_valid = False
+                        continue
+                    invalid = False
+                    for each in data_types:
+                        if each not in ancestor_data_types:
+                            invalid = True
+                    if invalid is True:
+                        ancestor_field_is_valid = False
+                        continue
+                if sample_category is not None:
+                    if ancestor_sample_category is None:
+                        ancestor_field_is_valid = False
+                        continue
+                    if ancestor_sample_category not in sample_category:
+                        ancestor_field_is_valid = False
+                        continue
+                if organ is not None:
+                    if ancestor_organ is None:
+                        ancestor_field_is_valid = False
+                        continue
+                    if ancestor_organ not in organ:
+                        ancestor_field_is_valid = False
+                        continue
+            for each in descendant_field_values:
+                data_types = None
+                sample_category = None
+                organ = None
+                field = each['field_value']
+                field_name = field['name']
+                if field_name == "data_types":
+                    data_types = field['values']
+                if field_name == "organ":
+                    organ = field['values']
+                if field_name == "sample_category":
+                    sample_category = field['values']
+                if data_types is not None:
+                    if descendant_data_types is None:
+                        descendant_field_is_valid = False
+                        continue
+                    invalid = False
+                    for each in data_types:
+                        if each not in descendant_data_types:
+                            invalid = True
+                    if invalid is True:
+                        descendant_field_is_valid = False
+                        continue
+                if sample_category is not None:
+                    if descendant_sample_category is None:
+                        descendant_field_is_valid = False
+                        continue
+                    if descendant_sample_category not in sample_category:
+                        descendant_field_is_valid = False
+                        continue
+                if organ is not None:
+                    if descendant_organ is None:
+                        descendant_field_is_valid = False
+                        continue
+                    if descendant_organ not in organ:
+                        descendant_field_is_valid = False
+                        continue
+            if ancestor_field_is_valid and descendant_field_is_valid:
+                is_valid = True
+        if is_valid == False:
+            all_valid = False
+            error_msg.append(f"{row}: Ancestor and descendant match none of the constraints found in https://raw.githubusercontent.com/sennetconsortium/entity-api/main/src/schema/entity-constraints.yaml")
+    if all_valid == True:
+        return jsonify({"status": "success"}), 200
+    else:
+        return jsonify(error_msg), 400
+
+
 
 
 ####################################################################################################
