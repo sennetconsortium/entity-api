@@ -3509,7 +3509,7 @@ def validate_constraints():
                     if ancestor_organ is None:
                         ancestor_field_is_valid = False
                         continue
-                    if ancestor_organ not in organ:
+                    if ancestor_organ.upper() not in organ:
                         ancestor_field_is_valid = False
                         continue
             for each in descendant_field_values:
