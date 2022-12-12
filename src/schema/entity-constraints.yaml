@@ -130,7 +130,7 @@ prov_constraints:
                     values: [organ]
                 - field_value:
                     name: organ
-                    values: [blood]
+                    values: [BD]
         descendant:
             entity_type: Sample
             field_values:
