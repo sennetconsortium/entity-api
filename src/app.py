@@ -3335,31 +3335,46 @@ def get_sample_prov_info():
 @app.route('/constraints', methods=['POST'])
 def get_constraints():
     constraints = constraint_helper_ui.get_constraints()
+    relationship_direction = request.args.get('relationship_direction')
     payload = request.get_json()
+
+    # Validate request
     if 'entity_type' not in payload:
         bad_request_error('Invalid entity_type (null) specified. Valid entity_types are source, sample, dataset')
 
     entity_type = payload['entity_type']
 
     if entity_type == 'sample' and 'sample_category' not in payload:
-        bad_request_error('Invalid sample_category (null) specified. sample_category is required when the entity_type is sample')
+        bad_request_error('Invalid sample_category (null) specified. sample_category is required when the entity_type '
+                          'is sample')
 
     if entity_type not in ['source', 'sample', 'dataset']:
         bad_request_error(f'Invalid entity_type ({entity_type}) specified. Valid entity_types are source, sample, '
                           f'dataset')
 
+    ancestors_or_descendants = None
+    if relationship_direction.lower() == 'descendants':
+        ancestors_or_descendants = 'allowable_descendants'
+    elif relationship_direction.lower() == 'ancestors':
+        ancestors_or_descendants = 'allowable_ancestors'
+    else:
+        bad_request_error(f'Invalid relationship_direction ({relationship_direction}) specified. Valid '
+                          f'relationship_directions are descendants or ancestors')
+
+    # Find and return the allowable descendants or the allowable ancestors for the entity given in the request
     for c in constraints['prov_constraints']:
         constraint = c['constraint']
-        ancestor = constraint['ancestor']
+        ancestor = constraint['entity']
         if ancestor == payload:
-            descendants = constraint['allowable_descendants']
-            result = []
-            for d in descendants:
-                field = d['field']
-                result.append(field)
-            return jsonify(result)
+            if ancestors_or_descendants in constraint:
+                entities = constraint[ancestors_or_descendants]
+                result = []
+                for d in entities:
+                    field = d['field']
+                    result.append(field)
+                return jsonify(result)
 
-    return not_found_error(f"Didn't find an ancestor constraint with the given payload : {payload}")
+    return not_found_error(f"Didn't find an {ancestors_or_descendants} constraint with the given payload : {payload}")
 
 
 """
