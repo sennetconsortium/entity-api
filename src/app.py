@@ -444,7 +444,7 @@ def get_entity_by_id(id):
     final_result = schema_manager.normalize_object_result_for_response('ENTITIES', complete_dict,
                                                                        properties_to_include=['protocol_url'])
 
-    if final_result['source_type']:
+    if 'source_type' in final_result:
         final_result['source_type'] = final_result['source_type'].capitalize()
 
     # Result filtering based on query string
@@ -904,7 +904,7 @@ def create_entity(entity_type):
     # Parse incoming json string into json data(python dict object)
     json_data_dict = request.get_json()
 
-    if json_data_dict['source_type']:
+    if 'source_type' in json_data_dict:
         json_data_dict['source_type'] = json_data_dict['source_type'].capitalize()
 
     # Validate request json against the yaml schema
