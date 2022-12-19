@@ -444,6 +444,9 @@ def get_entity_by_id(id):
     final_result = schema_manager.normalize_object_result_for_response('ENTITIES', complete_dict,
                                                                        properties_to_include=['protocol_url'])
 
+    if final_result['source_type']:
+        final_result['source_type'] = final_result['source_type'].capitalize()
+
     # Result filtering based on query string
     # The `data_access_level` property is available in all entities Source/Sample/Dataset
     # and this filter is being used by gateway to check the data_access_level for file assets
@@ -900,6 +903,9 @@ def create_entity(entity_type):
 
     # Parse incoming json string into json data(python dict object)
     json_data_dict = request.get_json()
+
+    if json_data_dict['source_type']:
+        json_data_dict['source_type'] = json_data_dict['source_type'].capitalize()
 
     # Validate request json against the yaml schema
     try:
