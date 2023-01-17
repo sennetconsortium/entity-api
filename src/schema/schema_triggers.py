@@ -866,7 +866,6 @@ def get_dataset_title(property_key, normalized_type, user_token, existing_data_d
     race = None
     sex = None
 
-    # TODO: At some point we will want to re-enable this
     # Parse assay_type from the Dataset
     try:
         # Note: The existing_data_dict['data_types'] is stored in Neo4j as a string representation of the Python list
