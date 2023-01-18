@@ -2466,7 +2466,7 @@ Query Parameters
         Filters returned datasets by a given group uuid. 
     organ : string
         Filters returned datasets related to a samples of the given organ. Accepts 2 character organ codes. These codes
-        must match the organ types yaml at https://raw.githubusercontent.com/hubmapconsortium/search-api/test-release/src/search-schema/data/definitions/enums/organ_types.yaml
+        must match the organ types yaml at https://raw.githubusercontent.com/sennetconsortium/search-api/master/src/search-schema/data/definitions/enums/organ_types.yaml
         or an error will be raised
     has_rui_info : string
         Accepts strings "true" or "false. Any other value will result in an error. If true, only datasets connected to 
@@ -2483,12 +2483,11 @@ json
 tsv
     a text file of tab separated values where each row is a dataset and the columns include all its prov info
 """
-# TODO: This endpoint will not function properly in its current state
 @app.route('/datasets/prov-info', methods=['GET'])
 def get_prov_info():
     # String constants
     HEADER_DATASET_UUID = 'dataset_uuid'
-    HEADER_DATASET_HUBMAP_ID = 'dataset_hubmap_id'
+    HEADER_DATASET_SENNET_ID = 'dataset_sennet_id'
     HEADER_DATASET_STATUS = 'dataset_status'
     HEADER_DATASET_GROUP_NAME = 'dataset_group_name'
     HEADER_DATASET_GROUP_UUID = 'dataset_group_uuid'
@@ -2499,45 +2498,40 @@ def get_prov_info():
     HEADER_DATASET_LAB_ID = 'lab_id_or_name'
     HEADER_DATASET_DATA_TYPES = 'dataset_data_types'
     HEADER_DATASET_PORTAL_URL = 'dataset_portal_url'
-    HEADER_FIRST_SAMPLE_HUBMAP_ID = 'first_sample_hubmap_id'
-    HEADER_FIRST_SAMPLE_SUBMISSION_ID = 'first_sample_submission_id'
+    HEADER_FIRST_SAMPLE_SENNET_ID = 'first_sample_sennet_id'
     HEADER_FIRST_SAMPLE_UUID = 'first_sample_uuid'
-    HEADER_FIRST_SAMPLE_TYPE = 'first_sample_type'
+    HEADER_FIRST_SAMPLE_CATEGORY = 'first_sample_category'
     HEADER_FIRST_SAMPLE_PORTAL_URL = 'first_sample_portal_url'
-    HEADER_ORGAN_HUBMAP_ID = 'organ_hubmap_id'
-    HEADER_ORGAN_SUBMISSION_ID = 'organ_submission_id'
+    HEADER_ORGAN_SENNET_ID = 'organ_sennet_id'
     HEADER_ORGAN_UUID = 'organ_uuid'
     HEADER_ORGAN_TYPE = 'organ_type'
-    HEADER_SOURCE_HUBMAP_ID = 'source_hubmap_id'
-    HEADER_SOURCE_SUBMISSION_ID = 'source_submission_id'
+    HEADER_SOURCE_SENNET_ID = 'source_sennet_id'
     HEADER_SOURCE_UUID = 'source_uuid'
     HEADER_SOURCE_GROUP_NAME = 'source_group_name'
-    HEADER_RUI_LOCATION_HUBMAP_ID = 'rui_location_hubmap_id'
-    HEADER_RUI_LOCATION_SUBMISSION_ID = 'rui_location_submission_id'
+    HEADER_RUI_LOCATION_SENNET_ID = 'rui_location_sennet_id'
     HEADER_RUI_LOCATION_UUID = 'rui_location_uuid'
-    HEADER_SAMPLE_METADATA_HUBMAP_ID = 'sample_metadata_hubmap_id'
-    HEADER_SAMPLE_METADATA_SUBMISSION_ID = 'sample_metadata_submission_id'
+    HEADER_SAMPLE_METADATA_SENNET_ID = 'sample_metadata_sennet_id'
     HEADER_SAMPLE_METADATA_UUID = 'sample_metadata_uuid'
     HEADER_PROCESSED_DATASET_UUID = 'processed_dataset_uuid'
-    HEADER_PROCESSED_DATASET_HUBMAP_ID = 'processed_dataset_hubmap_id'
+    HEADER_PROCESSED_DATASET_SENNET_ID = 'processed_dataset_sennet_id'
     HEADER_PROCESSED_DATASET_STATUS = 'processed_dataset_status'
     HEADER_PROCESSED_DATASET_PORTAL_URL = 'processed_dataset_portal_url'
     ASSAY_TYPES_URL = SchemaConstants.ASSAY_TYPES_YAML
     ORGAN_TYPES_URL = SchemaConstants.ORGAN_TYPES_YAML
-    HEADER_PREVIOUS_VERSION_HUBMAP_IDS = 'previous_version_hubmap_ids'
+    HEADER_PREVIOUS_VERSION_SENNET_IDS = 'previous_version_sennet_ids'
 
     headers = [
-        HEADER_DATASET_UUID, HEADER_DATASET_HUBMAP_ID, HEADER_DATASET_STATUS, HEADER_DATASET_GROUP_NAME,
+        HEADER_DATASET_UUID, HEADER_DATASET_SENNET_ID, HEADER_DATASET_STATUS, HEADER_DATASET_GROUP_NAME,
         HEADER_DATASET_GROUP_UUID, HEADER_DATASET_DATE_TIME_CREATED, HEADER_DATASET_CREATED_BY_EMAIL,
         HEADER_DATASET_DATE_TIME_MODIFIED, HEADER_DATASET_MODIFIED_BY_EMAIL, HEADER_DATASET_LAB_ID,
-        HEADER_DATASET_DATA_TYPES, HEADER_DATASET_PORTAL_URL, HEADER_FIRST_SAMPLE_HUBMAP_ID,
-        HEADER_FIRST_SAMPLE_SUBMISSION_ID, HEADER_FIRST_SAMPLE_UUID, HEADER_FIRST_SAMPLE_TYPE,
-        HEADER_FIRST_SAMPLE_PORTAL_URL, HEADER_ORGAN_HUBMAP_ID, HEADER_ORGAN_SUBMISSION_ID, HEADER_ORGAN_UUID,
-        HEADER_ORGAN_TYPE, HEADER_SOURCE_HUBMAP_ID, HEADER_SOURCE_SUBMISSION_ID, HEADER_SOURCE_UUID,
-        HEADER_SOURCE_GROUP_NAME, HEADER_RUI_LOCATION_HUBMAP_ID, HEADER_RUI_LOCATION_SUBMISSION_ID,
-        HEADER_RUI_LOCATION_UUID, HEADER_SAMPLE_METADATA_HUBMAP_ID, HEADER_SAMPLE_METADATA_SUBMISSION_ID,
-        HEADER_SAMPLE_METADATA_UUID, HEADER_PROCESSED_DATASET_UUID, HEADER_PROCESSED_DATASET_HUBMAP_ID,
-        HEADER_PROCESSED_DATASET_STATUS, HEADER_PROCESSED_DATASET_PORTAL_URL, HEADER_PREVIOUS_VERSION_HUBMAP_IDS
+        HEADER_DATASET_DATA_TYPES, HEADER_DATASET_PORTAL_URL, HEADER_FIRST_SAMPLE_SENNET_ID,
+        HEADER_FIRST_SAMPLE_UUID, HEADER_FIRST_SAMPLE_CATEGORY,
+        HEADER_FIRST_SAMPLE_PORTAL_URL, HEADER_ORGAN_SENNET_ID, HEADER_ORGAN_UUID,
+        HEADER_ORGAN_TYPE, HEADER_SOURCE_SENNET_ID, HEADER_SOURCE_UUID,
+        HEADER_SOURCE_GROUP_NAME, HEADER_RUI_LOCATION_SENNET_ID,
+        HEADER_RUI_LOCATION_UUID, HEADER_SAMPLE_METADATA_SENNET_ID,
+        HEADER_SAMPLE_METADATA_UUID, HEADER_PROCESSED_DATASET_UUID, HEADER_PROCESSED_DATASET_SENNET_ID,
+        HEADER_PROCESSED_DATASET_STATUS, HEADER_PROCESSED_DATASET_PORTAL_URL, HEADER_PREVIOUS_VERSION_SENNET_IDS
     ]
     published_only = True
 
@@ -2625,7 +2619,7 @@ def get_prov_info():
     for dataset in prov_info:
         internal_dict = collections.OrderedDict()
         internal_dict[HEADER_DATASET_UUID] = dataset['uuid']
-        internal_dict[HEADER_DATASET_HUBMAP_ID] = dataset['hubmap_id']
+        internal_dict[HEADER_DATASET_SENNET_ID] = dataset['sennet_id']
         internal_dict[HEADER_DATASET_STATUS] = dataset['status']
         internal_dict[HEADER_DATASET_GROUP_NAME] = dataset['group_name']
         internal_dict[HEADER_DATASET_GROUP_UUID] = dataset['group_uuid']
@@ -2662,134 +2656,114 @@ def get_prov_info():
 
         # first_sample properties are retrieved from its own dictionary
         if dataset['first_sample'] is not None:
-            first_sample_hubmap_id_list = []
-            first_sample_submission_id_list = []
+            first_sample_sennet_id_list = []
             first_sample_uuid_list = []
-            first_sample_type_list = []
+            first_sample_category_list = []
             first_sample_portal_url_list = []
             for item in dataset['first_sample']:
-                first_sample_hubmap_id_list.append(item['hubmap_id'])
-                first_sample_submission_id_list.append(item['submission_id'])
+                first_sample_sennet_id_list.append(item['sennet_id'])
                 first_sample_uuid_list.append(item['uuid'])
-                first_sample_type_list.append(item['specimen_type'])
+                first_sample_category_list.append(item['sample_category'])
                 first_sample_portal_url_list.append(app.config['DOI_REDIRECT_URL'].replace('<entity_type>', 'sample').replace('<identifier>', item['uuid']))
-            internal_dict[HEADER_FIRST_SAMPLE_HUBMAP_ID] = first_sample_hubmap_id_list
-            internal_dict[HEADER_FIRST_SAMPLE_SUBMISSION_ID] = first_sample_submission_id_list
+            internal_dict[HEADER_FIRST_SAMPLE_SENNET_ID] = first_sample_sennet_id_list
             internal_dict[HEADER_FIRST_SAMPLE_UUID] = first_sample_uuid_list
-            internal_dict[HEADER_FIRST_SAMPLE_TYPE] = first_sample_type_list
+            internal_dict[HEADER_FIRST_SAMPLE_CATEGORY] = first_sample_category_list
             internal_dict[HEADER_FIRST_SAMPLE_PORTAL_URL] = first_sample_portal_url_list
             if return_json is False:
-                internal_dict[HEADER_FIRST_SAMPLE_HUBMAP_ID] = ",".join(first_sample_hubmap_id_list)
-                internal_dict[HEADER_FIRST_SAMPLE_SUBMISSION_ID] = ",".join(first_sample_submission_id_list)
+                internal_dict[HEADER_FIRST_SAMPLE_SENNET_ID] = ",".join(first_sample_sennet_id_list)
                 internal_dict[HEADER_FIRST_SAMPLE_UUID] = ",".join(first_sample_uuid_list)
-                internal_dict[HEADER_FIRST_SAMPLE_TYPE] = ",".join(first_sample_type_list)
+                internal_dict[HEADER_FIRST_SAMPLE_CATEGORY] = ",".join(first_sample_category_list)
                 internal_dict[HEADER_FIRST_SAMPLE_PORTAL_URL] = ",".join(first_sample_portal_url_list)
 
         # distinct_organ properties are retrieved from its own dictionary
         if dataset['distinct_organ'] is not None:
-            distinct_organ_hubmap_id_list = []
-            distinct_organ_submission_id_list = []
+            distinct_organ_sennet_id_list = []
             distinct_organ_uuid_list = []
             distinct_organ_type_list = []
             for item in dataset['distinct_organ']:
-                distinct_organ_hubmap_id_list.append(item['hubmap_id'])
-                distinct_organ_submission_id_list.append(item['submission_id'])
+                distinct_organ_sennet_id_list.append(item['sennet_id'])
                 distinct_organ_uuid_list.append(item['uuid'])
                 distinct_organ_type_list.append(organ_types_dict[item['organ']]['description'].lower())
-            internal_dict[HEADER_ORGAN_HUBMAP_ID] = distinct_organ_hubmap_id_list
-            internal_dict[HEADER_ORGAN_SUBMISSION_ID] = distinct_organ_submission_id_list
+            internal_dict[HEADER_ORGAN_SENNET_ID] = distinct_organ_sennet_id_list
             internal_dict[HEADER_ORGAN_UUID] = distinct_organ_uuid_list
             internal_dict[HEADER_ORGAN_TYPE] = distinct_organ_type_list
             if return_json is False:
-                internal_dict[HEADER_ORGAN_HUBMAP_ID] = ",".join(distinct_organ_hubmap_id_list)
-                internal_dict[HEADER_ORGAN_SUBMISSION_ID] = ",".join(distinct_organ_submission_id_list)
+                internal_dict[HEADER_ORGAN_SENNET_ID] = ",".join(distinct_organ_sennet_id_list)
                 internal_dict[HEADER_ORGAN_UUID] = ",".join(distinct_organ_uuid_list)
                 internal_dict[HEADER_ORGAN_TYPE] = ",".join(distinct_organ_type_list)
 
         # distinct_source properties are retrieved from its own dictionary
         if dataset['distinct_source'] is not None:
-            distinct_source_hubmap_id_list = []
-            distinct_source_submission_id_list = []
+            distinct_source_sennet_id_list = []
             distinct_source_uuid_list = []
             distinct_source_group_name_list = []
             for item in dataset['distinct_source']:
-                distinct_source_hubmap_id_list.append(item['hubmap_id'])
-                distinct_source_submission_id_list.append(item['submission_id'])
+                distinct_source_sennet_id_list.append(item['sennet_id'])
                 distinct_source_uuid_list.append(item['uuid'])
                 distinct_source_group_name_list.append(item['group_name'])
-            internal_dict[HEADER_SOURCE_HUBMAP_ID] = distinct_source_hubmap_id_list
-            internal_dict[HEADER_SOURCE_SUBMISSION_ID] = distinct_source_submission_id_list
+            internal_dict[HEADER_SOURCE_SENNET_ID] = distinct_source_sennet_id_list
             internal_dict[HEADER_SOURCE_UUID] = distinct_source_uuid_list
             internal_dict[HEADER_SOURCE_GROUP_NAME] = distinct_source_group_name_list
             if return_json is False:
-                internal_dict[HEADER_SOURCE_HUBMAP_ID] = ",".join(distinct_source_hubmap_id_list)
-                internal_dict[HEADER_SOURCE_SUBMISSION_ID] = ",".join(distinct_source_submission_id_list)
+                internal_dict[HEADER_SOURCE_SENNET_ID] = ",".join(distinct_source_sennet_id_list)
                 internal_dict[HEADER_SOURCE_UUID] = ",".join(distinct_source_uuid_list)
                 internal_dict[HEADER_SOURCE_GROUP_NAME] = ",".join(distinct_source_group_name_list)
 
         # distinct_rui_sample properties are retrieved from its own dictionary
         if dataset['distinct_rui_sample'] is not None:
-            rui_location_hubmap_id_list = []
-            rui_location_submission_id_list = []
+            rui_location_sennet_id_list = []
             rui_location_uuid_list = []
             for item in dataset['distinct_rui_sample']:
-                rui_location_hubmap_id_list.append(item['hubmap_id'])
-                rui_location_submission_id_list.append(item['submission_id'])
+                rui_location_sennet_id_list.append(item['sennet_id'])
                 rui_location_uuid_list.append(item['uuid'])
-            internal_dict[HEADER_RUI_LOCATION_HUBMAP_ID] = rui_location_hubmap_id_list
-            internal_dict[HEADER_RUI_LOCATION_SUBMISSION_ID] = rui_location_submission_id_list
+            internal_dict[HEADER_RUI_LOCATION_SENNET_ID] = rui_location_sennet_id_list
             internal_dict[HEADER_RUI_LOCATION_UUID] = rui_location_uuid_list
             if return_json is False:
-                internal_dict[HEADER_RUI_LOCATION_HUBMAP_ID] = ",".join(rui_location_hubmap_id_list)
-                internal_dict[HEADER_RUI_LOCATION_SUBMISSION_ID] = ",".join(rui_location_submission_id_list)
+                internal_dict[HEADER_RUI_LOCATION_SENNET_ID] = ",".join(rui_location_sennet_id_list)
                 internal_dict[HEADER_RUI_LOCATION_UUID] = ",".join(rui_location_uuid_list)
 
         # distinct_metasample properties are retrieved from its own dictionary
         if dataset['distinct_metasample'] is not None:
-            metasample_hubmap_id_list = []
-            metasample_submission_id_list = []
+            metasample_sennet_id_list = []
             metasample_uuid_list = []
             for item in dataset['distinct_metasample']:
-                metasample_hubmap_id_list.append(item['hubmap_id'])
-                metasample_submission_id_list.append(item['submission_id'])
+                metasample_sennet_id_list.append(item['sennet_id'])
                 metasample_uuid_list.append(item['uuid'])
-            internal_dict[HEADER_SAMPLE_METADATA_HUBMAP_ID] = metasample_hubmap_id_list
-            internal_dict[HEADER_SAMPLE_METADATA_SUBMISSION_ID] = metasample_submission_id_list
+            internal_dict[HEADER_SAMPLE_METADATA_SENNET_ID] = metasample_sennet_id_list
             internal_dict[HEADER_SAMPLE_METADATA_UUID] = metasample_uuid_list
             if return_json is False:
-                internal_dict[HEADER_SAMPLE_METADATA_HUBMAP_ID] = ",".join(metasample_hubmap_id_list)
-                internal_dict[HEADER_SAMPLE_METADATA_SUBMISSION_ID] = ",".join(metasample_submission_id_list)
+                internal_dict[HEADER_SAMPLE_METADATA_SENNET_ID] = ",".join(metasample_sennet_id_list)
                 internal_dict[HEADER_SAMPLE_METADATA_UUID] = ",".join(metasample_uuid_list)
 
         # processed_dataset properties are retrived from its own dictionary
         if dataset['processed_dataset'] is not None:
             processed_dataset_uuid_list = []
-            processed_dataset_hubmap_id_list = []
+            processed_dataset_sennet_id_list = []
             processed_dataset_status_list = []
             processed_dataset_portal_url_list = []
             for item in dataset['processed_dataset']:
                 processed_dataset_uuid_list.append(item['uuid'])
-                processed_dataset_hubmap_id_list.append(item['hubmap_id'])
+                processed_dataset_sennet_id_list.append(item['sennet_id'])
                 processed_dataset_status_list.append(item['status'])
                 processed_dataset_portal_url_list.append(app.config['DOI_REDIRECT_URL'].replace('<entity_type>', 'dataset').replace('<identifier>', item['uuid']))
             internal_dict[HEADER_PROCESSED_DATASET_UUID] = processed_dataset_uuid_list
-            internal_dict[HEADER_PROCESSED_DATASET_HUBMAP_ID] = processed_dataset_hubmap_id_list
+            internal_dict[HEADER_PROCESSED_DATASET_SENNET_ID] = processed_dataset_sennet_id_list
             internal_dict[HEADER_PROCESSED_DATASET_STATUS] = processed_dataset_status_list
             internal_dict[HEADER_PROCESSED_DATASET_PORTAL_URL] = processed_dataset_portal_url_list
             if return_json is False:
                 internal_dict[HEADER_PROCESSED_DATASET_UUID] = ",".join(processed_dataset_uuid_list)
-                internal_dict[HEADER_PROCESSED_DATASET_UUID] = ",".join(processed_dataset_hubmap_id_list)
+                internal_dict[HEADER_PROCESSED_DATASET_UUID] = ",".join(processed_dataset_sennet_id_list)
                 internal_dict[HEADER_PROCESSED_DATASET_UUID] = ",".join(processed_dataset_status_list)
                 internal_dict[HEADER_PROCESSED_DATASET_UUID] = ",".join(processed_dataset_portal_url_list)
 
 
-        if dataset['previous_version_hubmap_ids'] is not None:
-            previous_version_hubmap_ids_list = []
-            for item in dataset['previous_version_hubmap_ids']:
-                previous_version_hubmap_ids_list.append(item)
-            internal_dict[HEADER_PREVIOUS_VERSION_HUBMAP_IDS] = previous_version_hubmap_ids_list
+        if dataset['previous_version_sennet_ids'] is not None:
+            previous_version_sennet_ids_list = []
+            for item in dataset['previous_version_sennet_ids']:
+                previous_version_sennet_ids_list.append(item)
+            internal_dict[HEADER_PREVIOUS_VERSION_SENNET_IDS] = previous_version_sennet_ids_list
             if return_json is False:
-                internal_dict[HEADER_PREVIOUS_VERSION_HUBMAP_IDS] = ",".join(previous_version_hubmap_ids_list)
+                internal_dict[HEADER_PREVIOUS_VERSION_SENNET_IDS] = ",".join(previous_version_sennet_ids_list)
 
         # Each dataset's dictionary is added to the list to be returned
         dataset_prov_list.append(internal_dict)
@@ -2867,7 +2841,7 @@ def get_prov_info_for_dataset(id):
             return_json = True
 
     HEADER_DATASET_UUID = 'dataset_uuid'
-    HEADER_DATASET_HUBMAP_ID = 'dataset_hubmap_id'
+    HEADER_DATASET_SENNET_ID = 'dataset_sennet_id'
     HEADER_DATASET_STATUS = 'dataset_status'
     HEADER_DATASET_GROUP_NAME = 'dataset_group_name'
     HEADER_DATASET_GROUP_UUID = 'dataset_group_uuid'
@@ -2878,43 +2852,38 @@ def get_prov_info_for_dataset(id):
     HEADER_DATASET_LAB_ID = 'lab_id_or_name'
     HEADER_DATASET_DATA_TYPES = 'dataset_data_types'
     HEADER_DATASET_PORTAL_URL = 'dataset_portal_url'
-    HEADER_FIRST_SAMPLE_HUBMAP_ID = 'first_sample_hubmap_id'
-    HEADER_FIRST_SAMPLE_SUBMISSION_ID = 'first_sample_submission_id'
+    HEADER_FIRST_SAMPLE_SENNET_ID = 'first_sample_sennet_id'
     HEADER_FIRST_SAMPLE_UUID = 'first_sample_uuid'
-    HEADER_FIRST_SAMPLE_TYPE = 'first_sample_type'
+    HEADER_FIRST_SAMPLE_CATEGORY = 'first_sample_category'
     HEADER_FIRST_SAMPLE_PORTAL_URL = 'first_sample_portal_url'
-    HEADER_ORGAN_HUBMAP_ID = 'organ_hubmap_id'
-    HEADER_ORGAN_SUBMISSION_ID = 'organ_submission_id'
+    HEADER_ORGAN_SENNET_ID = 'organ_sennet_id'
     HEADER_ORGAN_UUID = 'organ_uuid'
     HEADER_ORGAN_TYPE = 'organ_type'
-    HEADER_SOURCE_HUBMAP_ID = 'source_hubmap_id'
-    HEADER_SOURCE_SUBMISSION_ID = 'source_submission_id'
+    HEADER_SOURCE_SENNET_ID = 'source_sennet_id'
     HEADER_SOURCE_UUID = 'source_uuid'
     HEADER_SOURCE_GROUP_NAME = 'source_group_name'
-    HEADER_RUI_LOCATION_HUBMAP_ID = 'rui_location_hubmap_id'
-    HEADER_RUI_LOCATION_SUBMISSION_ID = 'rui_location_submission_id'
+    HEADER_RUI_LOCATION_SENNET_ID = 'rui_location_sennet_id'
     HEADER_RUI_LOCATION_UUID = 'rui_location_uuid'
-    HEADER_SAMPLE_METADATA_HUBMAP_ID = 'sample_metadata_hubmap_id'
-    HEADER_SAMPLE_METADATA_SUBMISSION_ID = 'sample_metadata_submission_id'
+    HEADER_SAMPLE_METADATA_SENNET_ID = 'sample_metadata_sennet_id'
     HEADER_SAMPLE_METADATA_UUID = 'sample_metadata_uuid'
     HEADER_PROCESSED_DATASET_UUID = 'processed_dataset_uuid'
-    HEADER_PROCESSED_DATASET_HUBMAP_ID = 'processed_dataset_hubmap_id'
+    HEADER_PROCESSED_DATASET_SENNET_ID = 'processed_dataset_sennet_id'
     HEADER_PROCESSED_DATASET_STATUS = 'processed_dataset_status'
     HEADER_PROCESSED_DATASET_PORTAL_URL = 'processed_dataset_portal_url'
     ASSAY_TYPES_URL = SchemaConstants.ASSAY_TYPES_YAML
     ORGAN_TYPES_URL = SchemaConstants.ORGAN_TYPES_YAML
 
     headers = [
-        HEADER_DATASET_UUID, HEADER_DATASET_HUBMAP_ID, HEADER_DATASET_STATUS, HEADER_DATASET_GROUP_NAME,
+        HEADER_DATASET_UUID, HEADER_DATASET_SENNET_ID, HEADER_DATASET_STATUS, HEADER_DATASET_GROUP_NAME,
         HEADER_DATASET_GROUP_UUID, HEADER_DATASET_DATE_TIME_CREATED, HEADER_DATASET_CREATED_BY_EMAIL,
         HEADER_DATASET_DATE_TIME_MODIFIED, HEADER_DATASET_MODIFIED_BY_EMAIL, HEADER_DATASET_LAB_ID,
-        HEADER_DATASET_DATA_TYPES, HEADER_DATASET_PORTAL_URL, HEADER_FIRST_SAMPLE_HUBMAP_ID,
-        HEADER_FIRST_SAMPLE_SUBMISSION_ID, HEADER_FIRST_SAMPLE_UUID, HEADER_FIRST_SAMPLE_TYPE,
-        HEADER_FIRST_SAMPLE_PORTAL_URL, HEADER_ORGAN_HUBMAP_ID, HEADER_ORGAN_SUBMISSION_ID, HEADER_ORGAN_UUID,
-        HEADER_ORGAN_TYPE, HEADER_SOURCE_HUBMAP_ID, HEADER_SOURCE_SUBMISSION_ID, HEADER_SOURCE_UUID,
-        HEADER_SOURCE_GROUP_NAME, HEADER_RUI_LOCATION_HUBMAP_ID, HEADER_RUI_LOCATION_SUBMISSION_ID,
-        HEADER_RUI_LOCATION_UUID, HEADER_SAMPLE_METADATA_HUBMAP_ID, HEADER_SAMPLE_METADATA_SUBMISSION_ID,
-        HEADER_SAMPLE_METADATA_UUID, HEADER_PROCESSED_DATASET_UUID, HEADER_PROCESSED_DATASET_HUBMAP_ID,
+        HEADER_DATASET_DATA_TYPES, HEADER_DATASET_PORTAL_URL, HEADER_FIRST_SAMPLE_SENNET_ID,
+        HEADER_FIRST_SAMPLE_UUID, HEADER_FIRST_SAMPLE_CATEGORY,
+        HEADER_FIRST_SAMPLE_PORTAL_URL, HEADER_ORGAN_SENNET_ID, HEADER_ORGAN_UUID,
+        HEADER_ORGAN_TYPE, HEADER_SOURCE_SENNET_ID, HEADER_SOURCE_UUID,
+        HEADER_SOURCE_GROUP_NAME, HEADER_RUI_LOCATION_SENNET_ID,
+        HEADER_RUI_LOCATION_UUID, HEADER_SAMPLE_METADATA_SENNET_ID,
+        HEADER_SAMPLE_METADATA_UUID, HEADER_PROCESSED_DATASET_UUID, HEADER_PROCESSED_DATASET_SENNET_ID,
         HEADER_PROCESSED_DATASET_STATUS, HEADER_PROCESSED_DATASET_PORTAL_URL
     ]
 
@@ -2940,15 +2909,15 @@ def get_prov_info_for_dataset(id):
         except yaml.YAMLError as e:
             raise yaml.YAMLError(e)
 
-    hubmap_ids = schema_manager.get_hubmap_ids(id)
+    sennet_ids = schema_manager.get_sennet_ids(id)
 
     # Get the target uuid if all good
-    uuid = hubmap_ids['hm_uuid']
+    uuid = sennet_ids['hm_uuid']
     dataset = app_neo4j_queries.get_individual_prov_info(neo4j_driver_instance, uuid)
     if dataset is None:
         bad_request_error("Query For this Dataset Returned no Records. Make sure this is a Primary Dataset")
     internal_dict = collections.OrderedDict()
-    internal_dict[HEADER_DATASET_HUBMAP_ID] = dataset['hubmap_id']
+    internal_dict[HEADER_DATASET_SENNET_ID] = dataset['sennet_id']
     internal_dict[HEADER_DATASET_UUID] = dataset['uuid']
     internal_dict[HEADER_DATASET_STATUS] = dataset['status']
     internal_dict[HEADER_DATASET_GROUP_NAME] = dataset['group_name']
@@ -2983,118 +2952,98 @@ def get_prov_info_for_dataset(id):
     internal_dict[HEADER_DATASET_PORTAL_URL] = app.config['DOI_REDIRECT_URL'].replace('<entity_type>', 'dataset').replace(
         '<identifier>', dataset['uuid'])
     if dataset['first_sample'] is not None:
-        first_sample_hubmap_id_list = []
-        first_sample_submission_id_list = []
+        first_sample_sennet_id_list = []
         first_sample_uuid_list = []
-        first_sample_type_list = []
+        first_sample_category_list = []
         first_sample_portal_url_list = []
         for item in dataset['first_sample']:
-            first_sample_hubmap_id_list.append(item['hubmap_id'])
-            first_sample_submission_id_list.append(item['submission_id'])
+            first_sample_sennet_id_list.append(item['sennet_id'])
             first_sample_uuid_list.append(item['uuid'])
-            first_sample_type_list.append(item['specimen_type'])
+            first_sample_category_list.append(item['sample_category'])
             first_sample_portal_url_list.append(
                 app.config['DOI_REDIRECT_URL'].replace('<entity_type>', 'sample').replace('<identifier>', item['uuid']))
-        internal_dict[HEADER_FIRST_SAMPLE_HUBMAP_ID] = first_sample_hubmap_id_list
-        internal_dict[HEADER_FIRST_SAMPLE_SUBMISSION_ID] = first_sample_submission_id_list
+        internal_dict[HEADER_FIRST_SAMPLE_SENNET_ID] = first_sample_sennet_id_list
         internal_dict[HEADER_FIRST_SAMPLE_UUID] = first_sample_uuid_list
-        internal_dict[HEADER_FIRST_SAMPLE_TYPE] = first_sample_type_list
+        internal_dict[HEADER_FIRST_SAMPLE_CATEGORY] = first_sample_category_list
         internal_dict[HEADER_FIRST_SAMPLE_PORTAL_URL] = first_sample_portal_url_list
         if return_json is False:
-            internal_dict[HEADER_FIRST_SAMPLE_HUBMAP_ID] = ",".join(first_sample_hubmap_id_list)
-            internal_dict[HEADER_FIRST_SAMPLE_SUBMISSION_ID] = ",".join(first_sample_submission_id_list)
+            internal_dict[HEADER_FIRST_SAMPLE_SENNET_ID] = ",".join(first_sample_sennet_id_list)
             internal_dict[HEADER_FIRST_SAMPLE_UUID] = ",".join(first_sample_uuid_list)
-            internal_dict[HEADER_FIRST_SAMPLE_TYPE] = ",".join(first_sample_type_list)
+            internal_dict[HEADER_FIRST_SAMPLE_CATEGORY] = ",".join(first_sample_category_list)
             internal_dict[HEADER_FIRST_SAMPLE_PORTAL_URL] = ",".join(first_sample_portal_url_list)
     if dataset['distinct_organ'] is not None:
-        distinct_organ_hubmap_id_list = []
-        distinct_organ_submission_id_list = []
+        distinct_organ_sennet_id_list = []
         distinct_organ_uuid_list = []
         distinct_organ_type_list = []
         for item in dataset['distinct_organ']:
-            distinct_organ_hubmap_id_list.append(item['hubmap_id'])
-            distinct_organ_submission_id_list.append(item['submission_id'])
+            distinct_organ_sennet_id_list.append(item['sennet_id'])
             distinct_organ_uuid_list.append(item['uuid'])
             distinct_organ_type_list.append(organ_types_dict[item['organ']]['description'].lower())
-        internal_dict[HEADER_ORGAN_HUBMAP_ID] = distinct_organ_hubmap_id_list
-        internal_dict[HEADER_ORGAN_SUBMISSION_ID] = distinct_organ_submission_id_list
+        internal_dict[HEADER_ORGAN_SENNET_ID] = distinct_organ_sennet_id_list
         internal_dict[HEADER_ORGAN_UUID] = distinct_organ_uuid_list
         internal_dict[HEADER_ORGAN_TYPE] = distinct_organ_type_list
         if return_json is False:
-            internal_dict[HEADER_ORGAN_HUBMAP_ID] = ",".join(distinct_organ_hubmap_id_list)
-            internal_dict[HEADER_ORGAN_SUBMISSION_ID] = ",".join(distinct_organ_submission_id_list)
+            internal_dict[HEADER_ORGAN_SENNET_ID] = ",".join(distinct_organ_sennet_id_list)
             internal_dict[HEADER_ORGAN_UUID] = ",".join(distinct_organ_uuid_list)
             internal_dict[HEADER_ORGAN_TYPE] = ",".join(distinct_organ_type_list)
     if dataset['distinct_source'] is not None:
-        distinct_source_hubmap_id_list = []
-        distinct_source_submission_id_list = []
+        distinct_source_sennet_id_list = []
         distinct_source_uuid_list = []
         distinct_source_group_name_list = []
         for item in dataset['distinct_source']:
-            distinct_source_hubmap_id_list.append(item['hubmap_id'])
-            distinct_source_submission_id_list.append(item['submission_id'])
+            distinct_source_sennet_id_list.append(item['sennet_id'])
             distinct_source_uuid_list.append(item['uuid'])
             distinct_source_group_name_list.append(item['group_name'])
-        internal_dict[HEADER_SOURCE_HUBMAP_ID] = distinct_source_hubmap_id_list
-        internal_dict[HEADER_SOURCE_SUBMISSION_ID] = distinct_source_submission_id_list
+        internal_dict[HEADER_SOURCE_SENNET_ID] = distinct_source_sennet_id_list
         internal_dict[HEADER_SOURCE_UUID] = distinct_source_uuid_list
         internal_dict[HEADER_SOURCE_GROUP_NAME] = distinct_source_group_name_list
         if return_json is False:
-            internal_dict[HEADER_SOURCE_HUBMAP_ID] = ",".join(distinct_source_hubmap_id_list)
-            internal_dict[HEADER_SOURCE_SUBMISSION_ID] = ",".join(distinct_source_submission_id_list)
+            internal_dict[HEADER_SOURCE_SENNET_ID] = ",".join(distinct_source_sennet_id_list)
             internal_dict[HEADER_SOURCE_UUID] = ",".join(distinct_source_uuid_list)
             internal_dict[HEADER_SOURCE_GROUP_NAME] = ",".join(distinct_source_group_name_list)
     if dataset['distinct_rui_sample'] is not None:
-        rui_location_hubmap_id_list = []
-        rui_location_submission_id_list = []
+        rui_location_sennet_id_list = []
         rui_location_uuid_list = []
         for item in dataset['distinct_rui_sample']:
-            rui_location_hubmap_id_list.append(item['hubmap_id'])
-            rui_location_submission_id_list.append(item['submission_id'])
+            rui_location_sennet_id_list.append(item['sennet_id'])
             rui_location_uuid_list.append(item['uuid'])
-        internal_dict[HEADER_RUI_LOCATION_HUBMAP_ID] = rui_location_hubmap_id_list
-        internal_dict[HEADER_RUI_LOCATION_SUBMISSION_ID] = rui_location_submission_id_list
+        internal_dict[HEADER_RUI_LOCATION_SENNET_ID] = rui_location_sennet_id_list
         internal_dict[HEADER_RUI_LOCATION_UUID] = rui_location_uuid_list
         if return_json is False:
-            internal_dict[HEADER_RUI_LOCATION_HUBMAP_ID] = ",".join(rui_location_hubmap_id_list)
-            internal_dict[HEADER_RUI_LOCATION_SUBMISSION_ID] = ",".join(rui_location_submission_id_list)
+            internal_dict[HEADER_RUI_LOCATION_SENNET_ID] = ",".join(rui_location_sennet_id_list)
             internal_dict[HEADER_RUI_LOCATION_UUID] = ",".join(rui_location_uuid_list)
     if dataset['distinct_metasample'] is not None:
-        metasample_hubmap_id_list = []
-        metasample_submission_id_list = []
+        metasample_sennet_id_list = []
         metasample_uuid_list = []
         for item in dataset['distinct_metasample']:
-            metasample_hubmap_id_list.append(item['hubmap_id'])
-            metasample_submission_id_list.append(item['submission_id'])
+            metasample_sennet_id_list.append(item['sennet_id'])
             metasample_uuid_list.append(item['uuid'])
-        internal_dict[HEADER_SAMPLE_METADATA_HUBMAP_ID] = metasample_hubmap_id_list
-        internal_dict[HEADER_SAMPLE_METADATA_SUBMISSION_ID] = metasample_submission_id_list
+        internal_dict[HEADER_SAMPLE_METADATA_SENNET_ID] = metasample_sennet_id_list
         internal_dict[HEADER_SAMPLE_METADATA_UUID] = metasample_uuid_list
         if return_json is False:
-            internal_dict[HEADER_SAMPLE_METADATA_HUBMAP_ID] = ",".join(metasample_hubmap_id_list)
-            internal_dict[HEADER_SAMPLE_METADATA_SUBMISSION_ID] = ",".join(metasample_submission_id_list)
+            internal_dict[HEADER_SAMPLE_METADATA_SENNET_ID] = ",".join(metasample_sennet_id_list)
             internal_dict[HEADER_SAMPLE_METADATA_UUID] = ",".join(metasample_uuid_list)
 
     # processed_dataset properties are retrived from its own dictionary
     if dataset['processed_dataset'] is not None:
         processed_dataset_uuid_list = []
-        processed_dataset_hubmap_id_list = []
+        processed_dataset_sennet_id_list = []
         processed_dataset_status_list = []
         processed_dataset_portal_url_list = []
         for item in dataset['processed_dataset']:
             processed_dataset_uuid_list.append(item['uuid'])
-            processed_dataset_hubmap_id_list.append(item['hubmap_id'])
+            processed_dataset_sennet_id_list.append(item['sennet_id'])
             processed_dataset_status_list.append(item['status'])
             processed_dataset_portal_url_list.append(
                 app.config['DOI_REDIRECT_URL'].replace('<entity_type>', 'dataset').replace('<identifier>',
                                                                                            item['uuid']))
         internal_dict[HEADER_PROCESSED_DATASET_UUID] = processed_dataset_uuid_list
-        internal_dict[HEADER_PROCESSED_DATASET_HUBMAP_ID] = processed_dataset_hubmap_id_list
+        internal_dict[HEADER_PROCESSED_DATASET_SENNET_ID] = processed_dataset_sennet_id_list
         internal_dict[HEADER_PROCESSED_DATASET_STATUS] = processed_dataset_status_list
         internal_dict[HEADER_PROCESSED_DATASET_PORTAL_URL] = processed_dataset_portal_url_list
         if return_json is False:
             internal_dict[HEADER_PROCESSED_DATASET_UUID] = ",".join(processed_dataset_uuid_list)
-            internal_dict[HEADER_PROCESSED_DATASET_UUID] = ",".join(processed_dataset_hubmap_id_list)
+            internal_dict[HEADER_PROCESSED_DATASET_UUID] = ",".join(processed_dataset_sennet_id_list)
             internal_dict[HEADER_PROCESSED_DATASET_UUID] = ",".join(processed_dataset_status_list)
             internal_dict[HEADER_PROCESSED_DATASET_UUID] = ",".join(processed_dataset_portal_url_list)
 
@@ -3235,17 +3184,14 @@ def get_sample_prov_info():
     HEADER_SAMPLE_HAS_RUI_INFO = "sample_has_rui_info"
     HEADER_SAMPLE_DIRECT_ANCESTOR_ID = "sample_ancestor_id"
     HEADER_SAMPLE_DIRECT_ANCESTOR_ENTITY_TYPE = "sample_ancestor_entity"
-    HEADER_SAMPLE_HUBMAP_ID = "sample_hubmap_id"
-    HEADER_SAMPLE_SUBMISSION_ID = "sample_submission_id"
-    HEADER_SAMPLE_TYPE = "sample_type"
+    HEADER_SAMPLE_SENNET_ID = "sample_sennet_id"
+    HEADER_SAMPLE_CATEGORY = "sample_category"
     HEADER_SOURCE_UUID = "source_uuid"
-    HEADER_SOURCE_SUBMISSION_ID = "source_submission_id"
-    HEADER_SOURCE_HUBMAP_ID = "source_hubmap_id"
+    HEADER_SOURCE_SENNET_ID = "source_sennet_id"
     HEADER_SOURCE_HAS_METADATA = "source_has_metadata"
     HEADER_ORGAN_UUID = "organ_uuid"
     HEADER_ORGAN_TYPE = "organ_type"
-    HEADER_ORGAN_HUBMAP_ID = "organ_hubmap_id"
-    HEADER_ORGAN_SUBMISSION_ID = "organ_submission_id"
+    HEADER_ORGAN_SENNET_ID = "organ_sennet_id"
     ORGAN_TYPES_URL = SchemaConstants.ORGAN_TYPES_YAML
 
     response = requests.get(url=ORGAN_TYPES_URL, verify=False)
@@ -3285,19 +3231,16 @@ def get_sample_prov_info():
         # the given sample is itself an organ.
         organ_uuid = None
         organ_type = None
-        organ_hubmap_id = None
-        organ_submission_id = None
+        organ_sennet_id = None
         if sample['organ_uuid'] is not None:
             organ_uuid = sample['organ_uuid']
             organ_type = organ_types_dict[sample['organ_organ_type']]['description'].lower()
-            organ_hubmap_id = sample['organ_hubmap_id']
-            organ_submission_id = sample['organ_submission_id']
+            organ_sennet_id = sample['organ_sennet_id']
         else:
-            if sample['sample_specimen_type'] == "organ":
+            if sample['sample_sample_category'] == "organ":
                 organ_uuid = sample['sample_uuid']
                 organ_type = organ_types_dict[sample['sample_organ']]['description'].lower()
-                organ_hubmap_id = sample['sample_hubmap_id']
-                organ_submission_id = sample['sample_submission_id']
+                organ_sennet_id = sample['sample_sennet_id']
 
 
         sample_has_metadata = False
@@ -3320,18 +3263,15 @@ def get_sample_prov_info():
         internal_dict[HEADER_SAMPLE_HAS_METADATA] = sample_has_metadata
         internal_dict[HEADER_SAMPLE_HAS_RUI_INFO] = sample_has_rui_info
         internal_dict[HEADER_SAMPLE_DIRECT_ANCESTOR_ID] = sample['sample_ancestor_id']
-        internal_dict[HEADER_SAMPLE_TYPE] = sample['sample_specimen_type']
-        internal_dict[HEADER_SAMPLE_HUBMAP_ID] = sample['sample_hubmap_id']
-        internal_dict[HEADER_SAMPLE_SUBMISSION_ID] = sample['sample_submission_id']
+        internal_dict[HEADER_SAMPLE_CATEGORY] = sample['sample_sample_category']
+        internal_dict[HEADER_SAMPLE_SENNET_ID] = sample['sample_sennet_id']
         internal_dict[HEADER_SAMPLE_DIRECT_ANCESTOR_ENTITY_TYPE] = sample['sample_ancestor_entity']
         internal_dict[HEADER_SOURCE_UUID] = sample['source_uuid']
         internal_dict[HEADER_SOURCE_HAS_METADATA] = source_has_metadata
-        internal_dict[HEADER_SOURCE_HUBMAP_ID] = sample['source_hubmap_id']
-        internal_dict[HEADER_SOURCE_SUBMISSION_ID] = sample['source_submission_id']
+        internal_dict[HEADER_SOURCE_SENNET_ID] = sample['source_sennet_id']
         internal_dict[HEADER_ORGAN_UUID] = organ_uuid
         internal_dict[HEADER_ORGAN_TYPE] = organ_type
-        internal_dict[HEADER_ORGAN_HUBMAP_ID] = organ_hubmap_id
-        internal_dict[HEADER_ORGAN_SUBMISSION_ID] = organ_submission_id
+        internal_dict[HEADER_ORGAN_SENNET_ID] = organ_sennet_id
 
         # Each sample's dictionary is added to the list to be returned
         sample_prov_list.append(internal_dict)
@@ -3710,7 +3650,6 @@ def user_in_sennet_read_group(request):
         # The property 'hmgroupids' is ALWASYS in the output with using schema_manager.get_user_info()
         # when the token in request is a groups token
         user_info = schema_manager.get_user_info(request)
-        # TODO: Need to update these types of checks after SenNet gets its own auth
         sennet_read_group_uuid = auth_helper_instance.get_default_read_group_uuid()
     except Exception as e:
         # Log the full stack trace, prepend a line with our message
@@ -4260,7 +4199,6 @@ def query_target_activity(id, user_token):
             "email": "marda@ufl.edu",
             "uuid": "1785aae4f0fb8f13a56d79957d1cbedf",
             "sennet_id": "SNT966.VNKN.965",
-            "submission_id": "UFL0007",
             "time_generated": "2020-10-19 15:52:02",
             "type": "SOURCE",
             "user_id": "694c6f6a-1deb-41a6-880f-d1ad8af3705f"
@@ -4317,7 +4255,6 @@ def query_target_entity(id, user_token):
             "email": "marda@ufl.edu",
             "uuid": "1785aae4f0fb8f13a56d79957d1cbedf",
             "sennet_id": "SNT966.VNKN.965",
-            "submission_id": "UFL0007",
             "time_generated": "2020-10-19 15:52:02",
             "type": "SOURCE",
             "user_id": "694c6f6a-1deb-41a6-880f-d1ad8af3705f"
@@ -4477,13 +4414,37 @@ organ_code : str
 
 Returns nothing. Raises bad_request_error is organ code not found on organ_types.yaml 
 """
-def validate_organ_code(organ_code):
-    ORGAN_YAML_URL = 'https://raw.githubusercontent.com/hubmapconsortium/search-api/test-release/src/search-schema/data/definitions/enums/organ_types.yaml'
-    with urllib.request.urlopen(ORGAN_YAML_URL) as organ_file:
-        organ_yaml = yaml.load(organ_file, Loader=yaml.FullLoader)
-    if organ_code.upper() not in organ_yaml:
-        bad_request_error(f"Invalid Organ. Organ must be 2 digit code, case-insensitive located at {ORGAN_YAML_URL}")
 
+
+def validate_organ_code(organ_code):
+    yaml_file_url = SchemaConstants.ORGAN_TYPES_YAML
+
+    # Function cache to improve performance
+    response = schema_manager.make_request_get(yaml_file_url)
+
+    if response.status_code == 200:
+        yaml_file = response.text
+
+        try:
+            organ_types_dict = yaml.safe_load(response.text)
+
+            if organ_code.upper() not in organ_types_dict:
+                bad_request_error(f"Invalid Organ. Organ must be 2 digit code, case-insensitive located at {yaml_file_url}")
+        except yaml.YAMLError as e:
+            raise yaml.YAMLError(e)
+    else:
+        msg = f"Unable to fetch the: {yaml_file_url}"
+        # Log the full stack trace, prepend a line with our message
+        logger.exception(msg)
+
+        logger.debug("======validate_organ_code() status code======")
+        logger.debug(response.status_code)
+
+        logger.debug("======validate_organ_code() response text======")
+        logger.debug(response.text)
+
+        # Terminate and let the users know
+        internal_server_error(f"Failed to validate the organ code: {organ_code}")
 
 ####################################################################################################
 ## For local development/testing

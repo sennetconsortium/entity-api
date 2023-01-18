@@ -44,7 +44,7 @@ PUBLIC_DATA_SUBDIR = 'public'
 # The url where dataset/collection DOIs are redirected to
 # The <entity_type> tag is required in the url and will be replaced by the incoming type
 # The <identifier> tag is required in the url and will be replaced by the incoming identifier
-DOI_REDIRECT_URL = 'https://portal.hubmapconsortium.org/browse/<entity_type>/<identifier>'
+DOI_REDIRECT_URL = 'https://data.sennetconsortium.org/<entity_type>?uuid=<identifier>'
 
 #URL to tsv file that holds the redirect url information for DOI redirects
 REDIRECTION_INFO_URL = 'https://raw.githubusercontent.com/hubmapconsortium/ccf-releases/main/reference-entity-ids.tsv'
