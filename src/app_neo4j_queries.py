@@ -206,7 +206,7 @@ Parameters
 neo4j_driver : neo4j.Driver object
     The neo4j database connection pool
 entity_type : str
-    One of the normalized entity types: Dataset, Collection, Sample, Donor
+    One of the normalized entity types: Dataset, Collection, Sample, Source
 property_key : str
     A target property key for result filtering
 
@@ -349,7 +349,7 @@ Parameters
 neo4j_driver : neo4j.Driver object
     The neo4j database connection pool
 entity_type : str
-    One of the normalized entity types: Dataset, Collection, Sample, Donor
+    One of the normalized entity types: Dataset, Collection, Sample, Source
 entity_data_dict : dict
     The target Entity node to be created
 
@@ -471,7 +471,7 @@ Parameters
 neo4j_driver : neo4j.Driver object
     The neo4j database connection pool
 entity_type : str
-    One of the normalized entity types: Dataset, Collection, Sample, Donor
+    One of the normalized entity types: Dataset, Collection, Sample, Source
 entity_data_dict : dict
     The target entity with properties to be updated
 uuid : str
@@ -947,7 +947,7 @@ Parameters
 neo4j_driver : neo4j.Driver object
     The neo4j database connection pool
 uuid : str
-    The uuid of target entity: Donor/Sample/Dataset, not Collection 
+    The uuid of target entity: Source/Sample/Dataset, not Collection 
 depth : int
     The maximum number of hops in the traversal
 """
@@ -1109,12 +1109,11 @@ published_only : boolean
 """
 
 
-# TODO: This function has not been tested to work with SenNet provenance
 def get_prov_info(neo4j_driver, param_dict, published_only):
     group_uuid_query_string = ''
     organ_query_string = 'OPTIONAL MATCH'
     organ_where_clause = ""
-    rui_info_query_string = 'OPTIONAL MATCH (ds)<-[*]-(ruiSample:Sample)'
+    rui_info_query_string = 'OPTIONAL MATCH (ds)-[*]->(ruiSample:Sample)'
     rui_info_where_clause = "WHERE NOT ruiSample.rui_location IS NULL AND NOT trim(ruiSample.rui_location) = '' "
     dataset_status_query_string = ''
     published_only_query_string = ''
@@ -1125,34 +1124,34 @@ def get_prov_info(neo4j_driver, param_dict, published_only):
         # organ_where_clause = f", organ: '{param_dict['organ'].upper()}'"
         organ_where_clause = f" WHERE toUpper(organ.organ) = '{param_dict['organ'].upper()}'"
     if 'has_rui_info' in param_dict:
-        rui_info_query_string = 'MATCH (ds)<-[*]-(ruiSample:Sample)'
+        rui_info_query_string = 'MATCH (ds)-[*]->(ruiSample:Sample)'
         if param_dict['has_rui_info'].lower() == 'false':
             rui_info_query_string = 'MATCH (ds:Dataset)'
-            rui_info_where_clause = "WHERE NOT EXISTS {MATCH (ds)<-[*]-(ruiSample:Sample) WHERE NOT ruiSample.rui_location IS NULL AND NOT TRIM(ruiSample.rui_location) = ''} MATCH (ds)<-[*]-(ruiSample:Sample)"
+            rui_info_where_clause = "WHERE NOT EXISTS {MATCH (ds)-[*]->(ruiSample:Sample) WHERE NOT ruiSample.rui_location IS NULL AND NOT TRIM(ruiSample.rui_location) = ''} MATCH (ds)-[*]->(ruiSample:Sample)"
     if 'dataset_status' in param_dict:
         dataset_status_query_string = f" AND toUpper(ds.status) = '{param_dict['dataset_status'].upper()}'"
     if published_only:
         published_only_query_string = f" AND toUpper(ds.status) = 'PUBLISHED'"
-    query = (f"MATCH (ds:Dataset)<-[:ACTIVITY_OUTPUT]-(a)<-[:ACTIVITY_INPUT]-(firstSample:Sample)<-[*]-(donor:Donor)"
-             f"WHERE not (ds)-[:REVISION_OF]->(:Dataset)"
+    query = (f"MATCH (ds:Dataset)-[:WAS_GENERATED_BY]->(a)-[:USED]->(firstSample:Sample)-[*]->(source:Source)"
+             f"WHERE not (ds)<-[:REVISION_OF]-(:Dataset)"
              f"{group_uuid_query_string}"
              f"{dataset_status_query_string}"
              f"{published_only_query_string}"
-             f" WITH ds, COLLECT(distinct donor) AS DONOR, COLLECT(distinct firstSample) AS FIRSTSAMPLE"
-             f" OPTIONAL MATCH (ds)<-[:REVISION_OF]-(rev:Dataset)"
-             f" WITH ds, DONOR, FIRSTSAMPLE, COLLECT(rev.hubmap_id) as REVISIONS"
-             f" OPTIONAL MATCH (ds)<-[*]-(metaSample:Sample)"
+             f" WITH ds, COLLECT(distinct source) AS SOURCE, COLLECT(distinct firstSample) AS FIRSTSAMPLE"
+             f" OPTIONAL MATCH (ds)-[:REVISION_OF]->(rev:Dataset)"
+             f" WITH ds, SOURCE, FIRSTSAMPLE, COLLECT(rev.sennet_id) as REVISIONS"
+             f" OPTIONAL MATCH (ds)-[*]->(metaSample:Sample)"
              f" WHERE NOT metaSample.metadata IS NULL AND NOT TRIM(metaSample.metadata) = ''"
-             f" WITH ds, FIRSTSAMPLE, DONOR, REVISIONS, collect(distinct metaSample) as METASAMPLE"
+             f" WITH ds, FIRSTSAMPLE, SOURCE, REVISIONS, collect(distinct metaSample) as METASAMPLE"
              f" {rui_info_query_string}"
              f" {rui_info_where_clause}"
-             f" WITH ds, FIRSTSAMPLE, DONOR, REVISIONS, METASAMPLE, collect(distinct ruiSample) as RUISAMPLE"
-             f" {organ_query_string} (donor)-[:ACTIVITY_INPUT]->(oa)-[:ACTIVITY_OUTPUT]->(organ:Sample {{sample_category:'organ'}})-[*]->(ds)"
+             f" WITH ds, FIRSTSAMPLE, SOURCE, REVISIONS, METASAMPLE, collect(distinct ruiSample) as RUISAMPLE"
+             f" {organ_query_string} (source)<-[:USED]-(oa)<-[:WAS_GENERATED_BY]-(organ:Sample {{sample_category:'organ'}})<-[*]-(ds)"
              f" {organ_where_clause}"
-             f" WITH ds, FIRSTSAMPLE, DONOR, REVISIONS, METASAMPLE, RUISAMPLE, COLLECT(DISTINCT organ) AS ORGAN "
-             f" OPTIONAL MATCH (ds)-[:ACTIVITY_INPUT]->(a3)-[:ACTIVITY_OUTPUT]->(processed_dataset:Dataset)"
-             f" WITH ds, FIRSTSAMPLE, DONOR, REVISIONS, METASAMPLE, RUISAMPLE, ORGAN, COLLECT(distinct processed_dataset) AS PROCESSED_DATASET"
-             f" RETURN ds.uuid, FIRSTSAMPLE, DONOR, RUISAMPLE, ORGAN, ds.hubmap_id, ds.status, ds.group_name,"
+             f" WITH ds, FIRSTSAMPLE, SOURCE, REVISIONS, METASAMPLE, RUISAMPLE, COLLECT(DISTINCT organ) AS ORGAN "
+             f" OPTIONAL MATCH (ds)-[:USED]->(a3)-[:WAS_GENERATED_BY]->(processed_dataset:Dataset)"
+             f" WITH ds, FIRSTSAMPLE, SOURCE, REVISIONS, METASAMPLE, RUISAMPLE, ORGAN, COLLECT(distinct processed_dataset) AS PROCESSED_DATASET"
+             f" RETURN ds.uuid, FIRSTSAMPLE, SOURCE, RUISAMPLE, ORGAN, ds.sennet_id, ds.status, ds.group_name,"
              f" ds.group_uuid, ds.created_timestamp, ds.created_by_user_email, ds.last_modified_timestamp, "
              f" ds.last_modified_user_email, ds.lab_dataset_id, ds.data_types, METASAMPLE, PROCESSED_DATASET, REVISIONS")
 
@@ -1180,7 +1179,7 @@ def get_prov_info(neo4j_driver, param_dict, published_only):
             for entry in record_contents[2]:
                 node_dict = _node_to_dict(entry)
                 content_two.append(node_dict)
-            record_dict['distinct_donor'] = content_two
+            record_dict['distinct_source'] = content_two
             content_three = []
             for entry in record_contents[3]:
                 node_dict = _node_to_dict(entry)
@@ -1191,7 +1190,7 @@ def get_prov_info(neo4j_driver, param_dict, published_only):
                 node_dict = _node_to_dict(entry)
                 content_four.append(node_dict)
             record_dict['distinct_organ'] = content_four
-            record_dict['hubmap_id'] = record_contents[5]
+            record_dict['sennet_id'] = record_contents[5]
             record_dict['status'] = record_contents[6]
             record_dict['group_name'] = record_contents[7]
             record_dict['group_uuid'] = record_contents[8]
@@ -1218,7 +1217,7 @@ def get_prov_info(neo4j_driver, param_dict, published_only):
             for entry in record_contents[17]:
                 node_dict = _node_to_dict(entry)
                 content_seventeen.append(node_dict)
-            record_dict['previous_version_hubmap_ids'] = content_seventeen
+            record_dict['previous_version_sennet_ids'] = content_seventeen
             list_of_dictionaries.append(record_dict)
     return list_of_dictionaries
 
@@ -1237,22 +1236,21 @@ dataset_uuid : string
 """
 
 
-# TODO: This function has not been tested to work with SenNet provenance
 def get_individual_prov_info(neo4j_driver, dataset_uuid):
     query = (
-        f"MATCH (ds:Dataset {{uuid: '{dataset_uuid}'}})<-[:ACTIVITY_OUTPUT]-(a)<-[:ACTIVITY_INPUT]-(firstSample:Sample)<-[*]-(donor:Donor)"
-        f" WITH ds, COLLECT(distinct donor) AS DONOR, COLLECT(distinct firstSample) AS FIRSTSAMPLE"
-        f" OPTIONAL MATCH (ds)<-[*]-(metaSample:Sample)"
+        f"MATCH (ds:Dataset {{uuid: '{dataset_uuid}'}})-[:WAS_GENERATED_BY]->(a)-[:USED]->(firstSample:Sample)-[*]->(source:Source)"
+        f" WITH ds, COLLECT(distinct source) AS SOURCE, COLLECT(distinct firstSample) AS FIRSTSAMPLE"
+        f" OPTIONAL MATCH (ds)-[*]->(metaSample:Sample)"
         f" WHERE NOT metaSample.metadata IS NULL AND NOT TRIM(metaSample.metadata) = ''"
-        f" WITH ds, FIRSTSAMPLE, DONOR, COLLECT(distinct metaSample) AS METASAMPLE"
-        f" OPTIONAL MATCH (ds)<-[*]-(ruiSample:Sample)"
+        f" WITH ds, FIRSTSAMPLE, SOURCE, COLLECT(distinct metaSample) AS METASAMPLE"
+        f" OPTIONAL MATCH (ds)-[*]->(ruiSample:Sample)"
         f" WHERE NOT ruiSample.rui_location IS NULL AND NOT TRIM(ruiSample.rui_location) = ''"
-        f" WITH ds, FIRSTSAMPLE, DONOR, METASAMPLE, COLLECT(distinct ruiSample) AS RUISAMPLE"
-        f" OPTIONAL match (donor)-[:ACTIVITY_INPUT]->(oa)-[:ACTIVITY_OUTPUT]->(organ:Sample {{sample_category:'organ'}})-[*]->(ds)"
-        f" WITH ds, FIRSTSAMPLE, DONOR, METASAMPLE, RUISAMPLE, COLLECT(distinct organ) AS ORGAN "
-        f" OPTIONAL MATCH (ds)-[:ACTIVITY_INPUT]->(a3)-[:ACTIVITY_OUTPUT]->(processed_dataset:Dataset)"
-        f" WITH ds, FIRSTSAMPLE, DONOR, METASAMPLE, RUISAMPLE, ORGAN, COLLECT(distinct processed_dataset) AS PROCESSED_DATASET"
-        f" RETURN ds.uuid, FIRSTSAMPLE, DONOR, RUISAMPLE, ORGAN, ds.hubmap_id, ds.status, ds.group_name,"
+        f" WITH ds, FIRSTSAMPLE, SOURCE, METASAMPLE, COLLECT(distinct ruiSample) AS RUISAMPLE"
+        f" OPTIONAL match (source)<-[:USED]-(oa)<-[:WAS_GENERATED_BY]-(organ:Sample {{sample_category:'organ'}})<-[*]-(ds)"
+        f" WITH ds, FIRSTSAMPLE, SOURCE, METASAMPLE, RUISAMPLE, COLLECT(distinct organ) AS ORGAN "
+        f" OPTIONAL MATCH (ds)<-[:USED]-(a3)<-[:WAS_GENERATED_BY]-(processed_dataset:Dataset)"
+        f" WITH ds, FIRSTSAMPLE, SOURCE, METASAMPLE, RUISAMPLE, ORGAN, COLLECT(distinct processed_dataset) AS PROCESSED_DATASET"
+        f" RETURN ds.uuid, FIRSTSAMPLE, SOURCE, RUISAMPLE, ORGAN, ds.sennet_id, ds.status, ds.group_name,"
         f" ds.group_uuid, ds.created_timestamp, ds.created_by_user_email, ds.last_modified_timestamp, "
         f" ds.last_modified_user_email, ds.lab_dataset_id, ds.data_types, METASAMPLE, PROCESSED_DATASET")
 
@@ -1278,7 +1276,7 @@ def get_individual_prov_info(neo4j_driver, dataset_uuid):
             for entry in record_contents[2]:
                 node_dict = _node_to_dict(entry)
                 content_two.append(node_dict)
-            record_dict['distinct_donor'] = content_two
+            record_dict['distinct_source'] = content_two
             content_three = []
             for entry in record_contents[3]:
                 node_dict = _node_to_dict(entry)
@@ -1289,7 +1287,7 @@ def get_individual_prov_info(neo4j_driver, dataset_uuid):
                 node_dict = _node_to_dict(entry)
                 content_four.append(node_dict)
             record_dict['distinct_organ'] = content_four
-            record_dict['hubmap_id'] = record_contents[5]
+            record_dict['sennet_id'] = record_contents[5]
             record_dict['status'] = record_contents[6]
             record_dict['group_name'] = record_contents[7]
             record_dict['group_uuid'] = record_contents[8]
@@ -1326,10 +1324,9 @@ neo4j_driver : neo4j.Driver object
 """
 
 
-# TODO: This function has not been tested to work with SenNet provenance
 def get_sankey_info(neo4j_driver):
-    query = (f"MATCH (ds:Dataset)<-[]-(a)<-[]-(:Sample)"
-             f"MATCH (donor)-[:ACTIVITY_INPUT]->(oa)-[:ACTIVITY_OUTPUT]->(organ:Sample {{sample_category:'organ'}})-[*]->(ds)"
+    query = (f"MATCH (ds:Dataset)-[]->(a)-[]->(:Sample)"
+             f"MATCH (source)<-[:USED]-(oa)<-[:WAS_GENERATED_BY]-(organ:Sample {{sample_category:'organ'}})<-[*]-(ds)"
              f"RETURN distinct ds.group_name, organ.organ, ds.data_types, ds.status, ds. uuid order by ds.group_name")
     logger.info("======get_sankey_info() query======")
     logger.info(query)
@@ -1362,9 +1359,8 @@ def get_sankey_info(neo4j_driver):
 
 """
 Returns sample uuid, sample rui location, sample metadata, sample group name, sample created_by_email, sample ancestor
-uuid, sample ancestor entity type, organ uuid, organ type, lab tissue sample id, donor uuid, donor 
-metadata, sample_hubmap_id, organ_hubmap_id, donor_hubmap_id, sample_submission_id, organ_submission_id,
- donor_submission_id, and sample_type all in a dictionary
+uuid, sample ancestor entity type, organ uuid, organ type, lab tissue sample id, source uuid, source 
+metadata, sample_sennet_id, organ_sennet_id, source_sennet_id, and sample_type all in a dictionary
 
 Parameters
 ----------
@@ -1375,22 +1371,21 @@ param_dict : dictionary
 """
 
 
-# TODO: This function has not been tested to work with SenNet provenance
 def get_sample_prov_info(neo4j_driver, param_dict):
     group_uuid_query_string = ''
     if 'group_uuid' in param_dict:
         group_uuid_query_string = f" WHERE toUpper(s.group_uuid) = '{param_dict['group_uuid'].upper()}'"
     query = (
-        f" MATCH (s:Sample)<-[*]-(d:Donor)"
+        f" MATCH (s:Sample)-[*]->(d:Source)"
         f" {group_uuid_query_string}"
         f" WITH s, d"
-        f" OPTIONAL MATCH (s)<-[*]-(organ:Sample{{sample_category: 'organ'}})"
+        f" OPTIONAL MATCH (s)-[*]->(organ:Sample{{sample_category: 'organ'}})"
         f" WITH s, organ, d"
-        f" MATCH (s)<-[]-()<-[]-(da)"
+        f" MATCH (s)-[]->()-[]->(da)"
         f" RETURN s.uuid, s.lab_tissue_sample_id, s.group_name, s.created_by_user_email, s.metadata, s.rui_location,"
         f" d.uuid, d.metadata, organ.uuid, organ.sample_category, organ.metadata, da.uuid, da.entity_type, "
-        f"s.sample_category, organ.organ, s.organ, s.hubmap_id, s.submission_id, organ.hubmap_id, organ.submission_id, "
-        f"d.hubmap_id, d.submission_id"
+        f"s.sample_category, organ.organ, s.organ, s.sennet_id, organ.sennet_id, "
+        f"d.sennet_id"
     )
 
     logger.info("======get_sample_prov_info() query======")
@@ -1413,8 +1408,8 @@ def get_sample_prov_info(neo4j_driver, param_dict):
             record_dict['sample_created_by_email'] = record_contents[3]
             record_dict['sample_metadata'] = record_contents[4]
             record_dict['sample_rui_info'] = record_contents[5]
-            record_dict['donor_uuid'] = record_contents[6]
-            record_dict['donor_metadata'] = record_contents[7]
+            record_dict['source_uuid'] = record_contents[6]
+            record_dict['source_metadata'] = record_contents[7]
             record_dict['organ_uuid'] = record_contents[8]
             record_dict['organ_type'] = record_contents[9]
             record_dict['organ_metadata'] = record_contents[10]
@@ -1423,12 +1418,9 @@ def get_sample_prov_info(neo4j_driver, param_dict):
             record_dict['sample_sample_category'] = record_contents[13]
             record_dict['organ_organ_type'] = record_contents[14]
             record_dict['sample_organ'] = record_contents[15]
-            record_dict['sample_hubmap_id'] = record_contents[16]
-            record_dict['sample_submission_id'] = record_contents[17]
-            record_dict['organ_hubmap_id'] = record_contents[18]
-            record_dict['organ_submission_id'] = record_contents[19]
-            record_dict['donor_hubmap_id'] = record_contents[20]
-            record_dict['donor_submission_id'] = record_contents[21]
+            record_dict['sample_sennet_id'] = record_contents[16]
+            record_dict['organ_sennet_id'] = record_contents[17]
+            record_dict['source_sennet_id'] = record_contents[18]
 
             list_of_dictionaries.append(record_dict)
     return list_of_dictionaries

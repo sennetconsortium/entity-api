@@ -98,7 +98,7 @@ def get_dataset_organ_and_source_info(neo4j_driver, uuid):
 
         # To improve the query performance, we implement the two-step queries to drastically reduce the DB hits
         sample_query = (f"MATCH (e:Dataset)-[:USED|WAS_GENERATED_BY*]->(s:Sample) "
-                        f"WHERE e.uuid='{uuid}' AND EXISTS(s.sample_category)"
+                        f"WHERE e.uuid='{uuid}' AND s.sample_category is not null and s.sample_category='organ'"
                         f"RETURN DISTINCT s.sample_category AS sample_category, s.organ AS organ_name, s.uuid AS sample_uuid")
 
         logger.info("======get_dataset_organ_and_donor_info() sample_query======")
@@ -116,7 +116,7 @@ def get_dataset_organ_and_source_info(neo4j_driver, uuid):
 
             # TODO: Need to test this. WAS_GENERATED_BY and USED might need to be swapped
             donor_query = (f"MATCH (s:Sample)-[:USED|WAS_GENERATED_BY*]->(d:Source) "
-                           f"WHERE s.uuid='{sample_uuid}' AND EXISTS(s.sample_category) "
+                           f"WHERE s.uuid='{sample_uuid}' AND s.sample_category is not null "
                            f"RETURN DISTINCT d.metadata AS donor_metadata")
 
             logger.info("======get_dataset_organ_and_donor_info() donor_query======")
