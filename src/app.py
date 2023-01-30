@@ -4273,7 +4273,7 @@ def query_target_entity(id, user_token):
             sennet_ids = schema_manager.get_sennet_ids(id)
 
             # Get the target uuid if all good
-            uuid = sennet_ids['sn_uuid']
+            uuid = sennet_ids['uuid']
             entity_dict = app_neo4j_queries.get_entity(neo4j_driver_instance, uuid)
 
             # The uuid exists via uuid-api doesn't mean it's also in Neo4j
