@@ -938,14 +938,20 @@ def create_entity(entity_type):
         direct_ancestor_uuid = json_data_dict['direct_ancestor_uuid']
         # Check existence of the direct ancestor (either another Sample or Source)
         direct_ancestor_dict = query_target_entity(direct_ancestor_uuid, user_token)
+        json_data_dict['direct_ancestor_uuid'] = direct_ancestor_uuid['uuid']
 
         # Generate 'before_create_triiger' data and create the entity details in Neo4j
         merged_dict = create_entity_details(request, normalized_entity_type, user_token, json_data_dict)
     elif normalized_entity_type == 'Dataset':
         # `direct_ancestor_uuids` is required for creating new Dataset
         # Check existence of those direct ancestors
+
+        direct_ancestor_uuids = []
         for direct_ancestor_uuid in json_data_dict['direct_ancestor_uuids']:
             direct_ancestor_dict = query_target_entity(direct_ancestor_uuid, user_token)
+            direct_ancestor_uuids.append(direct_ancestor_dict['uuid'])
+
+        json_data_dict['direct_ancestor_uuids'] = direct_ancestor_uuids
 
         # Also check existence of the previous revision dataset if specified
         if 'previous_revision_uuid' in json_data_dict:
