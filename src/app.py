@@ -938,7 +938,7 @@ def create_entity(entity_type):
         direct_ancestor_uuid = json_data_dict['direct_ancestor_uuid']
         # Check existence of the direct ancestor (either another Sample or Source)
         direct_ancestor_dict = query_target_entity(direct_ancestor_uuid, user_token)
-        json_data_dict['direct_ancestor_uuid'] = direct_ancestor_uuid['uuid']
+        json_data_dict['direct_ancestor_uuid'] = direct_ancestor_dict['uuid']
 
         # Generate 'before_create_triiger' data and create the entity details in Neo4j
         merged_dict = create_entity_details(request, normalized_entity_type, user_token, json_data_dict)
