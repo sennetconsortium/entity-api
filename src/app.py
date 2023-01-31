@@ -938,14 +938,20 @@ def create_entity(entity_type):
         direct_ancestor_uuid = json_data_dict['direct_ancestor_uuid']
         # Check existence of the direct ancestor (either another Sample or Source)
         direct_ancestor_dict = query_target_entity(direct_ancestor_uuid, user_token)
+        json_data_dict['direct_ancestor_uuid'] = direct_ancestor_dict['uuid']
 
         # Generate 'before_create_triiger' data and create the entity details in Neo4j
         merged_dict = create_entity_details(request, normalized_entity_type, user_token, json_data_dict)
     elif normalized_entity_type == 'Dataset':
         # `direct_ancestor_uuids` is required for creating new Dataset
         # Check existence of those direct ancestors
+
+        direct_ancestor_uuids = []
         for direct_ancestor_uuid in json_data_dict['direct_ancestor_uuids']:
             direct_ancestor_dict = query_target_entity(direct_ancestor_uuid, user_token)
+            direct_ancestor_uuids.append(direct_ancestor_dict['uuid'])
+
+        json_data_dict['direct_ancestor_uuids'] = direct_ancestor_uuids
 
         # Also check existence of the previous revision dataset if specified
         if 'previous_revision_uuid' in json_data_dict:
@@ -4243,46 +4249,59 @@ Returns
 dict
     A dictionary of entity details returned from neo4j
 """
+
+
 def query_target_entity(id, user_token):
-    try:
-        """
-        The dict returned by uuid-api that contains all the associated ids, e.g.:
-        {
-            "ancestor_id": "23c0ffa90648358e06b7ac0c5673ccd2",
-            "ancestor_ids":[
-                "23c0ffa90648358e06b7ac0c5673ccd2"
-            ],
-            "email": "marda@ufl.edu",
-            "uuid": "1785aae4f0fb8f13a56d79957d1cbedf",
-            "sennet_id": "SNT966.VNKN.965",
-            "time_generated": "2020-10-19 15:52:02",
-            "type": "SOURCE",
-            "user_id": "694c6f6a-1deb-41a6-880f-d1ad8af3705f"
-        }
-        """
-        sennet_ids = schema_manager.get_sennet_ids(id)
+    entity_dict = None
+    current_datetime = datetime.now()
 
-        # Get the target uuid if all good
-        uuid = sennet_ids['uuid']
-        entity_dict = app_neo4j_queries.get_entity(neo4j_driver_instance, uuid)
+    # Use the cached data if found and still valid
+    # Otherwise, make a fresh query and add to cache
+    if entity_dict is None:
+        try:
+            """
+            The dict returned by uuid-api that contains all the associated ids, e.g.:
+            {
+                "ancestor_id": "940f409ea5b96ff8d98a87d185cc28e2",
+                "ancestor_ids": [
+                    "940f409ea5b96ff8d98a87d185cc28e2"
+                ],
+                "email": "jamie.l.allen@vanderbilt.edu",
+                "sn_uuid": "be5a8f1654364c9ea0ca3071ba48f260",
+                "sennet_id": "SN272.FXQF.697",
+                "submission_id": "VAN0032-RK-2-43",
+                "time_generated": "2020-11-09 19:55:09",
+                "type": "SAMPLE",
+                "user_id": "83ae233d-6d1d-40eb-baa7-b6f636ab579a"
+            }
+            """
+            # Get cached ids if exist otherwise retrieve from UUID-API
+            sennet_ids = schema_manager.get_sennet_ids(id)
 
-        # The uuid exists via uuid-api doesn't mean it's also in Neo4j
-        if not entity_dict:
-            not_found_error(f"Entity of id: {id} not found in Neo4j")
+            # Get the target uuid if all good
+            uuid = sennet_ids['uuid']
+            entity_dict = app_neo4j_queries.get_entity(neo4j_driver_instance, uuid)
 
-        return entity_dict
-    except requests.exceptions.RequestException as e:
-        # Due to the use of response.raise_for_status() in schema_manager.get_sennet_ids()
-        # we can access the status codes from the exception
-        status_code = e.response.status_code
+            # The uuid exists via uuid-api doesn't mean it's also in Neo4j
+            if not entity_dict:
+                not_found_error(f"Entity of id: {id} not found in Neo4j")
 
-        if status_code == 400:
-            bad_request_error(e.response.text)
-        if status_code == 404:
-            not_found_error(e.response.text)
-        else:
-            internal_server_error(e.response.text)
+        except requests.exceptions.RequestException as e:
+            # Due to the use of response.raise_for_status() in schema_manager.get_sennet_ids()
+            # we can access the status codes from the exception
+            status_code = e.response.status_code
 
+            if status_code == 400:
+                bad_request_error(e.response.text)
+            if status_code == 404:
+                not_found_error(e.response.text)
+            else:
+                internal_server_error(e.response.text)
+    else:
+        logger.info(f'Using the cache data of entity {id} at time {current_datetime}')
+
+    # Final return
+    return entity_dict
 
 """
 Get target entity dict
