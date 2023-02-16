@@ -904,6 +904,10 @@ def create_entity(entity_type):
     # Parse incoming json string into json data(python dict object)
     json_data_dict = request.get_json()
 
+    if 'metadata' in json_data_dict:
+        if isinstance(json_data_dict['metadata'], list):
+            json_data_dict['metadata'] = json_data_dict['metadata'][0]
+
     if 'source_type' in json_data_dict:
         json_data_dict['source_type'] = json_data_dict['source_type'].capitalize()
 
