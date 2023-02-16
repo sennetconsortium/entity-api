@@ -119,7 +119,7 @@ prov_constraints:
             field_values:
                 - field_value:
                     name: data_types
-                    values: [lightsheet]
+                    values: [Lightsheet]
     - entity_constraint:
         description: "A suspension can be the direct descendant of an organ of type blood"
         ancestor:

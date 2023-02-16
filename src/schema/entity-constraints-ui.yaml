@@ -19,7 +19,7 @@ prov_constraints:
                   entity_type: sample
                   sample_category: [block]
     - constraint:
-        descendant_description: "A tissue section, tissue block, suspension, and lightsheet can be a descendant of a tissue block"
+        descendant_description: "A tissue section, tissue block, suspension, and Lightsheet can be a descendant of a tissue block"
         entity:
             entity_type: sample
             sample_category: block
@@ -29,7 +29,7 @@ prov_constraints:
                   sample_category: [ section, block, suspension ]
             - field:
                   entity_type: dataset
-                  data_type: [lightsheet]
+                  data_type: [Lightsheet]
     - constraint:
         descendant_description: "A suspension and dataset can be a descendant of a tissue section"
         entity:
