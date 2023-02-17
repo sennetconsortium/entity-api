@@ -4498,7 +4498,7 @@ def validate_metadata(pathname, user_token):
         if response.status_code == 200:
             return True
         else:
-            logger.error(f"The ingest-api failed to validate the metadata")
+            logger.error(response.text)
 
     except Exception:
         msg = f"Failed to send the validate metadata request to ingest-api"
