@@ -1190,6 +1190,18 @@ def update_entity(id):
     # Parse incoming json string into json data(python dict object)
     json_data_dict = request.get_json()
 
+    if 'metadata' in json_data_dict:
+        if isinstance(json_data_dict['metadata'], list):
+            json_data_dict['metadata'] = json_data_dict['metadata'][0]
+
+        if 'pathname' in json_data_dict:
+            if not validate_metadata(json_data_dict['pathname'], user_token):
+                bad_request_error("Metadata did not pass validation.")
+            del json_data_dict['pathname']
+        else:
+            bad_request_error("Metadata must be added via the Data Sharing Portal.")
+
+
     # Normalize user provided status
     if "status" in json_data_dict:
         normalized_status = schema_manager.normalize_status(json_data_dict["status"])
