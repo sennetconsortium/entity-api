@@ -908,6 +908,14 @@ def create_entity(entity_type):
         if isinstance(json_data_dict['metadata'], list):
             json_data_dict['metadata'] = json_data_dict['metadata'][0]
 
+        if 'pathname' in json_data_dict:
+            if not validate_metadata(json_data_dict['pathname'], user_token):
+                bad_request_error("Metadata did not pass validation.")
+            del json_data_dict['pathname']
+        else:
+            bad_request_error("Metadata must be added via the Data Sharing Portal.")
+
+
     if 'source_type' in json_data_dict:
         json_data_dict['source_type'] = json_data_dict['source_type'].capitalize()
 
@@ -4468,6 +4476,39 @@ def validate_organ_code(organ_code):
 
         # Terminate and let the users know
         internal_server_error(f"Failed to validate the organ code: {organ_code}")
+
+
+"""
+Validates the given metadata via the pathname returned by the Ingest API
+
+pathname : str
+
+Returns Boolean whether validation was passed or not. 
+"""
+
+
+def validate_metadata(pathname, user_token):
+    try:
+        logger.info(f"Making a call to ingest-api to validate metadata")
+
+        headers = create_request_headers(user_token)
+        data = {'pathname': pathname}
+
+        response = requests.post(app.config['INGEST_API_URL'] + "/validation", headers=headers, data=data)
+        if response.status_code == 200:
+            return True
+        else:
+            logger.error(f"The ingest-api failed to validate the metadata")
+
+    except Exception:
+        msg = f"Failed to send the validate metadata request to ingest-api"
+        # Log the full stack trace, prepend a line with our message
+        logger.exception(msg)
+        # Terminate and let the users know
+        internal_server_error(msg)
+
+    return False
+
 
 ####################################################################################################
 ## For local development/testing
