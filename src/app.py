@@ -3376,19 +3376,19 @@ def validate_constraints():
         row = row + 1
         if "ancestor" not in entry or "descendant" not in entry:
             all_valid = False
-            error_msg.append(f"{row}: Request Json must contain 'ancestor' and 'descendant")
+            error_msg.append(_ln_err("Request Json must contain `ancestor` and `descendant`", row))
             continue
 
         ancestor = entry['ancestor']
         descendant = entry['descendant']
         if not isinstance(ancestor, dict) or not isinstance(descendant, dict):
             all_valid = False
-            error_msg.append(f"{row}: Values for 'ancestor' and 'descendant' must be json")
+            error_msg.append(_ln_err("Values for `ancestor` and `descendant` must be json", row))
             continue
 
         if "entity_type" not in ancestor or "entity_type" not in descendant:
             all_valid = False
-            error_msg.append(f"{row}: 'ancestor' and 'descendant' must contain the field 'entity_type'")
+            error_msg.append(_ln_err(" `ancestor` and `descendant` must contain the field `entity_type`", row))
             continue
         ancestor_entity_type = ancestor['entity_type'].lower()
         descendant_entity_type = descendant['entity_type'].lower()
@@ -3396,7 +3396,7 @@ def validate_constraints():
         valid_entity_types = ['source', 'dataset', 'sample']
         if ancestor_entity_type not in valid_entity_types or descendant_entity_type not in valid_entity_types:
             all_valid = False
-            error_msg.append(f"{row}: allowed entity types are: {valid_entity_types}")
+            error_msg.append(_ln_err(f"Allowed entity types are: {valid_entity_types}", row))
 
         ancestor_sample_category = None
         descendant_sample_category = None
@@ -3418,13 +3418,13 @@ def validate_constraints():
             ancestor_data_types = ancestor['data_types']
             if not isinstance(ancestor_data_types, list):
                 all_valid = False
-                error_msg.append(f"{row}: 'If data_types is present in ancestor, value must be a list'")
+                error_msg.append(_ln_err("If `data_types` is present in ancestor, value must be a list", row))
                 continue
         if "data_types" in descendant:
             descendant_data_types = descendant['data_types']
             if not isinstance(descendant_data_types, list):
                 all_valid = False
-                error_msg.append(f"{row}: 'If data_types is present in descendant, value must be a list")
+                error_msg.append(_ln_err("If `data_types` is present in descendant, value must be a list", row))
                 continue
         is_valid = False
         for each in constraints['prov_constraints']:
@@ -3520,7 +3520,7 @@ def validate_constraints():
                 is_valid = True
         if is_valid == False:
             all_valid = False
-            error_msg.append(f"{row}: Ancestor and descendant match none of the constraints found in https://raw.githubusercontent.com/sennetconsortium/entity-api/main/src/schema/entity-constraints.yaml")
+            error_msg.append(_ln_err("Ancestor and descendant match none of the constraints found in https://raw.githubusercontent.com/sennetconsortium/entity-api/main/src/schema/entity-constraints.yaml", row))
     if all_valid == True:
         return jsonify({"status": "success"}), 200
     else:
@@ -4425,6 +4425,29 @@ def access_level_prefix_dir(dir_name):
 
     return hm_file_helper.ensureTrailingSlashURL(hm_file_helper.ensureBeginningSlashURL(dir_name))
 
+
+"""
+Formats error into dict
+
+error : str
+    the detail of the error
+    
+row : int
+    the row number where the error occurred
+    
+column : str
+    the column in the csv/tsv where the error occurred
+
+Returns
+-------
+ dict 
+"""
+def _ln_err(error: str, row: int = None, column: str = None):
+    return {
+        'column': column,
+        'error': error,
+        'row': row
+    }
 
 """
 Ensures that a given organ code matches what is found on the organ_types yaml document
