@@ -211,6 +211,9 @@ shared_entity_properties: &shared_entity_properties
     immutable: true
     description: "One of the normalized entity types: Dataset, Collection, Sample, Source"
     before_create_trigger: set_entity_type
+  metadata:
+    type: json_string # dict
+    description: "The metadata returned from the processing at data submission time."
   was_attributed_to:
     type: list
     description: "Attribution is the ascribing of an entity to an agent."
@@ -370,9 +373,6 @@ ENTITIES:
       pipeline_message:
         #todo: where is this attribute sourced from?  Is it stored in the database? <- Not in neo4j
         type: string
-      ingest_metadata:
-        type: json_string # dict
-        description: "The metadata returned from the processing at data submission time."
       local_directory_rel_path:
         # Example: protected/<TMC>/<uuid>
         type: string
@@ -510,9 +510,6 @@ ENTITIES:
         # The updated_peripherally tag is a temporary measure to correctly handle any attributes
         # which are potentially updated by multiple triggers
         updated_peripherally: true
-      metadata:
-        type: json_string # dict
-        description: "Source metadata coded as described here: <get source metadata doc from Chuck>"
       lab_source_id:
         type: string
         required_on_create: true
@@ -533,6 +530,7 @@ ENTITIES:
         description: "The displayname of globus group which the user who created this entity is a member of"
         before_create_trigger: set_group_name
         #todo: map to provenance_group_name in ES - ? In the current version it's not mapped
+      #TODO: we can possibly remove this with how the metadata validation is ran automatically now
       portal_metadata_upload_files:
         type: json_string
         description: "list of relative paths to metadata files"
@@ -579,6 +577,7 @@ ENTITIES:
         type: string
         description: 'The category of the sample (Block/Section/Suspension/Bodily Fluid/Organ/Organ Piece/Other)'
         required_on_create: true
+      #TODO: we can possibly remove this with how the metadata validation is ran automatically now
       portal_metadata_upload_files:
         type: json_string
         description: "A list of relative paths to metadata files"
@@ -631,9 +630,6 @@ ENTITIES:
         exposed: false # For internal use only
         description: "Internal count of child samples, used for generating the submission id of the children. This field is not exposed via the api."
         #todo: add new yaml attribute, exposed that defaults to true.  When false the attribute is not returned in ws response
-      metadata:
-        type: json_string
-        description: "The sample specific metadata derived from the uploaded sample_metadata.tsv file"
       rui_location:
         type: json_string
         description: "The sample location and orientation in the ancestor organ as specified in the RUI tool."
@@ -671,6 +667,7 @@ ENTITIES:
         # The updated_peripherally tag is a temporary measure to correctly handle any attributes
         # which are potentially updated by multiple triggers
         updated_peripherally: true
+      #TODO: we can possibly remove this with how the metadata validation is ran automatically now
       metadata_files:
         # This property has no before_create_trigger method, but will be created via `metadata_files_to_add` and updated via `metadata_files_to_remove`
         type: list
@@ -682,6 +679,7 @@ ENTITIES:
         # The updated_peripherally tag is a temporary measure to correctly handle any attributes
         # which are potentially updated by multiple triggers
         updated_peripherally: true
+      #TODO: we can possibly remove this with how the metadata validation is ran automatically now
       metadata_files_to_add:
         type: list
         transient: true
@@ -692,6 +690,7 @@ ENTITIES:
         # The updated_peripherally tag is a temporary measure to correctly handle any attributes
         # which are potentially updated by multiple triggers
         updated_peripherally: true
+      #TODO: we can possibly remove this with how the metadata validation is ran automatically now
       metadata_files_to_remove:
         # This is only valid on update via a PUT request
         type: list
