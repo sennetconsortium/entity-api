@@ -3363,7 +3363,7 @@ def get_constraints():
     return not_found_error(f"Didn't find an {ancestors_or_descendants} constraint with the given payload : {payload}")
 
 
-@app.route('/constraints/validate/match', methods=['POST'])
+@app.route('/constraints/validate/test', methods=['POST'])
 def validate_constraints_new():
     # Always expect a json body
     require_json(request)
