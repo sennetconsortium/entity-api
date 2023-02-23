@@ -16,6 +16,8 @@ import logging
 import json
 import time
 import copy
+from lib.constraints import validate_constraint
+from lib.rest import full_response, rest_response, StatusCodes
 
 # Local modules
 import app_neo4j_queries
@@ -3359,6 +3361,19 @@ def get_constraints():
                 return jsonify(result)
 
     return not_found_error(f"Didn't find an {ancestors_or_descendants} constraint with the given payload : {payload}")
+
+
+@app.route('/constraints/validate/match', methods=['POST'])
+def validate_constraints_new():
+    # Always expect a json body
+    require_json(request)
+    is_match = request.values.get('match')
+
+    entry_json = request.get_json()
+    result = rest_response(StatusCodes.BAD_REQUEST, 'Bad', {})
+    for constraint in entry_json:
+        result = validate_constraint(constraint, bool(is_match))
+    return full_response(result)
 
 
 """
