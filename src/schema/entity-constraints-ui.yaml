@@ -10,15 +10,6 @@ prov_constraints:
                   entity_type: sample
                   sample_category: [organ]
     - constraint:
-        descendant_description: "A tissue block can be a descendant of an Organ"
-        entity:
-            entity_type: sample
-            sample_category: organ
-        allowable_descendants:
-            - field:
-                  entity_type: sample
-                  sample_category: [block]
-    - constraint:
         descendant_description: "A tissue section, tissue block, suspension, and Lightsheet can be a descendant of a tissue block"
         entity:
             entity_type: sample
@@ -42,11 +33,14 @@ prov_constraints:
             - field:
                   entity_type: dataset
     - constraint:
-        descendant_description: "A Dataset can be the descendant of a suspension"
+        descendant_description: "A Dataset or suspension can be the descendant of a suspension"
         entity:
             entity_type: sample
             sample_category: suspension
         allowable_descendants:
+            - field:
+                  entity_type: sample
+                  sample_category: [ suspension ]
             - field:
                   entity_type: dataset
     - constraint:
@@ -79,3 +73,13 @@ prov_constraints:
             - field:
                   entity_type: sample
                   sample_category: [suspension]
+    - constraint:
+        descendant_description: "A tissue block can be a descendant of an Organ"
+        entity:
+          entity_type: sample
+          sample_category: organ
+          value:
+        allowable_descendants:
+          - field:
+              entity_type: sample
+              sample_category: [ block ]

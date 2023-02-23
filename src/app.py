@@ -15,6 +15,7 @@ from pathlib import Path
 import logging
 import json
 import time
+import copy
 
 # Local modules
 import app_neo4j_queries
@@ -116,10 +117,11 @@ except Exception:
 ####################################################################################################
 
 try:
-    with open('schema/entity-constraints-ui.yaml', 'r') as ui_file:
+    file_path = os.path.dirname(os.path.realpath(__file__)) + os.sep
+    with open(file_path + 'schema/entity-constraints-ui.yaml', 'r') as ui_file:
         constraints_ui_yaml = yaml.safe_load(ui_file)
     constraint_helper_ui = ConstraintsHelper(constraints_ui_yaml)
-    with open('schema/entity-constraints.yaml', 'r') as api_file:
+    with open(file_path + 'schema/entity-constraints.yaml', 'r') as api_file:
         constraints_yaml = yaml.safe_load(api_file)
     constraint_helper_api = ConstraintsHelper(constraints_yaml)
     logger.info("Initialized constraints_helper module successfully :)")
@@ -3341,7 +3343,13 @@ def get_constraints():
     for c in constraints['prov_constraints']:
         constraint = c['constraint']
         ancestor = constraint['entity']
-        if ancestor == payload:
+        #hot fix: when the constraint value is empty, means allow all.
+        ancestor_temp = copy.deepcopy(ancestor)
+        if 'value' in ancestor and ancestor['value'] is None:
+            del ancestor_temp['value']
+            if 'value' in payload:
+                del payload['value']
+        if ancestor_temp == payload:
             if ancestors_or_descendants in constraint:
                 entities = constraint[ancestors_or_descendants]
                 result = []
