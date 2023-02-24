@@ -16,8 +16,8 @@ import logging
 import json
 import time
 import copy
-from lib.constraints import validate_constraint
-from lib.rest import full_response, rest_response, StatusCodes
+from lib.constraints import get_constraints_by_ancestor, get_constraints_by_descendant
+from lib.rest import full_response, rest_response, StatusCodes, rest_ok, rest_bad_req
 
 # Local modules
 import app_neo4j_queries
@@ -3368,12 +3368,27 @@ def validate_constraints_new():
     # Always expect a json body
     require_json(request)
     is_match = request.values.get('match')
+    order = request.values.get('order')
+    use_case = request.values.get('filter')
 
     entry_json = request.get_json()
-    result = rest_response(StatusCodes.BAD_REQUEST, 'Bad', {})
+    results = []
+    final_result = rest_ok({})
+
     for constraint in entry_json:
-        result = validate_constraint(constraint, bool(is_match))
-    return full_response(result)
+
+        if order == 'descendants':
+            result = get_constraints_by_descendant(constraint, bool(is_match), use_case)
+        else:
+            result = get_constraints_by_ancestor(constraint, bool(is_match), use_case)
+
+        if result.get('code') is not StatusCodes.OK:
+            final_result = rest_bad_req({})
+
+        results.append(result)
+
+    final_result['description'] = results
+    return full_response(final_result)
 
 
 """

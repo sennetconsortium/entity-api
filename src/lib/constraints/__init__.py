@@ -30,26 +30,23 @@ def build_constraints():
     return all_constraints
 
 
-def determine_constraint_from_entity(constraint_unit) -> dict:
+def determine_constraint_from_entity(constraint_unit, use_case=None) -> dict:
     entity_type = constraint_unit.get('entity_type')
     sub_type = constraint_unit.get('sub_type')
     error = None
     constraints = []
-    if entity_type == Entities.SAMPLE:
-        try:
-            if sub_type is not None:
-                func = f"build_sample_{sub_type[0]}_constraints"
-                constraints = globals()[func](entity_type)
-            else:
-                error = 'Samples require `sub_type` in constraint definition.'
-        except Exception as e:
-            error = f"No `sub_type` found with value `{sub_type[0]}`"
-    elif entity_type == Entities.SOURCE:
-        constraints = build_source_constraints(entity_type)
-    elif entity_type == Entities.DATASET:
-        constraints = build_dataset_constraints(entity_type)
-    else:
+    entities = get_entities()
+
+    if entity_type not in entities:
         error = f"No `entity_type` found with value `{entity_type}`"
+    else:
+        try:
+            _sub_type = f"{sub_type[0]}_" if sub_type is not None else ''
+            _use_case = f"{use_case}_" if use_case is not None else ''
+            func = f"build_{entity_type}_{_sub_type}{_use_case}constraints"
+            constraints = globals()[func](entity_type)
+        except Exception as e:
+            error = f"Constraints could not be found with the combination of `sub_type`: `{sub_type[0]}` and `filter` as {use_case}"
 
     return {
         'constraints': constraints,
@@ -57,8 +54,10 @@ def determine_constraint_from_entity(constraint_unit) -> dict:
     }
 
 
-def validate_constraint_unit_to_entry_unit(entry_units, const_units):
+def validate_constraint_units_to_entry_units(entry_units, const_units):
     match = False
+    const_units = get_constraint_unit_as_list(const_units)
+    entry_units = get_constraint_unit_as_list(entry_units)
     for entry_unit in entry_units:
 
         sub_type = entry_unit.get('sub_type')
@@ -71,40 +70,68 @@ def validate_constraint_unit_to_entry_unit(entry_units, const_units):
 
         if entry_unit in const_units:
             match = True
+        else:
+            match = False
             break
+
     return match
 
 
-def validate_constraint(entry, is_match=False) -> dict:
-    entry_ancestor = entry.get('ancestor')
-    results = []
+def get_constraints_by_descendant(entry, is_match=False, use_case=None) -> dict:
+    return get_constraints(entry, 'descendants', 'ancestors', is_match, use_case)
 
-    if entry_ancestor is not None:
-        constraints = determine_constraint_from_entity(entry_ancestor)
+
+def get_constraints_by_ancestor(entry, is_match=False, use_case=None) -> dict:
+    return get_constraints(entry, 'ancestors', 'descendants', is_match, use_case)
+
+
+def get_constraint_unit(entry):
+    if type(entry) is list and len(entry) > 0:
+        return entry[0]
+    elif type(entry) is dict:
+        return entry
+    else:
+        return None
+
+
+def get_constraint_unit_as_list(entry):
+    if type(entry) is list:
+        return entry
+    elif type(entry) is dict:
+        return [entry]
+    else:
+        return None
+
+
+def get_constraints(entry, key1, key2, is_match=False, use_case=None) -> dict:
+    entry_key1 = get_constraint_unit(entry.get(key1))
+    msg = f"Missing `{key1}` in request. Use orders=ancestors|descendants request param to specify. Default: ancestors"
+    result = rest_bad_req(msg) if is_match else rest_ok("Nothing to validate.")
+
+    if entry_key1 is not None:
+        constraints = determine_constraint_from_entity(entry_key1, use_case)
         if constraints.get('error') is not None:
-            results.append(rest_bad_req(constraints.get('error')))
+            result = rest_bad_req(constraints.get('error'))
 
         for constraint in constraints.get('constraints'):
-            const_ancestor = constraint.get('ancestor')
+            const_key1 = get_constraint_unit(constraint.get(key1))
 
-            if entry_ancestor.items() <= const_ancestor.items():
-                const_descendants = constraint.get('descendants')
+            if entry_key1.items() <= const_key1.items():
+                const_key2 = constraint.get(key2)
 
                 if is_match:
-                    entry_descendants = entry.get('descendants')
-                    if validate_constraint_unit_to_entry_unit(entry_descendants, const_descendants):
-                        results.append(rest_ok(const_descendants))
-                        break
+                    entry_key2 = entry.get(key2)
+                    if entry_key2 is not None and validate_constraint_units_to_entry_units(entry_key2, const_key2):
+                        result = rest_ok(const_key2)
                     else:
-                        results.append(rest_response(StatusCodes.NOT_FOUND, 'Match not found', const_descendants))
+                        result = rest_response(StatusCodes.NOT_FOUND, f"Match not found. Valid `{key2}` in description.", const_key2)
                 else:
-                    results.append(rest_ok(const_descendants))
-                    break
-
+                    result = rest_ok(const_key2)
+                break
             else:
-                results.append(rest_response(StatusCodes.NOT_FOUND, 'No matching constraints on given ancestor', None))
+                result = rest_response(StatusCodes.NOT_FOUND, f"No matching constraints on given `{key1}`", None)
 
-    return results[len(results) - 1]
+    return result
 
 
 
