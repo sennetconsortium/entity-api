@@ -1,0 +1,242 @@
+# Constraint Validation
+Most of the constraints are written in the wording like:   
+ - entity_type can be a descendant of entity_type 
+ - entity_type [sub_type] can be a descendant of entity_type [subtype]
+
+## Format
+Each request must be an array of objects with `ancestors` and `descendants` properties.
+Each of these two properties are also arrays.
+```
+[
+    {
+        "ancestors": [
+            {
+                "entity_type": "sample",
+                "sub_type": ["suspension"],
+                "sub_type_val": null
+            }
+        ],
+        "descendants": [
+            {
+                "entity_type": "sample",
+                "sub_type": ["suspension"],
+                "sub_type_val": null
+            }
+        ]
+    }
+]
+```
+## Example Requests:
+The following request will fail because the request
+does not match the constraint requirements. It will result in 
+a 400 Bad Request.
+The `description` property returns the valid constraints for the given relationship.
+If you do not specify the `order` request param, the request will be made against
+the given `ancestors` and the response will return the valid `descendants`.
+`/constraints/validate?match=true`
+```
+[
+    {
+        "ancestors": [
+            {
+                "entity_type": "sample",
+                "sub_type": ["block"],
+                "sub_type_val": null
+            }
+        ],
+        "descendants": [
+          	{
+                "entity_type": "sample",
+                "sub_type": ["suspension"],
+                "sub_type_val": null
+        	}
+        ]
+    }
+]
+```
+#### Response 1a:
+```
+{
+    "code": 400,
+    "description": [
+        {
+            "code": 404,
+            "description": [
+                {
+                    "entity_type": "sample",
+                    "sub_type": [
+                        "block",
+                        "section",
+                        "suspension"
+                    ],
+                    "sub_type_val": null
+                },
+                {
+                    "entity_type": "dataset",
+                    "sub_type": [
+                        "Lightsheet"
+                    ],
+                    "sub_type_val": null
+                }
+            ],
+            "name": "Match not found. Valid `descendants` in description."
+        }
+    ],
+    "name": "Bad Request"
+}
+```
+The **currently** correct match for an ancestor sample block is: 
+#### Request:
+`/constraints/validate?match=true`
+```
+[
+    {
+        "ancestors": [
+            {
+                "entity_type": "sample",
+                "sub_type": ["block"],
+                "sub_type_val": null
+            }
+        ],
+        "descendants": [
+          	{
+                "entity_type": "sample",
+                "sub_type": ["block", "section", "suspension"],
+                "sub_type_val": null
+        	}
+        ]
+    }
+]
+```
+#### Response 1b:
+```
+{
+    "code": 200,
+    "description": [
+        {
+            "code": 200,
+            "description": [
+                {
+                    "entity_type": "sample",
+                    "sub_type": [
+                        "block",
+                        "section",
+                        "suspension"
+                    ],
+                    "sub_type_val": null
+                },
+                {
+                    "entity_type": "dataset",
+                    "sub_type": [
+                        "Lightsheet"
+                    ],
+                    "sub_type_val": null
+                }
+            ],
+            "name": "OK"
+        }
+    ],
+    "name": "OK"
+}
+
+```
+You can reverse the order and the response will give you valid ancestors in return.  
+`/constraints/validate?match=true&order=descendants`
+#### Response 1c:
+```
+{
+    "code": 200,
+    "description": [
+        {
+            "code": 200,
+            "description": {
+                "entity_type": "sample",
+                "sub_type": [
+                    "block"
+                ],
+                "sub_type_val": null
+            },
+            "name": "OK"
+        }
+    ],
+    "name": "OK"
+}
+
+```
+
+## Getting the descendants given a particular ancestor:
+Remove the `match` param from the request url:
+#### Request:
+`/constraints/validate`
+```
+[
+    {
+        "ancestors": [
+            {
+                "entity_type": "sample",
+                "sub_type": ["block"],
+                "sub_type_val": null
+            }
+        ]
+    }
+]
+```
+The response will be same as **1b** above.
+You can retrieve the ancestors given a particular descendant:
+#### Request:
+`/constraints/validate?order=descendants`
+```
+
+```
+The response will be same as **1c** above.
+
+
+## The `filter` request param:
+The following  makes a special use case filter.  
+#### Request:
+`/constraints/validate?filter=search&order=descendants`  
+```
+[
+    {
+      
+        "descendants": [
+          	{
+              "entity_type": "dataset",
+              "sub_type": null,
+              "sub_type_val": null
+        	}
+        ]
+    }
+]
+```
+It's response:
+```
+{
+    "code": 200,
+    "description": [
+        {
+            "code": 200,
+            "description": [
+                {
+                    "keyword": "entity_type.keyword",
+                    "value": "dataset"
+                },
+                {
+                    "keyword": "sample_category.keyword",
+                    "value": "block"
+                },
+                {
+                    "keyword": "sample_category.keyword",
+                    "value": "section"
+                },
+                {
+                    "keyword": "sample_category.keyword",
+                    "value": "suspension"
+                }
+            ],
+            "name": "OK"
+        }
+    ],
+    "name": "OK"
+}
+```
