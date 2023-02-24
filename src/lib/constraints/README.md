@@ -2,8 +2,11 @@
 Most of the constraints are written in the wording like:   
  - entity_type can be a descendant of entity_type 
  - entity_type [sub_type] can be a descendant of entity_type [subtype]
+ - *can be a descendant* of is denoted by `--->` in comments
+ - Look at the sample code to write new constraints
 
-## Format
+## The REST API
+### Payload Request Format
 Each request must be an array of objects with `ancestors` and `descendants` properties.
 Each of these two properties are also arrays.
 ```
@@ -11,11 +14,12 @@ Each of these two properties are also arrays.
     {
         "ancestors": [
             {
-                "entity_type": "sample",
-                "sub_type": ["suspension"],
-                "sub_type_val": null
+                "entity_type": Entities.strEnum,
+                "sub_type": array,
+                "sub_type_val": array
             }
         ],
+        # example
         "descendants": [
             {
                 "entity_type": "sample",
@@ -26,7 +30,7 @@ Each of these two properties are also arrays.
     }
 ]
 ```
-## Example Requests:
+### Example Requests:
 The following request will fail because the request
 does not match the constraint requirements. It will result in 
 a 400 Bad Request.
@@ -168,7 +172,7 @@ You can reverse the order and the `response.description` will give you valid anc
 
 ```
 
-## Getting the descendants given a particular ancestor:
+### Getting the descendants given a particular ancestor:
 Remove the `match` param from the request url:
 #### Request:
 `/constraints/validate`
@@ -205,7 +209,7 @@ You can retrieve the `ancestors` given a particular descendant:
 The response will be same as **1c** above.
 
 
-## The `filter` request param:
+### The `filter` request param:
 The following  makes a special use case filter.  
 #### Request:
 `/constraints/validate?filter=search&order=descendants`  
