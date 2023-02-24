@@ -79,7 +79,7 @@ def validate_constraint(entry, is_match=False) -> dict:
     if entry_ancestor is not None:
         constraints = determine_constraint_from_entity(entry_ancestor)
         if constraints.get('error') is not None:
-            results.append(rest_response(StatusCodes.BAD_REQUEST, 'Bad Request', constraints.get('error')))
+            results.append(rest_response_bad_req(constraints.get('error')))
 
         for constraint in constraints.get('constraints'):
             const_ancestor = constraint.get('ancestor')
@@ -90,12 +90,12 @@ def validate_constraint(entry, is_match=False) -> dict:
                 if is_match:
                     entry_descendants = entry.get('descendants')
                     if validate_constraint_unit_to_entry_unit(entry_descendants, const_descendants):
-                        results.append(rest_response(StatusCodes.OK, 'OK', const_descendants))
+                        results.append(rest_response_ok(const_descendants))
                         break
                     else:
                         results.append(rest_response(StatusCodes.NOT_FOUND, 'Match not found', const_descendants))
                 else:
-                    results.append(rest_response(StatusCodes.OK, 'OK', const_descendants))
+                    results.append(rest_response_ok(const_descendants))
                     break
 
             else:

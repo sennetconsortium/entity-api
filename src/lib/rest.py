@@ -1,4 +1,4 @@
-from enum import IntEnum
+from enum import IntEnum, Enum
 from flask import request, abort, make_response
 
 
@@ -10,12 +10,28 @@ class StatusCodes(IntEnum):
     SERVER_ERR = 500
 
 
+class StatusMsgs(str, Enum):
+    OK = 'OK'
+    BAD_REQUEST = 'Bad Request'
+    NOT_FOUND = 'Not Found'
+    UNACCEPTABLE = 'Unacceptable Request'
+    SERVER_ERR = 'Internal Server Error'
+
+
 def is_json_request():
     return request.content_type == 'application/json'
 
 
 def server_error(e):
     return rest_response(StatusCodes.SERVER_ERR, 'Sever Error', f"{e}")
+
+
+def rest_response_ok(desc):
+    return rest_response(StatusCodes.OK, StatusMsgs.OK, desc)
+
+
+def rest_response_bad_req(desc):
+    return rest_response(StatusCodes.BAD_REQUEST, StatusMsgs.BAD_REQUEST, desc)
 
 
 def rest_response(code: StatusCodes, name: str, desc):
