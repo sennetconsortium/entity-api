@@ -42,8 +42,9 @@ def build_sample_section_constraints(entity, constraints=None):
 
     # Dataset ---> Sample section
     ancestor = build_constraint_unit(entity, [SpecimenCategory.SECTION])
-    descendant = build_constraint_unit(Entities.DATASET)
-    constraints.append(build_constraint(ancestor, [descendant]))
+    descendant = build_constraint_unit(Entities.SAMPLE, [SpecimenCategory.SUSPENSION])
+    descendant2 = build_constraint_unit(Entities.DATASET)
+    constraints.append(build_constraint(ancestor, [descendant, descendant2]))
 
     return constraints
 
