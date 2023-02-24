@@ -22,15 +22,15 @@ def is_json_request():
     return request.content_type == 'application/json'
 
 
-def server_error(e):
-    return rest_response(StatusCodes.SERVER_ERR, 'Sever Error', f"{e}")
+def rest_sever_err(e):
+    return rest_response(StatusCodes.SERVER_ERR, StatusMsgs.SERVER_ERR, f"{e}")
 
 
-def rest_response_ok(desc):
+def rest_ok(desc):
     return rest_response(StatusCodes.OK, StatusMsgs.OK, desc)
 
 
-def rest_response_bad_req(desc):
+def rest_bad_req(desc):
     return rest_response(StatusCodes.BAD_REQUEST, StatusMsgs.BAD_REQUEST, desc)
 
 
@@ -51,7 +51,3 @@ def get_json_header(headers: dict = None):
         headers = {}
     headers["Content-Type"] = "application/json"
     return headers
-
-
-def bad_request_error(desc):
-    abort(StatusCodes.BAD_REQUEST, description=desc)

@@ -37,8 +37,11 @@ def determine_constraint_from_entity(constraint_unit) -> dict:
     constraints = []
     if entity_type == Entities.SAMPLE:
         try:
-            func = f"build_sample_{sub_type[0]}_constraints"
-            constraints = globals()[func](entity_type)
+            if sub_type is not None:
+                func = f"build_sample_{sub_type[0]}_constraints"
+                constraints = globals()[func](entity_type)
+            else:
+                error = 'Samples require `sub_type` in constraint definition.'
         except Exception as e:
             error = f"No `sub_type` found with value `{sub_type[0]}`"
     elif entity_type == Entities.SOURCE:
@@ -79,7 +82,7 @@ def validate_constraint(entry, is_match=False) -> dict:
     if entry_ancestor is not None:
         constraints = determine_constraint_from_entity(entry_ancestor)
         if constraints.get('error') is not None:
-            results.append(rest_response_bad_req(constraints.get('error')))
+            results.append(rest_bad_req(constraints.get('error')))
 
         for constraint in constraints.get('constraints'):
             const_ancestor = constraint.get('ancestor')
@@ -90,16 +93,16 @@ def validate_constraint(entry, is_match=False) -> dict:
                 if is_match:
                     entry_descendants = entry.get('descendants')
                     if validate_constraint_unit_to_entry_unit(entry_descendants, const_descendants):
-                        results.append(rest_response_ok(const_descendants))
+                        results.append(rest_ok(const_descendants))
                         break
                     else:
                         results.append(rest_response(StatusCodes.NOT_FOUND, 'Match not found', const_descendants))
                 else:
-                    results.append(rest_response_ok(const_descendants))
+                    results.append(rest_ok(const_descendants))
                     break
 
             else:
-                results.append(rest_response(StatusCodes.NOT_FOUND, 'No matching constraints on given ancestor', const_ancestor))
+                results.append(rest_response(StatusCodes.NOT_FOUND, 'No matching constraints on given ancestor', None))
 
     return results[len(results) - 1]
 

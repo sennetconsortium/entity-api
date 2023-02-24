@@ -22,5 +22,5 @@ class DataTypes(str, Enum):
     LIGHTSHEET = 'Lightsheet'
 
 
-def get_entities():
+def get_entities() -> list[Entities]:
     return [Entities.SOURCE, Entities.SAMPLE, Entities.DATASET]
