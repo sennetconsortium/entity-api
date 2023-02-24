@@ -5,29 +5,16 @@ from lib.constraints.dataset import *
 from lib.rest import *
 
 
-def build_source_constraints(entity):
+def build_source_constraints(entity) -> list:
     return build_all_source_constraints(entity)
 
 
-def build_sample_constraints(entity):
+def build_sample_constraints(entity) -> list:
     return build_all_sample_constraints(entity)
 
 
-def build_dataset_constraints(entity):
+def build_dataset_constraints(entity) -> list:
     return build_all_dataset_constraints(entity)
-
-
-def build_constraints():
-    entities = get_entities()
-    all_constraints: dict = {}
-    try:
-        for entity in entities:
-            func = f"build_{entity}_constraints"
-            all_constraints[entity] = locals()[func](entity)
-    except Exception as e:
-        print(f"{e}")
-
-    return all_constraints
 
 
 def determine_constraint_from_entity(constraint_unit, use_case=None) -> dict:
@@ -54,7 +41,7 @@ def determine_constraint_from_entity(constraint_unit, use_case=None) -> dict:
     }
 
 
-def validate_constraint_units_to_entry_units(entry_units, const_units):
+def validate_constraint_units_to_entry_units(entry_units, const_units) -> bool:
     match = False
     const_units = get_constraint_unit_as_list(const_units)
     entry_units = get_constraint_unit_as_list(entry_units)
