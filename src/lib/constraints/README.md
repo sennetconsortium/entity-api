@@ -9,9 +9,9 @@ Most of the constraints are written in the wording like:
 ### Endpoint:
 `/constraints/validate`
 ### Request params:
-- match: Set to true to match entries. Default is `false`
-- order: `ancestors` or `descendants`. Determines how to retrieve/match against. The opposite property constraints will be returned.
-- filter: Use to call a specific function within the code. Currently, only `search` is available.
+- `match`: Set to true to match entries. Default is `false`
+- `order`: `ancestors` or `descendants`. Determines how to retrieve/match against. The opposite property constraints will be returned.
+- `filter`: Use to call a specific function within the code. Currently, only `search` is available.
 
 ### Payload Request Format
 Each request must be an array of objects with `ancestors` and `descendants` properties. At least 1 of these properties must be
