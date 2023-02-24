@@ -7,7 +7,8 @@ Most of the constraints are written in the wording like:
 
 ## The REST API
 ### Payload Request Format
-Each request must be an array of objects with `ancestors` and `descendants` properties.
+Each request must be an array of objects with `ancestors` and `descendants` properties. At least 1 of these properties must be
+present when retrieving the other, and both must be present when validating/matching.
 Each of these two properties are also arrays.
 ```
 [
@@ -174,7 +175,7 @@ You can reverse the order and the `response.description` will give you valid anc
 
 ### Getting the descendants given a particular ancestor:
 Remove the `match` param from the request url:
-#### Request:
+#### Request 2a:
 `/constraints/validate`
 ```
 [
@@ -191,7 +192,7 @@ Remove the `match` param from the request url:
 ```
 The response will be same as **1b** above.
 You can retrieve the `ancestors` given a particular descendant:
-#### Request:
+#### Request 2b:
 `/constraints/validate?order=descendants`
 ```
 [
@@ -211,7 +212,7 @@ The response will be same as **1c** above.
 
 ### The `filter` request param:
 The following  makes a special use case filter.  
-#### Request:
+#### Request 3a:
 `/constraints/validate?filter=search&order=descendants`  
 ```
 [
@@ -226,7 +227,7 @@ The following  makes a special use case filter.
     }
 ]
 ```
-It's response:
+#### Response 3b:
 ```
 {
     "code": 200,
@@ -256,4 +257,76 @@ It's response:
     ],
     "name": "OK"
 }
+```
+
+### Retrieving and validating multiple rows:
+#### Request 4a:
+`/constraints/validate`
+```
+[
+  {
+    "ancestors": [
+      {
+        "entity_type": "sample",
+        "sub_type": [
+          "block"],
+        "sub_type_val": null
+      }
+    ]
+  },
+  {
+    "ancestors": [
+      {
+        "entity_type": "source",
+        "sub_type": null,
+        "sub_type_val": null
+      }
+    ]
+  }
+]
+```
+#### Response 4a:
+```
+{
+    "code": 200,
+    "description": [
+        {
+            "code": 200,
+            "description": [
+                {
+                    "entity_type": "sample",
+                    "sub_type": [
+                        "block",
+                        "section",
+                        "suspension"
+                    ],
+                    "sub_type_val": null
+                },
+                {
+                    "entity_type": "dataset",
+                    "sub_type": [
+                        "Lightsheet"
+                    ],
+                    "sub_type_val": null
+                }
+            ],
+            "name": "OK"
+        },
+        {
+            "code": 200,
+            "description": [
+                {
+                    "entity_type": "sample",
+                    "sub_type": [
+                        "organ"
+                    ],
+                    "sub_type_val": null
+                }
+            ],
+            "name": "OK"
+        }
+    ],
+    "name": "OK"
+}
+
 ```
