@@ -57,6 +57,15 @@ def determine_constraint_from_entity(constraint_unit) -> dict:
 def validate_constraint_unit_to_entry_unit(entry_units, const_units):
     match = False
     for entry_unit in entry_units:
+
+        sub_type = entry_unit.get('sub_type')
+        if sub_type is not None:
+            sub_type.sort()
+
+        sub_type_val = entry_unit.get('sub_type_val')
+        if sub_type_val is not None:
+            sub_type_val.sort()
+
         if entry_unit in const_units:
             match = True
             break
