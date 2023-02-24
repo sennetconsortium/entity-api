@@ -132,24 +132,3 @@ def get_constraints(entry, key1, key2, is_match=False, use_case=None) -> dict:
                 result = rest_response(StatusCodes.NOT_FOUND, f"No matching constraints on given `{key1}`", None)
 
     return result
-
-
-
-"""
-[
-    {
-        "ancestor": {
-            "entity_type": "sample",
-            "sub_type": ["suspension"],
-            "sub_type_val": null
-        },
-        "descendants": [
-          	{
-              "entity_type": "sample",
-              "sub_type": ["suspension"],
-              "sub_type_val": null
-        	}
-        ]
-    }
-]
-"""
