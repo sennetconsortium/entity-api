@@ -32,7 +32,8 @@ does not match the constraint requirements. It will result in
 a 400 Bad Request.
 The `description` property returns the valid constraints for the given relationship.
 If you do not specify the `order` request param, the request will be made against
-the given `ancestors` and the response will return the valid `descendants`.
+the given `ancestors` and the `response.description` will return the valid `descendants`.  
+#### Request 1a:
 `/constraints/validate?match=true`
 ```
 [
@@ -86,7 +87,7 @@ the given `ancestors` and the response will return the valid `descendants`.
 }
 ```
 The **currently** correct match for an ancestor sample block is: 
-#### Request:
+#### Request 1b:
 `/constraints/validate?match=true`
 ```
 [
@@ -99,11 +100,11 @@ The **currently** correct match for an ancestor sample block is:
             }
         ],
         "descendants": [
-          	{
+            {
                 "entity_type": "sample",
                 "sub_type": ["block", "section", "suspension"],
                 "sub_type_val": null
-        	}
+            }
         ]
     }
 ]
@@ -140,8 +141,11 @@ The **currently** correct match for an ancestor sample block is:
 }
 
 ```
-You can reverse the order and the response will give you valid ancestors in return.  
+You can reverse the order and the `response.description` will give you valid ancestors in return. 
+#### Request 1c:
 `/constraints/validate?match=true&order=descendants`
+(Payload request is same as `1b` above.)
+
 #### Response 1c:
 ```
 {
@@ -182,11 +186,21 @@ Remove the `match` param from the request url:
 ]
 ```
 The response will be same as **1b** above.
-You can retrieve the ancestors given a particular descendant:
+You can retrieve the `ancestors` given a particular descendant:
 #### Request:
 `/constraints/validate?order=descendants`
 ```
-
+[
+    {
+        "descendants": [
+            {
+                "entity_type": "sample",
+                "sub_type": ["block", "section", "suspension"],
+                "sub_type_val": null
+            }
+        ]
+    }
+]
 ```
 The response will be same as **1c** above.
 
@@ -198,13 +212,12 @@ The following  makes a special use case filter.
 ```
 [
     {
-      
         "descendants": [
-          	{
-              "entity_type": "dataset",
-              "sub_type": null,
-              "sub_type_val": null
-        	}
+            {
+                "entity_type": "dataset",
+                "sub_type": null,
+                "sub_type_val": null
+            }
         ]
     }
 ]
