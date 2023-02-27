@@ -9,7 +9,7 @@ def build_sample_organ_constraints(entity, constraints=None):
         constraints = []
 
     # Sample block ---> Sample organ
-    ancestor = build_constraint_unit(entity, [SpecimenCategory.ORGAN])
+    ancestor = build_constraint_unit(entity, [SpecimenCategory.ORGAN], ["!", Organs.BLOOD])
     descendant = build_constraint_unit(Entities.SAMPLE, [SpecimenCategory.BLOCK])
     constraints.append(build_constraint(ancestor, [descendant]))
 
