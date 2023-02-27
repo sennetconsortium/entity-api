@@ -1,24 +1,24 @@
 from enum import Enum
 
 
-class Entities(str, Enum):
+class Entities:
     SOURCE = 'Source'
     SAMPLE = 'Sample'
     DATASET = 'Dataset'
 
 
-class SpecimenCategory(str, Enum):
+class SpecimenCategory:
     ORGAN = 'organ'
     BLOCK = 'block'
     SECTION = 'section'
     SUSPENSION = 'suspension'
 
 
-class Organs(str, Enum):
+class Organs:
     BLOOD = 'BD'
 
 
-class DataTypes(str, Enum):
+class DataTypes:
     LIGHTSHEET = 'Lightsheet'
 
 
