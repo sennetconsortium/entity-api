@@ -8,14 +8,14 @@ def build_sample_organ_constraints(entity, constraints=None):
     if constraints is None:
         constraints = []
 
-    # Sample block ---> Sample organ
-    ancestor = build_constraint_unit(entity, [SpecimenCategory.ORGAN], ["!", Organs.BLOOD])
-    descendant = build_constraint_unit(Entities.SAMPLE, [SpecimenCategory.BLOCK])
-    constraints.append(build_constraint(ancestor, [descendant]))
-
     # Sample suspension ---> Sample organ of blood
     ancestor = build_constraint_unit(entity, [SpecimenCategory.ORGAN], [Organs.BLOOD])
     descendant = build_constraint_unit(Entities.SAMPLE, [SpecimenCategory.SUSPENSION])
+    constraints.append(build_constraint(ancestor, [descendant]))
+
+    # Sample block ---> Sample organ
+    ancestor = build_constraint_unit(entity, [SpecimenCategory.ORGAN])
+    descendant = build_constraint_unit(Entities.SAMPLE, [SpecimenCategory.BLOCK])
     constraints.append(build_constraint(ancestor, [descendant]))
 
     return constraints

@@ -3,7 +3,7 @@ from lib.constraints.source import *
 from lib.constraints.sample import *
 from lib.constraints.dataset import *
 from lib.rest import *
-
+from deepdiff import DeepDiff
 
 def build_source_constraints(entity) -> list:
     return build_all_source_constraints(entity)
@@ -31,7 +31,7 @@ def determine_constraint_from_entity(constraint_unit, use_case=None) -> dict:
             _sub_type = f"{sub_type[0]}_" if sub_type is not None else ''
             _use_case = f"{use_case}_" if use_case is not None else ''
             func = f"build_{entity_type}_{_sub_type}{_use_case}constraints"
-            constraints = globals()[func](entity_type)
+            constraints = globals()[func.lower()](entity_type)
         except Exception as e:
             error = f"Constraints could not be found with the combination of `sub_type`: `{sub_type[0]}` and `filter` as {use_case}"
 
@@ -117,7 +117,8 @@ def get_constraints(entry, key1, key2, is_match=False, use_case=None) -> dict:
         for constraint in constraints.get('constraints'):
             const_key1 = get_constraint_unit(constraint.get(key1))
 
-            if entry_key1.items() <= const_key1.items() or validate_exclusions(entry_key1, const_key1, 'sub_type_val'):
+            if DeepDiff(entry_key1, const_key1, ignore_string_case=True, exclude_types=[type(None)]) == {}:
+            # if entry_key1.items() <= const_key1.items():
                 const_key2 = constraint.get(key2)
 
                 if is_match:
