@@ -18,7 +18,8 @@ def build_dataset_constraints(entity) -> list:
 
 
 def determine_constraint_from_entity(constraint_unit, use_case=None) -> dict:
-    entity_type = constraint_unit.get('entity_type')
+    entity_type = constraint_unit.get('entity_type', '')
+    entity_type = entity_type.title()
     sub_type = constraint_unit.get('sub_type')
     error = None
     constraints = []
@@ -90,7 +91,7 @@ def get_constraint_unit_as_list(entry):
         return []
 
 
-def validate_exclusions(entry, constraint, key):
+def validate_exclusions(entry, constraint, key) -> bool:
     entry_key = get_constraint_unit_as_list(entry.get(key))
     const_key = get_constraint_unit_as_list(constraint.get(key))
 
