@@ -30,7 +30,7 @@ Each of these two properties are also arrays.
         # example
         "descendants": [
             {
-                "entity_type": "sample",
+                "entity_type": "Sample",
                 "sub_type": ["suspension"],
                 "sub_type_val": null
             }
@@ -52,14 +52,14 @@ the given `ancestors` and the `response.description` will return the valid `desc
     {
         "ancestors": [
             {
-                "entity_type": "sample",
+                "entity_type": "Sample",
                 "sub_type": ["block"],
                 "sub_type_val": null
             }
         ],
         "descendants": [
           	{
-                "entity_type": "sample",
+                "entity_type": "Sample",
                 "sub_type": ["suspension"],
                 "sub_type_val": null
         	}
@@ -76,7 +76,7 @@ the given `ancestors` and the `response.description` will return the valid `desc
             "code": 404,
             "description": [
                 {
-                    "entity_type": "sample",
+                    "entity_type": "Sample",
                     "sub_type": [
                         "block",
                         "section",
@@ -85,7 +85,7 @@ the given `ancestors` and the `response.description` will return the valid `desc
                     "sub_type_val": null
                 },
                 {
-                    "entity_type": "dataset",
+                    "entity_type": "Dataset",
                     "sub_type": [
                         "Lightsheet"
                     ],
@@ -106,14 +106,14 @@ The **currently** correct match for an ancestor sample block is:
     {
         "ancestors": [
             {
-                "entity_type": "sample",
+                "entity_type": "Sample",
                 "sub_type": ["block"],
                 "sub_type_val": null
             }
         ],
         "descendants": [
             {
-                "entity_type": "sample",
+                "entity_type": "Sample",
                 "sub_type": ["block", "section", "suspension"],
                 "sub_type_val": null
             }
@@ -130,7 +130,7 @@ The **currently** correct match for an ancestor sample block is:
             "code": 200,
             "description": [
                 {
-                    "entity_type": "sample",
+                    "entity_type": "Sample",
                     "sub_type": [
                         "block",
                         "section",
@@ -139,7 +139,7 @@ The **currently** correct match for an ancestor sample block is:
                     "sub_type_val": null
                 },
                 {
-                    "entity_type": "dataset",
+                    "entity_type": "Dataset",
                     "sub_type": [
                         "Lightsheet"
                     ],
@@ -166,7 +166,7 @@ You can reverse the order and the `response.description` will give you valid anc
         {
             "code": 200,
             "description": {
-                "entity_type": "sample",
+                "entity_type": "Sample",
                 "sub_type": [
                     "block"
                 ],
@@ -189,7 +189,7 @@ Remove the `match` param from the request url:
     {
         "ancestors": [
             {
-                "entity_type": "sample",
+                "entity_type": "Sample",
                 "sub_type": ["block"],
                 "sub_type_val": null
             }
@@ -206,7 +206,7 @@ You can retrieve the `ancestors` given a particular descendant:
     {
         "descendants": [
             {
-                "entity_type": "sample",
+                "entity_type": "Sample",
                 "sub_type": ["block", "section", "suspension"],
                 "sub_type_val": null
             }
@@ -226,7 +226,7 @@ The following  makes a special use case filter.
     {
         "descendants": [
             {
-                "entity_type": "dataset",
+                "entity_type": "Dataset",
                 "sub_type": null,
                 "sub_type_val": null
             }
@@ -244,7 +244,7 @@ The following  makes a special use case filter.
             "description": [
                 {
                     "keyword": "entity_type.keyword",
-                    "value": "dataset"
+                    "value": "Dataset"
                 },
                 {
                     "keyword": "sample_category.keyword",
@@ -274,7 +274,7 @@ The following  makes a special use case filter.
   {
     "ancestors": [
       {
-        "entity_type": "sample",
+        "entity_type": "Sample",
         "sub_type": [
           "block"],
         "sub_type_val": null
@@ -284,7 +284,7 @@ The following  makes a special use case filter.
   {
     "ancestors": [
       {
-        "entity_type": "source",
+        "entity_type": "Source",
         "sub_type": null,
         "sub_type_val": null
       }
@@ -301,7 +301,7 @@ The following  makes a special use case filter.
             "code": 200,
             "description": [
                 {
-                    "entity_type": "sample",
+                    "entity_type": "Sample",
                     "sub_type": [
                         "block",
                         "section",
@@ -310,7 +310,7 @@ The following  makes a special use case filter.
                     "sub_type_val": null
                 },
                 {
-                    "entity_type": "dataset",
+                    "entity_type": "Dataset",
                     "sub_type": [
                         "Lightsheet"
                     ],
@@ -323,7 +323,7 @@ The following  makes a special use case filter.
             "code": 200,
             "description": [
                 {
-                    "entity_type": "sample",
+                    "entity_type": "Sample",
                     "sub_type": [
                         "organ"
                     ],
@@ -348,12 +348,12 @@ is taken as unit. So the following will result in just the response for the firs
     {
         "ancestors": [
             {
-                "entity_type": "sample",
+                "entity_type": "Sample",
                 "sub_type": ["block"],
                 "sub_type_val": null
             },
             {
-                "entity_type": "dataset",
+                "entity_type": "Dataset",
                 "sub_type": null,
                 "sub_type_val": null
             }
