@@ -18,7 +18,8 @@ def build_dataset_constraints(entity) -> list:
 
 
 def determine_constraint_from_entity(constraint_unit, use_case=None) -> dict:
-    entity_type = constraint_unit.get('entity_type')
+    entity_type = constraint_unit.get('entity_type', '')
+    entity_type = entity_type.title()
     sub_type = constraint_unit.get('sub_type')
     error = None
     constraints = []
@@ -30,7 +31,7 @@ def determine_constraint_from_entity(constraint_unit, use_case=None) -> dict:
         try:
             _sub_type = f"{sub_type[0]}_" if sub_type is not None else ''
             _use_case = f"{use_case}_" if use_case is not None else ''
-            func = f"build_{entity_type}_{_sub_type}{_use_case}constraints"
+            func = f"build_{entity_type.lower()}_{_sub_type}{_use_case}constraints"
             constraints = globals()[func](entity_type)
         except Exception as e:
             error = f"Constraints could not be found with the combination of `sub_type`: `{sub_type[0]}` and `filter` as {use_case}"
@@ -90,7 +91,7 @@ def get_constraint_unit_as_list(entry):
         return []
 
 
-def validate_exclusions(entry, constraint, key):
+def validate_exclusions(entry, constraint, key) -> bool:
     entry_key = get_constraint_unit_as_list(entry.get(key))
     const_key = get_constraint_unit_as_list(constraint.get(key))
 

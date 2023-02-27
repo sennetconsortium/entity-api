@@ -2,9 +2,9 @@ from enum import Enum
 
 
 class Entities(str, Enum):
-    SOURCE = 'source'
-    SAMPLE = 'sample'
-    DATASET = 'dataset'
+    SOURCE = 'Source'
+    SAMPLE = 'Sample'
+    DATASET = 'Dataset'
 
 
 class SpecimenCategory(str, Enum):
