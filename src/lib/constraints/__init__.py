@@ -43,7 +43,7 @@ def determine_constraint_from_entity(constraint_unit, use_case=None) -> dict:
 
 
 def validate_constraint_units_to_entry_units(entry_units, const_units) -> bool:
-    match = False
+    all_match = []
     const_units = get_constraint_unit_as_list(const_units)
     entry_units = get_constraint_unit_as_list(entry_units)
     for entry_unit in entry_units:
@@ -56,13 +56,15 @@ def validate_constraint_units_to_entry_units(entry_units, const_units) -> bool:
         if sub_type_val is not None:
             sub_type_val.sort()
 
-        if entry_unit in const_units:
-            match = True
-        else:
-            match = False
-            break
+        match = False
+        for const_unit in const_units:
+            if DeepDiff(entry_unit, const_unit, ignore_string_case=True, exclude_types=[type(None)]) == {}:
+                match = True
+                break
 
-    return match
+        all_match.append(match)
+
+    return False not in all_match
 
 
 def get_constraints_by_descendant(entry, is_match=False, use_case=None) -> dict:
@@ -119,7 +121,6 @@ def get_constraints(entry, key1, key2, is_match=False, use_case=None) -> dict:
             const_key1 = get_constraint_unit(constraint.get(key1))
 
             if DeepDiff(entry_key1, const_key1, ignore_string_case=True, exclude_types=[type(None)]) == {}:
-            # if entry_key1.items() <= const_key1.items():
                 const_key2 = constraint.get(key2)
 
                 if is_match:

@@ -8,7 +8,13 @@ def build_constraint(ancestor: dict, descendants: list[dict]) -> dict:
     }
 
 
-def build_constraint_unit(entity: Entities, sub_type=None, sub_type_val=None) -> dict:
+def build_constraint_unit(entity: Entities, sub_type: list = None, sub_type_val: list = None) -> dict:
+    if type(sub_type) is list:
+        sub_type.sort()
+
+    if type(sub_type_val) is list:
+        sub_type_val.sort()
+
     constraint: dict = {
         'entity_type': entity,
         'sub_type': sub_type,

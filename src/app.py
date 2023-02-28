@@ -3312,7 +3312,7 @@ def get_sample_prov_info():
     return jsonify(sample_prov_list)
 
 
-@app.route('/constraints', methods=['POST'])
+@app.route('/constraints/old', methods=['POST'])
 def get_constraints():
     constraints = constraint_helper_ui.get_constraints()
     relationship_direction = request.args.get('relationship_direction')
@@ -3363,20 +3363,22 @@ def get_constraints():
     return not_found_error(f"Didn't find an {ancestors_or_descendants} constraint with the given payload : {payload}")
 
 
-@app.route('/constraints/validate/test', methods=['POST'])
+@app.route('/constraints', methods=['POST'])
 def validate_constraints_new():
     # Always expect a json body
     require_json(request)
     is_match = request.values.get('match')
     order = request.values.get('order')
     use_case = request.values.get('filter')
+    report_type = request.values.get('report_type')
 
     entry_json = request.get_json()
     results = []
     final_result = rest_ok({})
 
+    index = 0
     for constraint in entry_json:
-
+        index += 1
         if order == 'descendants':
             result = get_constraints_by_descendant(constraint, bool(is_match), use_case)
         else:
@@ -3385,7 +3387,11 @@ def validate_constraints_new():
         if result.get('code') is not StatusCodes.OK:
             final_result = rest_bad_req({})
 
-        results.append(result)
+        if report_type == 'ln_err':
+            if result.get('code') is not StatusCodes.OK:
+                results.append(_ln_err(f"{result.get('name')} {result.get('description')}", index))
+        else:
+            results.append(result)
 
     final_result['description'] = results
     return full_response(final_result)
