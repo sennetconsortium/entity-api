@@ -133,6 +133,7 @@ def get_constraints(entry, key1, key2, is_match=False, use_case=None) -> dict:
                 else:
                     result = rest_ok(const_key2)
                 break
+
             else:
                 result = rest_response(StatusCodes.NOT_FOUND, f"No matching constraints on given `{key1}`", None)
 
