@@ -34,7 +34,8 @@ def determine_constraint_from_entity(constraint_unit, use_case=None) -> dict:
             func = f"build_{entity_type}_{_sub_type}{_use_case}constraints"
             constraints = globals()[func.lower()](entity_type)
         except Exception as e:
-            error = f"Constraints could not be found with the combination of `sub_type`: `{sub_type[0]}` and `filter` as {use_case}"
+            filter_err = f" and `filter` as {use_case}" if use_case is not None else ''
+            error = f"Constraints could not be found with `sub_type`: `{sub_type[0]}`{filter_err}."
 
     return {
         'constraints': constraints,
