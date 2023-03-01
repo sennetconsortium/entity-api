@@ -15,17 +15,14 @@ from pathlib import Path
 import logging
 import json
 import time
-import copy
 from lib.constraints import get_constraints_by_ancestor, get_constraints_by_descendant
 from lib.rest import full_response, rest_response, StatusCodes, rest_ok, rest_bad_req
 
 # Local modules
 import app_neo4j_queries
 import provenance
-from constraints_helper import ConstraintsHelper
 from schema import schema_manager
 from schema import schema_errors
-from schema import schema_triggers
 from schema.schema_constants import SchemaConstants
 
 # HuBMAP commons
@@ -110,25 +107,6 @@ try:
         auth_helper_instance = AuthHelper.instance()
 except Exception:
     msg = "Failed to initialize the AuthHelper class"
-    # Log the full stack trace, prepend a line with our message
-    logger.exception(msg)
-
-
-####################################################################################################
-## Constraint Helper Initialization
-####################################################################################################
-
-try:
-    file_path = os.path.dirname(os.path.realpath(__file__)) + os.sep
-    with open(file_path + 'schema/entity-constraints-ui.yaml', 'r') as ui_file:
-        constraints_ui_yaml = yaml.safe_load(ui_file)
-    constraint_helper_ui = ConstraintsHelper(constraints_ui_yaml)
-    with open(file_path + 'schema/entity-constraints.yaml', 'r') as api_file:
-        constraints_yaml = yaml.safe_load(api_file)
-    constraint_helper_api = ConstraintsHelper(constraints_yaml)
-    logger.info("Initialized constraints_helper module successfully :)")
-except Exception:
-    msg = "Failed to initialize the constraints_helper module"
     # Log the full stack trace, prepend a line with our message
     logger.exception(msg)
 
