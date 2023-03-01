@@ -7,7 +7,7 @@ Most of the constraints are written in the wording like:
 
 ## The REST API
 ### Endpoint:
-`/constraints/validate`
+`/constraints`
 ### Request params:
 - `match`: Set to true to match entries. Default is `false`
 - `order`: `ancestors` or `descendants`. Determines how to retrieve/match against. The opposite property constraints will be returned.
@@ -46,7 +46,7 @@ The `description` property returns the valid constraints for the given relations
 If you do not specify the `order` request param, the request will be made against
 the given `ancestors` and the `response.description` will return the valid `descendants`.  
 #### Request 1a:
-`/constraints/validate?match=true`
+`/constraints?match=true`
 ```
 [
     {
@@ -100,7 +100,7 @@ the given `ancestors` and the `response.description` will return the valid `desc
 ```
 The **currently** correct match for an ancestor sample block is: 
 #### Request 1b:
-`/constraints/validate?match=true`
+`/constraints?match=true`
 ```
 [
     {
@@ -155,7 +155,7 @@ The **currently** correct match for an ancestor sample block is:
 ```
 You can reverse the order and the `response.description` will give you valid ancestors in return. 
 #### Request 1c:
-`/constraints/validate?match=true&order=descendants`
+`/constraints?match=true&order=descendants`
 (Payload request is same as `1b` above.)
 
 #### Response 1c:
@@ -183,7 +183,7 @@ You can reverse the order and the `response.description` will give you valid anc
 ### Getting the descendants given a particular ancestor:
 Remove the `match` param from the request url:
 #### Request 2a:
-`/constraints/validate`
+`/constraints`
 ```
 [
     {
@@ -200,7 +200,7 @@ Remove the `match` param from the request url:
 The response will be same as **1b** above.
 You can retrieve the `ancestors` given a particular descendant:
 #### Request 2b:
-`/constraints/validate?order=descendants`
+`/constraints?order=descendants`
 ```
 [
     {
@@ -220,7 +220,7 @@ The response will be same as **1c** above.
 ### The `filter` request param:
 The following  makes a special use case filter.  
 #### Request 3a:
-`/constraints/validate?filter=search&order=descendants`  
+`/constraints?filter=search&order=descendants`  
 ```
 [
     {
@@ -268,7 +268,7 @@ The following  makes a special use case filter.
 
 ### Retrieving and validating multiple rows:
 #### Request 4a:
-`/constraints/validate`
+`/constraints`
 ```
 [
   {
@@ -342,7 +342,7 @@ The following  makes a special use case filter.
 This library will not match or retrieve for given multiple `ancestors` in one row, or if `order=descendants`, will not match multiple `descendants` in the same row. The first item
 is taken as unit. So the following will result in just the response for the first ancestor (sample block).
 #### Request 5a:
-`/constraints/validate`
+`/constraints`
 ```
 [
     {
