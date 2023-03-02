@@ -27,11 +27,11 @@ def build_sample_block_constraints(entity, constraints=None):
 
     # Sample block, section, suspension; Dataset ---> Sample block
     ancestor = build_constraint_unit(entity, [SpecimenCategory.BLOCK])
-    descendant = build_constraint_unit(Entities.SAMPLE, [SpecimenCategory.BLOCK,
-                                                         SpecimenCategory.SECTION,
-                                                         SpecimenCategory.SUSPENSION])
-    descendant2 = build_constraint_unit(Entities.DATASET, [DataTypes.LIGHTSHEET])
-    constraints.append(build_constraint(ancestor, [descendant, descendant2]))
+    descendant = build_constraint_unit(Entities.SAMPLE, [SpecimenCategory.BLOCK])
+    descendant2 = build_constraint_unit(Entities.SAMPLE, [SpecimenCategory.SECTION])
+    descendant3 = build_constraint_unit(Entities.SAMPLE, [SpecimenCategory.SUSPENSION])
+    descendant4 = build_constraint_unit(Entities.DATASET, [DataTypes.LIGHTSHEET])
+    constraints.append(build_constraint(ancestor, [descendant, descendant2, descendant3, descendant4]))
 
     return constraints
 
