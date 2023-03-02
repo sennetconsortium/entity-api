@@ -96,6 +96,8 @@ def get_constraint_unit_as_list(entry):
         return []
 
 
+# Validates based on exclusions. Example constraint:
+# build_constraint_unit(entity, [SpecimenCategory.BLOCK], ['!', Organs.BLOOD])
 def validate_exclusions(entry, constraint, key) -> bool:
     entry_key = get_constraint_unit_as_list(entry.get(key))
     const_key = get_constraint_unit_as_list(constraint.get(key))
@@ -124,7 +126,7 @@ def get_constraints(entry, key1, key2, is_match=False, use_case=None) -> dict:
         for constraint in constraints:
             const_key1 = get_constraint_unit(constraint.get(key1))
 
-            if DeepDiff(entry_key1, const_key1, ignore_string_case=True, exclude_types=[type(None)]) == {}:
+            if DeepDiff(entry_key1, const_key1, ignore_string_case=True, exclude_types=[type(None)]) == {}: # or validate_exclusions(entry_key1, const_key1, 'sub_type_val'):
                 const_key2 = constraint.get(key2)
 
                 if is_match:
