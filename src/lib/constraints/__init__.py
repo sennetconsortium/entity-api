@@ -36,7 +36,9 @@ def determine_constraint_from_entity(constraint_unit, use_case=None) -> dict:
         except Exception as e:
             filter_err = f" and `filter` as {use_case}" if use_case is not None else ''
             error = f"Constraints could not be found with `sub_type`: `{sub_type[0]}`{filter_err}."
-
+            if not use_case:
+                func = f"build_{entity_type}_constraints"
+                constraints = globals()[func.lower()](entity_type)
     return {
         'constraints': constraints,
         'error': error
@@ -114,11 +116,12 @@ def get_constraints(entry, key1, key2, is_match=False, use_case=None) -> dict:
     result = rest_bad_req(msg) if is_match else rest_ok("Nothing to validate.")
 
     if entry_key1 is not None:
-        constraints = determine_constraint_from_entity(entry_key1, use_case)
-        if constraints.get('error') is not None:
-            result = rest_bad_req(constraints.get('error'))
+        report = determine_constraint_from_entity(entry_key1, use_case)
+        constraints = report.get('constraints')
+        if report.get('error') is not None and not constraints:
+            result = rest_bad_req(report.get('error'))
 
-        for constraint in constraints.get('constraints'):
+        for constraint in constraints:
             const_key1 = get_constraint_unit(constraint.get(key1))
 
             if DeepDiff(entry_key1, const_key1, ignore_string_case=True, exclude_types=[type(None)]) == {}:
