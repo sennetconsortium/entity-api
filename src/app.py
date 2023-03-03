@@ -891,7 +891,12 @@ def create_entity(entity_type):
             json_data_dict['metadata'] = json_data_dict['metadata'][0]
 
         if 'pathname' in json_data_dict:
-            if not validate_metadata(json_data_dict['pathname'], user_token):
+            data = {
+                'pathname': json_data_dict['pathname'],
+                'entity_type': entity_type,
+                'sub_type': json_data_dict.get('sample_category')
+            }
+            if not validate_metadata(data, user_token):
                 bad_request_error("Metadata did not pass validation.")
             del json_data_dict['pathname']
         else:
@@ -4323,12 +4328,11 @@ Returns Boolean whether validation was passed or not.
 """
 
 
-def validate_metadata(pathname, user_token):
+def validate_metadata(data, user_token):
     try:
         logger.info(f"Making a call to ingest-api to validate metadata")
 
         headers = create_request_headers(user_token)
-        data = {'pathname': pathname}
 
         response = requests.post(app.config['INGEST_API_URL'] + "/validation", headers=headers, data=data)
         if response.status_code == 200:
