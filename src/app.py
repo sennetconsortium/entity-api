@@ -880,23 +880,7 @@ def create_entity(entity_type):
     except schema_errors.InvalidApplicationHeaderException as e:
         bad_request_error(e)
 
-    # Always expect a json body
-    require_json(request)
-
-    # Parse incoming json string into json data(python dict object)
-    json_data_dict = request.get_json()
-
-    if 'metadata' in json_data_dict:
-        if isinstance(json_data_dict['metadata'], list):
-            json_data_dict['metadata'] = json_data_dict['metadata'][0]
-
-        if 'pathname' in json_data_dict:
-            if not validate_metadata(json_data_dict['pathname'], user_token):
-                bad_request_error("Metadata did not pass validation.")
-            del json_data_dict['pathname']
-        else:
-            bad_request_error("Metadata must be added via the Data Sharing Portal.")
-
+    json_data_dict = check_for_metadata(entity_type, user_token)
 
     if 'source_type' in json_data_dict:
         json_data_dict['source_type'] = json_data_dict['source_type'].capitalize()
@@ -1172,18 +1156,6 @@ def update_entity(id):
     # Parse incoming json string into json data(python dict object)
     json_data_dict = request.get_json()
 
-    if 'metadata' in json_data_dict:
-        if isinstance(json_data_dict['metadata'], list):
-            json_data_dict['metadata'] = json_data_dict['metadata'][0]
-
-        if 'pathname' in json_data_dict:
-            if not validate_metadata(json_data_dict['pathname'], user_token):
-                bad_request_error("Metadata did not pass validation.")
-            del json_data_dict['pathname']
-        else:
-            bad_request_error("Metadata must be added via the Data Sharing Portal.")
-
-
     # Normalize user provided status
     if "status" in json_data_dict:
         normalized_status = schema_manager.normalize_status(json_data_dict["status"])
@@ -1196,6 +1168,8 @@ def update_entity(id):
 
     # Get target entity and return as a dict if exists
     entity_dict = query_target_entity(id, user_token)
+
+    json_data_dict = check_for_metadata(entity_dict.get('entity_type'), user_token)
 
     # Normalize user provided entity_type
     normalized_entity_type = schema_manager.normalize_entity_type(entity_dict['entity_type'])
@@ -4314,6 +4288,31 @@ def validate_organ_code(organ_code):
         internal_server_error(f"Failed to validate the organ code: {organ_code}")
 
 
+def check_for_metadata(entity_type, user_token):
+    # Always expect a json body
+    require_json(request)
+
+    # Parse incoming json string into json data(python dict object)
+    json_data_dict = request.get_json()
+
+    if 'metadata' in json_data_dict:
+        if isinstance(json_data_dict['metadata'], list):
+            json_data_dict['metadata'] = json_data_dict['metadata'][0]
+
+        if 'pathname' in json_data_dict:
+            data = {
+                'pathname': json_data_dict['pathname'],
+                'entity_type': entity_type,
+                'sub_type': json_data_dict.get('sample_category')
+            }
+            if not validate_metadata(data, user_token):
+                bad_request_error("Metadata did not pass validation.")
+            del json_data_dict['pathname']
+        else:
+            bad_request_error("Metadata must be added via the Data Sharing Portal.")
+
+    return json_data_dict
+
 """
 Validates the given metadata via the pathname returned by the Ingest API
 
@@ -4323,12 +4322,11 @@ Returns Boolean whether validation was passed or not.
 """
 
 
-def validate_metadata(pathname, user_token):
+def validate_metadata(data, user_token):
     try:
         logger.info(f"Making a call to ingest-api to validate metadata")
 
         headers = create_request_headers(user_token)
-        data = {'pathname': pathname}
 
         response = requests.post(app.config['INGEST_API_URL'] + "/validation", headers=headers, data=data)
         if response.status_code == 200:
