@@ -4299,17 +4299,16 @@ def check_for_metadata(entity_type, user_token):
         if isinstance(json_data_dict['metadata'], list):
             json_data_dict['metadata'] = json_data_dict['metadata'][0]
 
-        if 'pathname' in json_data_dict:
+        if 'pathname' in json_data_dict['metadata']:
             data = {
-                'pathname': json_data_dict['pathname'],
+                'pathname': json_data_dict['metadata']['pathname'],
                 'entity_type': entity_type,
                 'sub_type': json_data_dict.get('sample_category')
             }
             if not validate_metadata(data, user_token):
                 bad_request_error("Metadata did not pass validation.")
-            del json_data_dict['pathname']
         else:
-            bad_request_error("Metadata must be added via the Data Sharing Portal.")
+            bad_request_error("Missing `pathname` in metadata. (Metadata must be added via the Data Sharing Portal.)")
 
     return json_data_dict
 
