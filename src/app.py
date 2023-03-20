@@ -32,6 +32,10 @@ from hubmap_commons import neo4j_driver
 from hubmap_commons.hm_auth import AuthHelper
 from hubmap_commons.exceptions import HTTPException
 
+# Consortia commons
+from consortia_commons.ubkg import initialize_ubkg
+from consortia_commons.rest import rest_ok, rest_server_err
+
 
 # Root logger configuration
 global logger
@@ -142,6 +146,22 @@ def close_neo4j_driver(error):
 
 
 ####################################################################################################
+## UBKG Ontology initialization
+####################################################################################################
+
+try:
+    ubkg_instance = initialize_ubkg(app.config)
+
+    logger.info("Initialized ubkg module successfully :)")
+# Use a broad catch-all here
+except Exception:
+    msg = "Failed to initialize the ubkg module"
+    # Log the full stack trace, prepend a line with our message
+    logger.exception(msg)
+
+
+
+####################################################################################################
 ## Schema initialization
 ####################################################################################################
 
@@ -153,7 +173,8 @@ try:
                               app.config['INGEST_API_URL'],
                               app.config['SEARCH_API_URL'],
                               auth_helper_instance,
-                              neo4j_driver_instance)
+                              neo4j_driver_instance,
+                              ubkg_instance)
 
     logger.info("Initialized schema_manager module successfully :)")
 # Use a broad catch-all here
@@ -2528,8 +2549,8 @@ def get_prov_info():
     HEADER_PROCESSED_DATASET_SENNET_ID = 'processed_dataset_sennet_id'
     HEADER_PROCESSED_DATASET_STATUS = 'processed_dataset_status'
     HEADER_PROCESSED_DATASET_PORTAL_URL = 'processed_dataset_portal_url'
-    ASSAY_TYPES_URL = SchemaConstants.ASSAY_TYPES_YAML
-    ORGAN_TYPES_URL = SchemaConstants.ORGAN_TYPES_YAML
+    ASSAY_TYPES = ubkg_instance.get_ubkg_by_endpoint(ubkg_instance.assay_types)
+    ORGAN_TYPES = ubkg_instance.get_ubkg_valueset(ubkg_instance.organ_types)
     HEADER_PREVIOUS_VERSION_SENNET_IDS = 'previous_version_sennet_ids'
 
     headers = [
@@ -2553,28 +2574,6 @@ def get_prov_info():
 
     if user_in_sennet_read_group(request):
         published_only = False
-
-    # Parsing the organ types yaml has to be done here rather than calling schema.schema_triggers.get_organ_description
-    # because that would require using a urllib request for each dataset
-    response = requests.get(url=ORGAN_TYPES_URL, verify=False)
-
-    if response.status_code == 200:
-        yaml_file = response.text
-        try:
-            organ_types_dict = yaml.safe_load(yaml_file)
-        except yaml.YAMLError as e:
-            raise yaml.YAMLError(e)
-
-    # As above, we parse te assay type yaml here rather than calling the special method for it because this avoids
-    # having to access the resource for every dataset.
-    response = requests.get(url=ASSAY_TYPES_URL, verify=False)
-
-    if response.status_code == 200:
-        yaml_file = response.text
-        try:
-            assay_types_dict = yaml.safe_load(yaml_file)
-        except yaml.YAMLError as e:
-            raise yaml.YAMLError(e)
 
     # Processing and validating query parameters
     accepted_arguments = ['format', 'organ', 'has_rui_info', 'dataset_status', 'group_uuid']
@@ -2644,19 +2643,14 @@ def get_prov_info():
         # Data type codes are replaced with data type descriptions
         assay_description_list = []
         for item in dataset['data_types']:
-            try:
-                assay_description_list.append(assay_types_dict[item]['description'])
-            # Some data types aren't given by their code in the assay types yaml and are instead given as an alt name.
-            # In these cases, we have to search each assay type and see if the given code matches any alternate names.
-            except KeyError:
-                valid_key = False
-                for each in assay_types_dict:
-                    if valid_key is False:
-                        if item in assay_types_dict[each]['alt-names']:
-                            assay_description_list.append(assay_types_dict[each]['description'])
-                            valid_key = True
-                if valid_key is False:
-                    assay_description_list.append(item)
+            valid_key = False
+            for assay_type in ASSAY_TYPES:
+                if assay_type['data_type'] == item:
+                    assay_description_list.append(assay_type['description'])
+                    valid_key = True
+                    break
+            if valid_key is False:
+                assay_description_list.append(item)
         dataset['data_types'] = assay_description_list
         internal_dict[HEADER_DATASET_DATA_TYPES] = dataset['data_types']
 
@@ -2692,10 +2686,15 @@ def get_prov_info():
             distinct_organ_sennet_id_list = []
             distinct_organ_uuid_list = []
             distinct_organ_type_list = []
+
             for item in dataset['distinct_organ']:
                 distinct_organ_sennet_id_list.append(item['sennet_id'])
                 distinct_organ_uuid_list.append(item['uuid'])
-                distinct_organ_type_list.append(organ_types_dict[item['organ']]['description'].lower())
+                # TODO: Need to update this code once Ontology Organ Types endpoint is update
+                for organ_type in ORGAN_TYPES:
+                    if organ_type['rui_code'] == item['organ']:
+                        distinct_organ_type_list.append(organ_type['description'].lower())
+                # distinct_organ_type_list.append(organ_types_dict[item['organ']]['description'].lower())
             internal_dict[HEADER_ORGAN_SENNET_ID] = distinct_organ_sennet_id_list
             internal_dict[HEADER_ORGAN_UUID] = distinct_organ_uuid_list
             internal_dict[HEADER_ORGAN_TYPE] = distinct_organ_type_list
@@ -2882,8 +2881,8 @@ def get_prov_info_for_dataset(id):
     HEADER_PROCESSED_DATASET_SENNET_ID = 'processed_dataset_sennet_id'
     HEADER_PROCESSED_DATASET_STATUS = 'processed_dataset_status'
     HEADER_PROCESSED_DATASET_PORTAL_URL = 'processed_dataset_portal_url'
-    ASSAY_TYPES_URL = SchemaConstants.ASSAY_TYPES_YAML
-    ORGAN_TYPES_URL = SchemaConstants.ORGAN_TYPES_YAML
+    ASSAY_TYPES = ubkg_instance.get_ubkg_by_endpoint(ubkg_instance.assay_types)
+    ORGAN_TYPES = ubkg_instance.get_ubkg_valueset(ubkg_instance.organ_types)
 
     headers = [
         HEADER_DATASET_UUID, HEADER_DATASET_SENNET_ID, HEADER_DATASET_STATUS, HEADER_DATASET_GROUP_NAME,
@@ -2898,28 +2897,6 @@ def get_prov_info_for_dataset(id):
         HEADER_SAMPLE_METADATA_UUID, HEADER_PROCESSED_DATASET_UUID, HEADER_PROCESSED_DATASET_SENNET_ID,
         HEADER_PROCESSED_DATASET_STATUS, HEADER_PROCESSED_DATASET_PORTAL_URL
     ]
-
-    # Parsing the organ types yaml has to be done here rather than calling schema.schema_triggers.get_organ_description
-    # because that would require using a urllib request for each dataset
-    response = requests.get(url=ORGAN_TYPES_URL, verify=False)
-
-    if response.status_code == 200:
-        yaml_file = response.text
-        try:
-            organ_types_dict = yaml.safe_load(yaml_file)
-        except yaml.YAMLError as e:
-            raise yaml.YAMLError(e)
-
-    # As above, we parse te assay type yaml here rather than calling the special method for it because this avoids
-    # having to access the resource for every dataset.
-    response = requests.get(url=ASSAY_TYPES_URL, verify=False)
-
-    if response.status_code == 200:
-        yaml_file = response.text
-        try:
-            assay_types_dict = yaml.safe_load(yaml_file)
-        except yaml.YAMLError as e:
-            raise yaml.YAMLError(e)
 
     sennet_ids = schema_manager.get_sennet_ids(id)
 
@@ -2944,19 +2921,14 @@ def get_prov_info_for_dataset(id):
     # Data type codes are replaced with data type descriptions
     assay_description_list = []
     for item in dataset['data_types']:
-        try:
-            assay_description_list.append(assay_types_dict[item]['description'])
-        # Some data types aren't given by their code in the assay types yaml and are instead given as an alt name.
-        # In these cases, we have to search each assay type and see if the given code matches any alternate names.
-        except KeyError:
-            valid_key = False
-            for each in assay_types_dict:
-                if valid_key is False:
-                    if item in assay_types_dict[each]['alt-names']:
-                        assay_description_list.append(assay_types_dict[each]['description'])
-                        valid_key = True
-            if valid_key is False:
-                assay_description_list.append(item)
+        valid_key = False
+        for assay_type in ASSAY_TYPES:
+            if assay_type['data_type'] == item:
+                assay_description_list.append(assay_type['description'])
+                valid_key = True
+                break
+        if valid_key is False:
+            assay_description_list.append(item)
     dataset['data_types'] = assay_description_list
     internal_dict[HEADER_DATASET_DATA_TYPES] = dataset['data_types']
     if return_json is False:
@@ -2990,7 +2962,11 @@ def get_prov_info_for_dataset(id):
         for item in dataset['distinct_organ']:
             distinct_organ_sennet_id_list.append(item['sennet_id'])
             distinct_organ_uuid_list.append(item['uuid'])
-            distinct_organ_type_list.append(organ_types_dict[item['organ']]['description'].lower())
+            # TODO: Need to update this code once Ontology Organ Types endpoint is update
+            for organ_type in ORGAN_TYPES:
+                if organ_type['rui_code'] == item['organ']:
+                    distinct_organ_type_list.append(organ_type['description'].lower())
+            # distinct_organ_type_list.append(organ_types_dict[item['organ']]['description'].lower())
         internal_dict[HEADER_ORGAN_SENNET_ID] = distinct_organ_sennet_id_list
         internal_dict[HEADER_ORGAN_UUID] = distinct_organ_uuid_list
         internal_dict[HEADER_ORGAN_TYPE] = distinct_organ_type_list
@@ -3104,31 +3080,10 @@ def sankey_data():
     HEADER_ORGAN_TYPE = 'organ_type'
     HEADER_DATASET_DATA_TYPES = 'dataset_data_types'
     HEADER_DATASET_STATUS = 'dataset_status'
-    ASSAY_TYPES_URL = SchemaConstants.ASSAY_TYPES_YAML
-    ORGAN_TYPES_URL = SchemaConstants.ORGAN_TYPES_YAML
+    ASSAY_TYPES = ubkg_instance.get_ubkg_by_endpoint(ubkg_instance.assay_types)
+    ORGAN_TYPES = ubkg_instance.get_ubkg_valueset(ubkg_instance.organ_types)
     with open('sankey_mapping.json') as f:
         mapping_dict = json.load(f)
-    # Parsing the organ types yaml has to be done here rather than calling schema.schema_triggers.get_organ_description
-    # because that would require using a urllib request for each dataset
-    response = requests.get(url=ORGAN_TYPES_URL, verify=False)
-
-    if response.status_code == 200:
-        yaml_file = response.text
-        try:
-            organ_types_dict = yaml.safe_load(yaml_file)
-        except yaml.YAMLError as e:
-            raise yaml.YAMLError(e)
-
-    # As above, we parse te assay type yaml here rather than calling the special method for it because this avoids
-    # having to access the resource for every dataset.
-    response = requests.get(url=ASSAY_TYPES_URL, verify=False)
-
-    if response.status_code == 200:
-        yaml_file = response.text
-        try:
-            assay_types_dict = yaml.safe_load(yaml_file)
-        except yaml.YAMLError as e:
-            raise yaml.YAMLError(e)
 
     # Instantiation of the list dataset_prov_list
     dataset_sankey_list = []
@@ -3138,22 +3093,23 @@ def sankey_data():
     for dataset in sankey_info:
         internal_dict = collections.OrderedDict()
         internal_dict[HEADER_DATASET_GROUP_NAME] = dataset[HEADER_DATASET_GROUP_NAME]
-        internal_dict[HEADER_ORGAN_TYPE] = organ_types_dict[dataset[HEADER_ORGAN_TYPE]]['description'].lower()
+        # TODO: Need to update this code once Ontology Organ Types endpoint is update
+        for organ_type in ORGAN_TYPES:
+            if organ_type['code'] == dataset[HEADER_ORGAN_TYPE]:
+                internal_dict[HEADER_ORGAN_TYPE] = organ_type['description'].lower()
+        # internal_dict[HEADER_ORGAN_TYPE] = organ_types_dict[dataset[HEADER_ORGAN_TYPE]]['description'].lower()
         # Data type codes are replaced with data type descriptions
         assay_description = ""
-        try:
-            assay_description = assay_types_dict[dataset[HEADER_DATASET_DATA_TYPES]]['description']
-        # Some data types aren't given by their code in the assay types yaml and are instead given as an alt name.
-        # In these cases, we have to search each assay type and see if the given code matches any alternate names.
-        except KeyError:
-            valid_key = False
-            for each in assay_types_dict:
-                if valid_key is False:
-                    if dataset[HEADER_DATASET_DATA_TYPES] in assay_types_dict[each]['alt-names']:
-                        assay_description = assay_types_dict[each]['description']
-                        valid_key = True
-            if valid_key is False:
-                assay_description = dataset[HEADER_DATASET_DATA_TYPES]
+
+        valid_key = False
+        for assay_type in ASSAY_TYPES:
+            if assay_type['data_type'] == dataset[HEADER_DATASET_DATA_TYPES] or dataset[HEADER_DATASET_DATA_TYPES] in \
+                    assay_type['alt-names']:
+                assay_description = assay_type['description']
+                valid_key = True
+                break
+        if valid_key is False:
+            assay_description = dataset[HEADER_DATASET_DATA_TYPES]
         internal_dict[HEADER_DATASET_DATA_TYPES] = assay_description
 
         # Replace applicable Group Name and Data type with the value needed for the sankey via the mapping_dict
@@ -3204,16 +3160,7 @@ def get_sample_prov_info():
     HEADER_ORGAN_UUID = "organ_uuid"
     HEADER_ORGAN_TYPE = "organ_type"
     HEADER_ORGAN_SENNET_ID = "organ_sennet_id"
-    ORGAN_TYPES_URL = SchemaConstants.ORGAN_TYPES_YAML
-
-    response = requests.get(url=ORGAN_TYPES_URL, verify=False)
-
-    if response.status_code == 200:
-        yaml_file = response.text
-        try:
-            organ_types_dict = yaml.safe_load(yaml_file)
-        except yaml.YAMLError as e:
-            raise yaml.YAMLError(e)
+    ORGAN_TYPES = ubkg_instance.get_ubkg_valueset(ubkg_instance.organ_types)
 
     # Processing and validating query parameters
     accepted_arguments = ['group_uuid']
@@ -3246,12 +3193,14 @@ def get_sample_prov_info():
         organ_sennet_id = None
         if sample['organ_uuid'] is not None:
             organ_uuid = sample['organ_uuid']
-            organ_type = organ_types_dict[sample['organ_organ_type']]['description'].lower()
+            # TODO: Update once we have organ endpoint
+            # organ_type = organ_types_dict[sample['organ_organ_type']]['description'].lower()
             organ_sennet_id = sample['organ_sennet_id']
         else:
             if sample['sample_sample_category'] == "organ":
                 organ_uuid = sample['sample_uuid']
-                organ_type = organ_types_dict[sample['sample_organ']]['description'].lower()
+                # TODO: Update once we have organ endpoint
+                # organ_type = organ_types_dict[sample['sample_organ']]['description'].lower()
                 organ_sennet_id = sample['sample_sennet_id']
 
 
@@ -4284,34 +4233,32 @@ Returns nothing. Raises bad_request_error is organ code not found on organ_types
 
 
 def validate_organ_code(organ_code):
-    yaml_file_url = SchemaConstants.ORGAN_TYPES_YAML
+    ORGAN_TYPES = ubkg_instance.get_ubkg_valueset(ubkg_instance.organ_types)
 
-    # Function cache to improve performance
-    response = schema_manager.make_request_get(yaml_file_url)
-
-    if response.status_code == 200:
-        yaml_file = response.text
-
-        try:
-            organ_types_dict = yaml.safe_load(response.text)
-
-            if organ_code.upper() not in organ_types_dict:
-                bad_request_error(f"Invalid Organ. Organ must be 2 digit code, case-insensitive located at {yaml_file_url}")
-        except yaml.YAMLError as e:
-            raise yaml.YAMLError(e)
-    else:
-        msg = f"Unable to fetch the: {yaml_file_url}"
-        # Log the full stack trace, prepend a line with our message
-        logger.exception(msg)
-
-        logger.debug("======validate_organ_code() status code======")
-        logger.debug(response.status_code)
-
-        logger.debug("======validate_organ_code() response text======")
-        logger.debug(response.text)
-
-        # Terminate and let the users know
-        internal_server_error(f"Failed to validate the organ code: {organ_code}")
+    # TODO: Need to update this code once Ontology Organ Types endpoint is update
+    # if response.status_code == 200:
+    #     yaml_file = response.text
+    #
+    #     try:
+    #         organ_types_dict = yaml.safe_load(response.text)
+    #
+    #         if organ_code.upper() not in organ_types_dict:
+    #             bad_request_error(f"Invalid Organ. Organ must be 2 digit code, case-insensitive located at {yaml_file_url}")
+    #     except yaml.YAMLError as e:
+    #         raise yaml.YAMLError(e)
+    # else:
+    #     msg = f"Unable to fetch the: {yaml_file_url}"
+    #     # Log the full stack trace, prepend a line with our message
+    #     logger.exception(msg)
+    #
+    #     logger.debug("======validate_organ_code() status code======")
+    #     logger.debug(response.status_code)
+    #
+    #     logger.debug("======validate_organ_code() response text======")
+    #     logger.debug(response.text)
+    #
+    #     # Terminate and let the users know
+    #     internal_server_error(f"Failed to validate the organ code: {organ_code}")
 
 
 """
@@ -4352,7 +4299,7 @@ def validate_metadata(pathname, user_token):
 
 if __name__ == "__main__":
     try:
-        app.run(host='0.0.0.0', port="5002")
+        app.run(host='0.0.0.0', port="5002", debug=True)
     except Exception as e:
         print("Error during starting debug server.")
         print(str(e))

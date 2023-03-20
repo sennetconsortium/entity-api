@@ -30,6 +30,7 @@ _ingest_api_url = None
 _search_api_url = None
 _auth_helper = None
 _neo4j_driver = None
+_ubkg = None
 
 # For handling cached requests to uuid-api and external static resources (github raw yaml files)
 request_cache = {}
@@ -56,7 +57,8 @@ def initialize(valid_yaml_file,
                ingest_api_url,
                search_api_url,
                auth_helper_instance,
-               neo4j_driver_instance):
+               neo4j_driver_instance,
+               ubkg_instance):
     # Specify as module-scope variables
     global _schema
     global _uuid_api_url
@@ -64,6 +66,7 @@ def initialize(valid_yaml_file,
     global _search_api_url
     global _auth_helper
     global _neo4j_driver
+    global _ubkg
 
     _schema = load_provenance_schema(valid_yaml_file)
     _uuid_api_url = uuid_api_url
@@ -73,6 +76,7 @@ def initialize(valid_yaml_file,
     # Get the helper instances
     _auth_helper = auth_helper_instance
     _neo4j_driver = neo4j_driver_instance
+    _ubkg = ubkg_instance
 
 
 ####################################################################################################
@@ -1646,6 +1650,22 @@ def get_neo4j_driver_instance():
     global _neo4j_driver
 
     return _neo4j_driver
+
+
+"""
+Get the UBKG instance to be used by trigger methods
+
+Returns
+-------
+ubkg
+    The UBKG instance
+"""
+
+
+def get_ubkg_instance():
+    global _ubkg
+
+    return _ubkg
 
 
 """
