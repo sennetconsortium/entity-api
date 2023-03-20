@@ -2,8 +2,10 @@ from lib.constraints.base import *
 from lib.constraints.source import *
 from lib.constraints.sample import *
 from lib.constraints.dataset import *
-from lib.rest import *
 from deepdiff import DeepDiff
+
+from consortia_commons.rest import rest_ok, rest_response, StatusCodes, rest_bad_req
+
 
 def build_source_constraints(entity) -> list:
     return build_all_source_constraints(entity)

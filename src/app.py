@@ -16,14 +16,12 @@ import logging
 import json
 import time
 from lib.constraints import get_constraints_by_ancestor, get_constraints_by_descendant
-from lib.rest import full_response, rest_response, StatusCodes, rest_ok, rest_bad_req
 
 # Local modules
 import app_neo4j_queries
 import provenance
 from schema import schema_manager
 from schema import schema_errors
-from schema.schema_constants import SchemaConstants
 
 # HuBMAP commons
 from hubmap_commons import string_helper
@@ -34,7 +32,7 @@ from hubmap_commons.exceptions import HTTPException
 
 # Consortia commons
 from consortia_commons.ubkg import initialize_ubkg
-from consortia_commons.rest import rest_ok, rest_server_err
+from consortia_commons.rest import full_response, StatusCodes, rest_ok, rest_bad_req
 
 
 # Root logger configuration
