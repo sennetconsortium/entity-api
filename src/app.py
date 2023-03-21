@@ -32,8 +32,7 @@ from hubmap_commons.exceptions import HTTPException
 
 # Consortia commons
 from consortia_commons.ubkg import initialize_ubkg
-from consortia_commons.rest import full_response, StatusCodes, rest_ok, rest_bad_req
-
+from consortia_commons.rest import *
 
 # Root logger configuration
 global logger
@@ -63,36 +62,6 @@ app.config['SEARCH_API_URL'] = app.config['SEARCH_API_URL'].strip('/')
 
 # Suppress InsecureRequestWarning warning when requesting status on https with ssl cert verify disabled
 requests.packages.urllib3.disable_warnings(category = InsecureRequestWarning)
-
-
-####################################################################################################
-## Register error handlers
-####################################################################################################
-
-# Error handler for 400 Bad Request with custom error message
-@app.errorhandler(400)
-def http_bad_request(e):
-    return jsonify(error=str(e)), 400
-
-# Error handler for 401 Unauthorized with custom error message
-@app.errorhandler(401)
-def http_unauthorized(e):
-    return jsonify(error=str(e)), 401
-
-# Error handler for 403 Forbidden with custom error message
-@app.errorhandler(403)
-def http_forbidden(e):
-    return jsonify(error=str(e)), 403
-
-# Error handler for 404 Not Found with custom error message
-@app.errorhandler(404)
-def http_not_found(e):
-    return jsonify(error=str(e)), 404
-
-# Error handler for 500 Internal Server Error with custom error message
-@app.errorhandler(500)
-def http_internal_server_error(e):
-    return jsonify(error=str(e)), 500
 
 
 ####################################################################################################
@@ -328,10 +297,10 @@ def get_ancestor_organs(id):
     # A bit validation
     supported_entity_types = ['Sample', 'Dataset']
     if normalized_entity_type not in supported_entity_types:
-        bad_request_error(f"Unable to get the ancestor organs for this: {normalized_entity_type}, supported entity types: {COMMA_SEPARATOR.join(supported_entity_types)}")
+        abort_bad_req(f"Unable to get the ancestor organs for this: {normalized_entity_type}, supported entity types: {COMMA_SEPARATOR.join(supported_entity_types)}")
 
     if normalized_entity_type == 'Sample' and entity_dict['sample_category'].lower() == 'organ':
-        bad_request_error("Unable to get the ancestor organ of an organ.")
+        abort_bad_req("Unable to get the ancestor organ of an organ.")
 
     if normalized_entity_type == 'Dataset':
         # Only published/public datasets don't require token
@@ -390,7 +359,7 @@ def get_entity_by_id(id):
 
     # Handle Collection retrieval using a different endpoint
     if normalized_entity_type == 'Collection':
-        bad_request_error("Please use another API endpoint `/collections/<id>` to query a collection")
+        abort_bad_req("Please use another API endpoint `/collections/<id>` to query a collection")
 
     if normalized_entity_type == 'Dataset':
         # Only published/public datasets don't require token
@@ -460,16 +429,16 @@ def get_entity_by_id(id):
         if property_key is not None:
             # Validate the target property
             if property_key not in result_filtering_accepted_property_keys:
-                bad_request_error(f"Only the following property keys are supported in the query string: {COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}")
+                abort_bad_req(f"Only the following property keys are supported in the query string: {COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}")
 
             if property_key == 'status' and normalized_entity_type != 'Dataset':
-                bad_request_error(f"Only Dataset supports 'status' property key in the query string")
+                abort_bad_req(f"Only Dataset supports 'status' property key in the query string")
 
             # Response with the property value directly
             # Don't use jsonify() on string value
             return complete_dict[property_key]
         else:
-            bad_request_error("The specified query string is not supported. Use '?property=<key>' to filter the result")
+            abort_bad_req("The specified query string is not supported. Use '?property=<key>' to filter the result")
     else:
         # Response with the dict
         return jsonify(final_result)
@@ -508,7 +477,7 @@ def get_entity_provenance(id):
     # A bit validation to prevent Lab or Collection being queried
     supported_entity_types = ['Source', 'Sample', 'Dataset']
     if normalized_entity_type not in supported_entity_types:
-        bad_request_error(f"Unable to get the provenance for this {normalized_entity_type}, supported entity types: {COMMA_SEPARATOR.join(supported_entity_types)}")
+        abort_bad_req(f"Unable to get the provenance for this {normalized_entity_type}, supported entity types: {COMMA_SEPARATOR.join(supported_entity_types)}")
 
     if normalized_entity_type == 'Dataset':
         # Only published/public datasets don't require token
@@ -651,11 +620,11 @@ def get_entities_by_type(entity_type):
     try:
         schema_manager.validate_normalized_entity_type(normalized_entity_type)
     except schema_errors.InvalidNormalizedEntityTypeException as e:
-        bad_request_error("Invalid entity type provided: " + entity_type)
+        abort_bad_req("Invalid entity type provided: " + entity_type)
 
     # Handle Collections retrieval using a different endpoint
     if normalized_entity_type == 'Collection':
-        bad_request_error("Please use another API endpoint `/collections` to query collections")
+        abort_bad_req("Please use another API endpoint `/collections` to query collections")
 
     # Result filtering based on query string
     if bool(request.args):
@@ -666,7 +635,7 @@ def get_entities_by_type(entity_type):
 
             # Validate the target property
             if property_key not in result_filtering_accepted_property_keys:
-                bad_request_error(f"Only the following property keys are supported in the query string: {COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}")
+                abort_bad_req(f"Only the following property keys are supported in the query string: {COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}")
 
             # Only return a list of the filtered property value of each entity
             property_list = app_neo4j_queries.get_entities_by_type(neo4j_driver_instance, normalized_entity_type, property_key)
@@ -674,7 +643,7 @@ def get_entities_by_type(entity_type):
             # Final result
             final_result = property_list
         else:
-            bad_request_error("The specified query string is not supported. Use '?property=<key>' to filter the result")
+            abort_bad_req("The specified query string is not supported. Use '?property=<key>' to filter the result")
     # Return all the details if no property filtering
     else:
         # Get user token from Authorization header
@@ -749,7 +718,7 @@ def get_collection(id):
 
     # A bit validation
     if collection_dict['entity_type'] != 'Collection':
-        bad_request_error("Target entity of the given id is not a collection")
+        abort_bad_req("Target entity of the given id is not a collection")
 
     # Try to get user token from Authorization header
     # It's highly possible that there's no token provided
@@ -762,7 +731,7 @@ def get_collection(id):
         # When the requested collection is not public, send back 401
         if ('registered_doi' not in collection_dict) or ('doi_url' not in collection_dict):
             # Require a valid token in this case
-            unauthorized_error("The reqeusted collection is not public, a Globus token with the right access permission is required.")
+            abort_unauthorized("The reqeusted collection is not public, a Globus token with the right access permission is required.")
 
         # Otherwise only return the public datasets attached to this collection
         # for Collection.datasets property
@@ -827,12 +796,12 @@ def get_collections():
 
             # Validate the target property
             if property_key not in result_filtering_accepted_property_keys:
-                bad_request_error(f"Only the following property keys are supported in the query string: {COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}")
+                abort_bad_req(f"Only the following property keys are supported in the query string: {COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}")
 
             # Only return a list of the filtered property value of each public collection
             final_result = app_neo4j_queries.get_public_collections(neo4j_driver_instance, property_key)
         else:
-            bad_request_error("The specified query string is not supported. Use '?property=<key>' to filter the result")
+            abort_bad_req("The specified query string is not supported. Use '?property=<key>' to filter the result")
     # Return all the details if no property filtering
     else:
         # Use the internal token since no user token is requried to access public collections
@@ -888,16 +857,16 @@ def create_entity(entity_type):
     try:
         schema_manager.validate_normalized_entity_type(normalized_entity_type)
     except schema_errors.InvalidNormalizedEntityTypeException as e:
-        bad_request_error(f"Invalid entity type provided: {entity_type}")
+        abort_bad_req(f"Invalid entity type provided: {entity_type}")
 
     # Execute entity level validator defined in schema yaml before entity creation
     # Currently on Dataset and Upload creation require application header
     try:
         schema_manager.execute_entity_level_validator('before_entity_create_validator', normalized_entity_type, request)
     except schema_errors.MissingApplicationHeaderException as e:
-        bad_request_error(e)
+        abort_bad_req(e)
     except schema_errors.InvalidApplicationHeaderException as e:
-        bad_request_error(e)
+        abort_bad_req(e)
 
     # Always expect a json body
     require_json(request)
@@ -911,10 +880,10 @@ def create_entity(entity_type):
 
         if 'pathname' in json_data_dict:
             if not validate_metadata(json_data_dict['pathname'], user_token):
-                bad_request_error("Metadata did not pass validation.")
+                abort_bad_req("Metadata did not pass validation.")
             del json_data_dict['pathname']
         else:
-            bad_request_error("Metadata must be added via the Data Sharing Portal.")
+            abort_bad_req("Metadata must be added via the Data Sharing Portal.")
 
 
     if 'source_type' in json_data_dict:
@@ -925,7 +894,7 @@ def create_entity(entity_type):
         schema_manager.validate_json_data_against_schema('ENTITIES', json_data_dict, normalized_entity_type)
     except schema_errors.SchemaValidationException as e:
         # No need to log the validation errors
-        bad_request_error(str(e))
+        abort_bad_req(str(e))
 
     # Execute property level validators defined in schema yaml before entity property creation
     # Use empty dict {} to indicate there's no existing_data_dict
@@ -933,7 +902,7 @@ def create_entity(entity_type):
         schema_manager.execute_property_level_validators('ENTITIES', 'before_property_create_validators', normalized_entity_type, request, {}, json_data_dict)
     # Currently only ValueError
     except ValueError as e:
-        bad_request_error(e)
+        abort_bad_req(e)
 
     # Sample and Dataset: additional validation, create entity, after_create_trigger
     # Collection and Source: create entity
@@ -942,10 +911,10 @@ def create_entity(entity_type):
         # Vise versa, if `sample_category` is set to "organ", `organ` code is required
         if ('sample_category' in json_data_dict) and (json_data_dict['sample_category'].lower() == 'organ'):
             if ('organ' not in json_data_dict) or (json_data_dict['organ'].strip() == ''):
-                bad_request_error("A valid organ code is required when the sample_category is organ")
+                abort_bad_req("A valid organ code is required when the sample_category is organ")
         else:
             if 'organ' in json_data_dict:
-                bad_request_error("The sample_category must be organ when an organ code is provided")
+                abort_bad_req("The sample_category must be organ when an organ code is provided")
 
         # A bit more validation for new sample to be linked to existing source entity
         direct_ancestor_uuid = json_data_dict['direct_ancestor_uuid']
@@ -972,7 +941,7 @@ def create_entity(entity_type):
 
             # Make sure the previous version entity is either a Dataset or Sample
             if previous_version_dict['entity_type'] not in ['Dataset', 'Sample']:
-                bad_request_error(f"The previous_revision_uuid specified for this dataset must be either a Dataset or Sample")
+                abort_bad_req(f"The previous_revision_uuid specified for this dataset must be either a Dataset or Sample")
 
             # Also need to validate if the given 'previous_revision_uuid' has already had
             # an exisiting next revision
@@ -981,12 +950,12 @@ def create_entity(entity_type):
 
             # As long as the list is not empty, tell the users to use a different 'previous_revision_uuid'
             if next_revisions_list:
-                bad_request_error(f"The previous_revision_uuid specified for this dataset has already had a next revision")
+                abort_bad_req(f"The previous_revision_uuid specified for this dataset has already had a next revision")
 
             # Only published datasets can have revisions made of them. Verify that that status of the Dataset specified
             # by previous_revision_uuid is published. Else, bad request error.
             if previous_version_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
-                bad_request_error(f"The previous_revision_uuid specified for this dataset must be 'Published' in order to create a new revision from it")
+                abort_bad_req(f"The previous_revision_uuid specified for this dataset must be 'Published' in order to create a new revision from it")
 
         # Generate 'before_create_triiger' data and create the entity details in Neo4j
         merged_dict = create_entity_details(request, normalized_entity_type, user_token, json_data_dict)
@@ -1076,7 +1045,7 @@ def create_multiple_samples(count):
         schema_manager.validate_json_data_against_schema('ENTITIES', json_data_dict, normalized_entity_type)
     except schema_errors.SchemaValidationException as e:
         # No need to log the validation errors
-        bad_request_error(str(e))
+        abort_bad_req(str(e))
 
     # `direct_ancestor_uuid` is required on create
     # Check existence of the direct ancestor (either another Sample or Source) and get the first 'direct_ancestor_uuid'
@@ -1132,7 +1101,7 @@ def update_activity(id):
                                                          existing_entity_dict=activity_dict)
     except schema_errors.SchemaValidationException as e:
         # No need to log the validation errors
-        bad_request_error(str(e))
+        abort_bad_req(str(e))
 
     # Execute property level validators defined in schema yaml before entity property update
     try:
@@ -1142,7 +1111,7 @@ def update_activity(id):
             schema_errors.InvalidApplicationHeaderException,
             KeyError,
             ValueError) as e:
-        bad_request_error(e)
+        abort_bad_req(e)
 
     # Generate 'before_update_trigger' data and update the entity details in Neo4j
     merged_updated_dict = update_object_details('ACTIVITIES', request, "Activity", user_token, normalized_dict,
@@ -1197,10 +1166,10 @@ def update_entity(id):
 
         if 'pathname' in json_data_dict:
             if not validate_metadata(json_data_dict['pathname'], user_token):
-                bad_request_error("Metadata did not pass validation.")
+                abort_bad_req("Metadata did not pass validation.")
             del json_data_dict['pathname']
         else:
-            bad_request_error("Metadata must be added via the Data Sharing Portal.")
+            abort_bad_req("Metadata must be added via the Data Sharing Portal.")
 
 
     # Normalize user provided status
@@ -1228,7 +1197,7 @@ def update_entity(id):
         schema_manager.validate_json_data_against_schema('ENTITIES', json_data_dict, normalized_entity_type, existing_entity_dict = entity_dict)
     except schema_errors.SchemaValidationException as e:
         # No need to log the validation errors
-        bad_request_error(str(e))
+        abort_bad_req(str(e))
 
     # Execute property level validators defined in schema yaml before entity property update
     try:
@@ -1237,7 +1206,7 @@ def update_entity(id):
             schema_errors.InvalidApplicationHeaderException,
             KeyError,
             ValueError) as e:
-        bad_request_error(e)
+        abort_bad_req(e)
 
     # Sample, Dataset, and Upload: additional validation, update entity, after_update_trigger
     # Collection and Source: update entity
@@ -1252,7 +1221,7 @@ def update_entity(id):
             direct_ancestor_uuid_dict = query_target_entity(direct_ancestor_uuid, user_token)
             # Also make sure it's either another Sample or a Source
             if direct_ancestor_uuid_dict['entity_type'] not in ['Source', 'Sample']:
-                bad_request_error(f"The uuid: {direct_ancestor_uuid} is not a Source neither a Sample, cannot be used as the direct ancestor of this Sample")
+                abort_bad_req(f"The uuid: {direct_ancestor_uuid} is not a Source neither a Sample, cannot be used as the direct ancestor of this Sample")
 
         # Generate 'before_update_triiger' data and update the entity details in Neo4j
         merged_updated_dict = update_object_details('ENTITIES', request, normalized_entity_type, user_token, json_data_dict, entity_dict)
@@ -1288,7 +1257,7 @@ def update_entity(id):
                 dataset_dict = query_target_entity(dataset_uuid, user_token)
                 # Also make sure it's a Dataset
                 if dataset_dict['entity_type'] != 'Dataset':
-                    bad_request_error(f"The uuid: {dataset_uuid} is not a Dataset, cannot be linked to this Upload")
+                    abort_bad_req(f"The uuid: {dataset_uuid} is not a Dataset, cannot be linked to this Upload")
 
         has_dataset_uuids_to_unlink = False
         if ('dataset_uuids_to_unlink' in json_data_dict) and (json_data_dict['dataset_uuids_to_unlink']):
@@ -1401,7 +1370,7 @@ def get_ancestors(id):
 
     # Collection doesn't have ancestors via Activity nodes
     if normalized_entity_type == 'Collection':
-        bad_request_error(f"Unsupported entity type of id {id}: {normalized_entity_type}")
+        abort_bad_req(f"Unsupported entity type of id {id}: {normalized_entity_type}")
 
     if normalized_entity_type == 'Dataset':
         # Only published/public datasets don't require token
@@ -1428,7 +1397,7 @@ def get_ancestors(id):
 
             # Validate the target property
             if property_key not in result_filtering_accepted_property_keys:
-                bad_request_error(f"Only the following property keys are supported in the query string: {COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}")
+                abort_bad_req(f"Only the following property keys are supported in the query string: {COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}")
 
             # Only return a list of the filtered property value of each entity
             property_list = app_neo4j_queries.get_ancestors(neo4j_driver_instance, uuid, property_key)
@@ -1436,7 +1405,7 @@ def get_ancestors(id):
             # Final result
             final_result = property_list
         else:
-            bad_request_error("The specified query string is not supported. Use '?property=<key>' to filter the result")
+            abort_bad_req("The specified query string is not supported. Use '?property=<key>' to filter the result")
     # Return all the details if no property filtering
     else:
         ancestors_list = app_neo4j_queries.get_ancestors(neo4j_driver_instance, uuid)
@@ -1504,7 +1473,7 @@ def get_descendants(id):
 
             # Validate the target property
             if property_key not in result_filtering_accepted_property_keys:
-                bad_request_error(f"Only the following property keys are supported in the query string: {COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}")
+                abort_bad_req(f"Only the following property keys are supported in the query string: {COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}")
 
             # Only return a list of the filtered property value of each entity
             property_list = app_neo4j_queries.get_descendants(neo4j_driver_instance, uuid, property_key)
@@ -1512,7 +1481,7 @@ def get_descendants(id):
             # Final result
             final_result = property_list
         else:
-            bad_request_error("The specified query string is not supported. Use '?property=<key>' to filter the result")
+            abort_bad_req("The specified query string is not supported. Use '?property=<key>' to filter the result")
     # Return all the details if no property filtering
     else:
         descendants_list = app_neo4j_queries.get_descendants(neo4j_driver_instance, uuid)
@@ -1576,7 +1545,7 @@ def get_parents(id):
 
     # Collection doesn't have ancestors via Activity nodes
     if normalized_entity_type == 'Collection':
-        bad_request_error(f"Unsupported entity type of id {id}: {normalized_entity_type}")
+        abort_bad_req(f"Unsupported entity type of id {id}: {normalized_entity_type}")
 
     if normalized_entity_type == 'Dataset':
         # Only published/public datasets don't require token
@@ -1603,7 +1572,7 @@ def get_parents(id):
 
             # Validate the target property
             if property_key not in result_filtering_accepted_property_keys:
-                bad_request_error(f"Only the following property keys are supported in the query string: {COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}")
+                abort_bad_req(f"Only the following property keys are supported in the query string: {COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}")
 
             # Only return a list of the filtered property value of each entity
             property_list = app_neo4j_queries.get_parents(neo4j_driver_instance, uuid, property_key)
@@ -1611,7 +1580,7 @@ def get_parents(id):
             # Final result
             final_result = property_list
         else:
-            bad_request_error("The specified query string is not supported. Use '?property=<key>' to filter the result")
+            abort_bad_req("The specified query string is not supported. Use '?property=<key>' to filter the result")
     # Return all the details if no property filtering
     else:
         parents_list = app_neo4j_queries.get_parents(neo4j_driver_instance, uuid)
@@ -1678,7 +1647,7 @@ def get_children(id):
 
             # Validate the target property
             if property_key not in result_filtering_accepted_property_keys:
-                bad_request_error(f"Only the following property keys are supported in the query string: {COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}")
+                abort_bad_req(f"Only the following property keys are supported in the query string: {COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}")
 
             # Only return a list of the filtered property value of each entity
             property_list = app_neo4j_queries.get_children(neo4j_driver_instance, uuid, property_key)
@@ -1686,7 +1655,7 @@ def get_children(id):
             # Final result
             final_result = property_list
         else:
-            bad_request_error("The specified query string is not supported. Use '?property=<key>' to filter the result")
+            abort_bad_req("The specified query string is not supported. Use '?property=<key>' to filter the result")
     # Return all the details if no property filtering
     else:
         children_list = app_neo4j_queries.get_children(neo4j_driver_instance, uuid)
@@ -1747,7 +1716,7 @@ def get_previous_revisions(id):
 
             # Validate the target property
             if property_key not in result_filtering_accepted_property_keys:
-                bad_request_error(f"Only the following property keys are supported in the query string: {COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}")
+                abort_bad_req(f"Only the following property keys are supported in the query string: {COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}")
 
             # Only return a list of the filtered property value of each entity
             property_list = app_neo4j_queries.get_previous_revisions(neo4j_driver_instance, uuid, property_key)
@@ -1755,7 +1724,7 @@ def get_previous_revisions(id):
             # Final result
             final_result = property_list
         else:
-            bad_request_error("The specified query string is not supported. Use '?property=<key>' to filter the result")
+            abort_bad_req("The specified query string is not supported. Use '?property=<key>' to filter the result")
     # Return all the details if no property filtering
     else:
         descendants_list = app_neo4j_queries.get_previous_revisions(neo4j_driver_instance, uuid)
@@ -1811,7 +1780,7 @@ def get_next_revisions(id):
 
             # Validate the target property
             if property_key not in result_filtering_accepted_property_keys:
-                bad_request_error(f"Only the following property keys are supported in the query string: {COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}")
+                abort_bad_req(f"Only the following property keys are supported in the query string: {COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}")
 
             # Only return a list of the filtered property value of each entity
             property_list = app_neo4j_queries.get_next_revisions(neo4j_driver_instance, uuid, property_key)
@@ -1819,7 +1788,7 @@ def get_next_revisions(id):
             # Final result
             final_result = property_list
         else:
-            bad_request_error("The specified query string is not supported. Use '?property=<key>' to filter the result")
+            abort_bad_req("The specified query string is not supported. Use '?property=<key>' to filter the result")
     # Return all the details if no property filtering
     else:
         descendants_list = app_neo4j_queries.get_next_revisions(neo4j_driver_instance, uuid)
@@ -1873,7 +1842,7 @@ def add_datasets_to_collection(collection_uuid):
     # Query target entity against uuid-api and neo4j and return as a dict if exists
     entity_dict = query_target_entity(collection_uuid, user_token)
     if entity_dict['entity_type'] != 'Collection':
-        bad_request_error(f"The UUID provided in URL is not a Collection: {collection_uuid}")
+        abort_bad_req(f"The UUID provided in URL is not a Collection: {collection_uuid}")
 
     # Always expect a json body
     require_json(request)
@@ -1882,10 +1851,10 @@ def add_datasets_to_collection(collection_uuid):
     json_data_dict = request.get_json()
 
     if 'entity_uuids' not in json_data_dict:
-        bad_request_error("Missing 'entity_uuids' key in the request JSON.")
+        abort_bad_req("Missing 'entity_uuids' key in the request JSON.")
 
     if not json_data_dict['entity_uuids']:
-        bad_request_error("JSON field 'entity_uuids' can not be empty list.")
+        abort_bad_req("JSON field 'entity_uuids' can not be empty list.")
 
     # Now we have a list of uuids
     entity_uuids_list = json_data_dict['entity_uuids']
@@ -1901,7 +1870,7 @@ def add_datasets_to_collection(collection_uuid):
         # Log the full stack trace, prepend a line with our message
         logger.exception(msg)
         # Terminate and let the users know
-        internal_server_error(msg)
+        abort_internal_err(msg)
 
     # Send response with success message
     return jsonify(message = "Successfully added all the specified entities to the target collection")
@@ -1932,7 +1901,7 @@ def doi_redirect(id):
 
     # Only for collection
     if entity_type not in ['Collection', 'Dataset']:
-        bad_request_error("The target entity of the specified id must be a Collection or Dataset")
+        abort_bad_req("The target entity of the specified id must be a Collection or Dataset")
 
     uuid = entity_dict['uuid']
 
@@ -1943,7 +1912,7 @@ def doi_redirect(id):
         # Log the full stack trace, prepend a line with our message
         msg = "Incorrect configuration value for 'DOI_REDIRECT_URL'"
         logger.exception(msg)
-        internal_server_error(msg)
+        abort_internal_err(msg)
 
     rep_entity_type_pattern = re.compile(re.escape('<entity_type>'), re.RegexFlag.IGNORECASE)
     redirect_url = rep_entity_type_pattern.sub(entity_type.lower(), redirect_url)
@@ -2028,7 +1997,7 @@ def get_globus_url(id):
 
     # Only for Dataset and Upload
     if normalized_entity_type not in ['Dataset', 'Upload']:
-        bad_request_error("The target entity of the specified id is not a Dataset nor a Upload")
+        abort_bad_req("The target entity of the specified id is not a Dataset nor a Upload")
 
     # Upload doesn't have this 'data_access_level' property, we treat it as 'protected'
     # For Dataset, if no access level is present, default to protected too
@@ -2044,7 +2013,7 @@ def get_globus_url(id):
     if not 'group_uuid' in entity_dict or string_helper.isBlank(entity_dict['group_uuid']):
         msg = f"The 'group_uuid' property is not set for {normalized_entity_type} with uuid: {uuid}"
         logger.exception(msg)
-        internal_server_error(msg)
+        abort_internal_err(msg)
 
     group_uuid = entity_dict['group_uuid']
 
@@ -2054,7 +2023,7 @@ def get_globus_url(id):
     except schema_errors.NoDataProviderGroupException:
         msg = f"Invalid 'group_uuid': {group_uuid} for {normalized_entity_type} with uuid: {uuid}"
         logger.exception(msg)
-        internal_server_error(msg)
+        abort_internal_err(msg)
 
     group_name = groups_by_id_dict[group_uuid]['displayname']
 
@@ -2066,7 +2035,7 @@ def get_globus_url(id):
         user_info = auth_helper_instance.getUserDataAccessLevel(request)
     # If returns HTTPException with a 401, expired/invalid token
     except HTTPException:
-        unauthorized_error("The provided token is invalid or expired")
+        abort_unauthorized("The provided token is invalid or expired")
 
     # The user is in the Globus group with full access to thie dataset,
     # so they have protected level access to it
@@ -2076,7 +2045,7 @@ def get_globus_url(id):
         if not 'data_access_level' in user_info:
             msg = f"Unexpected error, data access level could not be found for user trying to access {normalized_entity_type} id: {id}"
             logger.exception(msg)
-            return internal_server_error(msg)
+            return abort_internal_err(msg)
 
         user_data_access_level = user_info['data_access_level'].lower()
 
@@ -2106,7 +2075,7 @@ def get_globus_url(id):
         dir_path = dir_path + access_dir + group_name + "/"
 
     if globus_server_uuid is None:
-        forbidden_error("Access not granted")
+        abort_forbidden("Access not granted")
 
     dir_path = dir_path + uuid + "/"
     dir_path = urllib.parse.quote(dir_path, safe='')
@@ -2151,7 +2120,7 @@ def get_dataset_latest_revision(id):
 
     # Only for Dataset
     if normalized_entity_type != 'Dataset':
-        bad_request_error("The entity of given id is not a Dataset")
+        abort_bad_req("The entity of given id is not a Dataset")
 
     latest_revision_dict = {}
 
@@ -2226,7 +2195,7 @@ def get_dataset_revision_number(id):
 
     # Only for Dataset
     if normalized_entity_type != 'Dataset':
-        bad_request_error("The entity of given id is not a Dataset")
+        abort_bad_req("The entity of given id is not a Dataset")
 
     # Only published/public datasets don't require token
     if entity_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
@@ -2280,13 +2249,13 @@ def retract_dataset(id):
     # Must enforce this rule otherwise we'll need to run after update triggers if any other fields
     # get passed in (which should be done using the generic entity update call)
     if 'retraction_reason' not in json_data_dict:
-        bad_request_error("Missing required field: retraction_reason")
+        abort_bad_req("Missing required field: retraction_reason")
 
     if 'sub_status' not in json_data_dict:
-        bad_request_error("Missing required field: sub_status")
+        abort_bad_req("Missing required field: sub_status")
 
     if len(json_data_dict) > 2:
-        bad_request_error("Only retraction_reason and sub_status are allowed fields")
+        abort_bad_req("Only retraction_reason and sub_status are allowed fields")
 
     # Must be a SenNet-Data-Admin group token
     token = get_user_token(request)
@@ -2299,7 +2268,7 @@ def retract_dataset(id):
 
     # A bit more application-level validation
     if normalized_entity_type != 'Dataset':
-        bad_request_error("The entity of given id is not a Dataset")
+        abort_bad_req("The entity of given id is not a Dataset")
 
     # Validate request json against the yaml schema
     # The given value of `sub_status` is being validated at this step
@@ -2307,7 +2276,7 @@ def retract_dataset(id):
         schema_manager.validate_json_data_against_schema('ENTITIES', json_data_dict, normalized_entity_type, existing_entity_dict = entity_dict)
     except schema_errors.SchemaValidationException as e:
         # No need to log the validation errors
-        bad_request_error(str(e))
+        abort_bad_req(str(e))
 
     # Execute property level validators defined in schema yaml before entity property update
     try:
@@ -2316,7 +2285,7 @@ def retract_dataset(id):
             schema_errors.InvalidApplicationHeaderException,
             KeyError,
             ValueError) as e:
-        bad_request_error(e)
+        abort_bad_req(e)
 
     # No need to call after_update() afterwards because retraction doesn't call any after_update_trigger methods
     merged_updated_dict = update_object_details('ENTITIES', request, normalized_entity_type, token, json_data_dict, entity_dict)
@@ -2377,7 +2346,7 @@ def get_revisions_list(id):
 
     # Only for Dataset
     if normalized_entity_type != 'Dataset':
-        bad_request_error("The entity is not a Dataset. Found entity type:" + normalized_entity_type)
+        abort_bad_req("The entity is not a Dataset. Found entity type:" + normalized_entity_type)
 
     # Only published/public datasets don't require token
     if entity_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
@@ -2457,7 +2426,7 @@ def get_associated_organs_from_dataset(id):
 
     # Only for Dataset
     if normalized_entity_type != 'Dataset':
-        bad_request_error("The entity of given id is not a Dataset")
+        abort_bad_req("The entity of given id is not a Dataset")
 
     # published/public datasets don't require token
     if entity_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
@@ -2471,7 +2440,7 @@ def get_associated_organs_from_dataset(id):
     # If there are zero items in the list associated organs, then there are no associated
     # Organs and a 404 will be returned.
     if len(associated_organs) < 1:
-        not_found_error("the dataset does not have any associated organs")
+        abort_not_found("the dataset does not have any associated organs")
 
     complete_entities_list = schema_manager.get_complete_entities_list(token, associated_organs)
 
@@ -2580,11 +2549,11 @@ def get_prov_info():
     if bool(request.args):
         for argument in request.args:
             if argument not in accepted_arguments:
-                bad_request_error(f"{argument} is an unrecognized argument.")
+                abort_bad_req(f"{argument} is an unrecognized argument.")
         return_format = request.args.get('format')
         if return_format is not None:
             if return_format.lower() not in ['json', 'tsv']:
-                bad_request_error(
+                abort_bad_req(
                     "Invalid Format. Accepted formats are json and tsv. If no format is given, TSV will be the default")
             if return_format.lower() == 'json':
                 return_json = True
@@ -2592,10 +2561,10 @@ def get_prov_info():
         if group_uuid is not None:
             groups_by_id_dict = auth_helper_instance.get_globus_groups_info()['by_id']
             if group_uuid not in groups_by_id_dict:
-                bad_request_error(
+                abort_bad_req(
                     f"Invalid Group UUID.")
             if not groups_by_id_dict[group_uuid]['data_provider']:
-                bad_request_error(f"Invalid Group UUID. Group must be a data provider")
+                abort_bad_req(f"Invalid Group UUID. Group must be a data provider")
             param_dict['group_uuid'] = group_uuid
         organ = request.args.get('organ')
         if organ is not None:
@@ -2604,14 +2573,14 @@ def get_prov_info():
         has_rui_info = request.args.get('has_rui_info')
         if has_rui_info is not None:
             if has_rui_info.lower() not in ['true', 'false']:
-                bad_request_error("Invalid value for 'has_rui_info'. Only values of true or false are acceptable")
+                abort_bad_req("Invalid value for 'has_rui_info'. Only values of true or false are acceptable")
             param_dict['has_rui_info'] = has_rui_info
         dataset_status = request.args.get('dataset_status')
         if dataset_status is not None:
             if dataset_status.lower() not in ['new', 'qa', 'published']:
-                bad_request_error("Invalid Dataset Status. Must be 'new', 'qa', or 'published' Case-Insensitive")
+                abort_bad_req("Invalid Dataset Status. Must be 'new', 'qa', or 'published' Case-Insensitive")
             if published_only and dataset_status.lower() != 'published':
-                bad_request_error(f"Invalid Dataset Status. No auth token given or token is not a member of HuBMAP-Read"
+                abort_bad_req(f"Invalid Dataset Status. No auth token given or token is not a member of HuBMAP-Read"
                                   " Group. If no token with HuBMAP-Read Group access is given, only datasets marked "
                                   "'Published' are available. Try again with a proper token, or change/remove "
                                   "dataset_status")
@@ -2835,7 +2804,7 @@ def get_prov_info_for_dataset(id):
 
     # Only for Dataset
     if normalized_entity_type != 'Dataset':
-        bad_request_error("The entity of given id is not a Dataset")
+        abort_bad_req("The entity of given id is not a Dataset")
 
     # published/public datasets don't require token
     if entity_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
@@ -2902,7 +2871,7 @@ def get_prov_info_for_dataset(id):
     uuid = sennet_ids['hm_uuid']
     dataset = app_neo4j_queries.get_individual_prov_info(neo4j_driver_instance, uuid)
     if dataset is None:
-        bad_request_error("Query For this Dataset Returned no Records. Make sure this is a Primary Dataset")
+        abort_bad_req("Query For this Dataset Returned no Records. Make sure this is a Primary Dataset")
     internal_dict = collections.OrderedDict()
     internal_dict[HEADER_DATASET_SENNET_ID] = dataset['sennet_id']
     internal_dict[HEADER_DATASET_UUID] = dataset['uuid']
@@ -3166,14 +3135,14 @@ def get_sample_prov_info():
     if bool(request.args):
         for argument in request.args:
             if argument not in accepted_arguments:
-                bad_request_error(f"{argument} is an unrecognized argument.")
+                abort_bad_req(f"{argument} is an unrecognized argument.")
         group_uuid = request.args.get('group_uuid')
         if group_uuid is not None:
             groups_by_id_dict = auth_helper_instance.get_globus_groups_info()['by_id']
             if group_uuid not in groups_by_id_dict:
-                bad_request_error(f"Invalid Group UUID.")
+                abort_bad_req(f"Invalid Group UUID.")
             if not groups_by_id_dict[group_uuid]['data_provider']:
-                bad_request_error(f"Invalid Group UUID. Group must be a data provider")
+                abort_bad_req(f"Invalid Group UUID. Group must be a data provider")
             param_dict['group_uuid'] = group_uuid
 
     # Instantiation of the list sample_prov_list
@@ -3305,61 +3274,6 @@ def validate_constraints_new():
 ## Internal Functions
 ####################################################################################################
 
-"""
-Throws error for 400 Bad Reqeust with message
-
-Parameters
-----------
-err_msg : str
-    The custom error message to return to end users
-"""
-def bad_request_error(err_msg):
-    abort(400, description = err_msg)
-
-"""
-Throws error for 401 Unauthorized with message
-
-Parameters
-----------
-err_msg : str
-    The custom error message to return to end users
-"""
-def unauthorized_error(err_msg):
-    abort(401, description = err_msg)
-
-"""
-Throws error for 403 Forbidden with message
-
-Parameters
-----------
-err_msg : str
-    The custom error message to return to end users
-"""
-def forbidden_error(err_msg):
-    abort(403, description = err_msg)
-
-"""
-Throws error for 404 Not Found with message
-
-Parameters
-----------
-err_msg : str
-    The custom error message to return to end users
-"""
-def not_found_error(err_msg):
-    abort(404, description = err_msg)
-
-"""
-Throws error for 500 Internal Server Error with message
-
-Parameters
-----------
-err_msg : str
-    The custom error message to return to end users
-"""
-def internal_server_error(err_msg):
-    abort(500, description = err_msg)
-
 
 """
 Parase the token from Authorization header
@@ -3385,7 +3299,7 @@ def get_user_token(request, non_public_access_required = False):
         msg = "Failed to parse the Authorization token by calling commons.auth_helper.getAuthorizationTokens()"
         # Log the full stack trace, prepend a line with our message
         logger.exception(msg)
-        internal_server_error(msg)
+        abort_internal_err(msg)
 
     # Further check the validity of the token if required non-public access
     if non_public_access_required:
@@ -3395,14 +3309,14 @@ def get_user_token(request, non_public_access_required = False):
         if isinstance(user_token, Response):
             # We wrap the message in a json and send back to requester as 401 too
             # The Response.data returns binary string, need to decode
-            unauthorized_error(user_token.get_data().decode())
+            abort_unauthorized(user_token.get_data().decode())
 
         # By now the token is already a valid token
         # But we also need to ensure the user belongs to SenNet-Read group
         # in order to access the non-public entity
         # Return a 403 response if the user doesn't belong to SenNet-READ group
         if not user_in_sennet_read_group(request):
-            forbidden_error("Access not granted")
+            abort_forbidden("Access not granted")
 
     return user_token
 
@@ -3464,14 +3378,14 @@ def validate_token_if_auth_header_exists(request):
         if isinstance(user_token, Response):
             # We wrap the message in a json and send back to requester as 401 too
             # The Response.data returns binary string, need to decode
-            unauthorized_error(user_token.get_data().decode())
+            abort_unauthorized(user_token.get_data().decode())
 
         # Also check if the parased token is invalid or expired
         # Set the second paremeter as False to skip group check
         user_info = auth_helper_instance.getUserInfo(user_token, False)
 
         if isinstance(user_info, Response):
-            unauthorized_error(user_info.get_data().decode())
+            abort_unauthorized(user_info.get_data().decode())
 
 
 """
@@ -3559,18 +3473,18 @@ def create_entity_details(request, normalized_entity_type, user_token, json_data
             msg = "The user does not have the correct Globus group associated with, can't create the entity"
 
         logger.exception(msg)
-        bad_request_error(msg)
+        abort_bad_req(msg)
     except schema_errors.UnmatchedDataProviderGroupException:
         msg = "The user does not belong to the given Globus group, can't create the entity"
         logger.exception(msg)
-        forbidden_error(msg)
+        abort_forbidden(msg)
     except schema_errors.MultipleDataProviderGroupException:
         msg = "The user has mutiple Globus groups associated with, please specify one using 'group_uuid'"
         logger.exception(msg)
-        bad_request_error(msg)
+        abort_bad_req(msg)
     except KeyError as e:
         logger.exception(e)
-        bad_request_error(e)
+        abort_bad_req(e)
     except requests.exceptions.RequestException as e:
         msg = f"Failed to create new SenNet ids via the uuid-api service"
         logger.exception(msg)
@@ -3580,11 +3494,11 @@ def create_entity_details(request, normalized_entity_type, user_token, json_data
         status_code = e.response.status_code
 
         if status_code == 400:
-            bad_request_error(e.response.text)
+            abort_bad_req(e.response.text)
         if status_code == 404:
-            not_found_error(e.response.text)
+            abort_not_found(e.response.text)
         else:
-            internal_server_error(e.response.text)
+            abort_internal_err(e.response.text)
 
     # Merge all the above dictionaries and pass to the trigger methods
     new_data_dict = {**json_data_dict, **user_info_dict, **new_ids_dict}
@@ -3597,7 +3511,7 @@ def create_entity_details(request, normalized_entity_type, user_token, json_data
         # Log the full stack trace, prepend a line with our message
         msg = "Failed to execute one of the 'before_create_trigger' methods, can't create the entity"
         logger.exception(msg)
-        internal_server_error(msg)
+        abort_internal_err(msg)
     except schema_errors.NoDataProviderGroupException:
         # Log the full stack trace, prepend a line with our message
         if 'group_uuid' in json_data_dict:
@@ -3606,28 +3520,28 @@ def create_entity_details(request, normalized_entity_type, user_token, json_data
             msg = "The user does not have the correct Globus group associated with, can't create the entity"
 
         logger.exception(msg)
-        bad_request_error(msg)
+        abort_bad_req(msg)
     except schema_errors.UnmatchedDataProviderGroupException:
         # Log the full stack trace, prepend a line with our message
         msg = "The user does not belong to the given Globus group, can't create the entity"
         logger.exception(msg)
-        forbidden_error(msg)
+        abort_forbidden(msg)
     except schema_errors.MultipleDataProviderGroupException:
         # Log the full stack trace, prepend a line with our message
         msg = "The user has mutiple Globus groups associated with, please specify one using 'group_uuid'"
         logger.exception(msg)
-        bad_request_error(msg)
+        abort_bad_req(msg)
     # If something wrong with file upload
     except schema_errors.FileUploadException as e:
         logger.exception(e)
-        internal_server_error(e)
+        abort_internal_err(e)
     except KeyError as e:
         # Log the full stack trace, prepend a line with our message
         logger.exception(e)
-        bad_request_error(e)
+        abort_bad_req(e)
     except Exception as e:
         logger.exception(e)
-        internal_server_error(e)
+        abort_internal_err(e)
 
     # Merge the user json data and generated trigger data into one dictionary
     merged_dict = {**json_data_dict, **generated_before_create_trigger_data_dict}
@@ -3649,7 +3563,7 @@ def create_entity_details(request, normalized_entity_type, user_token, json_data
         # Log the full stack trace, prepend a line with our message
         logger.exception(msg)
         # Terminate and let the users know
-        internal_server_error(msg)
+        abort_internal_err(msg)
 
 
     # Important: use `entity_dict` instead of `filtered_merged_dict` to keep consistent with the stored
@@ -3703,21 +3617,21 @@ def create_multiple_samples_details(request, normalized_entity_type, user_token,
             msg = "The user does not have the correct Globus group associated with, can't create the entity"
 
         logger.exception(msg)
-        bad_request_error(msg)
+        abort_bad_req(msg)
     except schema_errors.UnmatchedDataProviderGroupException:
         # Log the full stack trace, prepend a line with our message
         msg = "The user does not belong to the given Globus group, can't create the entity"
         logger.exception(msg)
-        forbidden_error(msg)
+        abort_forbidden(msg)
     except schema_errors.MultipleDataProviderGroupException:
         # Log the full stack trace, prepend a line with our message
         msg = "The user has mutiple Globus groups associated with, please specify one using 'group_uuid'"
         logger.exception(msg)
-        bad_request_error(msg)
+        abort_bad_req(msg)
     except KeyError as e:
         # Log the full stack trace, prepend a line with our message
         logger.exception(e)
-        bad_request_error(e)
+        abort_bad_req(e)
     except requests.exceptions.RequestException as e:
         msg = f"Failed to create new SenNet ids via the uuid-api service"
         logger.exception(msg)
@@ -3727,11 +3641,11 @@ def create_multiple_samples_details(request, normalized_entity_type, user_token,
         status_code = e.response.status_code
 
         if status_code == 400:
-            bad_request_error(e.response.text)
+            abort_bad_req(e.response.text)
         if status_code == 404:
-            not_found_error(e.response.text)
+            abort_not_found(e.response.text)
         else:
-            internal_server_error(e.response.text)
+            abort_internal_err(e.response.text)
 
     # Use the same json_data_dict and user_info_dict for each sample
     # Only difference is the `uuid` and `sennet_id` that are generated
@@ -3749,7 +3663,7 @@ def create_multiple_samples_details(request, normalized_entity_type, user_token,
         # Log the full stack trace, prepend a line with our message
         msg = "Failed to execute one of the 'before_create_trigger' methods, can't create the entity"
         logger.exception(msg)
-        internal_server_error(msg)
+        abort_internal_err(msg)
     except schema_errors.NoDataProviderGroupException:
         # Log the full stack trace, prepend a line with our message
         if 'group_uuid' in json_data_dict:
@@ -3758,24 +3672,24 @@ def create_multiple_samples_details(request, normalized_entity_type, user_token,
             msg = "The user does not have the correct Globus group associated with, can't create the entity"
 
         logger.exception(msg)
-        bad_request_error(msg)
+        abort_bad_req(msg)
     except schema_errors.UnmatchedDataProviderGroupException:
         # Log the full stack trace, prepend a line with our message
         msg = "The user does not belong to the given Globus group, can't create the entity"
         logger.exception(msg)
-        forbidden_error(msg)
+        abort_forbidden(msg)
     except schema_errors.MultipleDataProviderGroupException:
         # Log the full stack trace, prepend a line with our message
         msg = "The user has mutiple Globus groups associated with, please specify one using 'group_uuid'"
         logger.exception(msg)
-        bad_request_error(msg)
+        abort_bad_req(msg)
     except KeyError as e:
         # Log the full stack trace, prepend a line with our message
         logger.exception(e)
-        bad_request_error(e)
+        abort_bad_req(e)
     except Exception as e:
         logger.exception(e)
-        internal_server_error(e)
+        abort_internal_err(e)
 
     # Merge the user json data and generated trigger data into one dictionary
     merged_dict = {**json_data_dict, **generated_before_create_trigger_data_dict}
@@ -3806,7 +3720,7 @@ def create_multiple_samples_details(request, normalized_entity_type, user_token,
         # Log the full stack trace, prepend a line with our message
         logger.exception(msg)
         # Terminate and let the users know
-        internal_server_error(msg)
+        abort_internal_err(msg)
 
     # Return the generated ids for UI
     return new_ids_dict_list
@@ -3835,10 +3749,10 @@ def after_create(normalized_entity_type, user_token, merged_data_dict):
         # Log the full stack trace, prepend a line with our message
         msg = "The entity has been created, but failed to execute one of the 'after_create_trigger' methods"
         logger.exception(msg)
-        internal_server_error(msg)
+        abort_internal_err(msg)
     except Exception as e:
         logger.exception(e)
-        internal_server_error(e)
+        abort_internal_err(e)
 
 
 """
@@ -3874,16 +3788,16 @@ def update_object_details(provenance_type, request, normalized_entity_type, user
     # If something wrong with file upload
     except schema_errors.FileUploadException as e:
         logger.exception(e)
-        internal_server_error(e)
+        abort_internal_err(e)
     # If one of the before_update_trigger methods fails, we can't update the entity
     except schema_errors.BeforeUpdateTriggerException:
         # Log the full stack trace, prepend a line with our message
         msg = "Failed to execute one of the 'before_update_trigger' methods, can't update the entity"
         logger.exception(msg)
-        internal_server_error(msg)
+        abort_internal_err(msg)
     except Exception as e:
         logger.exception(e)
-        internal_server_error(e)
+        abort_internal_err(e)
 
     # Merge dictionaries
     merged_dict = {**json_data_dict, **generated_before_update_trigger_data_dict}
@@ -3907,7 +3821,7 @@ def update_object_details(provenance_type, request, normalized_entity_type, user
         # Log the full stack trace, prepend a line with our message
         logger.exception(msg)
         # Terminate and let the users know
-        internal_server_error(msg)
+        abort_internal_err(msg)
 
     # Important: use `updated_entity_dict` instead of `filtered_merged_dict` to keep consistent with the stored
     # string expression literals of Python list/dict being used with entity update, e.g., `image_files`
@@ -3944,10 +3858,10 @@ def after_update(normalized_entity_type, user_token, entity_dict):
         # Log the full stack trace, prepend a line with our message
         msg = "The entity information has been updated, but failed to execute one of the 'after_update_trigger' methods"
         logger.exception(msg)
-        internal_server_error(msg)
+        abort_internal_err(msg)
     except Exception as e:
         logger.exception(e)
-        internal_server_error(e)
+        abort_internal_err(e)
 
 
 """
@@ -3990,7 +3904,7 @@ def query_target_activity(id, user_token):
 
         # The uuid exists via uuid-api doesn't mean it's also in Neo4j
         if not entity_dict:
-            not_found_error(f"Activity of id: {id} not found in Neo4j")
+            abort_not_found(f"Activity of id: {id} not found in Neo4j")
 
         return entity_dict
     except requests.exceptions.RequestException as e:
@@ -3999,11 +3913,11 @@ def query_target_activity(id, user_token):
         status_code = e.response.status_code
 
         if status_code == 400:
-            bad_request_error(e.response.text)
+            abort_bad_req(e.response.text)
         if status_code == 404:
-            not_found_error(e.response.text)
+            abort_not_found(e.response.text)
         else:
-            internal_server_error(e.response.text)
+            abort_internal_err(e.response.text)
 
 
 """
@@ -4056,7 +3970,7 @@ def query_target_entity(id, user_token):
 
             # The uuid exists via uuid-api doesn't mean it's also in Neo4j
             if not entity_dict:
-                not_found_error(f"Entity of id: {id} not found in Neo4j")
+                abort_not_found(f"Entity of id: {id} not found in Neo4j")
 
         except requests.exceptions.RequestException as e:
             # Due to the use of response.raise_for_status() in schema_manager.get_sennet_ids()
@@ -4064,11 +3978,11 @@ def query_target_entity(id, user_token):
             status_code = e.response.status_code
 
             if status_code == 400:
-                bad_request_error(e.response.text)
+                abort_bad_req(e.response.text)
             if status_code == 404:
-                not_found_error(e.response.text)
+                abort_not_found(e.response.text)
             else:
-                internal_server_error(e.response.text)
+                abort_internal_err(e.response.text)
     else:
         logger.info(f'Using the cache data of entity {id} at time {current_datetime}')
 
@@ -4100,7 +4014,7 @@ def query_activity_was_generated_by(id, user_token):
 
         # The uuid exists via uuid-api doesn't mean it's also in Neo4j
         if not activity_dict:
-            not_found_error(f"Activity connected to id: {id} not found in Neo4j")
+            abort_not_found(f"Activity connected to id: {id} not found in Neo4j")
 
         return activity_dict
     except requests.exceptions.RequestException as e:
@@ -4109,11 +4023,11 @@ def query_activity_was_generated_by(id, user_token):
         status_code = e.response.status_code
 
         if status_code == 400:
-            bad_request_error(e.response.text)
+            abort_bad_req(e.response.text)
         if status_code == 404:
-            not_found_error(e.response.text)
+            abort_not_found(e.response.text)
         else:
-            internal_server_error(e.response.text)
+            abort_internal_err(e.response.text)
 
 """
 Always expect a json body from user request
@@ -4123,7 +4037,7 @@ request : Flask request object
 """
 def require_json(request):
     if not request.is_json:
-        bad_request_error("A json body and appropriate Content-Type header are required")
+        abort_bad_req("A json body and appropriate Content-Type header are required")
 
 
 """
@@ -4154,7 +4068,7 @@ def reindex_entity(uuid, user_token):
         # Log the full stack trace, prepend a line with our message
         logger.exception(msg)
         # Terminate and let the users know
-        internal_server_error(msg)
+        abort_internal_err(msg)
 
 """
 Create a dict of HTTP Authorization header with Bearer token for making calls to uuid-api
@@ -4226,7 +4140,7 @@ Ensures that a given organ code matches what is found on the organ_types yaml do
 
 organ_code : str
 
-Returns nothing. Raises bad_request_error is organ code not found on organ_types.yaml 
+Returns nothing. Raises abort_bad_req is organ code not found on organ_types.yaml 
 """
 
 
@@ -4241,7 +4155,7 @@ def validate_organ_code(organ_code):
     #         organ_types_dict = yaml.safe_load(response.text)
     #
     #         if organ_code.upper() not in organ_types_dict:
-    #             bad_request_error(f"Invalid Organ. Organ must be 2 digit code, case-insensitive located at {yaml_file_url}")
+    #             abort_bad_req(f"Invalid Organ. Organ must be 2 digit code, case-insensitive located at {yaml_file_url}")
     #     except yaml.YAMLError as e:
     #         raise yaml.YAMLError(e)
     # else:
@@ -4256,7 +4170,7 @@ def validate_organ_code(organ_code):
     #     logger.debug(response.text)
     #
     #     # Terminate and let the users know
-    #     internal_server_error(f"Failed to validate the organ code: {organ_code}")
+    #     abort_internal_err(f"Failed to validate the organ code: {organ_code}")
 
 
 """
@@ -4286,7 +4200,7 @@ def validate_metadata(pathname, user_token):
         # Log the full stack trace, prepend a line with our message
         logger.exception(msg)
         # Terminate and let the users know
-        internal_server_error(msg)
+        abort_internal_err(msg)
 
     return False
 
