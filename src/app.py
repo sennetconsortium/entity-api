@@ -1,7 +1,6 @@
 import collections
-import yaml
 from datetime import datetime
-from flask import Flask, g, jsonify, abort, request, Response, redirect, make_response
+from flask import Flask, g, jsonify
 from neo4j.exceptions import TransactionError
 import os
 import re
@@ -30,9 +29,9 @@ from hubmap_commons import neo4j_driver
 from hubmap_commons.hm_auth import AuthHelper
 from hubmap_commons.exceptions import HTTPException
 
-# Consortia commons
-from consortia_commons.ubkg import initialize_ubkg
-from consortia_commons.rest import *
+# Atlas Consortia commons
+from atlas_consortia_commons.ubkg import initialize_ubkg
+from atlas_consortia_commons.rest import *
 
 # Root logger configuration
 global logger
@@ -62,6 +61,23 @@ app.config['SEARCH_API_URL'] = app.config['SEARCH_API_URL'].strip('/')
 
 # Suppress InsecureRequestWarning warning when requesting status on https with ssl cert verify disabled
 requests.packages.urllib3.disable_warnings(category = InsecureRequestWarning)
+
+
+####################################################################################################
+## UBKG Ontology and REST initialization
+####################################################################################################
+
+try:
+    for exception in get_http_exceptions_classes():
+        app.register_error_handler(exception, abort_err_handler)
+    ubkg_instance = initialize_ubkg(app.config)
+
+    logger.info("Initialized ubkg module successfully :)")
+# Use a broad catch-all here
+except Exception:
+    msg = "Failed to initialize the ubkg module"
+    # Log the full stack trace, prepend a line with our message
+    logger.exception(msg)
 
 
 ####################################################################################################
@@ -110,21 +126,6 @@ def close_neo4j_driver(error):
         neo4j_driver.close()
         # Also remove neo4j_driver_instance from Flask's application context
         g.neo4j_driver_instance = None
-
-
-####################################################################################################
-## UBKG Ontology initialization
-####################################################################################################
-
-try:
-    ubkg_instance = initialize_ubkg(app.config)
-
-    logger.info("Initialized ubkg module successfully :)")
-# Use a broad catch-all here
-except Exception:
-    msg = "Failed to initialize the ubkg module"
-    # Log the full stack trace, prepend a line with our message
-    logger.exception(msg)
 
 
 
