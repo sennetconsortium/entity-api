@@ -1,4 +1,4 @@
-from lib.ontology import get_entities, Entities, SpecimenCategory, Organs, DataTypes
+from lib.ontology_old import get_entities, Entities, SpecimenCategory, Organs, DataTypes
 from lib.constraints.base import build_constraint, build_constraint_unit
 
 

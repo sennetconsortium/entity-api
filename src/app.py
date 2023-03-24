@@ -32,6 +32,7 @@ from hubmap_commons.exceptions import HTTPException
 # Atlas Consortia commons
 from atlas_consortia_commons.ubkg import initialize_ubkg
 from atlas_consortia_commons.rest import *
+from lib.ontology import init_ontology, Ontology
 
 # Root logger configuration
 global logger
@@ -70,7 +71,9 @@ requests.packages.urllib3.disable_warnings(category = InsecureRequestWarning)
 try:
     for exception in get_http_exceptions_classes():
         app.register_error_handler(exception, abort_err_handler)
-    ubkg_instance = initialize_ubkg(app.config)
+    app.ubkg = initialize_ubkg(app.config)
+    with app.app_context():
+        init_ontology()
 
     logger.info("Initialized ubkg module successfully :)")
 # Use a broad catch-all here
@@ -142,7 +145,7 @@ try:
                               app.config['SEARCH_API_URL'],
                               auth_helper_instance,
                               neo4j_driver_instance,
-                              ubkg_instance)
+                              app.ubkg)
 
     logger.info("Initialized schema_manager module successfully :)")
 # Use a broad catch-all here
@@ -2517,8 +2520,8 @@ def get_prov_info():
     HEADER_PROCESSED_DATASET_SENNET_ID = 'processed_dataset_sennet_id'
     HEADER_PROCESSED_DATASET_STATUS = 'processed_dataset_status'
     HEADER_PROCESSED_DATASET_PORTAL_URL = 'processed_dataset_portal_url'
-    ASSAY_TYPES = ubkg_instance.get_ubkg_by_endpoint(ubkg_instance.assay_types)
-    ORGAN_TYPES = ubkg_instance.get_ubkg_valueset(ubkg_instance.organ_types)
+    ASSAY_TYPES = Ontology.assay_types()
+    ORGAN_TYPES = app.ubkg.get_ubkg_valueset(app.ubkg.organ_types)
     HEADER_PREVIOUS_VERSION_SENNET_IDS = 'previous_version_sennet_ids'
 
     headers = [
@@ -2611,14 +2614,11 @@ def get_prov_info():
         # Data type codes are replaced with data type descriptions
         assay_description_list = []
         for item in dataset['data_types']:
-            valid_key = False
-            for assay_type in ASSAY_TYPES:
-                if assay_type['data_type'] == item:
-                    assay_description_list.append(assay_type['description'])
-                    valid_key = True
-                    break
-            if valid_key is False:
+            try:
+                assay_description_list.append(ASSAY_TYPES[item].value['description'])
+            except Exception:
                 assay_description_list.append(item)
+
         dataset['data_types'] = assay_description_list
         internal_dict[HEADER_DATASET_DATA_TYPES] = dataset['data_types']
 
@@ -2849,8 +2849,8 @@ def get_prov_info_for_dataset(id):
     HEADER_PROCESSED_DATASET_SENNET_ID = 'processed_dataset_sennet_id'
     HEADER_PROCESSED_DATASET_STATUS = 'processed_dataset_status'
     HEADER_PROCESSED_DATASET_PORTAL_URL = 'processed_dataset_portal_url'
-    ASSAY_TYPES = ubkg_instance.get_ubkg_by_endpoint(ubkg_instance.assay_types)
-    ORGAN_TYPES = ubkg_instance.get_ubkg_valueset(ubkg_instance.organ_types)
+    ASSAY_TYPES = Ontology.assay_types()
+    ORGAN_TYPES = app.ubkg.get_ubkg_valueset(app.ubkg.organ_types)
 
     headers = [
         HEADER_DATASET_UUID, HEADER_DATASET_SENNET_ID, HEADER_DATASET_STATUS, HEADER_DATASET_GROUP_NAME,
@@ -2889,14 +2889,11 @@ def get_prov_info_for_dataset(id):
     # Data type codes are replaced with data type descriptions
     assay_description_list = []
     for item in dataset['data_types']:
-        valid_key = False
-        for assay_type in ASSAY_TYPES:
-            if assay_type['data_type'] == item:
-                assay_description_list.append(assay_type['description'])
-                valid_key = True
-                break
-        if valid_key is False:
+        try:
+            assay_description_list.append(ASSAY_TYPES[item].value['description'])
+        except Exception:
             assay_description_list.append(item)
+
     dataset['data_types'] = assay_description_list
     internal_dict[HEADER_DATASET_DATA_TYPES] = dataset['data_types']
     if return_json is False:
@@ -3048,8 +3045,8 @@ def sankey_data():
     HEADER_ORGAN_TYPE = 'organ_type'
     HEADER_DATASET_DATA_TYPES = 'dataset_data_types'
     HEADER_DATASET_STATUS = 'dataset_status'
-    ASSAY_TYPES = ubkg_instance.get_ubkg_by_endpoint(ubkg_instance.assay_types)
-    ORGAN_TYPES = ubkg_instance.get_ubkg_valueset(ubkg_instance.organ_types)
+    ASSAY_TYPES = Ontology.assay_types()
+    ORGAN_TYPES = app.ubkg.get_ubkg_valueset(app.ubkg.organ_types)
     with open('sankey_mapping.json') as f:
         mapping_dict = json.load(f)
 
@@ -3069,15 +3066,11 @@ def sankey_data():
         # Data type codes are replaced with data type descriptions
         assay_description = ""
 
-        valid_key = False
-        for assay_type in ASSAY_TYPES:
-            if assay_type['data_type'] == dataset[HEADER_DATASET_DATA_TYPES] or dataset[HEADER_DATASET_DATA_TYPES] in \
-                    assay_type['alt-names']:
-                assay_description = assay_type['description']
-                valid_key = True
-                break
-        if valid_key is False:
+        try:
+            assay_description = ASSAY_TYPES[dataset[HEADER_DATASET_DATA_TYPES]].value['description']
+        except Exception:
             assay_description = dataset[HEADER_DATASET_DATA_TYPES]
+
         internal_dict[HEADER_DATASET_DATA_TYPES] = assay_description
 
         # Replace applicable Group Name and Data type with the value needed for the sankey via the mapping_dict
@@ -3128,7 +3121,7 @@ def get_sample_prov_info():
     HEADER_ORGAN_UUID = "organ_uuid"
     HEADER_ORGAN_TYPE = "organ_type"
     HEADER_ORGAN_SENNET_ID = "organ_sennet_id"
-    ORGAN_TYPES = ubkg_instance.get_ubkg_valueset(ubkg_instance.organ_types)
+    ORGAN_TYPES = app.ubkg.get_ubkg_valueset(app.ubkg.organ_types)
 
     # Processing and validating query parameters
     accepted_arguments = ['group_uuid']
@@ -4146,7 +4139,7 @@ Returns nothing. Raises abort_bad_req is organ code not found on organ_types.yam
 
 
 def validate_organ_code(organ_code):
-    ORGAN_TYPES = ubkg_instance.get_ubkg_valueset(ubkg_instance.organ_types)
+    ORGAN_TYPES = app.ubkg.get_ubkg_valueset(app.ubkg.organ_types)
 
     # TODO: Need to update this code once Ontology Organ Types endpoint is update
     # if response.status_code == 200:

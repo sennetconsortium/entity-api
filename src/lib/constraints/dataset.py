@@ -1,5 +1,5 @@
 from lib.constraints.base import build_constraint, build_constraint_unit, build_search_constraint_unit
-from lib.ontology import Entities, SpecimenCategory, Organs
+from lib.ontology_old import Entities, SpecimenCategory, Organs
 
 
 # can be the descendant of / --->

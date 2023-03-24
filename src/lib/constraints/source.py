@@ -1,4 +1,4 @@
-from lib.ontology import Entities, SpecimenCategory
+from lib.ontology_old import Entities, SpecimenCategory
 from lib.constraints.base import build_constraint, build_constraint_unit
 
 
