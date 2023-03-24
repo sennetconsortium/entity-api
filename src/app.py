@@ -3248,7 +3248,7 @@ def validate_constraints_new():
 
     entry_json = request.get_json()
     results = []
-    final_result = rest_ok({})
+    final_result = rest_ok({}, True)
 
     index = 0
     for constraint in entry_json:
@@ -3259,7 +3259,7 @@ def validate_constraints_new():
             result = get_constraints_by_ancestor(constraint, bool(is_match), use_case)
 
         if result.get('code') is not StatusCodes.OK:
-            final_result = rest_bad_req({})
+            final_result = rest_bad_req({}, True)
 
         if report_type == 'ln_err':
             if result.get('code') is not StatusCodes.OK:

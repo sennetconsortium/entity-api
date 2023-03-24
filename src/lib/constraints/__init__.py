@@ -117,13 +117,13 @@ def validate_exclusions(entry, constraint, key) -> bool:
 def get_constraints(entry, key1, key2, is_match=False, use_case=None) -> dict:
     entry_key1 = get_constraint_unit(entry.get(key1))
     msg = f"Missing `{key1}` in request. Use orders=ancestors|descendants request param to specify. Default: ancestors"
-    result = rest_bad_req(msg) if is_match else rest_ok("Nothing to validate.")
+    result = rest_bad_req(msg, True) if is_match else rest_ok("Nothing to validate.", True)
 
     if entry_key1 is not None:
         report = determine_constraint_from_entity(entry_key1, use_case)
         constraints = report.get('constraints')
         if report.get('error') is not None and not constraints:
-            result = rest_bad_req(report.get('error'))
+            result = rest_bad_req(report.get('error'), True)
 
         for constraint in constraints:
             const_key1 = get_constraint_unit(constraint.get(key1))
@@ -134,14 +134,14 @@ def get_constraints(entry, key1, key2, is_match=False, use_case=None) -> dict:
                 if is_match:
                     entry_key2 = entry.get(key2)
                     if entry_key2 is not None and validate_constraint_units_to_entry_units(entry_key2, const_key2):
-                        result = rest_ok(const_key2)
+                        result = rest_ok(const_key2, True)
                     else:
-                        result = rest_response(StatusCodes.NOT_FOUND, f"Match not found. Valid `{key2}` in description.", const_key2)
+                        result = rest_response(StatusCodes.NOT_FOUND, f"Match not found. Valid `{key2}` in description.", const_key2, True)
                 else:
-                    result = rest_ok(const_key2)
+                    result = rest_ok(const_key2, True)
                 break
 
             else:
-                result = rest_response(StatusCodes.NOT_FOUND, f"No matching constraints on given `{key1}`", None)
+                result = rest_response(StatusCodes.NOT_FOUND, f"No matching constraints on given `{key1}`", None, True)
 
     return result
