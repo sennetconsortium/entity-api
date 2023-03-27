@@ -12,7 +12,7 @@ def _get_obj_type(in_enum):
     return 'enum' if in_enum else 'class'
 
 def _get_response(obj):
-    if get_from_node(obj, 'endpoint'):
+    if type(obj) is not str and get_from_node(obj, 'endpoint'):
         return current_app.ubkg.get_ubkg_by_endpoint(obj)
     else:
         return current_app.ubkg.get_ubkg_valueset(obj)
@@ -76,8 +76,8 @@ class Ontology:
         return Ontology._as_list_or_class(entities(as_arr), as_arr, cb)
 
     @staticmethod
-    def assay_types(as_arr: bool = False, cb=str):
-        return Ontology._as_list_or_class(assay_types(as_arr), as_arr, cb)
+    def assay_types(as_arr: bool = False, cb=str, as_data_dict: bool = True):
+        return Ontology._as_list_or_class(assay_types(as_arr, as_data_dict), as_arr, cb)
 
     @staticmethod
     def specimen_categories(as_arr: bool = False, cb=str):
