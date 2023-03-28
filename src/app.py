@@ -4295,11 +4295,16 @@ def check_for_metadata(entity_type, user_token):
     # Parse incoming json string into json data(python dict object)
     json_data_dict = request.get_json()
 
+    # Convert `ingest_metadata` from pipeline to `metadata`
+    if 'ingest_metadata' in json_data_dict:
+        json_data_dict['metadata'] = json_data_dict['ingest_metadata']
+        del json_data_dict['ingest_metadata']
+
     if 'metadata' in json_data_dict:
         if isinstance(json_data_dict['metadata'], list):
             json_data_dict['metadata'] = json_data_dict['metadata'][0]
 
-        # TODO: add a validation check (validate_metadata). For now we want this to accept pipeline Dataset metadta
+        # TODO: add a validation check (validate_metadata). For now we want this to accept pipeline Dataset metadata
         if entity_type == 'Dataset':
             return json_data_dict
 
