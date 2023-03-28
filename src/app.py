@@ -4299,6 +4299,10 @@ def check_for_metadata(entity_type, user_token):
         if isinstance(json_data_dict['metadata'], list):
             json_data_dict['metadata'] = json_data_dict['metadata'][0]
 
+        # TODO: add a validation check (validate_metadata). For now we want this to accept pipeline Dataset metadta
+        if entity_type == 'Dataset':
+            return json_data_dict
+
         if 'pathname' in json_data_dict['metadata']:
             data = {
                 'pathname': json_data_dict['metadata']['pathname'],
