@@ -4,8 +4,9 @@ class SchemaConstants(object):
 
     # Constants used by validators
     INGEST_API_APP = 'ingest-api'
+    INGEST_PIPELINE_APP = 'ingest-pipeline'
     # HTTP header names are case-insensitive
-    HUBMAP_APP_HEADER = 'X-SenNet-Application'
+    SENNET_APP_HEADER = 'X-SenNet-Application'
     DATASET_STATUS_PUBLISHED = 'published'
 
     # Used by triggers, all lowercase for easy comparision
