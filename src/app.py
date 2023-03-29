@@ -4308,16 +4308,17 @@ def check_for_metadata(entity_type, user_token):
         if entity_type == 'Dataset':
             return json_data_dict
 
-        if 'pathname' in json_data_dict['metadata']:
-            data = {
-                'pathname': json_data_dict['metadata']['pathname'],
-                'entity_type': entity_type,
-                'sub_type': json_data_dict.get('sample_category')
-            }
-            if not validate_metadata(data, user_token):
-                bad_request_error("Metadata did not pass validation.")
-        else:
-            bad_request_error("Missing `pathname` in metadata. (Metadata must be added via the Data Sharing Portal.)")
+        if json_data_dict['metadata']:
+            if 'pathname' in json_data_dict['metadata']:
+                data = {
+                    'pathname': json_data_dict['metadata']['pathname'],
+                    'entity_type': entity_type,
+                    'sub_type': json_data_dict.get('sample_category')
+                }
+                if not validate_metadata(data, user_token):
+                    bad_request_error("Metadata did not pass validation.")
+            else:
+                bad_request_error("Missing `pathname` in metadata. (Metadata must be added via the Data Sharing Portal.)")
 
     return json_data_dict
 
