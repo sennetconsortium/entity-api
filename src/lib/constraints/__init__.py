@@ -5,6 +5,7 @@ from lib.constraints.dataset import *
 from deepdiff import DeepDiff
 
 from atlas_consortia_commons.rest import rest_ok, rest_response, StatusCodes, rest_bad_req
+from lib.ontology import Ontology, enum_val_lower
 
 
 def build_source_constraints(entity) -> list:
@@ -21,11 +22,11 @@ def build_dataset_constraints(entity) -> list:
 
 def determine_constraint_from_entity(constraint_unit, use_case=None) -> dict:
     entity_type = constraint_unit.get('entity_type', '')
-    entity_type = entity_type.title()
+    entity_type = entity_type.lower()
     sub_type = constraint_unit.get('sub_type')
     error = None
     constraints = []
-    entities = get_entities()
+    entities = Ontology.entities(as_arr=True, cb=enum_val_lower)
 
     if entity_type not in entities:
         error = f"No `entity_type` found with value `{entity_type}`"
