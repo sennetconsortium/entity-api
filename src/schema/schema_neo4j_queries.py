@@ -27,7 +27,6 @@ Returns
 list
     A unique list of uuids of source entities
 """
-# TODO: Need to update this call to work with updated activity connections
 def get_dataset_direct_ancestors(neo4j_driver, uuid, property_key = None):
     results = []
     if property_key:
@@ -74,7 +73,7 @@ str: The source metadata (string representation of a Python dict)
 """
 def get_dataset_organ_and_source_info(neo4j_driver, uuid):
     organ_name = None
-    donor_metadata = None
+    source_metadata = None
 
     with neo4j_driver.session() as session:
         # Old time-consuming single query, it takes a significant amounts of DB hits
@@ -84,9 +83,9 @@ def get_dataset_organ_and_source_info(neo4j_driver, uuid):
 
         # query = (f"MATCH (e:Dataset)<-[:ACTIVITY_INPUT|ACTIVITY_OUTPUT*]-(s:Sample)<-[:ACTIVITY_INPUT|ACTIVITY_OUTPUT*]-(d:Donor) "
         #          f"WHERE e.uuid='{uuid}' AND s.specimen_type='organ' AND EXISTS(s.organ) "
-        #          f"RETURN s.organ AS organ_name, d.metadata AS donor_metadata")
+        #          f"RETURN s.organ AS organ_name, d.metadata AS source_metadata")
 
-        # logger.info("======get_dataset_organ_and_donor_info() query======")
+        # logger.info("======get_dataset_organ_and_source_info() query======")
         # logger.info(query)
 
         # with neo4j_driver.session() as session:
@@ -94,14 +93,14 @@ def get_dataset_organ_and_source_info(neo4j_driver, uuid):
 
         #     if record:
         #         organ_name = record['organ_name']
-        #         donor_metadata = record['donor_metadata']
+        #         source_metadata = record['source_metadata']
 
         # To improve the query performance, we implement the two-step queries to drastically reduce the DB hits
         sample_query = (f"MATCH (e:Dataset)-[:USED|WAS_GENERATED_BY*]->(s:Sample) "
                         f"WHERE e.uuid='{uuid}' AND s.sample_category is not null and s.sample_category='organ'"
                         f"RETURN DISTINCT s.sample_category AS sample_category, s.organ AS organ_name, s.uuid AS sample_uuid")
 
-        logger.info("======get_dataset_organ_and_donor_info() sample_query======")
+        logger.info("======get_dataset_organ_and_source_info() sample_query======")
         logger.info(sample_query)
 
         sample_record = session.read_transaction(_execute_readonly_tx, sample_query)
@@ -114,20 +113,19 @@ def get_dataset_organ_and_source_info(neo4j_driver, uuid):
 
             sample_uuid = sample_record['sample_uuid']
 
-            # TODO: Need to test this. WAS_GENERATED_BY and USED might need to be swapped
-            donor_query = (f"MATCH (s:Sample)-[:USED|WAS_GENERATED_BY*]->(d:Source) "
+            source_query = (f"MATCH (s:Sample)-[:USED|WAS_GENERATED_BY*]->(d:Source) "
                            f"WHERE s.uuid='{sample_uuid}' AND s.sample_category is not null "
-                           f"RETURN DISTINCT d.metadata AS donor_metadata")
+                           f"RETURN DISTINCT d.metadata AS source_metadata")
 
-            logger.info("======get_dataset_organ_and_donor_info() donor_query======")
-            logger.info(donor_query)
+            logger.info("======get_dataset_organ_and_source_info() source_query======")
+            logger.info(source_query)
 
-            donor_record = session.read_transaction(_execute_readonly_tx, donor_query)
+            source_record = session.read_transaction(_execute_readonly_tx, source_query)
 
-            if donor_record:
-                donor_metadata = donor_record['donor_metadata']
+            if source_record:
+                source_metadata = source_record['source_metadata']
 
-    return organ_name, donor_metadata
+    return organ_name, source_metadata
 
 
 """

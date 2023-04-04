@@ -1963,33 +1963,11 @@ Returns
 str: The organ code description
 """
 def _get_organ_description(organ_code):
-    yaml_file_url = SchemaConstants.ORGAN_TYPES_YAML
+    ORGAN_TYPES = schema_manager.get_ubkg_instance.get_ubkg_valueset(
+        schema_manager.get_ubkg_instance.organ_types)
 
-    # Function cache to improve performance
-    response = schema_manager.make_request_get(yaml_file_url)
-
-    if response.status_code == 200:
-        yaml_file = response.text
-
-        try:
-            organ_types_dict = yaml.safe_load(response.text)
-            return organ_types_dict[organ_code]['description'].lower()
-        except yaml.YAMLError as e:
-            raise yaml.YAMLError(e)
-    else:
-        msg = f"Unable to fetch the: {yaml_file_url}"
-        # Log the full stack trace, prepend a line with our message
-        logger.exception(msg)
-
-        logger.debug("======_get_organ_description() status code======")
-        logger.debug(response.status_code)
-
-        logger.debug("======_get_organ_description() response text======")
-        logger.debug(response.text)
-
-        # Also bubble up the error message
-        raise requests.exceptions.RequestException(response.text)
-
-
-
+    # TODO: Need to update this code once we get updated ontology organ endpoint
+    for organ_type in ORGAN_TYPES:
+        if organ_type['rui_code'] == organ_code:
+            return organ_type['term'].loewr()
 
