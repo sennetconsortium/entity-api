@@ -30,7 +30,7 @@ def validate_application_header_before_entity_create(normalized_entity_type, req
     # Currently only ingest-api and ingest-pipeline are allowed
     # to create or update Dataset and Upload
     # Use lowercase for comparison
-    applications_allowed = [SchemaConstants.INGEST_API_APP]
+    applications_allowed = [SchemaConstants.INGEST_API_APP, SchemaConstants.INGEST_PIPELINE_APP]
 
     _validate_application_header(applications_allowed, request.headers)
 
@@ -83,7 +83,7 @@ def validate_application_header_before_property_update(property_key, normalized_
     # Currently only ingest-api and ingest-pipeline are allowed
     # to update Dataset.status or Upload.status
     # Use lowercase for comparison
-    applications_allowed = [SchemaConstants.INGEST_API_APP]
+    applications_allowed = [SchemaConstants.INGEST_API_APP, SchemaConstants.INGEST_PIPELINE_APP]
 
     _validate_application_header(applications_allowed, request.headers)
 
@@ -122,7 +122,7 @@ def validate_dataset_status_value(property_key, normalized_entity_type, request,
 
     # HTTP header names are case-insensitive
     # request.headers.get('X-Hubmap-Application') returns None if the header doesn't exist
-    app_header = request.headers.get(SchemaConstants.HUBMAP_APP_HEADER)
+    app_header = request.headers.get(SchemaConstants.SENNET_APP_HEADER)
 
     # Change status to 'Published' can only happen via ingest-api 
     # because file system changes are needed
@@ -278,15 +278,15 @@ request_headers: Flask request.headers object, behaves like a dict
 def _validate_application_header(applications_allowed, request_headers):
     # HTTP header names are case-insensitive
     # request_headers.get('X-Hubmap-Application') returns None if the header doesn't exist
-    app_header = request_headers.get(SchemaConstants.HUBMAP_APP_HEADER)
+    app_header = request_headers.get(SchemaConstants.SENNET_APP_HEADER)
 
     if not app_header:
-        msg = f"Unbale to proceed due to missing {SchemaConstants.HUBMAP_APP_HEADER} header from request"
+        msg = f"Unbale to proceed due to missing {SchemaConstants.SENNET_APP_HEADER} header from request"
         raise schema_errors.MissingApplicationHeaderException(msg)
 
     # Use lowercase for comparing the application header value against the yaml
     if app_header.lower() not in applications_allowed:
-        msg = f"Unable to proceed due to invalid {SchemaConstants.HUBMAP_APP_HEADER} header value: {app_header}"
+        msg = f"Unable to proceed due to invalid {SchemaConstants.SENNET_APP_HEADER} header value: {app_header}"
         raise schema_errors.InvalidApplicationHeaderException(msg)
 
 
