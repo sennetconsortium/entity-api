@@ -4156,7 +4156,7 @@ def check_for_metadata(entity_type, user_token):
     if 'metadata' in json_data_dict:
         # If metadata is empty then just proceed. The portal is more than likely trying to reset this intentionally
         if json_data_dict['metadata'] == {}:
-            return
+            return json_data_dict
 
         if isinstance(json_data_dict['metadata'], list):
             json_data_dict['metadata'] = json_data_dict['metadata'][0]
