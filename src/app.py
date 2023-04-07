@@ -1148,18 +1148,6 @@ def update_entity(id):
     # Parse incoming json string into json data(python dict object)
     json_data_dict = request.get_json()
 
-    if 'metadata' in json_data_dict:
-        if isinstance(json_data_dict['metadata'], list):
-            json_data_dict['metadata'] = json_data_dict['metadata'][0]
-
-        if 'pathname' in json_data_dict:
-            if not validate_metadata(json_data_dict['pathname'], user_token):
-                abort_bad_req("Metadata did not pass validation.")
-            del json_data_dict['pathname']
-        else:
-            abort_bad_req("Metadata must be added via the Data Sharing Portal.")
-
-
     # Normalize user provided status
     if "status" in json_data_dict:
         normalized_status = schema_manager.normalize_status(json_data_dict["status"])
@@ -4169,7 +4157,7 @@ def check_for_metadata(entity_type, user_token):
         # If metadata is empty then just proceed. The portal is more than likely trying to reset this intentionally
         if json_data_dict['metadata'] == {}:
             return
-        
+
         if isinstance(json_data_dict['metadata'], list):
             json_data_dict['metadata'] = json_data_dict['metadata'][0]
 
