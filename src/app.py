@@ -873,6 +873,7 @@ def create_entity(entity_type):
         abort_bad_req(e)
 
     json_data_dict = check_for_metadata(entity_type, user_token)
+    verify_ubkg_properties(json_data_dict)
 
     if 'source_type' in json_data_dict:
         json_data_dict['source_type'] = json_data_dict['source_type'].capitalize()
@@ -1162,6 +1163,7 @@ def update_entity(id):
     entity_dict = query_target_entity(id, user_token)
 
     json_data_dict = check_for_metadata(entity_dict.get('entity_type'), user_token)
+    verify_ubkg_properties(json_data_dict)
 
     # Normalize user provided entity_type
     normalized_entity_type = schema_manager.normalize_entity_type(entity_dict['entity_type'])
@@ -2494,7 +2496,7 @@ def get_prov_info():
     HEADER_PROCESSED_DATASET_SENNET_ID = 'processed_dataset_sennet_id'
     HEADER_PROCESSED_DATASET_STATUS = 'processed_dataset_status'
     HEADER_PROCESSED_DATASET_PORTAL_URL = 'processed_dataset_portal_url'
-    ASSAY_TYPES = Ontology.assay_types()
+    ASSAY_TYPES = Ontology.assay_types(as_data_dict=True)
     ORGAN_TYPES = app.ubkg.get_ubkg_valueset(app.ubkg.organ_types)
     HEADER_PREVIOUS_VERSION_SENNET_IDS = 'previous_version_sennet_ids'
 
@@ -2823,7 +2825,7 @@ def get_prov_info_for_dataset(id):
     HEADER_PROCESSED_DATASET_SENNET_ID = 'processed_dataset_sennet_id'
     HEADER_PROCESSED_DATASET_STATUS = 'processed_dataset_status'
     HEADER_PROCESSED_DATASET_PORTAL_URL = 'processed_dataset_portal_url'
-    ASSAY_TYPES = Ontology.assay_types()
+    ASSAY_TYPES = Ontology.assay_types(as_data_dict=True)
     ORGAN_TYPES = app.ubkg.get_ubkg_valueset(app.ubkg.organ_types)
 
     headers = [
@@ -3019,7 +3021,7 @@ def sankey_data():
     HEADER_ORGAN_TYPE = 'organ_type'
     HEADER_DATASET_DATA_TYPES = 'dataset_data_types'
     HEADER_DATASET_STATUS = 'dataset_status'
-    ASSAY_TYPES = Ontology.assay_types()
+    ASSAY_TYPES = Ontology.assay_types(as_data_dict=True)
     ORGAN_TYPES = app.ubkg.get_ubkg_valueset(app.ubkg.organ_types)
     with open('sankey_mapping.json') as f:
         mapping_dict = json.load(f)
@@ -4140,6 +4142,34 @@ def validate_organ_code(organ_code):
     #     # Terminate and let the users know
     #     abort_internal_err(f"Failed to validate the organ code: {organ_code}")
 
+
+def verify_ubkg_properties(json_data_dict):
+    SOURCE_TYPES = Ontology.source_types(as_data_dict=True)
+    SAMPLE_CATEGORIES = Ontology.specimen_categories(as_data_dict=True)
+
+    passes_ubkg_validation = False
+    failed_field = ''
+
+    if 'source_type' in json_data_dict:
+        passes_ubkg_validation = False
+        failed_field = 'source_type'
+        for source_type in SOURCE_TYPES:
+            if json_data_dict['source_type'] == source_type:
+                passes_ubkg_validation = True
+                break
+
+    if 'sample_category' in json_data_dict:
+        passes_ubkg_validation = False
+        failed_field = 'sample_category'
+        for sample_category in SAMPLE_CATEGORIES:
+            if json_data_dict['sample_category'] == sample_category:
+                passes_ubkg_validation = True
+                break
+
+    if not passes_ubkg_validation:
+        ubkg_validation_message = f"Value listed in '{failed_field}' does not match any allowable property. " \
+                                  "Please check proper spelling and casing."
+        abort_unacceptable(ubkg_validation_message)
 
 def check_for_metadata(entity_type, user_token):
     # Always expect a json body
