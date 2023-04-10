@@ -32,6 +32,7 @@ from hubmap_commons.exceptions import HTTPException
 # Atlas Consortia commons
 from atlas_consortia_commons.ubkg import initialize_ubkg
 from atlas_consortia_commons.rest import *
+from atlas_consortia_commons.string import equals
 from lib.ontology import init_ontology, Ontology
 
 # Root logger configuration
@@ -4147,14 +4148,15 @@ def verify_ubkg_properties(json_data_dict):
     SOURCE_TYPES = Ontology.source_types(as_data_dict=True)
     SAMPLE_CATEGORIES = Ontology.specimen_categories(as_data_dict=True)
 
-    passes_ubkg_validation = False
+    passes_ubkg_validation = True
     failed_field = ''
 
     if 'source_type' in json_data_dict:
         passes_ubkg_validation = False
         failed_field = 'source_type'
         for source_type in SOURCE_TYPES:
-            if json_data_dict['source_type'] == source_type:
+            if equals(json_data_dict['source_type'], source_type):
+                json_data_dict['source_type'] = source_type
                 passes_ubkg_validation = True
                 break
 
@@ -4162,7 +4164,8 @@ def verify_ubkg_properties(json_data_dict):
         passes_ubkg_validation = False
         failed_field = 'sample_category'
         for sample_category in SAMPLE_CATEGORIES:
-            if json_data_dict['sample_category'] == sample_category:
+            if equals(json_data_dict['sample_category'], sample_category):
+                json_data_dict['sample_category'] = sample_category
                 passes_ubkg_validation = True
                 break
 
