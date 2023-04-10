@@ -19,7 +19,7 @@ def _get_response(obj):
         return current_app.ubkg.get_ubkg_valueset(obj)
 
 
-def _build_enum_class(name: str, obj, key: str = 'term', in_enum: bool = False, ):
+def _build_enum_class(name: str, obj, key: str = 'term', in_enum: bool = False):
     response = _get_response(obj)
     return build_enum_class(name, response, key, obj_type=_get_obj_type(in_enum))
 
@@ -39,21 +39,21 @@ def _build_data_dict(obj, key: str = 'term'):
 
 def entities(in_enum: bool = False, as_data_dict: bool = False):
     if as_data_dict is True:
-        return _build_data_dict(current_app.ubkg.entities, key='term')
+        return _build_data_dict(current_app.ubkg.entities)
     else:
         return _build_enum_class('Entities', current_app.ubkg.entities, in_enum=in_enum)
 
 
 def specimen_categories(in_enum: bool = False, as_data_dict: bool = False):
     if as_data_dict is True:
-        return _build_data_dict(current_app.ubkg.specimen_categories, key='term')
+        return _build_data_dict(current_app.ubkg.specimen_categories)
     else:
         return _build_enum_class('SpecimenCategories', current_app.ubkg.specimen_categories, in_enum=in_enum)
 
 
 def organ_types(in_enum: bool = False, as_data_dict: bool = False):
     if as_data_dict is True:
-        return _build_data_dict(current_app.ubkg.organ_types, key='term')
+        return _build_data_dict(current_app.ubkg.organ_types)
     else:
         return _build_enum_class('OrganTypes', current_app.ubkg.organ_types, in_enum=in_enum)
 
@@ -67,7 +67,7 @@ def assay_types(in_enum: bool = False, as_data_dict: bool = False):
 
 def source_types(in_enum: bool = False, as_data_dict: bool = False):
     if as_data_dict is True:
-        return _build_data_dict(current_app.ubkg.source_types, key='term')
+        return _build_data_dict(current_app.ubkg.source_types)
     else:
         return _build_enum_class('SourceTypes', current_app.ubkg.source_types, in_enum=in_enum)
 
