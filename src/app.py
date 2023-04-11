@@ -4196,14 +4196,18 @@ def check_for_metadata(entity_type, user_token):
             return json_data_dict
 
         if json_data_dict['metadata']:
+            file_row = json_data_dict['metadata'].get('file_row')
             if 'pathname' in json_data_dict['metadata']:
                 data = {
                     'pathname': json_data_dict['metadata']['pathname'],
                     'entity_type': entity_type,
-                    'sub_type': json_data_dict.get('sample_category')
+                    'sub_type': json_data_dict.get('sample_category'),
+                    'tsv_row': file_row
                 }
                 if not validate_metadata(data, user_token):
                     abort_bad_req("Metadata did not pass validation.")
+            if file_row is not None:
+                del json_data_dict['metadata']['file_row']
             else:
                 abort_bad_req("Missing `pathname` in metadata. (Metadata must be added via the Data Sharing Portal.)")
 
@@ -4224,9 +4228,21 @@ def validate_metadata(data, user_token):
 
         headers = create_request_headers(user_token)
 
-        response = requests.post(app.config['INGEST_API_URL'] + "/validation", headers=headers, data=data)
+        response = requests.post(app.config['INGEST_API_URL'] + "/metadata/validate", headers=headers, data=data)
         if response.status_code == 200:
-            return True
+            # compare the two metadata
+            json_data_dict = request.get_json()
+            request_metadata = json_data_dict['metadata']
+
+            response_dict = response.json()
+            response_metadata = response_dict['metadata'][0]
+
+            del request_metadata['pathname']
+            if request_metadata.get('file_row') is not None:
+                del request_metadata['file_row']
+
+            return request_metadata.items() == response_metadata.items()
+
         else:
             logger.error(response.text)
 
