@@ -4206,8 +4206,6 @@ def check_for_metadata(entity_type, user_token):
                 }
                 if not validate_metadata(data, user_token):
                     abort_bad_req("Metadata did not pass validation.")
-            if file_row is not None:
-                del json_data_dict['metadata']['file_row']
             else:
                 abort_bad_req("Missing `pathname` in metadata. (Metadata must be added via the Data Sharing Portal.)")
 
