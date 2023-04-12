@@ -32,6 +32,7 @@ from hubmap_commons.exceptions import HTTPException
 # Atlas Consortia commons
 from atlas_consortia_commons.ubkg import initialize_ubkg
 from atlas_consortia_commons.rest import *
+from atlas_consortia_commons.string import equals
 from lib.ontology import init_ontology, Ontology
 
 # Root logger configuration
@@ -4147,29 +4148,27 @@ def verify_ubkg_properties(json_data_dict):
     SOURCE_TYPES = Ontology.source_types(as_data_dict=True)
     SAMPLE_CATEGORIES = Ontology.specimen_categories(as_data_dict=True)
 
-    passes_ubkg_validation = False
-    failed_field = ''
-
     if 'source_type' in json_data_dict:
-        passes_ubkg_validation = False
-        failed_field = 'source_type'
-        for source_type in SOURCE_TYPES:
-            if json_data_dict['source_type'] == source_type:
-                passes_ubkg_validation = True
-                break
+        compare_property_against_ubkg(SOURCE_TYPES, json_data_dict, 'source_type')
 
     if 'sample_category' in json_data_dict:
-        passes_ubkg_validation = False
-        failed_field = 'sample_category'
-        for sample_category in SAMPLE_CATEGORIES:
-            if json_data_dict['sample_category'] == sample_category:
-                passes_ubkg_validation = True
-                break
+        compare_property_against_ubkg(SAMPLE_CATEGORIES, json_data_dict, 'sample_category')
+
+
+def compare_property_against_ubkg(ubkg_dict, json_data_dict, field):
+    passes_ubkg_validation = False
+
+    for ubkg_field in ubkg_dict:
+        if equals(json_data_dict[field], ubkg_field):
+            json_data_dict[field] = ubkg_field
+            passes_ubkg_validation = True
+            break
 
     if not passes_ubkg_validation:
-        ubkg_validation_message = f"Value listed in '{failed_field}' does not match any allowable property. " \
-                                  "Please check proper spelling and casing."
+        ubkg_validation_message = f"Value listed in '{field}' does not match any allowable property. " \
+                                  "Please check proper spelling."
         abort_unacceptable(ubkg_validation_message)
+
 
 def check_for_metadata(entity_type, user_token):
     # Always expect a json body
