@@ -23,9 +23,9 @@ def _get_response(obj):
         return current_app.ubkg.get_ubkg_valueset(obj)
 
 
-def _build_enum_class(name: str, obj, key: str = 'term', val_key: str = None, prop_callback=to_snake_case_upper, obj_type: str = 'class'):
+def _build_enum_class(name: str, obj, key: str = 'term', val_key: str = None, prop_callback=to_snake_case_upper, data_as_val=False, obj_type: str = 'class'):
     response = _get_response(obj)
-    return build_enum_class(name, response, key, val_key=val_key, prop_callback=prop_callback, obj_type=obj_type)
+    return build_enum_class(name, response, key, val_key=val_key, prop_callback=prop_callback, obj_type=obj_type, data_as_val=data_as_val)
 
 
 def entities(in_enum: bool = False, as_data_dict: bool = False):
@@ -42,9 +42,10 @@ def organ_types(in_enum: bool = False, as_data_dict: bool = False):
                              obj_type=_get_obj_type(in_enum, as_data_dict))
 
 
-def assay_types(in_enum: bool = False, as_data_dict: bool = False, prop_callback=to_snake_case_upper):
+def assay_types(in_enum: bool = False, as_data_dict: bool = False,
+                prop_callback=to_snake_case_upper, data_as_val=False):
     return _build_enum_class('AssayTypes', current_app.ubkg.assay_types, key='data_type',
-                             obj_type=_get_obj_type(in_enum, as_data_dict), prop_callback=prop_callback)
+                             obj_type=_get_obj_type(in_enum, as_data_dict), prop_callback=prop_callback, data_as_val=data_as_val)
 
 
 def source_types(in_enum: bool = False, as_data_dict: bool = False):
@@ -70,8 +71,9 @@ class Ontology:
         return Ontology._as_list_or_class(entities(as_arr, as_data_dict), as_arr, cb)
 
     @staticmethod
-    def assay_types(as_arr: bool = False, cb=str, as_data_dict: bool = False, prop_callback=to_snake_case_upper):
-        return Ontology._as_list_or_class(assay_types(as_arr, as_data_dict, prop_callback), as_arr, cb)
+    def assay_types(as_arr: bool = False, cb=str, as_data_dict: bool = False, prop_callback=to_snake_case_upper, data_as_val=False):
+        return Ontology._as_list_or_class(assay_types(as_arr, as_data_dict, prop_callback,
+                                                      data_as_val=data_as_val), as_arr, cb)
 
     @staticmethod
     def specimen_categories(as_arr: bool = False, cb=str, as_data_dict: bool = False):

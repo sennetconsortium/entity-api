@@ -2497,7 +2497,7 @@ def get_prov_info():
     HEADER_PROCESSED_DATASET_SENNET_ID = 'processed_dataset_sennet_id'
     HEADER_PROCESSED_DATASET_STATUS = 'processed_dataset_status'
     HEADER_PROCESSED_DATASET_PORTAL_URL = 'processed_dataset_portal_url'
-    ASSAY_TYPES = Ontology.assay_types(as_data_dict=True, prop_callback=None)
+    ASSAY_TYPES = Ontology.assay_types(as_data_dict=True, prop_callback=None, data_as_val=True)
     ORGAN_TYPES = app.ubkg.get_ubkg_valueset(app.ubkg.organ_types)
     HEADER_PREVIOUS_VERSION_SENNET_IDS = 'previous_version_sennet_ids'
 
@@ -2826,7 +2826,7 @@ def get_prov_info_for_dataset(id):
     HEADER_PROCESSED_DATASET_SENNET_ID = 'processed_dataset_sennet_id'
     HEADER_PROCESSED_DATASET_STATUS = 'processed_dataset_status'
     HEADER_PROCESSED_DATASET_PORTAL_URL = 'processed_dataset_portal_url'
-    ASSAY_TYPES = Ontology.assay_types(as_data_dict=True, prop_callback=None)
+    ASSAY_TYPES = Ontology.assay_types(as_data_dict=True, prop_callback=None, data_as_val=True)
     ORGAN_TYPES = app.ubkg.get_ubkg_valueset(app.ubkg.organ_types)
 
     headers = [
@@ -3022,7 +3022,7 @@ def sankey_data():
     HEADER_ORGAN_TYPE = 'organ_type'
     HEADER_DATASET_DATA_TYPES = 'dataset_data_types'
     HEADER_DATASET_STATUS = 'dataset_status'
-    ASSAY_TYPES = Ontology.assay_types(as_data_dict=True, prop_callback=None)
+    ASSAY_TYPES = Ontology.assay_types(as_data_dict=True, prop_callback=None, data_as_val=True)
     ORGAN_TYPES = app.ubkg.get_ubkg_valueset(app.ubkg.organ_types)
     with open('sankey_mapping.json') as f:
         mapping_dict = json.load(f)
