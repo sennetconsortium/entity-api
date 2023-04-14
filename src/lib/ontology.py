@@ -19,9 +19,9 @@ def _get_response(obj):
         return current_app.ubkg.get_ubkg_valueset(obj)
 
 
-def _build_enum_class(name: str, obj, key: str = 'term', in_enum: bool = False):
+def _build_enum_class(name: str, obj, key: str = 'term', val_key: str = None, in_enum: bool = False):
     response = _get_response(obj)
-    return build_enum_class(name, response, key, obj_type=_get_obj_type(in_enum))
+    return build_enum_class(name, response, key, val_key=val_key, obj_type=_get_obj_type(in_enum))
 
 
 def _build_data_dict(obj, key: str = 'term'):
@@ -55,7 +55,7 @@ def organ_types(in_enum: bool = False, as_data_dict: bool = False):
     if as_data_dict is True:
         return _build_data_dict(current_app.ubkg.organ_types)
     else:
-        return _build_enum_class('OrganTypes', current_app.ubkg.organ_types, in_enum=in_enum)
+        return _build_enum_class('OrganTypes', current_app.ubkg.organ_types, val_key='rui_code', in_enum=in_enum)
 
 
 def assay_types(in_enum: bool = False, as_data_dict: bool = False):
