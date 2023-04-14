@@ -2498,7 +2498,7 @@ def get_prov_info():
     HEADER_PROCESSED_DATASET_STATUS = 'processed_dataset_status'
     HEADER_PROCESSED_DATASET_PORTAL_URL = 'processed_dataset_portal_url'
     ASSAY_TYPES = Ontology.assay_types(as_data_dict=True, prop_callback=None, data_as_val=True)
-    ORGAN_TYPES = app.ubkg.get_ubkg_valueset(app.ubkg.organ_types)
+    ORGAN_TYPES = Ontology.organ_types(as_data_dict=True, data_as_val=True)
     HEADER_PREVIOUS_VERSION_SENNET_IDS = 'previous_version_sennet_ids'
 
     headers = [
@@ -2635,11 +2635,10 @@ def get_prov_info():
             for item in dataset['distinct_organ']:
                 distinct_organ_sennet_id_list.append(item['sennet_id'])
                 distinct_organ_uuid_list.append(item['uuid'])
-                # TODO: Need to update this code once Ontology Organ Types endpoint is update
                 for organ_type in ORGAN_TYPES:
-                    if organ_type['rui_code'] == item['organ']:
-                        distinct_organ_type_list.append(organ_type['description'].lower())
-                # distinct_organ_type_list.append(organ_types_dict[item['organ']]['description'].lower())
+                    if ORGAN_TYPES[organ_type]['rui_code'] == item['organ']:
+                        distinct_organ_type_list.append(ORGAN_TYPES[organ_type]['term'])
+                        break
             internal_dict[HEADER_ORGAN_SENNET_ID] = distinct_organ_sennet_id_list
             internal_dict[HEADER_ORGAN_UUID] = distinct_organ_uuid_list
             internal_dict[HEADER_ORGAN_TYPE] = distinct_organ_type_list
@@ -2827,7 +2826,7 @@ def get_prov_info_for_dataset(id):
     HEADER_PROCESSED_DATASET_STATUS = 'processed_dataset_status'
     HEADER_PROCESSED_DATASET_PORTAL_URL = 'processed_dataset_portal_url'
     ASSAY_TYPES = Ontology.assay_types(as_data_dict=True, prop_callback=None, data_as_val=True)
-    ORGAN_TYPES = app.ubkg.get_ubkg_valueset(app.ubkg.organ_types)
+    ORGAN_TYPES = Ontology.organ_types(as_data_dict=True, data_as_val=True)
 
     headers = [
         HEADER_DATASET_UUID, HEADER_DATASET_SENNET_ID, HEADER_DATASET_STATUS, HEADER_DATASET_GROUP_NAME,
@@ -2904,11 +2903,10 @@ def get_prov_info_for_dataset(id):
         for item in dataset['distinct_organ']:
             distinct_organ_sennet_id_list.append(item['sennet_id'])
             distinct_organ_uuid_list.append(item['uuid'])
-            # TODO: Need to update this code once Ontology Organ Types endpoint is update
             for organ_type in ORGAN_TYPES:
-                if organ_type['rui_code'] == item['organ']:
-                    distinct_organ_type_list.append(organ_type['description'].lower())
-            # distinct_organ_type_list.append(organ_types_dict[item['organ']]['description'].lower())
+                if ORGAN_TYPES[organ_type]['rui_code'] == item['organ']:
+                    distinct_organ_type_list.append(ORGAN_TYPES[organ_type]['term'])
+                    break
         internal_dict[HEADER_ORGAN_SENNET_ID] = distinct_organ_sennet_id_list
         internal_dict[HEADER_ORGAN_UUID] = distinct_organ_uuid_list
         internal_dict[HEADER_ORGAN_TYPE] = distinct_organ_type_list
@@ -3023,7 +3021,7 @@ def sankey_data():
     HEADER_DATASET_DATA_TYPES = 'dataset_data_types'
     HEADER_DATASET_STATUS = 'dataset_status'
     ASSAY_TYPES = Ontology.assay_types(as_data_dict=True, prop_callback=None, data_as_val=True)
-    ORGAN_TYPES = app.ubkg.get_ubkg_valueset(app.ubkg.organ_types)
+    ORGAN_TYPES = Ontology.organ_types(as_data_dict=True, data_as_val=True)
     with open('sankey_mapping.json') as f:
         mapping_dict = json.load(f)
 
@@ -3037,10 +3035,10 @@ def sankey_data():
         internal_dict[HEADER_DATASET_GROUP_NAME] = dataset[HEADER_DATASET_GROUP_NAME]
         # TODO: Need to update this code once Ontology Organ Types endpoint is update
         for organ_type in ORGAN_TYPES:
-            if organ_type['code'] == dataset[HEADER_ORGAN_TYPE]:
-                internal_dict[HEADER_ORGAN_TYPE] = organ_type['description'].lower()
-        # internal_dict[HEADER_ORGAN_TYPE] = organ_types_dict[dataset[HEADER_ORGAN_TYPE]]['description'].lower()
-        # Data type codes are replaced with data type descriptions
+            if ORGAN_TYPES[organ_type]['rui_code'] == dataset[HEADER_ORGAN_TYPE]:
+                internal_dict[HEADER_ORGAN_TYPE] = ORGAN_TYPES[organ_type]['term']
+                break
+
         assay_description = ""
 
         try:
@@ -3098,7 +3096,7 @@ def get_sample_prov_info():
     HEADER_ORGAN_UUID = "organ_uuid"
     HEADER_ORGAN_TYPE = "organ_type"
     HEADER_ORGAN_SENNET_ID = "organ_sennet_id"
-    ORGAN_TYPES = app.ubkg.get_ubkg_valueset(app.ubkg.organ_types)
+    ORGAN_TYPES = Ontology.organ_types(as_data_dict=True, data_as_val=True)
 
     # Processing and validating query parameters
     accepted_arguments = ['group_uuid']
@@ -3131,14 +3129,18 @@ def get_sample_prov_info():
         organ_sennet_id = None
         if sample['organ_uuid'] is not None:
             organ_uuid = sample['organ_uuid']
-            # TODO: Update once we have organ endpoint
-            # organ_type = organ_types_dict[sample['organ_organ_type']]['description'].lower()
+            for organ_type in ORGAN_TYPES:
+                if ORGAN_TYPES[organ_type]['rui_code'] == sample['organ_organ_type']:
+                    organ_type = ORGAN_TYPES[organ_type]['term']
+                    break
             organ_sennet_id = sample['organ_sennet_id']
         else:
-            if sample['sample_sample_category'] == "organ":
+            if sample['sample_sample_category'] == Ontology.specimen_categories().ORGAN:
                 organ_uuid = sample['sample_uuid']
-                # TODO: Update once we have organ endpoint
-                # organ_type = organ_types_dict[sample['sample_organ']]['description'].lower()
+                for organ_type in ORGAN_TYPES:
+                    if ORGAN_TYPES[organ_type]['rui_code'] == sample['sample_organ']:
+                        organ_type = ORGAN_TYPES[organ_type]['term']
+                        break
                 organ_sennet_id = sample['sample_sennet_id']
 
 
@@ -4116,32 +4118,13 @@ Returns nothing. Raises abort_bad_req is organ code not found on organ_types.yam
 
 
 def validate_organ_code(organ_code):
-    ORGAN_TYPES = app.ubkg.get_ubkg_valueset(app.ubkg.organ_types)
+    ORGAN_TYPES = Ontology.organ_types(as_data_dict=True, data_as_val=True)
 
-    # TODO: Need to update this code once Ontology Organ Types endpoint is update
-    # if response.status_code == 200:
-    #     yaml_file = response.text
-    #
-    #     try:
-    #         organ_types_dict = yaml.safe_load(response.text)
-    #
-    #         if organ_code.upper() not in organ_types_dict:
-    #             abort_bad_req(f"Invalid Organ. Organ must be 2 digit code, case-insensitive located at {yaml_file_url}")
-    #     except yaml.YAMLError as e:
-    #         raise yaml.YAMLError(e)
-    # else:
-    #     msg = f"Unable to fetch the: {yaml_file_url}"
-    #     # Log the full stack trace, prepend a line with our message
-    #     logger.exception(msg)
-    #
-    #     logger.debug("======validate_organ_code() status code======")
-    #     logger.debug(response.status_code)
-    #
-    #     logger.debug("======validate_organ_code() response text======")
-    #     logger.debug(response.text)
-    #
-    #     # Terminate and let the users know
-    #     abort_internal_err(f"Failed to validate the organ code: {organ_code}")
+    for organ_type in ORGAN_TYPES:
+        if equals(ORGAN_TYPES[organ_type]['rui_code'], organ_code):
+            return
+
+    abort_bad_req(f"Invalid Organ. Organ must be 2 digit, case-insensitive code")
 
 
 def verify_ubkg_properties(json_data_dict):

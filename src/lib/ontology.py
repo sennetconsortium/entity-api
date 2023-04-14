@@ -37,9 +37,9 @@ def specimen_categories(in_enum: bool = False, as_data_dict: bool = False):
                              obj_type=_get_obj_type(in_enum, as_data_dict))
 
 
-def organ_types(in_enum: bool = False, as_data_dict: bool = False):
+def organ_types(in_enum: bool = False, as_data_dict: bool = False, data_as_val=False):
     return _build_enum_class('OrganTypes', current_app.ubkg.organ_types, val_key='rui_code',
-                             obj_type=_get_obj_type(in_enum, as_data_dict))
+                             obj_type=_get_obj_type(in_enum, as_data_dict), data_as_val=data_as_val)
 
 
 def assay_types(in_enum: bool = False, as_data_dict: bool = False,
@@ -80,8 +80,8 @@ class Ontology:
         return Ontology._as_list_or_class(specimen_categories(as_arr, as_data_dict), as_arr, cb)
 
     @staticmethod
-    def organ_types(as_arr: bool = False, cb=str, as_data_dict: bool = False):
-        return Ontology._as_list_or_class(organ_types(as_arr, as_data_dict), as_arr, cb)
+    def organ_types(as_arr: bool = False, cb=str, as_data_dict: bool = False, data_as_val=False):
+        return Ontology._as_list_or_class(organ_types(as_arr, as_data_dict, data_as_val=data_as_val), as_arr, cb)
 
     @staticmethod
     def source_types(as_arr: bool = False, cb=str, as_data_dict: bool = False):
