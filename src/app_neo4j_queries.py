@@ -2,7 +2,7 @@ from neo4j.exceptions import TransactionError
 import logging
 import json
 
-from libs.ontology import Ontology
+from lib.ontology import Ontology
 
 logger = logging.getLogger(__name__)
 
