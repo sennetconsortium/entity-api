@@ -4142,8 +4142,8 @@ def compare_property_against_ubkg(ubkg_dict, json_data_dict, field):
     passes_ubkg_validation = False
 
     for ubkg_field in ubkg_dict:
-        if equals(json_data_dict[field], ubkg_field):
-            json_data_dict[field] = ubkg_field
+        if equals(json_data_dict[field], ubkg_dict[ubkg_field]):
+            json_data_dict[field] = ubkg_dict[ubkg_field]
             passes_ubkg_validation = True
             break
 
