@@ -419,8 +419,6 @@ def get_entity_by_id(id):
     final_result = schema_manager.normalize_object_result_for_response('ENTITIES', complete_dict,
                                                                        properties_to_include=['protocol_url'])
 
-    if 'source_type' in final_result:
-        final_result['source_type'] = final_result['source_type'].capitalize()
 
     # Result filtering based on query string
     # The `data_access_level` property is available in all entities Source/Sample/Dataset
@@ -875,9 +873,6 @@ def create_entity(entity_type):
 
     json_data_dict = check_for_metadata(entity_type, user_token)
     verify_ubkg_properties(json_data_dict)
-
-    if 'source_type' in json_data_dict:
-        json_data_dict['source_type'] = json_data_dict['source_type'].capitalize()
 
     # Validate request json against the yaml schema
     try:
