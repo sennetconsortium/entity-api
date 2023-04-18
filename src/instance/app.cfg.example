@@ -48,3 +48,7 @@ DOI_REDIRECT_URL = 'https://data.sennetconsortium.org/<entity_type>?uuid=<identi
 
 #URL to tsv file that holds the redirect url information for DOI redirects
 REDIRECTION_INFO_URL = 'https://raw.githubusercontent.com/hubmapconsortium/ccf-releases/main/reference-entity-ids.tsv'
+
+UBKG_SERVER =
+UBKG_ENDPOINT_VALUESET =
+UBKG_CODES =
