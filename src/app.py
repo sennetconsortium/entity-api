@@ -3230,7 +3230,7 @@ def validate_constraints_new():
 
         if report_type == 'ln_err':
             if result.get('code') is not StatusCodes.OK:
-                results.append(_ln_err(f"{result.get('name')} {result.get('description')}", index))
+                results.append(_ln_err({'msg': result.get('name'), 'data': result.get('description')}, index))
         else:
             results.append(result)
 
@@ -4096,7 +4096,7 @@ Returns
 -------
  dict 
 """
-def _ln_err(error: str, row: int = None, column: str = None):
+def _ln_err(error, row: int = None, column: str = None):
     return {
         'column': column,
         'error': error,
