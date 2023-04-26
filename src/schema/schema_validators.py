@@ -299,38 +299,11 @@ Returns
 list: The list of defined tissue types
 """
 def _get_tissue_types():
-    yaml_file_url = SchemaConstants.TISSUE_TYPES_YAML
+    TISSUE_TYPES = schema_manager.get_ubkg_instance.get_ubkg_valueset(
+        schema_manager.get_ubkg_instance.specimen_categories)
 
-    # Function cache to improve performance
-    response = schema_manager.make_request_get(yaml_file_url)
-    
-    if response.status_code == 200:
-        yaml_file = response.text
+    tissue_types_list = []
+    for tissue_types in TISSUE_TYPES:
+        tissue_types_list.append(tissue_types['term'])
 
-        try:
-            tissue_types_dict = yaml.safe_load(response.text)
-
-            # We don't need the description here, just a list of tissue types
-            # Note: dict.keys() returns a dict, need to typecast to list
-            tissue_types_list = list(tissue_types_dict.keys())
-
-            # Add the 'other'
-            tissue_types_list.append('other')
-            
-            return tissue_types_list
-        except yaml.YAMLError as e:
-            raise yaml.YAMLError(e)
-    else:
-        msg = f"Unable to fetch the: {yaml_file_url}"
-        # Log the full stack trace, prepend a line with our message
-        logger.exception(msg)
-
-        logger.debug("======_get_tissue_types() status code======")
-        logger.debug(response.status_code)
-
-        logger.debug("======_get_tissue_types() response text======")
-        logger.debug(response.text)
-
-        # Also bubble up the error message
-        raise requests.exceptions.RequestException(response.text)
-
+    return tissue_types_list
