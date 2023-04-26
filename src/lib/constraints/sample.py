@@ -1,4 +1,3 @@
-from lib.ontology_old import Organs
 from lib.constraints.base import build_constraint, build_constraint_unit
 from lib.ontology import Ontology
 
@@ -12,7 +11,7 @@ def build_sample_organ_constraints(entity, constraints=None):
     Entities = Ontology.entities()
 
     # Sample suspension ---> Sample organ of blood
-    ancestor = build_constraint_unit(entity, [SpecimenCategories.ORGAN], [Organs.BLOOD])
+    ancestor = build_constraint_unit(entity, [SpecimenCategories.ORGAN], [Ontology.organ_types().BLOOD])
     descendant = build_constraint_unit(Entities.SAMPLE, [SpecimenCategories.SUSPENSION])
     constraints.append(build_constraint(ancestor, [descendant]))
 
