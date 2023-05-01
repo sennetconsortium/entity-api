@@ -41,5 +41,11 @@ src/VERSION
 ../.idea/
 venv
 
+# ignore vscode files
+.vscode/
+
 #ignore test venv
 **/testenv/
+
+# ignore pytest files
+./.pytest_cache/
