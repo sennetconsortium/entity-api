@@ -83,19 +83,19 @@ def test_get_entity_by_id_dataset(app):
         
         res.status_code == 200
 
-    assert res.json['contains_human_genetic_sequences'] == True
-    assert res.json['created_by_user_displayname'] == 'Lisa-Ann Bruney'
-    assert res.json['created_by_user_email'] == 'LIB118@pitt.edu'
-    assert res.json['created_by_user_sub'] == 'cd17bfa7-24fd-49ca-82ec-2d456ba53730'
-    assert res.json['created_timestamp'] == 1681831855041
-    assert res.json['data_access_level'] == 'protected'
-    assert res.json['data_types'] == ['CODEX']
-    assert res.json['entity_type'] == 'Dataset'
-    assert res.json['group_name'] == 'University of Pittsburgh TMC'
-    assert res.json['group_uuid'] == '28db7a2b-ed8a-11ec-8b0a-9fe9b51132b1'
-    assert res.json['lab_dataset_id'] == '897-Dataset'
-    assert res.json['local_directory_rel_path'] == 'protected/University of Pittsburgh TMC/6a7be8e95c62c74545a29666111899d9/'
-    assert res.json['sennet_id'] == 'SNT554.XLGX.327'
-    assert res.json['status'] == 'New'
-    assert res.json['title'] == 'CODEX data from the None of a source of unknown age, race and sex'
-    assert res.json['uuid'] == '6a7be8e95c62c74545a29666111899d9'
+        assert res.json['contains_human_genetic_sequences'] == True
+        assert res.json['created_by_user_displayname'] == 'Lisa-Ann Bruney'
+        assert res.json['created_by_user_email'] == 'LIB118@pitt.edu'
+        assert res.json['created_by_user_sub'] == 'cd17bfa7-24fd-49ca-82ec-2d456ba53730'
+        assert res.json['created_timestamp'] == 1681831855041
+        assert res.json['data_access_level'] == 'protected'
+        assert res.json['data_types'] == ['CODEX']
+        assert res.json['entity_type'] == 'Dataset'
+        assert res.json['group_name'] == 'University of Pittsburgh TMC'
+        assert res.json['group_uuid'] == '28db7a2b-ed8a-11ec-8b0a-9fe9b51132b1'
+        assert res.json['lab_dataset_id'] == '897-Dataset'
+        assert res.json['local_directory_rel_path'] == 'protected/University of Pittsburgh TMC/6a7be8e95c62c74545a29666111899d9/'
+        assert res.json['sennet_id'] == 'SNT554.XLGX.327'
+        assert res.json['status'] == 'New'
+        assert res.json['title'] == 'CODEX data from the None of a source of unknown age, race and sex'
+        assert res.json['uuid'] == '6a7be8e95c62c74545a29666111899d9'
