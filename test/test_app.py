@@ -42,3 +42,19 @@ def test_get_entity_by_id(app, entity_id, expected_response):
         assert res.status_code == 200
         for key, value in expected_response.items():
             assert res.json[key] == value
+
+@pytest.mark.parametrize('entity_type', [
+    'source',
+    'sample',
+    'dataset',
+])
+def test_get_entity_by_type(app, entity_type):
+    """Test that the get entity by type endpoint returns the correct entities"""
+    with app.test_client() as client:
+        res = client.get(f'/{entity_type}/entities')
+
+        assert res.status_code == 200
+        assert isinstance(res.json, list)
+        assert len(res.json) > 0
+        for entity in res.json:
+            assert entity['entity_type'] == entity_type.title()
