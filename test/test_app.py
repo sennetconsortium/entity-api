@@ -1,13 +1,12 @@
 import test
 test.cwd_to_src()
 
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 
 import app as app_module
-import test.requests as test_requests
-import test.responses as expected_responses
+import test.entities as test_entities
 
 
 @pytest.fixture()
@@ -25,24 +24,35 @@ def test_index(app):
         assert res.status_code == 200
         assert res.text == 'Hello! This is SenNet Entity API service :)'
 
-@pytest.mark.parametrize('entity_id, expected_response', [
-    ('8af152b82ea653a8e5189267a7e6f82a', expected_responses.get_entity_by_id_source_response),
-    ('f8946c392b6bd14595ff5a6b2fdc8497', expected_responses.get_entity_by_id_sample_response),
-    ('6a7be8e95c62c74545a29666111899d9', expected_responses.get_entity_by_id_dataset_response),
+@pytest.mark.parametrize('entity_type', [
+    ('source'),
+    ('sample'),
+    ('dataset'),
 ])
-def test_get_entity_by_id(app, entity_id, expected_response):
+def test_get_entity_by_id_success(app, entity_type):
     """Test that the get entity by id endpoint returns the correct entity"""
+    entity = test_entities.get_entity(entity_type)
+    entity_id = entity['uuid']
+    sennet_ids = test_entities.get_sennet_ids(entity_id, entity_type)
+
     # Assume user is valid and in sennet read group
     app_module.auth_helper_instance.getUserInfo = Mock(return_value={'hmgroupids': 'testgroup'})
     app_module.auth_helper_instance.get_default_read_group_uuid = Mock(return_value='testgroup')
 
-    with app.test_client() as client:
+    with (app.test_client() as client,
+          patch('app.schema_manager.get_sennet_ids', return_value=sennet_ids) as mock_get_sennet_ids,
+          patch('app.app_neo4j_queries.get_entity', return_value=entity) as mock_get_entity,
+          patch('app.schema_manager.get_complete_entity_result', return_value=entity) as mock_get_complete_entity_result):
+
         res = client.get(f'/entities/{entity_id}',
                          headers={'Authorization': 'Bearer testtoken1234'})
 
+        mock_get_sennet_ids.assert_called_once_with(entity_id)
+        mock_get_entity.assert_called_once()
+        mock_get_complete_entity_result.assert_called_once()
+
         assert res.status_code == 200
-        for key, value in expected_response.items():
-            assert res.json[key] == value
+        assert res.json == entity
 
 @pytest.mark.parametrize('entity_type', [
     'source',
@@ -83,3 +93,5 @@ def test_create_entity_success(app):
         assert res.status_code == 200
         for key, value in expected_response.items():
             assert res.json[key] == value
+
+
