@@ -6,6 +6,7 @@ from unittest.mock import Mock
 import pytest
 
 import app as app_module
+import test.requests as test_requests
 import test.responses as expected_responses
 
 
@@ -58,3 +59,27 @@ def test_get_entity_by_type(app, entity_type):
         assert len(res.json) > 0
         for entity in res.json:
             assert entity['entity_type'] == entity_type.title()
+
+def test_create_entity_success(app):
+    """Test that the create entity endpoint calls neo4j and returns the correct
+        response"""
+    with app.test_client() as client:
+        expected_response = expected_responses.create_entity_source_response
+
+        # Mock out the calls to the schema manager and neo4j queries
+        app_module.schema_manager.create_sennet_ids = Mock(return_value=[{}])
+        app_module.schema_manager.get_user_info = Mock(return_value={})
+        app_module.schema_manager.generate_triggered_data = Mock(return_value={})
+        app_module.app_neo4j_queries.create_entity = Mock(return_value=expected_response)
+
+        res = client.post('/entities/source',
+                          json=test_requests.create_entity_source_request,
+                          headers={'Authorization': 'Bearer testtoken1234'})
+
+        # Assert
+        app_module.schema_manager.create_sennet_ids.assert_called_once()
+        app_module.app_neo4j_queries.create_entity.assert_called_once()
+
+        assert res.status_code == 200
+        for key, value in expected_response.items():
+            assert res.json[key] == value
