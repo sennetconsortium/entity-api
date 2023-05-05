@@ -135,6 +135,28 @@ def test_get_entity_by_type_success(app, entity_type):
         assert res.status_code == 200
         assert res.json == entities
 
+@pytest.mark.parametrize('entity_type, query_key, query_value, status_code', [
+    ('source', 'property', 'uuid', 200),
+    ('sample', 'property', 'uuid', 200),
+    ('dataset', 'property', 'uuid', 200),
+    ('source', 'invalid_key', 'status', 400),
+    ('source', 'property', 'invalid_value', 400),
+])
+def test_get_entity_by_type_query(app, entity_type, query_key, query_value, status_code):
+    """Test that the get entities by type endpoint can handle specific query parameters"""
+    entities = test_entities.get_entities(entity_type)
+    if status_code == 200:
+        entities = [entity[query_value] for entity in entities]
+
+    with (app.test_client() as client,
+          patch('app.app_neo4j_queries.get_entities_by_type', return_value=entities)):
+
+        res = client.get(f'/{entity_type}/entities?{query_key}={query_value}')
+
+        assert res.status_code == status_code
+        if status_code == 200:
+            assert res.json == entities
+
 ### Create Entity
 
 @pytest.mark.parametrize('entity_type', [
