@@ -17,12 +17,16 @@ def app():
     yield app
     # clean up
 
+### Index
+
 def test_index(app):
     """Test that the index page is working"""
     with app.test_client() as client:
         res = client.get('/')
         assert res.status_code == 200
         assert res.text == 'Hello! This is SenNet Entity API service :)'
+
+### Get Entity by ID
 
 @pytest.mark.parametrize('entity_type', [
     ('source'),
@@ -54,6 +58,38 @@ def test_get_entity_by_id_success(app, entity_type):
         assert res.status_code == 200
         assert res.json == entity
 
+@pytest.mark.parametrize('entity_type, query_key, query_value, status_code', [
+    ('source', 'property', 'data_access_level', 200),
+    ('source', 'property', 'status', 400),
+    ('sample', 'property', 'data_access_level', 200),
+    ('sample', 'property', 'status', 400),
+    ('dataset', 'property', 'data_access_level', 200),
+    ('dataset', 'property', 'status', 200),
+    ('source', 'invalid_key', 'status', 400),
+    ('source', 'property', 'invalid_value', 400),
+])
+def test_get_entity_by_id_query(app, entity_type, query_key, query_value, status_code):
+    """Test that the get entity by id endpoint can handle specific query parameters"""
+    entity = test_entities.get_entity(entity_type)
+    entity_id = entity['uuid']
+    sennet_ids = test_entities.get_sennet_ids(entity_id, entity_type)
+
+    # Assume user is valid and in sennet read group
+    app_module.auth_helper_instance.getUserInfo = Mock(return_value={'hmgroupids': 'testgroup'})
+    app_module.auth_helper_instance.get_default_read_group_uuid = Mock(return_value='testgroup')
+
+    with (app.test_client() as client,
+          patch('app.schema_manager.get_sennet_ids', return_value=sennet_ids),
+          patch('app.app_neo4j_queries.get_entity', return_value=entity),
+          patch('app.schema_manager.get_complete_entity_result', return_value=entity)):
+
+        res = client.get(f'/entities/{entity_id}?{query_key}={query_value}',
+                         headers={'Authorization': 'Bearer testtoken1234'})
+
+        assert res.status_code == status_code
+        if status_code == 200:
+            assert res.text == entity[query_value]
+
 def test_get_entity_by_id_unauthorized(app):
     """Test that the get entity by id endpoint returns 401 when no bearer token 
        is given"""
@@ -77,6 +113,8 @@ def test_get_entity_by_id_forbidden_read_group(app):
         assert res.status_code == 403
         assert res.json == {'error': '403 Forbidden: Access not granted'} 
 
+### Get Entity by Type
+
 @pytest.mark.parametrize('entity_type', [
     'source',
     'sample',
@@ -96,6 +134,8 @@ def test_get_entity_by_type_success(app, entity_type):
 
         assert res.status_code == 200
         assert res.json == entities
+
+### Create Entity
 
 @pytest.mark.parametrize('entity_type', [
     'source',
