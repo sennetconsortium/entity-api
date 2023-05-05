@@ -74,28 +74,36 @@ def test_get_entity_by_type_success(app, entity_type):
         assert res.status_code == 200
         assert res.json == entities
 
-def test_create_entity_success(app):
+@pytest.mark.parametrize('entity_type', [
+    'source',
+])
+def test_create_entity_success(app, entity_type):
     """Test that the create entity endpoint calls neo4j and returns the correct
         response"""
-    with app.test_client() as client:
-        expected_response = expected_responses.create_entity_source_response
+    entity = test_entities.get_entity(entity_type)
+    request = {
+        "group_uuid":"57192604-18e0-11ed-b79b-972795fc9504",
+        "lab_source_id":"Unit test",
+        "source_type":"Human Organoid",
+        "protocol_url":"dx.doi.org/10.17504/protocols.io.3byl4j398lo5/v1",
+        "description":"Unit test lab notes"
+    }
+    response = { k: v for k, v in entity.items() if k != 'protocol_url' }
 
-        # Mock out the calls to the schema manager and neo4j queries
-        app_module.schema_manager.create_sennet_ids = Mock(return_value=[{}])
-        app_module.schema_manager.get_user_info = Mock(return_value={})
-        app_module.schema_manager.generate_triggered_data = Mock(return_value={})
-        app_module.app_neo4j_queries.create_entity = Mock(return_value=expected_response)
+    with (app.test_client() as client,
+          patch('app.schema_manager.create_sennet_ids', return_value=[{}]) as mock_create_sennet_ids,
+          patch('app.schema_manager.get_user_info', return_value={}),
+          patch('app.schema_manager.generate_triggered_data', return_value={}),
+          patch('app.app_neo4j_queries.create_entity', return_value=entity) as mock_create_entity):
 
         res = client.post('/entities/source',
-                          json=test_requests.create_entity_source_request,
+                          json=request,
                           headers={'Authorization': 'Bearer testtoken1234'})
 
         # Assert
-        app_module.schema_manager.create_sennet_ids.assert_called_once()
-        app_module.app_neo4j_queries.create_entity.assert_called_once()
+        mock_create_sennet_ids.assert_called_once()
+        mock_create_entity.assert_called_once()
 
         assert res.status_code == 200
-        for key, value in expected_response.items():
-            assert res.json[key] == value
-
-
+        assert res.json == response
+    
