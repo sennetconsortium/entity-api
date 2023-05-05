@@ -54,6 +54,16 @@ def test_get_entity_by_id_success(app, entity_type):
         assert res.status_code == 200
         assert res.json == entity
 
+def test_get_entity_by_id_unauthorized(app):
+    """Test that the get entity by id endpoint returns 401 when no bearer token 
+       is given"""
+    with app.test_client() as client:
+
+        res = client.get('/entities/8af152b82ea653a8e5189267a7e6f82a')
+
+        assert res.status_code == 401
+        assert res.json == {'error': '401 Unauthorized: No Authorization header'}
+
 @pytest.mark.parametrize('entity_type', [
     'source',
     'sample',
