@@ -135,6 +135,22 @@ def test_get_entity_by_type_success(app, entity_type):
         assert res.status_code == 200
         assert res.json == entities
 
+@pytest.mark.parametrize('entity_type', [
+    ('collection'),
+    ('invalid_type'),
+])
+def test_get_entities_by_type_invalid_type(app, entity_type):
+    """Test that the get entity by type endpoint returns a 400 for an invalid 
+       entity type"""
+    with (app.test_client() as client,
+          patch('app.app_neo4j_queries.get_entities_by_type') as mock_app_neo4j_queries):
+
+        res = client.get(f'/{entity_type}/entities')
+
+        mock_app_neo4j_queries.assert_not_called()
+
+        assert res.status_code == 400
+
 @pytest.mark.parametrize('entity_type, query_key, query_value, status_code', [
     ('source', 'property', 'uuid', 200),
     ('sample', 'property', 'uuid', 200),
