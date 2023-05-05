@@ -59,16 +59,20 @@ def test_get_entity_by_id_success(app, entity_type):
     'sample',
     'dataset',
 ])
-def test_get_entity_by_type(app, entity_type):
-    """Test that the get entity by type endpoint returns the correct entities"""
-    with app.test_client() as client:
+def test_get_entity_by_type_success(app, entity_type):
+    """Test that the get entity by type endpoint calls neo4j and returns the 
+       correct entities"""
+    entities = test_entities.get_entities(entity_type)
+
+    with (app.test_client() as client,
+          patch('app.app_neo4j_queries.get_entities_by_type', return_value=entities) as mock_app_neo4j_queries):
+
         res = client.get(f'/{entity_type}/entities')
 
+        mock_app_neo4j_queries.assert_called_once()
+
         assert res.status_code == 200
-        assert isinstance(res.json, list)
-        assert len(res.json) > 0
-        for entity in res.json:
-            assert entity['entity_type'] == entity_type.title()
+        assert res.json == entities
 
 def test_create_entity_success(app):
     """Test that the create entity endpoint calls neo4j and returns the correct

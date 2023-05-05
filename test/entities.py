@@ -73,7 +73,7 @@ entity_templates = {
         'last_modified_user_displayname': 'Test User',
         'last_modified_user_email': 'TESTUSER@example.com',
         'last_modified_user_sub': 'cd17bfa7-24fd-49ca-82ec-2d456ba53730',
-        'local_directory_rel_path': 'protected/University of Pittsburgh TMC/6a7be8e95c62c74545a29666111899d9/',
+        'local_directory_rel_path': 'protected/University of Pittsburgh TMC/<uuid>/',
         'sennet_id': 'SNT554.XLGX.327',
         'status': 'New',
         'uuid': '6a7be8e95c62c74545a29666111899d9'
@@ -81,9 +81,15 @@ entity_templates = {
 }
 
 def get_entity(entity_type: str) -> dict:
-    entity = entity_templates[entity_type]
+    entity = entity_templates[entity_type].copy()
     entity['uuid'] = uuid4().hex
+    if 'local_directory_rel_path' in entity:
+        # replace <uuid> with the uuid of the entity
+        entity['local_directory_rel_path'] = entity['local_directory_rel_path'].replace('<uuid>', entity['uuid']) 
     return entity
+
+def get_entities(entity_type: str, length: int = 3) -> list:
+    return [get_entity(entity_type) for _ in range(length)]
 
 def get_sennet_ids(uuid: str, entity_type: str) -> Mock:
     return {
