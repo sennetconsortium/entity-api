@@ -52,7 +52,10 @@ def test_get_entity_by_id_success(app, entity_type):
                          headers={'Authorization': 'Bearer testtoken1234'})
 
         mock_get_sennet_ids.assert_called_once_with(entity_id)
+
         mock_get_entity.assert_called_once()
+        mock_get_entity.call_args_list[0].args[1] == entity_id
+
         mock_get_complete_entity_result.assert_called_once()
 
         assert res.status_code == 200
