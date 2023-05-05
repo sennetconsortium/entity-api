@@ -120,7 +120,7 @@ def test_get_entity_by_id_forbidden_read_group(app):
     'sample',
     'dataset',
 ])
-def test_get_entity_by_type_success(app, entity_type):
+def test_get_entities_by_type_success(app, entity_type):
     """Test that the get entity by type endpoint calls neo4j and returns the 
        correct entities"""
     entities = test_entities.get_entities(entity_type)
@@ -158,7 +158,7 @@ def test_get_entities_by_type_invalid_type(app, entity_type):
     ('source', 'invalid_key', 'status', 400),
     ('source', 'property', 'invalid_value', 400),
 ])
-def test_get_entity_by_type_query(app, entity_type, query_key, query_value, status_code):
+def test_get_entities_by_type_query(app, entity_type, query_key, query_value, status_code):
     """Test that the get entities by type endpoint can handle specific query parameters"""
     entities = test_entities.get_entities(entity_type)
     if status_code == 200:
