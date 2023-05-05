@@ -64,6 +64,19 @@ def test_get_entity_by_id_unauthorized(app):
         assert res.status_code == 401
         assert res.json == {'error': '401 Unauthorized: No Authorization header'}
 
+def test_get_entity_by_id_forbidden_read_group(app):
+    """Test that the get entity by id endpoint returns 403 when user is not in
+       the sennet read group"""
+    with (app.test_client() as client,
+          patch('app.auth_helper_instance.getUserInfo', return_value={'hmgroupids': ''}),
+          patch('app.auth_helper_instance.get_default_read_group_uuid', return_value='testgroup')):
+
+        res = client.get('/entities/8af152b82ea653a8e5189267a7e6f82a',
+                         headers={'Authorization': 'Bearer testtoken1234'})
+
+        assert res.status_code == 403
+        assert res.json == {'error': '403 Forbidden: Access not granted'} 
+
 @pytest.mark.parametrize('entity_type', [
     'source',
     'sample',
