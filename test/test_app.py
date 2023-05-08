@@ -1,3 +1,4 @@
+import random
 import test
 test.cwd_to_src()
 
@@ -215,3 +216,25 @@ def test_create_entity_success(app, entity_type):
         assert res.status_code == 200
         assert res.json == response
     
+@pytest.mark.parametrize('entity_type', [
+    'source',
+    'sample', 
+    'dataset',
+])
+def test_create_entity_invalid(app, entity_type):
+    """Test that the create entity endpoint returns a 400 for an invalid 
+       request schema"""
+    # Purposely pick the wrong request template
+    req_ent = [x for x in test_entities.request_templates if x != entity_type]
+    request = test_entities.request_templates[random.choice(req_ent)]
+
+    with app.test_client() as client:
+        headers = {'Authorization': 'Bearer testtoken1234',}
+        if entity_type == 'dataset':
+            headers['X-Sennet-Application'] = 'ingest-api'
+
+        res = client.post(f'/entities/{entity_type}',
+                          json=request,
+                          headers=headers)
+                    
+        assert res.status_code == 400
