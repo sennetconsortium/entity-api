@@ -180,33 +180,37 @@ def test_get_entities_by_type_query(app, entity_type, query_key, query_value, st
 
 @pytest.mark.parametrize('entity_type', [
     'source',
+    'sample', 
+    'dataset',
 ])
 def test_create_entity_success(app, entity_type):
     """Test that the create entity endpoint calls neo4j and returns the correct
         response"""
     entity = test_entities.get_entity(entity_type)
-    request = {
-        "group_uuid":"57192604-18e0-11ed-b79b-972795fc9504",
-        "lab_source_id":"Unit test",
-        "source_type":"Human Organoid",
-        "protocol_url":"dx.doi.org/10.17504/protocols.io.3byl4j398lo5/v1",
-        "description":"Unit test lab notes"
-    }
-    response = { k: v for k, v in entity.items() if k != 'protocol_url' }
+    request = test_entities.request_templates[entity_type]
+    # Only include the fields that are expected to be returned
+    response = { k: v for k, v in entity.items() 
+                 if k not in ['protocol_url', 'image_files', 'thumbnail_file']}
 
     with (app.test_client() as client,
           patch('app.schema_manager.create_sennet_ids', return_value=[{}]) as mock_create_sennet_ids,
           patch('app.schema_manager.get_user_info', return_value={}),
           patch('app.schema_manager.generate_triggered_data', return_value={}),
-          patch('app.app_neo4j_queries.create_entity', return_value=entity) as mock_create_entity):
+          patch('app.app_neo4j_queries.create_entity', return_value=response) as mock_create_entity):
+        
+        headers = {'Authorization': 'Bearer testtoken1234',}
+        if entity_type == 'dataset':
+            headers['X-Sennet-Application'] = 'ingest-api'
 
-        res = client.post('/entities/source',
+        res = client.post(f'/entities/{entity_type}',
                           json=request,
-                          headers={'Authorization': 'Bearer testtoken1234'})
+                          headers=headers)
 
         # Assert
         mock_create_sennet_ids.assert_called_once()
+        assert mock_create_sennet_ids.call_args_list[0].args[0] == entity_type.title()
         mock_create_entity.assert_called_once()
+        assert mock_create_entity.call_args_list[0].args[1] == entity_type.title()
 
         assert res.status_code == 200
         assert res.json == response

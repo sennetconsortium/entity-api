@@ -31,6 +31,7 @@ entity_templates = {
         'created_by_user_sub': '1b8f1792-0ee8-473f-9249-2dc5aa4ce19c',
         'created_timestamp': 1681828388360,
         'data_access_level': 'consortium',
+        'description': 'Sample lab notes',
         'entity_type': 'Sample',
         'group_name': 'CODCC Testing Group',
         'group_uuid': '57192604-18e0-11ed-b79b-972795fc9504',
@@ -65,6 +66,8 @@ entity_templates = {
         'created_timestamp': 1681831855041,
         'data_access_level': 'protected',
         'data_types': ['CODEX'],
+        'dataset_info': 'lab notes',
+        "description": "Unit test for dataset",
         'entity_type': 'Dataset',
         'group_name': 'University of Pittsburgh TMC',
         'group_uuid': '28db7a2b-ed8a-11ec-8b0a-9fe9b51132b1',
@@ -103,3 +106,36 @@ def get_sennet_ids(uuid: str, entity_type: str) -> Mock:
         'user_id': '1b8f1792-0ee8-473f-9249-2dc5aa4ce19c',
         'uuid': uuid
     }
+
+### Requests
+
+request_templates = {
+    # source
+    'source': {
+        "group_uuid":"57192604-18e0-11ed-b79b-972795fc9504",
+        "lab_source_id":"Unit test",
+        "source_type":"Human Organoid",
+        "protocol_url":"dx.doi.org/10.17504/protocols.io.3byl4j398lo5/v1",
+        "description":"Unit test lab notes"
+    },
+    # sample
+    'sample': {
+        'direct_ancestor_uuid': '7095de797434d0b8414cd969d1ac6c0a',
+        'sample_category':'Organ',
+        'group_uuid':'57192604-18e0-11ed-b79b-972795fc9504',
+        'organ':'RK',
+        'protocol_url':'dx.doi.org/10.17504/protocols.io.3byl4j398lo5/v1',
+        'lab_tissue_sample_id':'Sample unit test',
+        'description':'Sample lab notes'
+    },
+    # dataset
+    'dataset': {
+        'direct_ancestor_uuids':['d7534e2f462a81c6afd3ded2a1544e34'],
+        'lab_dataset_id':'Dataset Unit Test',
+        'group_uuid':'57192604-18e0-11ed-b79b-972795fc9504',
+        'description':'Unit test for dataset',
+        'dataset_info':'lab notes',
+        'data_types':['Mint-ChIP'],
+        'contains_human_genetic_sequences':False
+    }
+}
