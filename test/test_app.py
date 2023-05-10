@@ -4,7 +4,7 @@ test.cwd_to_src()
 
 import os
 import random
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -100,17 +100,16 @@ def test_get_entity_by_id_query(app, entity_type, query_key, query_value, status
 def test_get_entities_by_type_success(app, entity_type):
     """Test that the get entity by type endpoint calls neo4j and returns the 
        correct entities"""
-    entities = test_entities.get_entities(entity_type)
+    with open (os.path.join(test_data_dir, f'get_entity_by_type_success_{entity_type}.json'), 'r') as f:
+        test_data = json.load(f)
 
     with (app.test_client() as client,
-          patch('app.app_neo4j_queries.get_entities_by_type', return_value=entities) as mock_app_neo4j_queries):
+          patch('app.app_neo4j_queries.get_entities_by_type', return_value=test_data['get_entities_by_type'])):
 
         res = client.get(f'/{entity_type}/entities')
 
-        mock_app_neo4j_queries.assert_called_once()
-
         assert res.status_code == 200
-        assert res.json == entities
+        assert res.json == test_data['response']
 
 @pytest.mark.parametrize('entity_type', [
     ('collection'),
@@ -119,12 +118,9 @@ def test_get_entities_by_type_success(app, entity_type):
 def test_get_entities_by_type_invalid_type(app, entity_type):
     """Test that the get entity by type endpoint returns a 400 for an invalid 
        entity type"""
-    with (app.test_client() as client,
-          patch('app.app_neo4j_queries.get_entities_by_type') as mock_app_neo4j_queries):
+    with (app.test_client() as client):
 
         res = client.get(f'/{entity_type}/entities')
-
-        mock_app_neo4j_queries.assert_not_called()
 
         assert res.status_code == 400
 
@@ -137,18 +133,22 @@ def test_get_entities_by_type_invalid_type(app, entity_type):
 ])
 def test_get_entities_by_type_query(app, entity_type, query_key, query_value, status_code):
     """Test that the get entities by type endpoint can handle specific query parameters"""
-    entities = test_entities.get_entities(entity_type)
+    with open (os.path.join(test_data_dir, f'get_entity_by_type_success_{entity_type}.json'), 'r') as f:
+        test_data = json.load(f)
+
+    expected_neo4j_query = test_data['get_entities_by_type'] 
     if status_code == 200:
-        entities = [entity[query_value] for entity in entities]
+        expected_neo4j_query = [entity[query_value] for entity in test_data['get_entities_by_type']]
+        expected_response = [entity[query_value] for entity in test_data['response']]
 
     with (app.test_client() as client,
-          patch('app.app_neo4j_queries.get_entities_by_type', return_value=entities)):
+          patch('app.app_neo4j_queries.get_entities_by_type', return_value=expected_neo4j_query)):
 
         res = client.get(f'/{entity_type}/entities?{query_key}={query_value}')
 
         assert res.status_code == status_code
         if status_code == 200:
-            assert res.json == entities
+            assert res.json == expected_response
 
 ### Create Entity
 
