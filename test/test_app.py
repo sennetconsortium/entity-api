@@ -238,3 +238,30 @@ def test_get_ancestors_success(app, entity_type):
 
         assert res.status_code == 200
         assert res.json == test_data['response'] 
+
+### Get Descendants
+
+@pytest.mark.parametrize('entity_type', [
+    'source',
+    'sample',
+    'dataset',
+])
+def test_get_descendants_success(app, entity_type):
+    """Test that the get descendants endpoint returns the correct entity"""
+
+    with open (os.path.join(test_data_dir, f'get_descendants_success_{entity_type}.json'), 'r') as f:
+        test_data = json.load(f)
+    entity_id = test_data['uuid']
+
+    with (app.test_client() as client,
+          patch('app.auth_helper_instance.getUserInfo', return_value=test_data['getUserInfo']),
+          patch('app.auth_helper_instance.get_default_read_group_uuid', return_value=test_data['get_default_read_group_uuid']),
+          patch('app.schema_manager.get_sennet_ids', return_value=test_data['get_sennet_ids']),
+          patch('app.app_neo4j_queries.get_entity', return_value=test_data['get_entity']),
+          patch('app.app_neo4j_queries.get_descendants', return_value=test_data['get_descendants'])):
+
+        res = client.get(f'/descendants/{entity_id}',
+                         headers=test_data['headers'])
+
+        assert res.status_code == 200
+        assert res.json == test_data['response'] 
