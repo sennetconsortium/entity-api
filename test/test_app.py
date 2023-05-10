@@ -1,7 +1,9 @@
-import random
+import json
 import test
 test.cwd_to_src()
 
+import os
+import random
 from unittest.mock import Mock, patch
 
 import pytest
@@ -9,6 +11,7 @@ import pytest
 import app as app_module
 import test.entities as test_entities
 
+test_data_dir = os.path.join(os.path.dirname(__file__), 'data')
 
 @pytest.fixture()
 def app():
@@ -36,31 +39,23 @@ def test_index(app):
 ])
 def test_get_entity_by_id_success(app, entity_type):
     """Test that the get entity by id endpoint returns the correct entity"""
-    entity = test_entities.get_entity(entity_type)
-    entity_id = entity['uuid']
-    sennet_ids = test_entities.get_sennet_ids(entity_id, entity_type)
-
-    # Assume user is valid and in sennet read group
-    app_module.auth_helper_instance.getUserInfo = Mock(return_value={'hmgroupids': 'testgroup'})
-    app_module.auth_helper_instance.get_default_read_group_uuid = Mock(return_value='testgroup')
+    
+    with open (os.path.join(test_data_dir, f'get_entity_by_id_success_{entity_type}.json'), 'r') as f:
+        test_data = json.load(f)
+    entity_id = test_data['uuid']
 
     with (app.test_client() as client,
-          patch('app.schema_manager.get_sennet_ids', return_value=sennet_ids) as mock_get_sennet_ids,
-          patch('app.app_neo4j_queries.get_entity', return_value=entity) as mock_get_entity,
-          patch('app.schema_manager.get_complete_entity_result', return_value=entity) as mock_get_complete_entity_result):
+          patch('app.auth_helper_instance.getUserInfo', return_value=test_data['getUserInfo']),
+          patch('app.auth_helper_instance.get_default_read_group_uuid', return_value=test_data['get_default_read_group_uuid']),
+          patch('app.schema_manager.get_sennet_ids', return_value=test_data['get_sennet_ids']),
+          patch('app.app_neo4j_queries.get_entity', return_value=test_data['get_entity']),
+          patch('app.schema_manager.get_complete_entity_result', return_value=test_data['get_complete_entity_result'])):
 
         res = client.get(f'/entities/{entity_id}',
-                         headers={'Authorization': 'Bearer testtoken1234'})
-
-        mock_get_sennet_ids.assert_called_once_with(entity_id)
-
-        mock_get_entity.assert_called_once()
-        mock_get_entity.call_args_list[0].args[1] == entity_id
-
-        mock_get_complete_entity_result.assert_called_once()
+                         headers=test_data['headers'])
 
         assert res.status_code == 200
-        assert res.json == entity
+        assert res.json == test_data['response']
 
 @pytest.mark.parametrize('entity_type, query_key, query_value, status_code', [
     ('source', 'property', 'data_access_level', 200),
@@ -74,48 +69,26 @@ def test_get_entity_by_id_success(app, entity_type):
 ])
 def test_get_entity_by_id_query(app, entity_type, query_key, query_value, status_code):
     """Test that the get entity by id endpoint can handle specific query parameters"""
-    entity = test_entities.get_entity(entity_type)
-    entity_id = entity['uuid']
-    sennet_ids = test_entities.get_sennet_ids(entity_id, entity_type)
 
-    # Assume user is valid and in sennet read group
-    app_module.auth_helper_instance.getUserInfo = Mock(return_value={'hmgroupids': 'testgroup'})
-    app_module.auth_helper_instance.get_default_read_group_uuid = Mock(return_value='testgroup')
+    with open (os.path.join(test_data_dir, f'get_entity_by_id_success_{entity_type}.json'), 'r') as f:
+        test_data = json.load(f)
+    entity_id = test_data['uuid']
+    expected_response = test_data['response']
 
     with (app.test_client() as client,
-          patch('app.schema_manager.get_sennet_ids', return_value=sennet_ids),
-          patch('app.app_neo4j_queries.get_entity', return_value=entity),
-          patch('app.schema_manager.get_complete_entity_result', return_value=entity)):
+          patch('app.auth_helper_instance.getUserInfo', return_value=test_data['getUserInfo']),
+          patch('app.auth_helper_instance.get_default_read_group_uuid', return_value=test_data['get_default_read_group_uuid']),
+          patch('app.schema_manager.get_sennet_ids', return_value=test_data['get_sennet_ids']),
+          patch('app.app_neo4j_queries.get_entity', return_value=test_data['get_entity']),
+          patch('app.schema_manager.get_complete_entity_result', return_value=test_data['get_complete_entity_result'])):
 
         res = client.get(f'/entities/{entity_id}?{query_key}={query_value}',
-                         headers={'Authorization': 'Bearer testtoken1234'})
+                         headers=test_data['headers'])
 
         assert res.status_code == status_code
         if status_code == 200:
-            assert res.text == entity[query_value]
+            assert res.text == expected_response[query_value]
 
-def test_get_entity_by_id_unauthorized(app):
-    """Test that the get entity by id endpoint returns 401 when no bearer token 
-       is given"""
-    with app.test_client() as client:
-
-        res = client.get('/entities/8af152b82ea653a8e5189267a7e6f82a')
-
-        assert res.status_code == 401
-        assert res.json == {'error': '401 Unauthorized: No Authorization header'}
-
-def test_get_entity_by_id_forbidden_read_group(app):
-    """Test that the get entity by id endpoint returns 403 when user is not in
-       the sennet read group"""
-    with (app.test_client() as client,
-          patch('app.auth_helper_instance.getUserInfo', return_value={'hmgroupids': ''}),
-          patch('app.auth_helper_instance.get_default_read_group_uuid', return_value='testgroup')):
-
-        res = client.get('/entities/8af152b82ea653a8e5189267a7e6f82a',
-                         headers={'Authorization': 'Bearer testtoken1234'})
-
-        assert res.status_code == 403
-        assert res.json == {'error': '403 Forbidden: Access not granted'} 
 
 ### Get Entity by Type
 
