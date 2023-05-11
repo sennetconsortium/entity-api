@@ -89,7 +89,6 @@ def test_get_entity_by_id_query(app, entity_type, query_key, query_value, status
         if status_code == 200:
             assert res.text == expected_response[query_value]
 
-
 ### Get Entity by Type
 
 @pytest.mark.parametrize('entity_type', [
@@ -210,6 +209,70 @@ def test_create_entity_invalid(app, entity_type):
                           json=wrong_data['request'],
                           headers=test_data['headers'])
                     
+        assert res.status_code == 400
+
+### Update Entity
+
+@pytest.mark.parametrize('entity_type', [
+    'source',
+    'sample',
+    'dataset',
+])
+def test_update_entity_success(app, entity_type):
+    """Test that the update entity endpoint returns the correct entity"""
+
+    with open(os.path.join(test_data_dir, f'update_entity_success_{entity_type}.json'), 'r') as f:
+        test_data = json.load(f)
+    entity_id = test_data['uuid']
+
+    with (app.test_client() as client,
+          patch('app.schema_manager.get_sennet_ids', side_effect=test_data['get_sennet_ids']),
+          patch('app.app_neo4j_queries.get_entity', side_effect=test_data['get_entity']),
+          patch('lib.ontology.Ontology.source_types', return_value=test_data['source_types']),
+          patch('lib.ontology.Ontology.specimen_categories', return_value=test_data['specimen_categories']),
+          patch('app.schema_manager.get_user_info', return_value=test_data['get_user_info']),
+          patch('app.schema_manager.generate_triggered_data', side_effect=test_data['generate_triggered_data']),
+          patch('app.app_neo4j_queries.update_entity', side_effect=test_data['update_entity']),
+          patch('app.schema_manager.get_complete_entity_result', side_effect=test_data['get_complete_entity_result']),
+          patch('app.app_neo4j_queries.get_activity_was_generated_by', return_value=test_data['get_activity_was_generated_by']),
+          patch('app.app_neo4j_queries.get_activity', return_value=test_data['get_activity']),
+          patch('requests.put', return_value=Response(status=202))):
+
+        res = client.put(f'/entities/{entity_id}',
+                         json=test_data['request'],
+                         headers=test_data['headers'])
+
+        assert res.status_code == 200
+        assert res.json == test_data['response']
+
+@pytest.mark.parametrize('entity_type', [
+    'source',
+    'sample',
+    'dataset',
+])
+def test_update_entity_invalid(app, entity_type):
+    """Test that the update entity endpoint returns a 400 for an invalid 
+       request schema"""
+
+    # purposedly load the wrong entity data to use in the request body
+    wrong_entity_type = random.choice([i for i in ['source', 'sample', 'dataset'] if i != entity_type])
+    with open (os.path.join(test_data_dir, f'create_entity_success_{wrong_entity_type}.json'), 'r') as f:
+        wrong_data = json.load(f)
+
+    with open(os.path.join(test_data_dir, f'update_entity_success_{entity_type}.json'), 'r') as f:
+        test_data = json.load(f)
+    entity_id = test_data['uuid']
+
+    with (app.test_client() as client,
+          patch('lib.ontology.Ontology.source_types', return_value=test_data['source_types']),
+          patch('lib.ontology.Ontology.specimen_categories', return_value=test_data['specimen_categories']),
+          patch('app.schema_manager.get_sennet_ids', side_effect=test_data['get_sennet_ids']),
+          patch('app.app_neo4j_queries.get_entity', side_effect=test_data['get_entity'])):
+
+        res = client.put(f'/entities/{entity_id}',
+                         json=wrong_data['request'],
+                         headers=test_data['headers'])
+
         assert res.status_code == 400
 
 ### Get Ancestors
