@@ -25,6 +25,7 @@ def app():
 
 def test_index(app):
     """Test that the index page is working"""
+
     with app.test_client() as client:
         res = client.get('/')
         assert res.status_code == 200
@@ -40,7 +41,7 @@ def test_index(app):
 def test_get_entity_by_id_success(app, entity_type):
     """Test that the get entity by id endpoint returns the correct entity"""
     
-    with open (os.path.join(test_data_dir, f'get_entity_by_id_success_{entity_type}.json'), 'r') as f:
+    with open(os.path.join(test_data_dir, f'get_entity_by_id_success_{entity_type}.json'), 'r') as f:
         test_data = json.load(f)
     entity_id = test_data['uuid']
 
@@ -70,7 +71,7 @@ def test_get_entity_by_id_success(app, entity_type):
 def test_get_entity_by_id_query(app, entity_type, query_key, query_value, status_code):
     """Test that the get entity by id endpoint can handle specific query parameters"""
 
-    with open (os.path.join(test_data_dir, f'get_entity_by_id_success_{entity_type}.json'), 'r') as f:
+    with open(os.path.join(test_data_dir, f'get_entity_by_id_success_{entity_type}.json'), 'r') as f:
         test_data = json.load(f)
     entity_id = test_data['uuid']
     expected_response = test_data['response']
@@ -99,7 +100,8 @@ def test_get_entity_by_id_query(app, entity_type, query_key, query_value, status
 def test_get_entities_by_type_success(app, entity_type):
     """Test that the get entity by type endpoint calls neo4j and returns the 
        correct entities"""
-    with open (os.path.join(test_data_dir, f'get_entity_by_type_success_{entity_type}.json'), 'r') as f:
+
+    with open(os.path.join(test_data_dir, f'get_entity_by_type_success_{entity_type}.json'), 'r') as f:
         test_data = json.load(f)
 
     with (app.test_client() as client,
@@ -117,6 +119,7 @@ def test_get_entities_by_type_success(app, entity_type):
 def test_get_entities_by_type_invalid_type(app, entity_type):
     """Test that the get entity by type endpoint returns a 400 for an invalid 
        entity type"""
+
     with (app.test_client() as client):
 
         res = client.get(f'/{entity_type}/entities')
@@ -132,7 +135,8 @@ def test_get_entities_by_type_invalid_type(app, entity_type):
 ])
 def test_get_entities_by_type_query(app, entity_type, query_key, query_value, status_code):
     """Test that the get entities by type endpoint can handle specific query parameters"""
-    with open (os.path.join(test_data_dir, f'get_entity_by_type_success_{entity_type}.json'), 'r') as f:
+
+    with open(os.path.join(test_data_dir, f'get_entity_by_type_success_{entity_type}.json'), 'r') as f:
         test_data = json.load(f)
 
     expected_neo4j_query = test_data['get_entities_by_type'] 
@@ -160,7 +164,7 @@ def test_create_entity_success(app, entity_type):
     """Test that the create entity endpoint calls neo4j and returns the correct
         response"""
 
-    with open (os.path.join(test_data_dir, f'create_entity_success_{entity_type}.json'), 'r') as f:
+    with open(os.path.join(test_data_dir, f'create_entity_success_{entity_type}.json'), 'r') as f:
         test_data = json.load(f)
 
     with (app.test_client() as client,
@@ -195,10 +199,10 @@ def test_create_entity_invalid(app, entity_type):
 
     # purposedly load the wrong entity data to use in the request body
     wrong_entity_type = random.choice([i for i in ['source', 'sample', 'dataset'] if i != entity_type])
-    with open (os.path.join(test_data_dir, f'create_entity_success_{wrong_entity_type}.json'), 'r') as f:
+    with open(os.path.join(test_data_dir, f'create_entity_success_{wrong_entity_type}.json'), 'r') as f:
         wrong_data = json.load(f)
 
-    with open (os.path.join(test_data_dir, f'create_entity_success_{entity_type}.json'), 'r') as f:
+    with open(os.path.join(test_data_dir, f'create_entity_success_{entity_type}.json'), 'r') as f:
         test_data = json.load(f)
 
     with (app.test_client() as client,
@@ -256,7 +260,7 @@ def test_update_entity_invalid(app, entity_type):
 
     # purposedly load the wrong entity data to use in the request body
     wrong_entity_type = random.choice([i for i in ['source', 'sample', 'dataset'] if i != entity_type])
-    with open (os.path.join(test_data_dir, f'create_entity_success_{wrong_entity_type}.json'), 'r') as f:
+    with open(os.path.join(test_data_dir, f'create_entity_success_{wrong_entity_type}.json'), 'r') as f:
         wrong_data = json.load(f)
 
     with open(os.path.join(test_data_dir, f'update_entity_success_{entity_type}.json'), 'r') as f:
@@ -285,7 +289,7 @@ def test_update_entity_invalid(app, entity_type):
 def test_get_ancestors_success(app, entity_type):
     """Test that the get ancestors endpoint returns the correct entity"""
 
-    with open (os.path.join(test_data_dir, f'get_ancestors_success_{entity_type}.json'), 'r') as f:
+    with open(os.path.join(test_data_dir, f'get_ancestors_success_{entity_type}.json'), 'r') as f:
         test_data = json.load(f)
     entity_id = test_data['uuid']
 
@@ -312,7 +316,7 @@ def test_get_ancestors_success(app, entity_type):
 def test_get_descendants_success(app, entity_type):
     """Test that the get descendants endpoint returns the correct entity"""
 
-    with open (os.path.join(test_data_dir, f'get_descendants_success_{entity_type}.json'), 'r') as f:
+    with open(os.path.join(test_data_dir, f'get_descendants_success_{entity_type}.json'), 'r') as f:
         test_data = json.load(f)
     entity_id = test_data['uuid']
 
