@@ -332,3 +332,38 @@ def test_get_descendants_success(app, entity_type):
 
         assert res.status_code == 200
         assert res.json == test_data['response'] 
+
+### Validate constraints
+
+@pytest.mark.parametrize('test_name', [
+    'source',
+    'sample_organ',
+    'sample_organ_blood',
+    'sample_block',
+    'sample_section',
+    'sample_suspension',
+    'dataset',
+])
+def test_validate_constraints_new(app, test_name):
+    """Test that the validate constraints endpoint returns the correct constraints"""
+
+    with open(os.path.join(test_data_dir, f'validate_constraints_{test_name}.json'), 'r') as f:
+        test_data = json.load(f)
+        
+    def mock_func(func_name):
+        data = test_data[func_name]
+        if data and data.get('code'):
+            # code being tested uses a StatusCode enum instead of an int 
+            data['code'] = app_module.StatusCodes(data['code'])
+        return data
+
+    with (app.test_client() as client,
+          patch('app.get_constraints_by_ancestor', return_value=mock_func('get_constraints_by_ancestor')),
+          patch('app.get_constraints_by_descendant', return_value=mock_func('get_constraints_by_descendant'))):
+        
+        res = client.post('/constraints' + test_data['query_string'], 
+                          headers={'Authorization': 'Bearer test_token'},
+                          json=test_data['request'])
+
+        assert res.status_code == 200
+        assert res.json == test_data['response']
