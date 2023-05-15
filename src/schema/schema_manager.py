@@ -167,7 +167,7 @@ dict
 
 def get_entity_properties(schema_section, normalized_class) -> dict:
     properties = schema_section[normalized_class]['properties']
-    super_class = schema_section[normalized_class]['superclass']
+    super_class = schema_section[normalized_class].get('superclass')
 
     if super_class is not None and super_class in schema_section:
 
