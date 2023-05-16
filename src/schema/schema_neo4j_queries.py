@@ -128,6 +128,20 @@ def get_dataset_organ_and_source_info(neo4j_driver, uuid):
     return organ_name, source_metadata
 
 
+def get_entity_type(neo4j_driver, entity_uuid: str) -> str:
+    query: str = f"Match (ent {{uuid: '{entity_uuid}'}}) return ent.entity_type"
+
+    logger.info("======get_entity_type() query======")
+    logger.info(query)
+
+    with neo4j_driver.session() as session:
+        record = session.read_transaction(_execute_readonly_tx, query)
+        if record and len(record) == 1:
+            return record[0]
+
+    return None
+
+
 """
 Create or recreate one or more linkages
 between the target entity node and the collection nodes in neo4j

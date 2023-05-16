@@ -61,6 +61,10 @@ app.config['UUID_API_URL'] = app.config['UUID_API_URL'].strip('/')
 app.config['INGEST_API_URL'] = app.config['INGEST_API_URL'].strip('/')
 app.config['SEARCH_API_URL'] = app.config['SEARCH_API_URL'].strip('/')
 
+# This mode when set True disables the PUT and POST calls, used on STAGE to make entity-api READ-ONLY
+# to prevent developers from creating new UUIDs and new entities or updating existing entities
+READ_ONLY_MODE = app.config['READ_ONLY_MODE']
+
 # Suppress InsecureRequestWarning warning when requesting status on https with ssl cert verify disabled
 requests.packages.urllib3.disable_warnings(category = InsecureRequestWarning)
 
@@ -778,7 +782,7 @@ published are returned with it.
 Returns
 -------
 json
-    A list of all the public collection dictionaries (with attached public datasts)
+    A list of all the public collection dictionaries (with attached public datasets)
 """
 @app.route('/collections', methods = ['GET'])
 def get_collections():
@@ -841,7 +845,7 @@ Default to skip those time-consuming properties
 Parameters
 ----------
 entity_type : str
-    One of the target entity types (case-insensitive since will be normalized): Dataset, Source, Sample, Upload
+    One of the target entity types (case-insensitive since will be normalized): Dataset, Source, Sample, Upload, Collection
 
 Returns
 -------
@@ -1810,8 +1814,11 @@ Returns
 json
     JSON string containing a success message with 200 status code
 """
-@app.route('/collections/<collection_uuid>/add-entities', methods = ['PUT'])
+@app.route('/collections/<collection_uuid>/add-datasets', methods = ['PUT'])
 def add_datasets_to_collection(collection_uuid):
+    if READ_ONLY_MODE:
+        abort_forbidden("Access not granted when entity-api in READ-ONLY mode")
+
     # Get user token from Authorization header
     user_token = get_user_token(request)
 
@@ -1838,6 +1845,8 @@ def add_datasets_to_collection(collection_uuid):
     # Make sure all the given uuids are datasets
     for entity_uuid in entity_uuids_list:
         entity_dict = query_target_entity(entity_uuid, user_token)
+        if not schema_manager.entity_type_instanceof(entity_dict['entity_type'], 'Dataset'):
+            abort_bad_req(f"The UUID provided in JSON is not a Dataset or Publication: {entity_uuid}")
 
     try:
         app_neo4j_queries.add_entities_to_collection(neo4j_driver_instance, collection_uuid, entity_uuids_list)
