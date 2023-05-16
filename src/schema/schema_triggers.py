@@ -241,7 +241,7 @@ def set_data_access_level(property_key, normalized_type, user_token, existing_da
     if 'uuid' not in new_data_dict:
         raise KeyError("Missing 'uuid' key in 'new_data_dict' during calling 'set_data_access_level()' trigger method.")
 
-    if normalized_type == 'Dataset':
+    if normalized_type in ['Dataset', 'Publication']:
         # 'contains_human_genetic_sequences' is required on create
         if 'contains_human_genetic_sequences' not in new_data_dict:
             raise KeyError("Missing 'contains_human_genetic_sequences' key in 'new_data_dict' during calling 'set_data_access_level()' trigger method.")
@@ -1249,7 +1249,7 @@ def set_was_generated_by(property_key, normalized_type, user_token, existing_dat
 
     # Build a list of direct ancestor uuids
     # Only one uuid in the list in this case
-    if normalized_type == 'Dataset':
+    if normalized_type in ['Dataset', 'Publication']:
         if 'direct_ancestor_uuids' not in existing_data_dict:
             raise KeyError(
                 "Missing 'direct_ancestor_uuids' key in 'existing_data_dict' during calling 'set_was_generated_by()' trigger method.")
@@ -1666,7 +1666,7 @@ str: The target property key
 str: The protocol_url string
 """
 def set_activity_protocol_url(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
-    if 'entity_type' in new_data_dict and new_data_dict['entity_type'] == 'Dataset':
+    if 'entity_type' in new_data_dict and new_data_dict['entity_type'] in ['Dataset', 'Publication']:
         return property_key, None
     else:
         if 'protocol_url' not in new_data_dict:

@@ -133,6 +133,52 @@ def get_all_types():
 
 
 """
+Extends to dicts together checking for None before extending
+
+Returns
+-------
+dict
+    The extended dict
+"""
+
+
+def extend_dicts(dict1: dict, dict2: dict) -> dict:
+    if dict1 is None:
+        dict1 = {}
+
+    if dict2 is None:
+        dict2 = {}
+
+    dict1.update(dict2)
+
+    return dict1
+
+
+
+
+"""
+Gets all properties by entity
+
+Returns
+-------
+dict
+    The Entity properties dict
+"""
+
+
+def get_entity_properties(schema_section, normalized_class) -> dict:
+    properties = schema_section[normalized_class]['properties']
+    super_class = schema_section[normalized_class].get('superclass')
+
+    if super_class is not None and super_class in schema_section:
+
+        super_class_properties = schema_section[super_class]['properties']
+        return extend_dicts(properties, super_class_properties)
+
+    return properties
+
+
+"""
 Get a list of all the supported entity types in the schmea yaml
 
 Returns
@@ -264,7 +310,7 @@ def generate_triggered_data(trigger_type, normalized_class, user_token, existing
 
     # The ordering of properties of this entity class defined in the yaml schema
     # decides the ordering of which trigger method gets to run first
-    properties = schema_section[normalized_class]['properties']
+    properties = get_entity_properties(schema_section, normalized_class)
 
     # Set each property value and put all resulting data into a dictionary for:
     # before_create_trigger|before_update_trigger|on_read_trigger
@@ -717,7 +763,7 @@ existing_entity_dict : dict
 def validate_json_data_against_schema(provenance_type, json_data_dict, normalized_entity_type, existing_entity_dict={}):
     global _schema
 
-    properties = _schema[provenance_type][normalized_entity_type]['properties']
+    properties = get_entity_properties(_schema[provenance_type], normalized_entity_type)
     schema_keys = properties.keys()
     json_data_keys = json_data_dict.keys()
     separator = ', '
@@ -857,6 +903,9 @@ def execute_entity_level_validator(validator_type, normalized_entity_type, reque
 
     entity = _schema['ENTITIES'][normalized_entity_type]
 
+    entity['properties'] = get_entity_properties(_schema['ENTITIES'], normalized_entity_type)
+
+
     for key in entity:
         if validator_type == key:
             validator_method_name = entity[validator_type]
@@ -909,7 +958,9 @@ def execute_property_level_validators(provenance_type, validator_type, normalize
     if provenance_type != 'ACTIVITIES':
         validate_normalized_entity_type(normalized_entity_type)
 
-    properties = _schema[provenance_type][normalized_entity_type]['properties']
+    # properties = _schema[provenance_type][normalized_entity_type]['properties']
+
+    properties = get_entity_properties(_schema[provenance_type], normalized_entity_type)
 
     for key in properties:
         # Only run the validators for keys present in the request json
@@ -1373,7 +1424,7 @@ def create_sennet_ids(normalized_class, json_data_dict, user_token, user_info_di
     }
 
     # Activity and Collection don't require the `parent_ids` in request json
-    if normalized_class in ['Source', 'Sample', 'Dataset', 'Upload']:
+    if normalized_class in ['Source', 'Sample', 'Dataset', 'Upload', 'Publication']:
         # The direct ancestor of Source and Upload must be Lab
         # The group_uuid is the Lab id in this case
         if normalized_class in ['Source', 'Upload']:

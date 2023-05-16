@@ -1209,7 +1209,7 @@ def update_entity(id):
         # Handle linkages update via `after_update_trigger` methods 
         if has_direct_ancestor_uuid:
             after_update(normalized_entity_type, user_token, merged_updated_dict)
-    elif normalized_entity_type == 'Dataset':
+    elif normalized_entity_type in ['Dataset', 'Publication']:
         # A bit more validation if `direct_ancestor_uuids` provided
         has_direct_ancestor_uuids = False
         if ('direct_ancestor_uuids' in json_data_dict) and (json_data_dict['direct_ancestor_uuids']):
@@ -1236,8 +1236,8 @@ def update_entity(id):
             for dataset_uuid in json_data_dict['dataset_uuids_to_link']:
                 dataset_dict = query_target_entity(dataset_uuid, user_token)
                 # Also make sure it's a Dataset
-                if dataset_dict['entity_type'] != 'Dataset':
-                    abort_bad_req(f"The uuid: {dataset_uuid} is not a Dataset, cannot be linked to this Upload")
+                if dataset_dict['entity_type'] not in ['Dataset', 'Publication']:
+                    abort_bad_req(f"The uuid: {dataset_uuid} is not a Dataset or Publication, cannot be linked to this Upload")
 
         has_dataset_uuids_to_unlink = False
         if ('dataset_uuids_to_unlink' in json_data_dict) and (json_data_dict['dataset_uuids_to_unlink']):
@@ -1885,8 +1885,8 @@ def doi_redirect(id):
     entity_type = entity_dict['entity_type']
 
     # Only for collection
-    if entity_type not in ['Collection', 'Dataset']:
-        abort_bad_req("The target entity of the specified id must be a Collection or Dataset")
+    if entity_type not in ['Collection', 'Dataset', 'Publication']:
+        abort_bad_req("The target entity of the specified id must be a Collection or Dataset or Publication")
 
     uuid = entity_dict['uuid']
 
@@ -1981,8 +1981,8 @@ def get_globus_url(id):
     normalized_entity_type = entity_dict['entity_type']
 
     # Only for Dataset and Upload
-    if normalized_entity_type not in ['Dataset', 'Upload']:
-        abort_bad_req("The target entity of the specified id is not a Dataset nor a Upload")
+    if normalized_entity_type not in ['Dataset', 'Publication', 'Upload']:
+        abort_bad_req("The target entity of the specified id is not a Dataset, Publication nor a Upload")
 
     # Upload doesn't have this 'data_access_level' property, we treat it as 'protected'
     # For Dataset, if no access level is present, default to protected too
