@@ -172,7 +172,7 @@ def get_entity_properties(schema_section, normalized_class) -> dict:
     if super_class is not None and super_class in schema_section:
 
         super_class_properties = schema_section[super_class]['properties']
-        return extend_dicts(properties, super_class_properties)
+        return extend_dicts(super_class_properties, properties)
 
     return properties
 
@@ -459,7 +459,7 @@ dict
 def remove_transient_and_none_values(provenance_type, merged_dict, normalized_entity_type):
     global _schema
 
-    properties = _schema[provenance_type][normalized_entity_type]['properties']
+    properties = get_entity_properties(_schema[provenance_type], normalized_entity_type)
 
     filtered_dict = {}
     for k, v in merged_dict.items():
@@ -612,7 +612,7 @@ def normalize_object_result_for_response(provenance_type, entity_dict, propertie
     # an incorrectly created entity that doesn't have the `entity_type` property
     if entity_dict and ('entity_type' in entity_dict):
         normalized_entity_type = entity_dict['entity_type']
-        properties = _schema[provenance_type][normalized_entity_type]['properties']
+        properties = get_entity_properties(_schema[provenance_type], normalized_entity_type)
     else:
         if provenance_type == 'ACTIVITIES':
             properties = _schema[provenance_type]['Activity']['properties']
