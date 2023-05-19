@@ -247,7 +247,7 @@ ENTITIES:
         type: string
         description: "Free text description of the collection"
       ###### Transient properties ######
-      entities:
+      datasets:
         type: list
         transient: true
         generated: true
