@@ -2,9 +2,9 @@ name: Tests
 
 on:
   push:
-    branches: [ 108-integrate-entity-api-pyunit-tests-with-github-actions ]
+    branches: [ dev-integrate ]
   pull_request:
-    branches: [ 108-integrate-entity-api-pyunit-tests-with-github-actions ]
+    branches: [ dev-integrate ]
 
 jobs:
   test:
