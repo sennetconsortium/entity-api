@@ -346,7 +346,7 @@ ENTITIES:
         after_update_trigger: set_was_generated_by
       direct_ancestors:
         type: list
-        description: "A list of direct parent ancensters (one level above) that the Dataset was derived from."
+        description: "A list of direct parent ancestors (one level above) that the Dataset was derived from."
         generated: true
         transient: true
         on_read_trigger: get_dataset_direct_ancestors
@@ -434,12 +434,16 @@ ENTITIES:
     # This superclass property is optional
     superclass: Dataset
     # Only allowed applications can create new Publication via POST
-    before_entity_create_validator: validate_application_header_before_entity_create
+    # before_entity_create_validator: validate_application_header_before_entity_create
     # Publications can be either derivation source or target
     derivation:
       source: true
       target: true
     properties:
+      title:
+        type: string
+        description: "The title of the publication."
+        required_on_create: true # Only required for create via POST, not update via PUT
       publication_doi:
         type: string
         description: 'The doi of the publication. (##.####/[alpha-numeric-string])'
