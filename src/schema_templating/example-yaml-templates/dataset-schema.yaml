@@ -128,7 +128,7 @@ Dataset:
         anyOf:
           - $ref: '#/components/schemas/Sample'
           - $ref: '#/components/schemas/Dataset'
-      description: "A list of direct parent ancensters (one level above) that the Dataset was derived from."
+      description: "A list of direct parent ancestors (one level above) that the Dataset was derived from."
     published_timestamp:
       readOnly: true
       type: integer
