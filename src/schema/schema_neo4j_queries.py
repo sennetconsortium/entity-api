@@ -141,7 +141,6 @@ def get_entity_type(neo4j_driver, entity_uuid: str) -> str:
 
     return None
 
-
 """
 Create or recreate one or more linkages
 between the target entity node and the collection nodes in neo4j
