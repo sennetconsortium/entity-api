@@ -1,0 +1,140 @@
+{
+  "request": {
+    "direct_ancestor_uuid": "7095de797434d0b8414cd969d1ac6c0a",
+    "sample_category": "Organ",
+    "group_uuid": "57192604-18e0-11ed-b79b-972795fc9504",
+    "organ": "RK",
+    "protocol_url": "dx.doi.org/10.17504/protocols.io.3byl4j398lo5/v1",
+    "lab_tissue_sample_id": "Sample unit test",
+    "description": "Sample lab notes"
+  },
+  "response": {
+    "created_by_user_displayname": "Test User",
+    "created_by_user_email": "TESTUSER@example.com",
+    "created_by_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
+    "created_timestamp": 1683306482813,
+    "data_access_level": "consortium",
+    "description": "Sample lab notes",
+    "entity_type": "Sample",
+    "group_name": "CODCC Testing Group",
+    "group_uuid": "57192604-18e0-11ed-b79b-972795fc9504",
+    "lab_tissue_sample_id": "Sample unit test",
+    "last_modified_timestamp": 1683306482813,
+    "last_modified_user_displayname": "Test User",
+    "last_modified_user_email": "TESTUSER@example.com",
+    "last_modified_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
+    "organ": "RK",
+    "sample_category": "Organ",
+    "sennet_id": "SNT547.QXFQ.945",
+    "uuid": "a3d8bb9560b0eea3dd49185ca5dcc9dd"
+  },
+  "headers": {
+    "Authorization": "Bearer testtoken1234"
+  },
+  "get_sennet_ids": {
+    "ancestor_id": "8af152b82ea653a8e5189267a7e6f82a",
+    "ancestor_ids": ["8af152b82ea653a8e5189267a7e6f82a"],
+    "email": "TESTUSER@example.com",
+    "hm_uuid": "a3d8bb9560b0eea3dd49185ca5dcc9dd",
+    "sennet_id": "SNT547.QXFQ.945",
+    "time_generated": "2023-04-18 15:30:55",
+    "type": "SOURCE",
+    "user_id": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
+    "uuid": "a3d8bb9560b0eea3dd49185ca5dcc9dd"
+  },
+  "get_entity": {
+    "lab_source_id": "Mouse Source 1",
+    "group_name": "CODCC Testing Group",
+    "sennet_id": "SNT986.NQMB.577",
+    "last_modified_timestamp": 1681826894432,
+    "created_by_user_displayname": "Test User",
+    "description": "This is a mouse source.",
+    "source_type": "Mouse",
+    "group_uuid": "57192604-18e0-11ed-b79b-972795fc9504",
+    "created_timestamp": 1681826894432,
+    "created_by_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
+    "uuid": "8af152b82ea653a8e5189267a7e6f82a",
+    "last_modified_user_displayname": "Test User",
+    "created_by_user_email": "testuser@example.com",
+    "data_access_level": "consortium",
+    "entity_type": "Source",
+    "last_modified_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
+    "last_modified_user_email": "testuser@example.com",
+    "protocol_url": "dx.doi.org/10.17504/protocols.io.3byl4j398lo5/v1" 
+  },
+  "create_sennet_ids": [
+    {
+      "uuid": "a3d8bb9560b0eea3dd49185ca5dcc9dd",
+      "hm_uuid": "a3d8bb9560b0eea3dd49185ca5dcc9dd",
+      "sennet_id": "SNT997.RRWW.445"
+    }
+  ],
+  "source_types": {
+    "MOUSE": "Mouse",
+    "HUMAN": "Human",
+    "HUMAN_ORGANOID": "Human Organoid",
+    "MOUSE_ORGANOID": "Mouse Organoid"
+  },
+  "specimen_categories": {
+    "ORGAN": "Organ",
+    "SUSPENSION": "Suspension",
+    "SECTION": "Section",
+    "BLOCK": "Block"
+  },
+  "get_user_info": {
+    "active": true,
+    "token_type": "Bearer",
+    "scope": "test_scope",
+    "client_id": "b83519ea-5b7a-4d7d-b45c-8b5ba9c0b87a",
+    "username": "testuser@example.com",
+    "name": "Test User",
+    "email": "TESTUSER@example.com",
+    "exp": 1683729353,
+    "iat": 1683556553,
+    "nbf": 1683556553,
+    "sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
+    "aud": ["groups.api.example.com", "b83519ea-5b7a-4d7d-b45c-8b5ba9c0b87a"],
+    "iss": "https://auth.example.com",
+    "dependent_tokens_cache_id": "",
+    "hmgroupids": ["cd386b52-0cd8-4e07-87cc-d84b2f27b70a"],
+    "group_membership_ids": ["cd386b52-0cd8-4e07-87cc-d84b2f27b70a"],
+    "hmroleids": [],
+    "hmscopes": ["test_scope"]
+  },
+  "generate_triggered_data": {
+    "created_timestamp": 1683306482813,
+    "created_by_user_displayname": "Test User",
+    "created_by_user_email": "TESTUSER@example.com",
+    "created_by_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
+    "uuid": "a3d8bb9560b0eea3dd49185ca5dcc9dd",
+    "sennet_id": "SNT547.QXFQ.945",
+    "last_modified_timestamp": 1683306482813,
+    "last_modified_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
+    "last_modified_user_email": "TESTUSER@example.com",
+    "last_modified_user_displayname": "Test User",
+    "entity_type": "Sample",
+    "data_access_level": "consortium",
+    "group_uuid": "57192604-18e0-11ed-b79b-972795fc9504",
+    "group_name": "CODCC Testing Group"
+  },
+  "create_entity": {
+    "organ": "RK",
+    "sennet_id": "SNT547.QXFQ.945",
+    "group_name": "CODCC Testing Group",
+    "last_modified_timestamp": 1683306482813,
+    "lab_tissue_sample_id": "Sample unit test",
+    "created_by_user_displayname": "Test User",
+    "description": "Sample lab notes",
+    "created_timestamp": 1683306482813,
+    "group_uuid": "57192604-18e0-11ed-b79b-972795fc9504",
+    "sample_category": "Organ",
+    "created_by_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
+    "uuid": "a3d8bb9560b0eea3dd49185ca5dcc9dd",
+    "last_modified_user_displayname": "Test User",
+    "created_by_user_email": "TESTUSER@example.com",
+    "entity_type": "Sample",
+    "data_access_level": "consortium",
+    "last_modified_user_email": "TESTUSER@example.com",
+    "last_modified_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d"
+  }
+}
