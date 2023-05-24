@@ -2,9 +2,13 @@ name: Tests
 
 on:
   push:
-    branches: [ dev-integrate ]
+    branches:
+      - main
+      - dev-integrate
   pull_request:
-    branches: [ dev-integrate ]
+    branches:
+      - main
+      - dev-integrate
 
 jobs:
   test:
