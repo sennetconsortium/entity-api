@@ -80,10 +80,11 @@ new_data_dict : dict
 """
 def validate_application_header_before_property_update(property_key, normalized_entity_type, request, existing_data_dict, new_data_dict):
     # A list of applications allowed to update this property
-    # Currently only ingest-api and ingest-pipeline are allowed
+    # Currently only ingest-api, ingest-pipeline, and portal-ui are allowed
     # to update Dataset.status or Upload.status
     # Use lowercase for comparison
-    applications_allowed = [SchemaConstants.INGEST_API_APP, SchemaConstants.INGEST_PIPELINE_APP]
+    applications_allowed = [SchemaConstants.INGEST_API_APP, SchemaConstants.INGEST_PIPELINE_APP,
+                            SchemaConstants.INGEST_PORTAL_APP]
 
     _validate_application_header(applications_allowed, request.headers)
 
@@ -106,7 +107,7 @@ new_data_dict : dict
 """
 def validate_dataset_status_value(property_key, normalized_entity_type, request, existing_data_dict, new_data_dict):
     # Use lowercase for comparison
-    accepted_status_values = ['new', 'processing', 'published', 'qa', 'error', 'hold', 'invalid']
+    accepted_status_values = ['new', 'processing', 'published', 'qa', 'error', 'hold', 'invalid', 'submitted']
     new_status = new_data_dict[property_key].lower()
 
     if new_status not in accepted_status_values:
