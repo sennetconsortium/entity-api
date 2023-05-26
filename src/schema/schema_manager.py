@@ -243,9 +243,9 @@ def get_entity_properties(schema_section: dict, normalized_class: str) -> dict:
     if super_class is not None and super_class in schema_section:
 
         super_class_properties = schema_section[super_class]['properties']
-        return extend_dicts(super_class_properties, properties)
+        return extend_dicts(dict(super_class_properties), dict(properties))
 
-    return properties
+    return dict(properties)
 
 
 """
