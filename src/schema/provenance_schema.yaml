@@ -589,7 +589,7 @@ ENTITIES:
         before_create_trigger: set_data_access_level
       sample_category:
         type: string
-        description: 'The category of the sample (Block/Section/Suspension/Bodily Fluid/Organ/Organ Piece/Other)'
+        description: 'The category of the sample (Block/Section/Suspension/Organ)'
         required_on_create: true
       #TODO: we can possibly remove this with how the metadata validation is ran automatically now
       portal_metadata_upload_files:
@@ -638,6 +638,7 @@ ENTITIES:
       lab_tissue_sample_id:
         type: string
         description: "Lab specific id for the sample."
+        required_on_create: true
       next_identifier:
         type: string
         immutable: true
