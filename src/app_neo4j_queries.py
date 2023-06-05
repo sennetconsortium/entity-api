@@ -787,6 +787,39 @@ def get_sorted_revisions(neo4j_driver, uuid):
 
 
 """
+Returns all of the Sample information associated with a Dataset, back to each Donor. Returns a dictionary
+containing all of the provenance info for a given dataset. Each Sample is in its own dictionary, converted
+from its neo4j node and placed into a list. 
+
+Parameters
+----------
+neo4j_driver : neo4j.Driver object
+    The neo4j database connection pool
+dataset_uuid : string
+    the uuid of the desired dataset
+"""
+def get_all_dataset_samples(neo4j_driver, dataset_uuid):
+    query = f"MATCH p = (ds:Dataset {{uuid: '{dataset_uuid}'}})-[*]->(s:Source) return p"
+    logger.info("======get_all_dataset_samples() query======")
+    logger.info(query)
+
+    # Dictionary of Dictionaries, keyed by UUID, containing each Sample returned in the Neo4j Path
+    dataset_sample_list = {}
+    with neo4j_driver.session() as session:
+        result = session.run(query)
+        if result.peek() is None:
+            return
+        for record in result:
+            for item in record:
+                for node in item.nodes:
+                    if node["entity_type"] == 'Sample':
+                        if not node["uuid"] in dataset_sample_list:
+                            # specimen_type -> sample_category 12/15/2022
+                            dataset_sample_list[node["uuid"]] = {'sample_category': node["sample_category"]}
+    return dataset_sample_list
+
+
+"""
 Get all previous revisions of the target entity by uuid
 
 Parameters

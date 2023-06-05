@@ -2797,10 +2797,14 @@ def get_prov_info_for_dataset(id):
 
     return_json = False
     dataset_prov_list = []
+    include_samples = []
     if bool(request.args):
         return_format = request.args.get('format')
         if (return_format is not None) and (return_format.lower() == 'json'):
             return_json = True
+        include_samples_req = request.args.get('include_samples')
+        if (include_samples_req is not None):
+            include_samples = include_samples_req.lower().split(',')
 
     HEADER_DATASET_UUID = 'dataset_uuid'
     HEADER_DATASET_SENNET_ID = 'dataset_sennet_id'
@@ -2832,6 +2836,7 @@ def get_prov_info_for_dataset(id):
     HEADER_PROCESSED_DATASET_SENNET_ID = 'processed_dataset_sennet_id'
     HEADER_PROCESSED_DATASET_STATUS = 'processed_dataset_status'
     HEADER_PROCESSED_DATASET_PORTAL_URL = 'processed_dataset_portal_url'
+    HEADER_DATASET_SAMPLES = "dataset_samples"
     ASSAY_TYPES = Ontology.assay_types(as_data_dict=True, prop_callback=None, data_as_val=True)
     ORGAN_TYPES = Ontology.organ_types(as_data_dict=True, data_as_val=True)
 
@@ -2981,6 +2986,18 @@ def get_prov_info_for_dataset(id):
             internal_dict[HEADER_PROCESSED_DATASET_UUID] = ",".join(processed_dataset_sennet_id_list)
             internal_dict[HEADER_PROCESSED_DATASET_UUID] = ",".join(processed_dataset_status_list)
             internal_dict[HEADER_PROCESSED_DATASET_UUID] = ",".join(processed_dataset_portal_url_list)
+
+    if include_samples:
+        dataset_samples = app_neo4j_queries.get_all_dataset_samples(neo4j_driver_instance, uuid)
+        logger.debug(f"dataset_samples={str(dataset_samples)}")
+        if 'all' in include_samples:
+            internal_dict[HEADER_DATASET_SAMPLES] = dataset_samples
+        else:
+            requested_samples = {}
+            for uuid in dataset_samples.keys():
+                if dataset_samples[uuid]['sample_category'] in include_samples:
+                    requested_samples[uuid] = dataset_samples[uuid]
+            internal_dict[HEADER_DATASET_SAMPLES] = requested_samples
 
     dataset_prov_list.append(internal_dict)
 
