@@ -787,7 +787,7 @@ def get_sorted_revisions(neo4j_driver, uuid):
 
 
 """
-Returns all of the Sample information associated with a Dataset, back to each Donor. Returns a dictionary
+Returns all of the Sample information associated with a Dataset, back to each Source. Returns a dictionary
 containing all of the provenance info for a given dataset. Each Sample is in its own dictionary, converted
 from its neo4j node and placed into a list. 
 
@@ -814,7 +814,6 @@ def get_all_dataset_samples(neo4j_driver, dataset_uuid):
                 for node in item.nodes:
                     if node["entity_type"] == 'Sample':
                         if not node["uuid"] in dataset_sample_list:
-                            # specimen_type -> sample_category 12/15/2022
                             dataset_sample_list[node["uuid"]] = {'sample_category': node["sample_category"]}
     return dataset_sample_list
 
