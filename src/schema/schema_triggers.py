@@ -5,10 +5,12 @@ import yaml
 import logging
 import datetime
 import requests
+from atlas_consortia_commons.string import equals
 from neo4j.exceptions import TransactionError
 
 # Use the current_app proxy, which points to the application handling the current activity
 from flask import current_app as app
+from lib.ontology import Ontology
 
 # Local modules
 from schema import schema_manager
@@ -879,7 +881,7 @@ def get_dataset_title(property_key, normalized_type, user_token, existing_data_d
     assay_type_desc = schema_manager.convert_str_to_data(existing_data_dict['data_types'])[0]
 
     # Get the sample organ name and source metadata information of this dataset
-    organ_name, source_metadata = schema_neo4j_queries.get_dataset_organ_and_source_info(schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'])
+    organ_name, source_metadata, source_type = schema_neo4j_queries.get_dataset_organ_and_source_info(schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'])
 
     # Can we move organ_types.yaml to commons or make it an API call to avoid parsing the raw yaml?
     # Parse the organ description
@@ -892,12 +894,21 @@ def get_dataset_title(property_key, normalized_type, user_token, existing_data_d
         except (yaml.YAMLError, requests.exceptions.RequestException) as e:
             raise Exception(e)
 
+    generated_title = ''
     # Parse age, race, and sex
     if source_metadata is not None:
         # Note: The donor_metadata is stored in Neo4j as a string representation of the Python dict
         # It's not stored in Neo4j as a json string! And we can't store it as a json string
         # due to the way that Cypher handles single/double quotes.
         ancestor_metadata_dict = schema_manager.convert_str_to_data(source_metadata)
+
+        if equals(source_type, Ontology.source_types().MOUSE):
+            sex = 'female' if equals(ancestor_metadata_dict['sex'], 'F') else 'male'
+            adj = 'not ' if ancestor_metadata_dict['is_embryo'] is False else ''
+            is_embryo = f"it is {adj}an embryo"
+            generated_title = f"strain of {ancestor_metadata_dict['strain']} from {sex} mouse, {is_embryo}"
+        return property_key, generated_title
+
 
         data_list = []
 
@@ -1963,11 +1974,9 @@ Returns
 str: The organ code description
 """
 def _get_organ_description(organ_code):
-    ORGAN_TYPES = schema_manager.get_ubkg_instance.get_ubkg_valueset(
-        schema_manager.get_ubkg_instance.organ_types)
+    ORGAN_TYPES = Ontology.organ_types(as_arr=False, as_data_dict=True, data_as_val=True)
 
-    # TODO: Need to update this code once we get updated ontology organ endpoint
-    for organ_type in ORGAN_TYPES:
-        if organ_type['rui_code'] == organ_code:
-            return organ_type['term'].loewr()
+    for key in ORGAN_TYPES:
+        if ORGAN_TYPES[key]['rui_code'] == organ_code:
+            return ORGAN_TYPES[key]['term'].lower()
 
