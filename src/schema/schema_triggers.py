@@ -907,7 +907,7 @@ def get_dataset_title(property_key, normalized_type, user_token, existing_data_d
             adj = 'not ' if ancestor_metadata_dict['is_embryo'] is False else ''
             is_embryo = f"it is {adj}an embryo"
             generated_title = f"strain of {ancestor_metadata_dict['strain']} from {sex} mouse, {is_embryo}"
-        return property_key, generated_title
+            return property_key, generated_title
 
 
         data_list = []
