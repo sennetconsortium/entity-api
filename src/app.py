@@ -4137,12 +4137,33 @@ def validate_organ_code(organ_code):
 def verify_ubkg_properties(json_data_dict):
     SOURCE_TYPES = Ontology.source_types(as_data_dict=True)
     SAMPLE_CATEGORIES = Ontology.specimen_categories(as_data_dict=True)
+    DATA_TYPES = Ontology.assay_types(as_data_dict=True)
 
     if 'source_type' in json_data_dict:
         compare_property_against_ubkg(SOURCE_TYPES, json_data_dict, 'source_type')
 
     if 'sample_category' in json_data_dict:
         compare_property_against_ubkg(SAMPLE_CATEGORIES, json_data_dict, 'sample_category')
+
+    if 'data_types' in json_data_dict:
+        compare_property_list_against_ubkg(DATA_TYPES, json_data_dict, 'data_types')
+
+def compare_property_list_against_ubkg(ubkg_dict, json_data_dict, field):
+    good_fields = []
+    passes_ubkg_validation = True
+    for ubkg_field in ubkg_dict:
+        for item in json_data_dict[field]:
+            if equals(item, ubkg_dict[ubkg_field]):
+                good_fields.append(ubkg_dict[ubkg_field])
+
+    if len(good_fields) != len(json_data_dict[field]):
+        match_note = f"Mathing include: {', '.join(good_fields)}. " if len(good_fields) > 0 else ''
+        ubkg_validation_message = f"Some or all values in '{field}' does not match any allowable property. " \
+                                  f"{match_note}" \
+                                  "Please check proper spelling."
+        abort_unacceptable(ubkg_validation_message)
+
+    json_data_dict[field] = good_fields
 
 
 def compare_property_against_ubkg(ubkg_dict, json_data_dict, field):
