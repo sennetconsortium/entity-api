@@ -904,9 +904,10 @@ def get_dataset_title(property_key, normalized_type, user_token, existing_data_d
 
         if equals(source_type, Ontology.source_types().MOUSE):
             sex = 'female' if equals(ancestor_metadata_dict['sex'], 'F') else 'male'
-            adj = 'not ' if ancestor_metadata_dict['is_embryo'] is False else ''
-            is_embryo = f"it is {adj}an embryo"
-            generated_title = f"strain of {ancestor_metadata_dict['strain']} from {sex} mouse, {is_embryo}"
+            is_embryo = ancestor_metadata_dict['is_embryo']
+            adj = '' if is_embryo is True or equals(is_embryo, 'True') else 'not '
+            is_embryo_txt = f"it is {adj}an embryo"
+            generated_title = f"strain of {ancestor_metadata_dict['strain']} from {sex} mouse, {is_embryo_txt}"
             return property_key, generated_title
 
 

@@ -84,6 +84,7 @@
     "SECTION": "Section",
     "BLOCK": "Block"
   },
+  "assay_types": {"BULKRNA": "bulk-RNA", "CITESEQ": "CITE-Seq", "CODEX": "CODEX", "CODEXCYTOKIT": "codex_cytokit", "CODEXCYTOKITV1": "codex_cytokit_v1", "COSMX_RNA": "CosMX (RNA)", "DBITSEQ": "DBiT-seq", "FACS__FLUORESCENCEACTIVATED_CELL_SORTING": "FACS - Fluorescence-activated Cell Sorting", "GEOMX_RNA": "GeoMX (RNA)", "IMAGEPYRAMID": "image_pyramid", "LCMS": "LC-MS", "LIGHTSHEET": "Lightsheet", "MIBI": "MIBI", "MIBIDEEPCELL": "mibi_deepcell", "MINTCHIP": "Mint-ChIP", "PUBLICATION": "publication", "PUBLICATIONANCILLARY": "publication_ancillary", "SALMONRNASEQ10X": "salmon_rnaseq_10x", "SALMONRNASEQBULK": "salmon_rnaseq_bulk", "SALMONSNRNASEQ10X": "salmon_sn_rnaseq_10x", "SASP": "SASP", "SCRNASEQ": "scRNA-seq", "SNATACSEQ": "snATAC-seq", "SNRNASEQ": "snRNA-seq", "SNRNASEQ10XGENOMICSV3": "snRNAseq-10xGenomics-v3", "STAINED_SLIDES": "Stained Slides", "VISIUM": "Visium"},
   "get_user_info": {
     "active": true,
     "token_type": "Bearer",
