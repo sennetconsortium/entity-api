@@ -906,7 +906,7 @@ def get_dataset_title(property_key, normalized_type, user_token, existing_data_d
             sex = 'female' if equals(ancestor_metadata_dict['sex'], 'F') else 'male'
             is_embryo = ancestor_metadata_dict['is_embryo']
             embryo = ' embryo' if is_embryo is True or equals(is_embryo, 'True') else ''
-            generated_title = f"{assay_type_desc} data from the {organ_desc} of a {ancestor_metadata_dict['strain']} strain {sex} mouse{embryo}"
+            generated_title = f"{assay_type_desc} data from the {organ_desc} of a {ancestor_metadata_dict['strain']} {sex} mouse{embryo}"
             return property_key, generated_title
 
 
