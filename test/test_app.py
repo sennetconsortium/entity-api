@@ -170,6 +170,7 @@ def test_create_entity_success(app, entity_type):
     with (app.test_client() as client,
           patch('lib.ontology.Ontology.source_types', return_value=test_data['source_types']),
           patch('lib.ontology.Ontology.specimen_categories', return_value=test_data['specimen_categories']),
+          patch('lib.ontology.Ontology.assay_types', return_value=test_data['assay_types']),
           patch('app.schema_manager.create_sennet_ids', return_value=test_data['create_sennet_ids']) as mock_create_sennet_ids,
           patch('app.schema_manager.get_user_info', return_value=test_data['get_user_info']),
           patch('app.schema_manager.generate_triggered_data', return_value=test_data['generate_triggered_data']),
