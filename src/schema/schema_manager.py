@@ -751,9 +751,13 @@ def normalize_object_result_for_response(provenance_type, entity_dict, propertie
     if entity_dict and ('entity_type' in entity_dict):
         normalized_entity_type = entity_dict['entity_type']
         properties = get_entity_properties(_schema[provenance_type], normalized_entity_type)
+    elif provenance_type == 'ACTIVITIES':
+        properties = _schema[provenance_type]['Activity']['properties']
     else:
-        if provenance_type == 'ACTIVITIES':
-            properties = _schema[provenance_type]['Activity']['properties']
+        logger.error(   f"Unable to normalize object result with"
+                        f" entity_dict={str(entity_dict)} and"
+                        f" provenance_type={provenance_type}.")
+        raise schema_errors.SchemaValidationException("Unable to normalize object.  See logs.")
 
     for key in entity_dict:
         # Only return the properties defined in the schema yaml
@@ -1051,12 +1055,12 @@ def execute_property_level_validators(provenance_type, validator_type, normalize
                     raise schema_errors.MissingApplicationHeaderException(e)
                 except schema_errors.InvalidApplicationHeaderException as e:
                     raise schema_errors.InvalidApplicationHeaderException(e)
-                except ValueError as e:
-                    raise ValueError(e)
-                except Exception:
-                    msg = f"Failed to call the {validator_type} method: {validator_method_name} defiend for entity {normalized_entity_type} on property {key}"
+                except ValueError as ve:
+                    raise ValueError(ve)
+                except Exception as e:
+                    msg = f"Failed to call the {validator_type} method: {validator_method_name} defined for entity {normalized_entity_type} on property {key}"
                     # Log the full stack trace, prepend a line with our message
-                    logger.exception(msg)
+                    logger.exception(f"{msg}. {str(e)}")
 
 
 """
