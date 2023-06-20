@@ -3073,6 +3073,7 @@ def get_prov_info_for_dataset(id):
             internal_dict[HEADER_PROCESSED_DATASET_UUID] = ",".join(processed_dataset_portal_url_list)
 
     if include_samples:
+        headers.append(HEADER_DATASET_SAMPLES)
         dataset_samples = app_neo4j_queries.get_all_dataset_samples(neo4j_driver_instance, uuid)
         logger.debug(f"dataset_samples={str(dataset_samples)}")
         if 'all' in include_samples:
