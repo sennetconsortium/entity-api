@@ -2797,10 +2797,14 @@ def get_prov_info_for_dataset(id):
 
     return_json = False
     dataset_prov_list = []
+    include_samples = []
     if bool(request.args):
         return_format = request.args.get('format')
         if (return_format is not None) and (return_format.lower() == 'json'):
             return_json = True
+        include_samples_req = request.args.get('include_samples')
+        if (include_samples_req is not None):
+            include_samples = include_samples_req.lower().split(',')
 
     HEADER_DATASET_UUID = 'dataset_uuid'
     HEADER_DATASET_SENNET_ID = 'dataset_sennet_id'
@@ -2832,6 +2836,7 @@ def get_prov_info_for_dataset(id):
     HEADER_PROCESSED_DATASET_SENNET_ID = 'processed_dataset_sennet_id'
     HEADER_PROCESSED_DATASET_STATUS = 'processed_dataset_status'
     HEADER_PROCESSED_DATASET_PORTAL_URL = 'processed_dataset_portal_url'
+    HEADER_DATASET_SAMPLES = "dataset_samples"
     ASSAY_TYPES = Ontology.assay_types(as_data_dict=True, prop_callback=None, data_as_val=True)
     ORGAN_TYPES = Ontology.organ_types(as_data_dict=True, data_as_val=True)
 
@@ -2981,6 +2986,18 @@ def get_prov_info_for_dataset(id):
             internal_dict[HEADER_PROCESSED_DATASET_UUID] = ",".join(processed_dataset_sennet_id_list)
             internal_dict[HEADER_PROCESSED_DATASET_UUID] = ",".join(processed_dataset_status_list)
             internal_dict[HEADER_PROCESSED_DATASET_UUID] = ",".join(processed_dataset_portal_url_list)
+
+    if include_samples:
+        dataset_samples = app_neo4j_queries.get_all_dataset_samples(neo4j_driver_instance, uuid)
+        logger.debug(f"dataset_samples={str(dataset_samples)}")
+        if 'all' in include_samples:
+            internal_dict[HEADER_DATASET_SAMPLES] = dataset_samples
+        else:
+            requested_samples = {}
+            for uuid in dataset_samples.keys():
+                if dataset_samples[uuid]['sample_category'] in include_samples:
+                    requested_samples[uuid] = dataset_samples[uuid]
+            internal_dict[HEADER_DATASET_SAMPLES] = requested_samples
 
     dataset_prov_list.append(internal_dict)
 
@@ -4137,12 +4154,33 @@ def validate_organ_code(organ_code):
 def verify_ubkg_properties(json_data_dict):
     SOURCE_TYPES = Ontology.source_types(as_data_dict=True)
     SAMPLE_CATEGORIES = Ontology.specimen_categories(as_data_dict=True)
+    DATA_TYPES = Ontology.assay_types(as_data_dict=True)
 
     if 'source_type' in json_data_dict:
         compare_property_against_ubkg(SOURCE_TYPES, json_data_dict, 'source_type')
 
     if 'sample_category' in json_data_dict:
         compare_property_against_ubkg(SAMPLE_CATEGORIES, json_data_dict, 'sample_category')
+
+    if 'data_types' in json_data_dict:
+        compare_property_list_against_ubkg(DATA_TYPES, json_data_dict, 'data_types')
+
+def compare_property_list_against_ubkg(ubkg_dict, json_data_dict, field):
+    good_fields = []
+    passes_ubkg_validation = True
+    for ubkg_field in ubkg_dict:
+        for item in json_data_dict[field]:
+            if equals(item, ubkg_dict[ubkg_field]):
+                good_fields.append(ubkg_dict[ubkg_field])
+
+    if len(good_fields) != len(json_data_dict[field]):
+        match_note = f"Mathing include: {', '.join(good_fields)}. " if len(good_fields) > 0 else ''
+        ubkg_validation_message = f"Some or all values in '{field}' does not match any allowable property. " \
+                                  f"{match_note}" \
+                                  "Please check proper spelling."
+        abort_unacceptable(ubkg_validation_message)
+
+    json_data_dict[field] = good_fields
 
 
 def compare_property_against_ubkg(ubkg_dict, json_data_dict, field):
@@ -4193,8 +4231,17 @@ def check_for_metadata(entity_type, user_token):
                     'sub_type': json_data_dict.get('sample_category'),
                     'tsv_row': file_row
                 }
-                if not validate_metadata(data, user_token):
+                valid_metadata = validate_metadata(data, user_token)
+                if not valid_metadata:
                     abort_bad_req("Metadata did not pass validation.")
+                if valid_metadata is True:
+                    # The source/sample_id are being removed as for 1. they are irrelevant within the context of the full json entity
+                    # 2. a user could include an invalid id in the tsv during single registration
+                    # which would then get stored in neo4j. We don't want this.
+                    cols_to_del = ['sample_id', 'source_id']
+                    for col in cols_to_del:
+                        if json_data_dict['metadata'].get(col) is not None:
+                            del json_data_dict['metadata'][col]
             else:
                 abort_bad_req("Missing `pathname` in metadata. (Metadata must be added via the Data Sharing Portal.)")
 
@@ -4224,6 +4271,8 @@ def validate_metadata(data, user_token):
             response_dict = response.json()
             response_metadata = response_dict['metadata'][0]
 
+            # Delete these because they would have been appended during the Portal-UI processe ...
+            # So remove before comparing.
             del request_metadata['pathname']
             if request_metadata.get('file_row') is not None:
                 del request_metadata['file_row']
