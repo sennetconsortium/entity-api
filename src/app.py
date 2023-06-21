@@ -821,7 +821,7 @@ def get_entities_by_type(entity_type):
             # Get back a list of entity dicts for the given entity type
             entities_list = app_neo4j_queries.get_entities_by_type(neo4j_driver_instance, normalized_entity_type)
 
-        complete_entities_list = schema_manager.get_complete_entities_list(token, entities_list, generated_properties_to_skip)
+        complete_entities_list = schema_manager.get_complete_entities_list(token, entities_list, properties_to_skip)
 
         # Final result after normalization
         final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list)
