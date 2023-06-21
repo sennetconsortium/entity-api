@@ -97,14 +97,14 @@ def get_dataset_organ_and_source_info(neo4j_driver, uuid):
 
         # To improve the query performance, we implement the two-step queries to drastically reduce the DB hits
         sample_query = (f"MATCH (e:Dataset)-[:USED|WAS_GENERATED_BY*]->(s:Sample) "
-                        f"WHERE e.uuid='{uuid}' AND s.sample_category is not null and s.sample_category='organ'"
+                        f"WHERE e.uuid='{uuid}' AND s.sample_category is not null and s.sample_category='Organ' "
                         f"RETURN DISTINCT s.sample_category AS sample_category, s.organ AS organ_name, s.uuid AS sample_uuid")
 
         logger.info("======get_dataset_organ_and_source_info() sample_query======")
         logger.info(sample_query)
 
         sample_record = session.read_transaction(_execute_readonly_tx, sample_query)
-
+        source_type = None
         if sample_record:
             if sample_record['organ_name'] is None:
                 organ_name = sample_record['sample_category']
@@ -115,7 +115,7 @@ def get_dataset_organ_and_source_info(neo4j_driver, uuid):
 
             source_query = (f"MATCH (s:Sample)-[:USED|WAS_GENERATED_BY*]->(d:Source) "
                            f"WHERE s.uuid='{sample_uuid}' AND s.sample_category is not null "
-                           f"RETURN DISTINCT d.metadata AS source_metadata")
+                           f"RETURN DISTINCT d.metadata AS source_metadata, d.source_type AS source_type")
 
             logger.info("======get_dataset_organ_and_source_info() source_query======")
             logger.info(source_query)
@@ -123,9 +123,10 @@ def get_dataset_organ_and_source_info(neo4j_driver, uuid):
             source_record = session.read_transaction(_execute_readonly_tx, source_query)
 
             if source_record:
-                source_metadata = source_record['source_metadata']
+                source_metadata = source_record[0]
+                source_type = source_record[1]
 
-    return organ_name, source_metadata
+    return organ_name, source_metadata, source_type
 
 
 def get_entity_type(neo4j_driver, entity_uuid: str) -> str:
