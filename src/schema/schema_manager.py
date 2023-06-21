@@ -18,7 +18,8 @@ from schema import schema_neo4j_queries
 # HuBMAP commons
 from hubmap_commons.hm_auth import AuthHelper
 
-from schema import schema_neo4j_queries
+# Atlas Consortia commons
+from atlas_consortia_commons.rest import *
 
 logger = logging.getLogger(__name__)
 
@@ -1278,9 +1279,8 @@ def validate_target_entity_type_for_derivation(normalized_target_entity_type):
     accepted_target_entity_types = get_derivation_target_entity_types()
 
     if normalized_target_entity_type not in accepted_target_entity_types:
-        bad_request_error(
-            f"Invalid target entity type specified for creating the derived entity. Accepted types: {separator.join(accepted_target_entity_types)}")
-
+        abort_bad_req(  f"Invalid target entity type specified for creating the derived entity."
+                        f" Accepted types: {separator.join(accepted_target_entity_types)}")
 
 """
 Validate the source and target entity types for creating derived entity
@@ -1297,9 +1297,8 @@ def validate_source_entity_type_for_derivation(normalized_source_entity_type):
     accepted_source_entity_types = get_derivation_source_entity_types()
 
     if normalized_source_entity_type not in accepted_source_entity_types:
-        bad_request_error(
-            f"Invalid source entity class specified for creating the derived entity. Accepted types: {separator.join(accepted_source_entity_types)}")
-
+        abort_bad_req(  f"Invalid source entity class specified for creating the derived entity."
+                        f" Accepted types: {separator.join(accepted_source_entity_types)}")
 
 ####################################################################################################
 ## Other functions used in conjuction with the trigger methods

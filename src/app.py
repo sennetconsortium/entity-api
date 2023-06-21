@@ -72,39 +72,6 @@ READ_ONLY_MODE = app.config['READ_ONLY_MODE']
 requests.packages.urllib3.disable_warnings(category = InsecureRequestWarning)
 
 ####################################################################################################
-## Register error handlers
-####################################################################################################
-
-# Error handler for 400 Bad Request with custom error message
-@app.errorhandler(400)
-def http_bad_request(e):
-    return jsonify(error = str(e)), 400
-
-
-# Error handler for 401 Unauthorized with custom error message
-@app.errorhandler(401)
-def http_unauthorized(e):
-    return jsonify(error = str(e)), 401
-
-
-# Error handler for 403 Forbidden with custom error message
-@app.errorhandler(403)
-def http_forbidden(e):
-    return jsonify(error = str(e)), 403
-
-
-# Error handler for 404 Not Found with custom error message
-@app.errorhandler(404)
-def http_not_found(e):
-    return jsonify(error = str(e)), 404
-
-
-# Error handler for 500 Internal Server Error with custom error message
-@app.errorhandler(500)
-def http_internal_server_error(e):
-    return jsonify(error = str(e)), 500
-
-####################################################################################################
 ## UBKG Ontology and REST initialization
 ####################################################################################################
 
@@ -413,7 +380,7 @@ def get_collection(id):
 
     # A bit validation
     if collection_dict['entity_type'] != 'Collection':
-        bad_request_error("Target entity of the given id is not a collection")
+        abort_bad_req("Target entity of the given id is not a collection")
 
     # Try to get user token from Authorization header
     # It's highly possible that there's no token provided
@@ -426,7 +393,7 @@ def get_collection(id):
         # When the requested collection is not public, send back 401
         if ('registered_doi' not in collection_dict) or ('doi_url' not in collection_dict):
             # Require a valid token in this case
-            http_unauthorized("The requested collection is not public, a Globus token with the right access permission is required.")
+            abort_unauthorized("The requested collection is not public, a Globus token with the right access permission is required.")
 
         # Otherwise only return the public datasets attached to this collection
         # for Collection.datasets property
@@ -454,7 +421,7 @@ def _get_entity_visibility(normalized_entity_type, entity_dict):
         logger.log( logging.ERROR
                     ,f"normalized_entity_type={normalized_entity_type}"
                      f" not recognized by schema_manager.get_all_entity_types().")
-        bad_request_error(f"'{normalized_entity_type}' is not a recognized entity type.")
+        abort_bad_req(f"'{normalized_entity_type}' is not a recognized entity type.")
 
     # Use the characteristics of the entity's data to classify the entity's visibility, so
     # it can be used along with the user's authorization to determine access.
