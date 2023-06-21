@@ -905,9 +905,8 @@ def get_dataset_title(property_key, normalized_type, user_token, existing_data_d
         if equals(source_type, Ontology.source_types().MOUSE):
             sex = 'female' if equals(ancestor_metadata_dict['sex'], 'F') else 'male'
             is_embryo = ancestor_metadata_dict['is_embryo']
-            adj = '' if is_embryo is True or equals(is_embryo, 'True') else 'not '
-            is_embryo_txt = f"it is {adj}an embryo"
-            generated_title = f"strain of {ancestor_metadata_dict['strain']} from {sex} mouse, {is_embryo_txt}"
+            embryo = ' embryo' if is_embryo is True or equals(is_embryo, 'True') else ''
+            generated_title = f"{assay_type_desc} data from the {organ_desc} of a {ancestor_metadata_dict['strain']} {sex} mouse{embryo}"
             return property_key, generated_title
 
 
@@ -933,6 +932,11 @@ def get_dataset_title(property_key, normalized_type, user_token, existing_data_d
 
                 if data['grouping_concept_preferred_term'].lower() == 'sex':
                     sex = data['preferred_term'].lower()
+
+    if equals(source_type, Ontology.source_types().MOUSE) or \
+            equals(source_type, Ontology.source_types().MOUSE_ORGANOID):
+        generated_title = f"{assay_type_desc} data from the {organ_desc} of a source of unknown strain, sex, and age"
+        return property_key, generated_title
 
     age_race_sex_info = None
 
