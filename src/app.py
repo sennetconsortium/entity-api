@@ -521,7 +521,8 @@ def get_entity_by_id(id):
 
     # Also normalize the result based on schema
     final_result = schema_manager.normalize_object_result_for_response( provenance_type='ENTITIES'
-                                                                        ,entity_dict=complete_dict)
+                                                                        ,entity_dict=complete_dict
+                                                                        ,properties_to_include=['protocol_url'])
 
     # Result filtering based on query string
     # The `data_access_level` property is available in all entities Source/Sample/Dataset
