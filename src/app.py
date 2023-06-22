@@ -791,7 +791,8 @@ def get_entities_by_type(entity_type):
         complete_entities_list = schema_manager.get_complete_entities_list(token, entities_list, properties_to_skip)
 
         # Final result after normalization
-        final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list)
+        final_result = schema_manager.normalize_entities_list_for_response( complete_entities_list
+                                                                            ,properties_to_include=['protocol_url'])
 
     # Response with the final result
     return jsonify(final_result)
