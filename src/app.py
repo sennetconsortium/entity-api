@@ -14,7 +14,8 @@ from pathlib import Path
 import logging
 import json
 import time
-from lib.constraints import get_constraints_by_ancestor, get_constraints_by_descendant
+from lib.constraints import get_constraints_by_ancestor, get_constraints_by_descendant, build_constraint, \
+    build_constraint_unit
 
 # Local modules
 import app_neo4j_queries
@@ -912,6 +913,7 @@ def create_entity(entity_type):
         direct_ancestor_uuid = json_data_dict['direct_ancestor_uuid']
         # Check existence of the direct ancestor (either another Sample or Source)
         direct_ancestor_dict = query_target_entity(direct_ancestor_uuid, user_token)
+        validate_constraints_by_entities(direct_ancestor_dict, json_data_dict, normalized_entity_type)
         json_data_dict['direct_ancestor_uuid'] = direct_ancestor_dict['uuid']
 
         # Generate 'before_create_triiger' data and create the entity details in Neo4j
@@ -923,6 +925,7 @@ def create_entity(entity_type):
         direct_ancestor_uuids = []
         for direct_ancestor_uuid in json_data_dict['direct_ancestor_uuids']:
             direct_ancestor_dict = query_target_entity(direct_ancestor_uuid, user_token)
+            validate_constraints_by_entities(direct_ancestor_dict, json_data_dict, normalized_entity_type)
             direct_ancestor_uuids.append(direct_ancestor_dict['uuid'])
 
         json_data_dict['direct_ancestor_uuids'] = direct_ancestor_uuids
@@ -1202,6 +1205,7 @@ def update_entity(id):
             direct_ancestor_uuid = json_data_dict['direct_ancestor_uuid']
             # Check existence of the source entity
             direct_ancestor_uuid_dict = query_target_entity(direct_ancestor_uuid, user_token)
+            validate_constraints_by_entities(direct_ancestor_uuid_dict, json_data_dict, normalized_entity_type)
             # Also make sure it's either another Sample or a Source
             if direct_ancestor_uuid_dict['entity_type'] not in ['Source', 'Sample']:
                 abort_bad_req(f"The uuid: {direct_ancestor_uuid} is not a Source neither a Sample, cannot be used as the direct ancestor of this Sample")
@@ -1221,6 +1225,7 @@ def update_entity(id):
             # Check existence of those source entities
             for direct_ancestor_uuids in json_data_dict['direct_ancestor_uuids']:
                 direct_ancestor_uuids_dict = query_target_entity(direct_ancestor_uuids, user_token)
+                validate_constraints_by_entities(direct_ancestor_uuids_dict, json_data_dict, normalized_entity_type)
 
         # Generate 'before_update_trigger' data and update the entity details in Neo4j
         merged_updated_dict = update_object_details('ENTITIES', request, normalized_entity_type, user_token, json_data_dict, entity_dict)
@@ -3234,7 +3239,7 @@ Returns
 JSON                   
 """
 @app.route('/constraints', methods=['POST'])
-def validate_constraints_new():
+def validate_constraints():
     # Always expect a json body
     require_json(request)
     is_match = request.values.get('match')
@@ -4131,6 +4136,33 @@ def _ln_err(error, row: int = None, column: str = None):
         'error': error,
         'row': row
     }
+
+
+def validate_constraints_by_entities(ancestor, descendant, descendant_entity_type = None):
+
+    def get_sub_type(obj):
+        sub_type = obj.get('sample_category') if obj.get('sample_category') is not None else obj.get('source_type')
+        sub_type = obj.get('data_types') if sub_type is None else [sub_type]
+        return sub_type
+
+    def get_sub_type_val(obj):
+        sub_type_val = obj.get('organ')
+        return [sub_type_val] if sub_type_val is not None else None
+
+    def get_entity_type(obj, default_type):
+        return obj.get('entity_type') if obj.get('entity_type') is not None else default_type
+
+    constraint = build_constraint(
+        build_constraint_unit(ancestor.get('entity_type'),
+                              sub_type=get_sub_type(ancestor), sub_type_val=get_sub_type_val(ancestor)),
+        [build_constraint_unit(get_entity_type(descendant, descendant_entity_type),
+                               sub_type=get_sub_type(descendant), sub_type_val=get_sub_type_val(descendant))]
+    )
+
+    result = get_constraints_by_ancestor(constraint, True)
+    if result.get('code') is not StatusCodes.OK:
+        abort_bad_req(f"Invalid entity constraints {result.get('description')}")
+    return result
 
 """
 Ensures that a given organ code matches what is found on the organ_types yaml document
