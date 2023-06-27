@@ -1,3 +1,4 @@
+import ast
 import collections
 from datetime import datetime
 from flask import Flask, g, jsonify
@@ -4137,12 +4138,25 @@ def _ln_err(error, row: int = None, column: str = None):
         'row': row
     }
 
+"""
+Ensures that two given entity dicts as ancestor and descendant pass constraint validation.
 
-def validate_constraints_by_entities(ancestor, descendant, descendant_entity_type = None):
+ancestor: dict
+descendant: dict
+descendant_entity_type: str (dicts sometimes do not include immutable keys like entity_type, pass it here.)
+
+Returns constraint test full matches if successful. Raises abort_bad_req if failed.
+"""
+def validate_constraints_by_entities(ancestor, descendant, descendant_entity_type=None):
 
     def get_sub_type(obj):
         sub_type = obj.get('sample_category') if obj.get('sample_category') is not None else obj.get('source_type')
-        sub_type = obj.get('data_types') if sub_type is None else [sub_type]
+        try:
+            sub_type = obj.get('data_types') if sub_type is None else [sub_type]
+            if type(sub_type) is not list:
+                sub_type = ast.literal_eval(sub_type)
+        except Exception as ec:
+            logger.error(str(ec))
         return sub_type
 
     def get_sub_type_val(obj):
@@ -4161,7 +4175,7 @@ def validate_constraints_by_entities(ancestor, descendant, descendant_entity_typ
 
     result = get_constraints_by_ancestor(constraint, True)
     if result.get('code') is not StatusCodes.OK:
-        abort_bad_req(f"Invalid entity constraints {result.get('description')}")
+        abort_bad_req(f"Invalid entity constraints. Valid descendants include: {result.get('description')}")
     return result
 
 """
