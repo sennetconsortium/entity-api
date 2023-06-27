@@ -1166,6 +1166,15 @@ def update_activity(id):
     return jsonify(normalized_complete_dict)
 
 
+@app.route('/entities/type/<type_a>/instanceof/<type_b>', methods=['GET'])
+def get_entities_type_instanceof(type_a, type_b):
+    try:
+        instanceof: bool = schema_manager.entity_type_instanceof(type_a, type_b)
+    except:
+        abort_bad_req('Unable to process request')
+    return make_response(jsonify({'instanceof': instanceof}), 200)
+
+
 """
 Update the properties of a given entity
 
