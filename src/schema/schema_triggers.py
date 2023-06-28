@@ -5,12 +5,14 @@ import yaml
 import logging
 import datetime
 import requests
+from atlas_consortia_commons.string import equals
 from neo4j.exceptions import TransactionError
 from collections import defaultdict
 import re
 
 # Use the current_app proxy, which points to the application handling the current activity
 from flask import current_app as app
+from lib.ontology import Ontology
 
 # Local modules
 from schema import schema_manager
@@ -1032,8 +1034,7 @@ str: The generated dataset title
 
 def get_dataset_title(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     if 'uuid' not in existing_data_dict:
-        raise KeyError(
-            "Missing 'uuid' key in 'existing_data_dict' during calling 'get_dataset_title()' trigger method.")
+        raise KeyError("Missing 'uuid' key in 'existing_data_dict' during calling 'get_dataset_title()' trigger method.")
 
     # Assume organ_desc is always available, otherwise will throw parsing error
     organ_desc = '<organ_desc>'
@@ -1055,8 +1056,7 @@ def get_dataset_title(property_key, normalized_type, user_token, existing_data_d
     assay_type_desc = schema_manager.convert_str_to_data(existing_data_dict['data_types'])[0]
 
     # Get the sample organ name and source metadata information of this dataset
-    organ_name, source_metadata = schema_neo4j_queries.get_dataset_organ_and_source_info(
-        schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'])
+    organ_name, source_metadata, source_type = schema_neo4j_queries.get_dataset_organ_and_source_info(schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'])
 
     # Can we move organ_types.yaml to commons or make it an API call to avoid parsing the raw yaml?
     # Parse the organ description
@@ -1069,12 +1069,21 @@ def get_dataset_title(property_key, normalized_type, user_token, existing_data_d
         except (yaml.YAMLError, requests.exceptions.RequestException) as e:
             raise Exception(e)
 
+    generated_title = ''
     # Parse age, race, and sex
     if source_metadata is not None:
         # Note: The donor_metadata is stored in Neo4j as a string representation of the Python dict
         # It's not stored in Neo4j as a json string! And we can't store it as a json string
         # due to the way that Cypher handles single/double quotes.
         ancestor_metadata_dict = schema_manager.convert_str_to_data(source_metadata)
+
+        if equals(source_type, Ontology.source_types().MOUSE):
+            sex = 'female' if equals(ancestor_metadata_dict['sex'], 'F') else 'male'
+            is_embryo = ancestor_metadata_dict['is_embryo']
+            embryo = ' embryo' if is_embryo is True or equals(is_embryo, 'True') else ''
+            generated_title = f"{assay_type_desc} data from the {organ_desc} of a {ancestor_metadata_dict['strain']} {sex} mouse{embryo}"
+            return property_key, generated_title
+
 
         data_list = []
 
@@ -1098,6 +1107,11 @@ def get_dataset_title(property_key, normalized_type, user_token, existing_data_d
 
                 if data['grouping_concept_preferred_term'].lower() == 'sex':
                     sex = data['preferred_term'].lower()
+
+    if equals(source_type, Ontology.source_types().MOUSE) or \
+            equals(source_type, Ontology.source_types().MOUSE_ORGANOID):
+        generated_title = f"{assay_type_desc} data from the {organ_desc} of a source of unknown strain, sex, and age"
+        return property_key, generated_title
 
     age_race_sex_info = None
 
@@ -2230,10 +2244,8 @@ str: The organ code description
 
 
 def _get_organ_description(organ_code):
-    ORGAN_TYPES = schema_manager.get_ubkg_instance.get_ubkg_valueset(
-        schema_manager.get_ubkg_instance.organ_types)
+    ORGAN_TYPES = Ontology.organ_types(as_arr=False, as_data_dict=True, data_as_val=True)
 
-    # TODO: Need to update this code once we get updated ontology organ endpoint
-    for organ_type in ORGAN_TYPES:
-        if organ_type['rui_code'] == organ_code:
-            return organ_type['term'].loewr()
+    for key in ORGAN_TYPES:
+        if ORGAN_TYPES[key]['rui_code'] == organ_code:
+            return ORGAN_TYPES[key]['term'].lower()
