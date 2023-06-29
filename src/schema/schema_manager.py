@@ -18,7 +18,8 @@ from schema import schema_neo4j_queries
 # HuBMAP commons
 from hubmap_commons.hm_auth import AuthHelper
 
-from schema import schema_neo4j_queries
+# Atlas Consortia commons
+from atlas_consortia_commons.rest import *
 
 logger = logging.getLogger(__name__)
 
@@ -133,6 +134,7 @@ def get_all_types():
     # Need convert the dict_keys object to a list
     return list(entity_types) + list(activity_types)
 
+
 """
 Get the superclass (if defined) of the given entity class
 
@@ -146,6 +148,8 @@ Returns
 string or None
     One of the normalized entity classes if defined (currently only Publication has Dataset as superclass). None otherwise
 """
+
+
 def get_entity_superclass(normalized_entity_class):
     normalized_superclass = None
 
@@ -224,8 +228,6 @@ def extend_dicts(dict1: dict, dict2: dict) -> dict:
     return dict1
 
 
-
-
 """
 Gets all properties by entity
 
@@ -241,7 +243,6 @@ def get_entity_properties(schema_section: dict, normalized_class: str) -> dict:
     super_class = schema_section[normalized_class].get('superclass')
 
     if super_class is not None and super_class in schema_section:
-
         super_class_properties = schema_section[super_class]['properties']
         return extend_dicts(dict(super_class_properties), dict(properties))
 
@@ -265,6 +266,7 @@ def get_all_entity_types():
     # Need convert the dict_keys object to a list
     return list(dict_keys)
 
+
 """
 Get the superclass (if defined) of the given entity class
 
@@ -278,6 +280,8 @@ Returns
 string or None
     One of the normalized entity classes if defined (currently only Publucation has Dataset as superclass). None otherwise
 """
+
+
 def get_entity_superclass(normalized_entity_class):
     normalized_superclass = None
 
@@ -332,6 +336,7 @@ def entity_instanceof(entity_uuid: str, entity_class: str) -> bool:
     entity_type: str = \
         schema_neo4j_queries.get_entity_type(get_neo4j_driver_instance(), entity_uuid)
     return entity_type_instanceof(entity_type, entity_class)
+
 
 """
 Generating triggered data based on the target events and methods
@@ -409,7 +414,7 @@ def generate_triggered_data(trigger_type, normalized_class, user_token, existing
                         # No return values for 'after_create_trigger' and 'after_update_trigger'
                         # because the property value is already set and stored in neo4j
                         # Normally it's building linkages between entity nodes
-                        # Use {} since no incoming new_data_dict 
+                        # Use {} since no incoming new_data_dict
                         trigger_method_to_call(key, normalized_class, user_token, existing_data_dict, {})
                     except Exception:
                         msg = "Failed to call the " + trigger_type + " method: " + trigger_method_name
@@ -470,7 +475,7 @@ def generate_triggered_data(trigger_type, normalized_class, user_token, existing
                         # Log the full stack trace, prepend a line with our message
                         logger.exception(msg)
 
-                        # We can't create/update the entity 
+                        # We can't create/update the entity
                         # without successfully executing this trigger method
                         raise schema_errors.BeforeUpdateTriggerException
             else:
@@ -531,12 +536,17 @@ def generate_triggered_data(trigger_type, normalized_class, user_token, existing
                     # Log the full stack trace, prepend a line with our message
                     logger.exception(msg)
                     raise schema_errors.FileUploadException(e)
+                # Certain requirements were not met to create this triggered field
+                except schema_errors.InvalidPropertyRequirementsException as e:
+                    msg = f"Failed to call the {trigger_type} method: {trigger_method_name}"
+                    # Log the full stack trace, prepend a line with our message
+                    logger.exception(msg)
                 except Exception as e:
                     msg = f"Failed to call the {trigger_type} method: {trigger_method_name}"
                     # Log the full stack trace, prepend a line with our message
                     logger.exception(msg)
                     if trigger_type == 'before_create_trigger':
-                        # We can't create/update the entity 
+                        # We can't create/update the entity
                         # without successfully executing this trigger method
                         raise schema_errors.BeforeCreateTriggerException
                     else:
@@ -636,10 +646,10 @@ dict
 
 
 def get_complete_entity_result(token, entity_dict, properties_to_skip=[]):
-    # In case entity_dict is None or 
+    # In case entity_dict is None or
     # an incorrectly created entity that doesn't have the `entity_type` property
     if entity_dict and ('entity_type' in entity_dict):
-        # No error handling here since if a 'on_read_trigger' method failed, 
+        # No error handling here since if a 'on_read_trigger' method failed,
         # the property value will be the error message
         # Pass {} since no new_data_dict for 'on_read_trigger'
         generated_on_read_trigger_data_dict = generate_triggered_data('on_read_trigger', entity_dict['entity_type'],
@@ -746,14 +756,18 @@ def normalize_object_result_for_response(provenance_type, entity_dict, propertie
     normalized_entity = {}
     properties = []
 
-    # In case entity_dict is None or 
+    # In case entity_dict is None or
     # an incorrectly created entity that doesn't have the `entity_type` property
     if entity_dict and ('entity_type' in entity_dict):
         normalized_entity_type = entity_dict['entity_type']
         properties = get_entity_properties(_schema[provenance_type], normalized_entity_type)
+    elif provenance_type == 'ACTIVITIES':
+        properties = _schema[provenance_type]['Activity']['properties']
     else:
-        if provenance_type == 'ACTIVITIES':
-            properties = _schema[provenance_type]['Activity']['properties']
+        logger.error(f"Unable to normalize object result with"
+                     f" entity_dict={str(entity_dict)} and"
+                     f" provenance_type={provenance_type}.")
+        raise schema_errors.SchemaValidationException("Unable to normalize object.  See logs.")
 
     for key in entity_dict:
         # Only return the properties defined in the schema yaml
@@ -810,7 +824,8 @@ def normalize_entities_list_for_response(entities_list, properties_to_exclude=[]
     normalized_entities_list = []
 
     for entity_dict in entities_list:
-        normalized_entity_dict = normalize_object_result_for_response('ENTITIES', entity_dict, properties_to_exclude, properties_to_include)
+        normalized_entity_dict = normalize_object_result_for_response('ENTITIES', entity_dict, properties_to_exclude,
+                                                                      properties_to_include)
         normalized_entities_list.append(normalized_entity_dict)
 
     return normalized_entities_list
@@ -875,7 +890,7 @@ def validate_json_data_against_schema(provenance_type, json_data_dict, normalize
 
     # Checks for entity update via HTTP PUT
     if existing_entity_dict:
-        # Check if keys in request json are immutable 
+        # Check if keys in request json are immutable
         immutable_keys = []
         for key in json_data_keys:
             if normalized_entity_type == 'Sample' or normalized_entity_type == 'Source':
@@ -899,7 +914,7 @@ def validate_json_data_against_schema(provenance_type, json_data_dict, normalize
         missing_required_keys_on_create = []
         empty_value_of_required_keys_on_create = []
         for key in schema_keys:
-            # By default, the schema treats all entity properties as optional on creation. 
+            # By default, the schema treats all entity properties as optional on creation.
             # Use `required_on_create: true` to mark a property as required for creating a new entity
             if ('required_on_create' in properties[key]) and properties[key]['required_on_create'] and (
                     'trigger' not in properties[key]):
@@ -974,7 +989,6 @@ def execute_entity_level_validator(validator_type, normalized_entity_type, reque
     entity = _schema['ENTITIES'][normalized_entity_type]
 
     entity['properties'] = get_entity_properties(_schema['ENTITIES'], normalized_entity_type)
-
 
     for key in entity:
         if validator_type == key:
@@ -1051,12 +1065,12 @@ def execute_property_level_validators(provenance_type, validator_type, normalize
                     raise schema_errors.MissingApplicationHeaderException(e)
                 except schema_errors.InvalidApplicationHeaderException as e:
                     raise schema_errors.InvalidApplicationHeaderException(e)
-                except ValueError as e:
-                    raise ValueError(e)
-                except Exception:
-                    msg = f"Failed to call the {validator_type} method: {validator_method_name} defiend for entity {normalized_entity_type} on property {key}"
+                except ValueError as ve:
+                    raise ValueError(ve)
+                except Exception as e:
+                    msg = f"Failed to call the {validator_type} method: {validator_method_name} defined for entity {normalized_entity_type} on property {key}"
                     # Log the full stack trace, prepend a line with our message
-                    logger.exception(msg)
+                    logger.exception(f"{msg}. {str(e)}")
 
 
 """
@@ -1132,7 +1146,7 @@ Parameters
 ----------
 status : str
     One of the status types: New|Processing|QA|Published|Error|Hold|Invalid
-    
+
 Returns
 -------
 string
@@ -1274,8 +1288,8 @@ def validate_target_entity_type_for_derivation(normalized_target_entity_type):
     accepted_target_entity_types = get_derivation_target_entity_types()
 
     if normalized_target_entity_type not in accepted_target_entity_types:
-        bad_request_error(
-            f"Invalid target entity type specified for creating the derived entity. Accepted types: {separator.join(accepted_target_entity_types)}")
+        abort_bad_req(f"Invalid target entity type specified for creating the derived entity."
+                      f" Accepted types: {separator.join(accepted_target_entity_types)}")
 
 
 """
@@ -1293,8 +1307,8 @@ def validate_source_entity_type_for_derivation(normalized_source_entity_type):
     accepted_source_entity_types = get_derivation_source_entity_types()
 
     if normalized_source_entity_type not in accepted_source_entity_types:
-        bad_request_error(
-            f"Invalid source entity class specified for creating the derived entity. Accepted types: {separator.join(accepted_source_entity_types)}")
+        abort_bad_req(f"Invalid source entity class specified for creating the derived entity."
+                      f" Accepted types: {separator.join(accepted_source_entity_types)}")
 
 
 ####################################################################################################
@@ -1485,7 +1499,7 @@ def create_sennet_ids(normalized_class, json_data_dict, user_token, user_info_di
     organ_code - required only in the case where an id is being generated for a SAMPLE that
                has a SOURCE as a direct ancestor.  Must be one of the codes from:
                https://github.com/hubmapconsortium/search-api/blob/test-release/src/search-schema/data/definitions/enums/organ_types.yaml
-    
+
     Query string (in url) arguments:
         entity_count - optional, the number of ids to generate. If omitted, defaults to 1 
     """

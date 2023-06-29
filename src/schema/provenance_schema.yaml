@@ -147,12 +147,24 @@ doi_properties: &doi_properties
     # So we can't define it as `immutable: true`
     type: string
     description: "The doi of the registered entity. e.g. 10.35079/hbm289.pcbm.487"
+    before_property_create_validators:
+     - verify_DOI_pair
+     - halt_update_if_DOI_exists
+    before_property_update_validators:
+     - verify_DOI_pair
+     - halt_update_if_DOI_exists
   doi_url:
     # This property gets set via a PUT by ingest-api after the DOI is created via DataCite
     # So we can't define it as `immutable: true`
     type: string
     description: "The url from the doi registry for this entity. e.g. https://doi.org/10.35079/hbm289.pcbm.487"
-  # Currently cretors and contacts are only available for public Collections
+    before_property_create_validators:
+     - verify_DOI_pair
+     - halt_update_if_DOI_exists
+    before_property_update_validators:
+     - verify_DOI_pair
+     - halt_update_if_DOI_exists
+  # Currently creators and contacts are only available for public Collections
   creators:
     type: list
     description: "A list of the people who created the entity with full name, email, ORCID iD, institution, etc.. This is analogus to the author list on a publication."
@@ -173,10 +185,10 @@ shared_entity_properties: &shared_entity_properties
   last_modified_timestamp:
     type: integer
     generated: true
-    auto_update: true # Will always update automatically if the entity gets updated, different from `immutable: false` (can be updated by users or not) 
+    auto_update: true # Will always update automatically if the entity gets updated, different from `immutable: false` (can be updated by users or not)
     description: "The timestamp of when the object was last modified.  The format is an integer representing milliseconds since midnight, Jan 1, 1970"
     # Set on both create and update
-    # These two properties will have the same timestamp due to the use of 
+    # These two properties will have the same timestamp due to the use of
     # neo4j function TIMESTAMP() instead of generating the timestamp in Python
     before_create_trigger: set_timestamp
     before_update_trigger: set_timestamp
@@ -238,7 +250,44 @@ ENTITIES:
     properties:
       <<: *shared_properties
       <<: *shared_entity_properties
-      <<: *doi_properties
+      # Because Collection-specific validation is needed for some
+      # DOI fields, all validations from
+      # <<: *doi_properties
+      # are merged into this section
+      ###### DOI properties with entity-specific validations + copies of validations in doi_properties ######
+      registered_doi:
+        type: string
+        description: "See description in doi_properties section above"
+        before_property_create_validators:
+          - verify_DOI_pair
+          - halt_DOI_if_collection_missing_elements
+          - halt_DOI_if_unpublished_dataset
+        before_property_update_validators:
+          - verify_DOI_pair
+          - halt_update_if_DOI_exists
+          - halt_DOI_if_collection_missing_elements
+          - halt_DOI_if_unpublished_dataset
+      doi_url:
+        type: string
+        description: "See description in doi_properties section above"
+        before_property_create_validators:
+          - verify_DOI_pair
+          - halt_DOI_if_collection_missing_elements
+          - halt_DOI_if_unpublished_dataset
+        before_property_update_validators:
+          - verify_DOI_pair
+          - halt_update_if_DOI_exists
+          - halt_DOI_if_collection_missing_elements
+          - halt_if_DOI_for_unpublished_dataset
+      # Creators and contacts are required for a Collection to be public
+      creators:
+        type: list
+        description: "See description in doi_properties section above"
+      contacts:
+        type: list
+        description: "See description in doi_properties section above"
+
+      ###### entity-specific validations ######
       title:
         type: string
         description: "The title of the Collection."
@@ -246,7 +295,22 @@ ENTITIES:
       description:
         type: string
         description: "Free text description of the collection"
+        required_on_create: true
       ###### Transient properties ######
+      dataset_uuids:
+        type: list
+        before_property_create_validators:
+          - validate_no_duplicates_in_list
+          - collection_entities_are_existing_datasets
+        before_property_update_validators:
+          - validate_no_duplicates_in_list
+          - collection_entities_are_existing_datasets
+        transient: true
+        exposed: false
+        description: "The uuids of Datasets in this Collection.  Used to pass source entity ids in on a POST call to create the linkages."
+        # Note: link_collection_to_direct_datasets() will always delete all the old linkages first
+        after_create_trigger: link_collection_to_datasets
+        after_update_trigger: link_collection_to_datasets
       datasets:
         type: list
         transient: true
@@ -384,7 +448,7 @@ ENTITIES:
         type: string
       ingest_id:
         type: string
-      # A user who is a member of multiple groups HAS to send in the group_uuid 
+      # A user who is a member of multiple groups HAS to send in the group_uuid
       group_uuid:
         type: string
         immutable: true
@@ -528,7 +592,7 @@ ENTITIES:
         type: string
         required_on_create: true
         description: "A lab specific identifier for the source."
-      # A user who is a member of multiple groups HAS to send in the group_uuid 
+      # A user who is a member of multiple groups HAS to send in the group_uuid
       group_uuid:
         type: string
         immutable: true
@@ -563,7 +627,9 @@ ENTITIES:
         description: "True if the source was consented to allow public, open access to any data, identified or not, derived from the source's tissue.  Otherwise false."
       source_mapped_metadata:
         type: json_string # dict
-        description: "The metadata returned from the processing at data submission time."
+        generated: true # Disallow entry from users via POST
+        immutable: true # Disallow update via PUT
+        description: "The modified and mapped metadata returned from the processing at data submission time."
         on_read_trigger: get_source_mapped_metadata
       source_type:
         type: string
