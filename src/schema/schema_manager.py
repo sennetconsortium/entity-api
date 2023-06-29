@@ -18,7 +18,8 @@ from schema import schema_neo4j_queries
 # HuBMAP commons
 from hubmap_commons.hm_auth import AuthHelper
 
-from schema import schema_neo4j_queries
+# Atlas Consortia commons
+from atlas_consortia_commons.rest import *
 
 logger = logging.getLogger(__name__)
 
@@ -751,9 +752,13 @@ def normalize_object_result_for_response(provenance_type, entity_dict, propertie
     if entity_dict and ('entity_type' in entity_dict):
         normalized_entity_type = entity_dict['entity_type']
         properties = get_entity_properties(_schema[provenance_type], normalized_entity_type)
+    elif provenance_type == 'ACTIVITIES':
+        properties = _schema[provenance_type]['Activity']['properties']
     else:
-        if provenance_type == 'ACTIVITIES':
-            properties = _schema[provenance_type]['Activity']['properties']
+        logger.error(   f"Unable to normalize object result with"
+                        f" entity_dict={str(entity_dict)} and"
+                        f" provenance_type={provenance_type}.")
+        raise schema_errors.SchemaValidationException("Unable to normalize object.  See logs.")
 
     for key in entity_dict:
         # Only return the properties defined in the schema yaml
@@ -1051,12 +1056,12 @@ def execute_property_level_validators(provenance_type, validator_type, normalize
                     raise schema_errors.MissingApplicationHeaderException(e)
                 except schema_errors.InvalidApplicationHeaderException as e:
                     raise schema_errors.InvalidApplicationHeaderException(e)
-                except ValueError as e:
-                    raise ValueError(e)
-                except Exception:
-                    msg = f"Failed to call the {validator_type} method: {validator_method_name} defiend for entity {normalized_entity_type} on property {key}"
+                except ValueError as ve:
+                    raise ValueError(ve)
+                except Exception as e:
+                    msg = f"Failed to call the {validator_type} method: {validator_method_name} defined for entity {normalized_entity_type} on property {key}"
                     # Log the full stack trace, prepend a line with our message
-                    logger.exception(msg)
+                    logger.exception(f"{msg}. {str(e)}")
 
 
 """
@@ -1274,9 +1279,8 @@ def validate_target_entity_type_for_derivation(normalized_target_entity_type):
     accepted_target_entity_types = get_derivation_target_entity_types()
 
     if normalized_target_entity_type not in accepted_target_entity_types:
-        bad_request_error(
-            f"Invalid target entity type specified for creating the derived entity. Accepted types: {separator.join(accepted_target_entity_types)}")
-
+        abort_bad_req(  f"Invalid target entity type specified for creating the derived entity."
+                        f" Accepted types: {separator.join(accepted_target_entity_types)}")
 
 """
 Validate the source and target entity types for creating derived entity
@@ -1293,9 +1297,8 @@ def validate_source_entity_type_for_derivation(normalized_source_entity_type):
     accepted_source_entity_types = get_derivation_source_entity_types()
 
     if normalized_source_entity_type not in accepted_source_entity_types:
-        bad_request_error(
-            f"Invalid source entity class specified for creating the derived entity. Accepted types: {separator.join(accepted_source_entity_types)}")
-
+        abort_bad_req(  f"Invalid source entity class specified for creating the derived entity."
+                        f" Accepted types: {separator.join(accepted_source_entity_types)}")
 
 ####################################################################################################
 ## Other functions used in conjuction with the trigger methods
