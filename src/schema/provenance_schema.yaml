@@ -185,10 +185,10 @@ shared_entity_properties: &shared_entity_properties
   last_modified_timestamp:
     type: integer
     generated: true
-    auto_update: true # Will always update automatically if the entity gets updated, different from `immutable: false` (can be updated by users or not) 
+    auto_update: true # Will always update automatically if the entity gets updated, different from `immutable: false` (can be updated by users or not)
     description: "The timestamp of when the object was last modified.  The format is an integer representing milliseconds since midnight, Jan 1, 1970"
     # Set on both create and update
-    # These two properties will have the same timestamp due to the use of 
+    # These two properties will have the same timestamp due to the use of
     # neo4j function TIMESTAMP() instead of generating the timestamp in Python
     before_create_trigger: set_timestamp
     before_update_trigger: set_timestamp
@@ -448,7 +448,7 @@ ENTITIES:
         type: string
       ingest_id:
         type: string
-      # A user who is a member of multiple groups HAS to send in the group_uuid 
+      # A user who is a member of multiple groups HAS to send in the group_uuid
       group_uuid:
         type: string
         immutable: true
@@ -592,7 +592,7 @@ ENTITIES:
         type: string
         required_on_create: true
         description: "A lab specific identifier for the source."
-      # A user who is a member of multiple groups HAS to send in the group_uuid 
+      # A user who is a member of multiple groups HAS to send in the group_uuid
       group_uuid:
         type: string
         immutable: true
@@ -625,6 +625,12 @@ ENTITIES:
       open_consent:
         type: boolean
         description: "True if the source was consented to allow public, open access to any data, identified or not, derived from the source's tissue.  Otherwise false."
+      source_mapped_metadata:
+        type: json_string # dict
+        generated: true # Disallow entry from users via POST
+        immutable: true # Disallow update via PUT
+        description: "The modified and mapped metadata returned from the processing at data submission time."
+        on_read_trigger: get_source_mapped_metadata
       source_type:
         type: string
         required_on_create: true

@@ -7,6 +7,8 @@ import datetime
 import requests
 from atlas_consortia_commons.string import equals
 from neo4j.exceptions import TransactionError
+from collections import defaultdict
+import re
 
 # Use the current_app proxy, which points to the application handling the current activity
 from flask import current_app as app
@@ -19,7 +21,6 @@ from schema import schema_neo4j_queries
 from schema.schema_constants import SchemaConstants
 
 logger = logging.getLogger(__name__)
-
 
 ####################################################################################################
 ## Trigger methods shared among Collection, Dataset, Source, Sample - DO NOT RENAME
@@ -46,11 +47,14 @@ Returns
 str: The target property key
 str: The neo4j TIMESTAMP() function as string
 """
+
+
 def set_timestamp(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     # Use the neo4j TIMESTAMP() function during entity creation
-    # Will be proessed in app_neo4j_queries._build_properties_map() 
+    # Will be proessed in app_neo4j_queries._build_properties_map()
     # and schema_neo4j_queries._build_properties_map()
     return property_key, 'TIMESTAMP()'
+
 
 """
 Trigger event method of setting the entity type of a given entity
@@ -73,6 +77,8 @@ Returns
 str: The target property key
 str: The string of normalized entity type
 """
+
+
 def set_entity_type(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     return property_key, normalized_type
 
@@ -98,11 +104,14 @@ Returns
 str: The target property key
 str: The 'sub' string
 """
+
+
 def set_user_sub(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     if 'sub' not in new_data_dict:
         raise KeyError("Missing 'sub' key in 'new_data_dict' during calling 'set_user_sub()' trigger method.")
 
     return property_key, new_data_dict['sub']
+
 
 """
 Trigger event method of getting user email
@@ -125,11 +134,14 @@ Returns
 str: The target property key
 str: The 'email' string
 """
+
+
 def set_user_email(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     if 'email' not in new_data_dict:
         raise KeyError("Missing 'email' key in 'new_data_dict' during calling 'set_user_email()' trigger method.")
 
     return property_key, new_data_dict['email']
+
 
 """
 Trigger event method of getting user name
@@ -152,11 +164,14 @@ Returns
 str: The target property key
 str: The 'name' string
 """
+
+
 def set_user_displayname(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     if 'name' not in new_data_dict:
         raise KeyError("Missing 'name' key in 'new_data_dict' during calling 'set_user_displayname()' trigger method.")
 
     return property_key, new_data_dict['name']
+
 
 """
 Trigger event method of getting uuid, hubmap_id for a new entity to be created
@@ -179,11 +194,14 @@ Returns
 str: The target property key
 str: The uuid created via uuid-api
 """
+
+
 def set_uuid(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     if 'uuid' not in new_data_dict:
         raise KeyError("Missing 'uuid' key in 'new_data_dict' during calling 'set_uuid()' trigger method.")
 
     return property_key, new_data_dict['uuid']
+
 
 """
 Trigger event method of getting uuid, hubmap_id for a new entity to be created
@@ -206,6 +224,8 @@ Returns
 str: The target property key
 str: The sennet_id/sennet_id created via uuid-api
 """
+
+
 def set_sennet_id(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     if 'sennet_id' not in new_data_dict:
         raise KeyError("Missing 'sennet_id' key in 'new_data_dict' during calling 'set_sennet_id()' trigger method.")
@@ -239,6 +259,8 @@ Returns
 str: The target property key
 str: The data access level string
 """
+
+
 def set_data_access_level(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     if 'uuid' not in new_data_dict:
         raise KeyError("Missing 'uuid' key in 'new_data_dict' during calling 'set_data_access_level()' trigger method.")
@@ -246,12 +268,13 @@ def set_data_access_level(property_key, normalized_type, user_token, existing_da
     if normalized_type in ['Dataset', 'Publication']:
         # 'contains_human_genetic_sequences' is required on create
         if 'contains_human_genetic_sequences' not in new_data_dict:
-            raise KeyError("Missing 'contains_human_genetic_sequences' key in 'new_data_dict' during calling 'set_data_access_level()' trigger method.")
+            raise KeyError(
+                "Missing 'contains_human_genetic_sequences' key in 'new_data_dict' during calling 'set_data_access_level()' trigger method.")
 
         # Default to protected
         data_access_level = SchemaConstants.ACCESS_LEVEL_PROTECTED
 
-        # When `contains_human_genetic_sequences` is true, even if `status` is 'Published', 
+        # When `contains_human_genetic_sequences` is true, even if `status` is 'Published',
         # the `data_access_level` is still 'protected'
         if new_data_dict['contains_human_genetic_sequences']:
             data_access_level = SchemaConstants.ACCESS_LEVEL_PROTECTED
@@ -265,7 +288,8 @@ def set_data_access_level(property_key, normalized_type, user_token, existing_da
 
         # public if any dataset below it in the provenance hierarchy is published
         # (i.e. Dataset.status == "Published")
-        count = schema_neo4j_queries.count_attached_published_datasets(schema_manager.get_neo4j_driver_instance(), normalized_type, new_data_dict['uuid'])
+        count = schema_neo4j_queries.count_attached_published_datasets(schema_manager.get_neo4j_driver_instance(),
+                                                                       normalized_type, new_data_dict['uuid'])
 
         if count > 0:
             data_access_level = SchemaConstants.ACCESS_LEVEL_PUBLIC
@@ -294,11 +318,13 @@ Returns
 str: The target property key
 str: The group uuid
 """
+
+
 def set_group_uuid(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     group_uuid = None
 
-    # Look for membership in a single "data provider" group and sets to that. 
-    # Otherwise if not set and no single "provider group" membership throws error.  
+    # Look for membership in a single "data provider" group and sets to that.
+    # Otherwise if not set and no single "provider group" membership throws error.
     # This field is also used to link (Neo4j relationship) to the correct Lab node on creation.
     if 'hmgroupids' not in new_data_dict:
         raise KeyError("Missing 'hmgroupids' key in 'new_data_dict' during calling 'set_group_uuid()' trigger method.")
@@ -332,6 +358,7 @@ def set_group_uuid(property_key, normalized_type, user_token, existing_data_dict
 
     return property_key, group_uuid
 
+
 """
 Trigger event method of setting the group_name
 
@@ -353,11 +380,13 @@ Returns
 str: The target property key
 str: The group name
 """
+
+
 def set_group_name(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     group_name = None
 
-    # If `group_uuid` is not already set, looks for membership in a single "data provider" group and sets to that. 
-    # Otherwise if not set and no single "provider group" membership throws error.  
+    # If `group_uuid` is not already set, looks for membership in a single "data provider" group and sets to that.
+    # Otherwise if not set and no single "provider group" membership throws error.
     # This field is also used to link (Neo4j relationship) to the correct Lab node on creation.
     if 'hmgroupids' not in new_data_dict:
         raise KeyError("Missing 'hmgroupids' key in 'new_data_dict' during calling 'set_group_name()' trigger method.")
@@ -425,8 +454,11 @@ Returns
 str: The target property key
 list: The file info dicts in a list
 """
+
+
 def commit_image_files(property_key, normalized_type, user_token, existing_data_dict, new_data_dict, generated_dict):
-    return _commit_files('image_files', property_key, normalized_type, user_token, existing_data_dict, new_data_dict, generated_dict)
+    return _commit_files('image_files', property_key, normalized_type, user_token, existing_data_dict, new_data_dict,
+                         generated_dict)
 
 
 """
@@ -460,8 +492,11 @@ Returns
 str: The target property key
 list: The file info dicts in a list
 """
+
+
 def delete_image_files(property_key, normalized_type, user_token, existing_data_dict, new_data_dict, generated_dict):
-    return _delete_files('image_files', property_key, normalized_type, user_token, existing_data_dict, new_data_dict, generated_dict)
+    return _delete_files('image_files', property_key, normalized_type, user_token, existing_data_dict, new_data_dict,
+                         generated_dict)
 
 
 """
@@ -485,25 +520,31 @@ Returns
 str: The target property key
 list: The file info dicts (with updated descriptions) in a list
 """
-def update_file_descriptions(property_key, normalized_type, user_token, existing_data_dict, new_data_dict, generated_dict):
-    if property_key not in new_data_dict:
-        raise KeyError(f"Missing '{property_key}' key in 'new_data_dict' during calling 'update_file_descriptions()' trigger method.")
 
-    #If POST or PUT where the target doesn't exist create the file info array
-    #if generated_dict doesn't contain the property yet, copy it from the existing_data_dict
-    #or if it doesn't exist in existing_data_dict create it
+
+def update_file_descriptions(property_key, normalized_type, user_token, existing_data_dict, new_data_dict,
+                             generated_dict):
+    if property_key not in new_data_dict:
+        raise KeyError(
+            f"Missing '{property_key}' key in 'new_data_dict' during calling 'update_file_descriptions()' trigger method.")
+
+    # If POST or PUT where the target doesn't exist create the file info array
+    # if generated_dict doesn't contain the property yet, copy it from the existing_data_dict
+    # or if it doesn't exist in existing_data_dict create it
     if not property_key in generated_dict:
         if not property_key in existing_data_dict:
-            raise KeyError(f"Missing '{property_key}' key in 'existing_data_dict' during call to 'update_file_descriptions()' trigger method.")
+            raise KeyError(
+                f"Missing '{property_key}' key in 'existing_data_dict' during call to 'update_file_descriptions()' trigger method.")
         # Otherwise this is a PUT where the target array exists already
         else:
             # Note: The property, name specified by `target_property_key`, is stored in Neo4j as a string representation of the Python list
-            # It's not stored in Neo4j as a json string! And we can't store it as a json string 
+            # It's not stored in Neo4j as a json string! And we can't store it as a json string
             # due to the way that Cypher handles single/double quotes.
             existing_files_list = schema_manager.convert_str_to_data(existing_data_dict[property_key])
     else:
         if not property_key in generated_dict:
-            raise KeyError(f"Missing '{property_key}' key in 'generated_dict' during calling 'update_file_descriptions()' trigger method.")
+            raise KeyError(
+                f"Missing '{property_key}' key in 'generated_dict' during calling 'update_file_descriptions()' trigger method.")
         existing_files_list = generated_dict[property_key]
 
     file_info_by_uuid_dict = {}
@@ -524,7 +565,6 @@ def update_file_descriptions(property_key, normalized_type, user_token, existing
 
     generated_dict[property_key] = list(file_info_by_uuid_dict.values())
     return generated_dict
-
 
 
 ####################################################################################################
@@ -552,13 +592,17 @@ Returns
 str: The target property key
 list: A list of associated dataset dicts with all the normalized information
 """
+
+
 def get_collection_datasets(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     if 'uuid' not in existing_data_dict:
-        raise KeyError("Missing 'uuid' key in 'existing_data_dict' during calling 'get_collection_datasets()' trigger method.")
+        raise KeyError(
+            "Missing 'uuid' key in 'existing_data_dict' during calling 'get_collection_datasets()' trigger method.")
 
-    datasets_list = schema_neo4j_queries.get_collection_datasets(schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'])
+    datasets_list = schema_neo4j_queries.get_collection_datasets(schema_manager.get_neo4j_driver_instance(),
+                                                                 existing_data_dict['uuid'])
 
-    # Additional properties of the datasets to exclude 
+    # Additional properties of the datasets to exclude
     # We don't want to show too much nested information
     properties_to_skip = [
         'direct_ancestors',
@@ -599,6 +643,8 @@ Returns
 str: The target property key
 str: Initial status of "New"
 """
+
+
 def set_dataset_status_new(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     # Always 'New' on dataset creation
     return property_key, 'New'
@@ -621,12 +667,17 @@ existing_data_dict : dict
 new_data_dict : dict
     A merged dictionary that contains all possible input data to be used
 """
-def update_dataset_and_ancestors_data_access_level(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+
+
+def update_dataset_and_ancestors_data_access_level(property_key, normalized_type, user_token, existing_data_dict,
+                                                   new_data_dict):
     if 'uuid' not in existing_data_dict:
-        raise KeyError("Missing 'uuid' key in 'existing_data_dict' during calling 'update_dataset_ancestors_data_access_level()' trigger method.")
+        raise KeyError(
+            "Missing 'uuid' key in 'existing_data_dict' during calling 'update_dataset_ancestors_data_access_level()' trigger method.")
 
     if 'status' not in existing_data_dict:
-        raise KeyError("Missing 'status' key in 'existing_data_dict' during calling 'update_dataset_ancestors_data_access_level()' trigger method.")
+        raise KeyError(
+            "Missing 'status' key in 'existing_data_dict' during calling 'update_dataset_ancestors_data_access_level()' trigger method.")
 
     # Caculate the new data_access_level of this dataset's ancestors (except another dataset is the ancestor)
     # public if any dataset below the Source/Sample in the provenance hierarchy is published
@@ -635,10 +686,12 @@ def update_dataset_and_ancestors_data_access_level(property_key, normalized_type
 
     if existing_data_dict['status'].lower() == DATASET_STATUS_PUBLISHED:
         try:
-            schema_neo4j_queries.update_dataset_and_ancestors_data_access_level(schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'], ACCESS_LEVEL_PUBLIC)
+            schema_neo4j_queries.update_dataset_and_ancestors_data_access_level(
+                schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'], ACCESS_LEVEL_PUBLIC)
         except TransactionError:
             # No need to log
             raise
+
 
 """
 Trigger event method of getting a list of collections for this new Dataset
@@ -661,13 +714,17 @@ Returns
 str: The target property key
 list: A list of associated collections with all the normalized information
 """
+
+
 def get_dataset_collections(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     if 'uuid' not in existing_data_dict:
-        raise KeyError("Missing 'uuid' key in 'existing_data_dict' during calling 'get_dataset_collections()' trigger method.")
+        raise KeyError(
+            "Missing 'uuid' key in 'existing_data_dict' during calling 'get_dataset_collections()' trigger method.")
 
     # No property key needs to filter the result
     # Get back the list of collection dicts
-    collections_list = schema_neo4j_queries.get_dataset_collections(schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'])
+    collections_list = schema_neo4j_queries.get_dataset_collections(schema_manager.get_neo4j_driver_instance(),
+                                                                    existing_data_dict['uuid'])
 
     # Exclude datasets from each resulting collection
     # We don't want to show too much nested information
@@ -675,6 +732,7 @@ def get_dataset_collections(property_key, normalized_type, user_token, existing_
     complete_entities_list = schema_manager.get_complete_entities_list(user_token, collections_list, properties_to_skip)
 
     return property_key, schema_manager.normalize_entities_list_for_response(complete_entities_list)
+
 
 """
 Trigger event method of getting the associated Upload for this Dataset
@@ -697,14 +755,18 @@ Returns
 str: The target property key
 dict: A dict of associated Upload detail with all the normalized information
 """
+
+
 def get_dataset_upload(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     return_dict = None
 
     if 'uuid' not in existing_data_dict:
-        raise KeyError("Missing 'uuid' key in 'existing_data_dict' during calling 'get_dataset_upload()' trigger method.")
+        raise KeyError(
+            "Missing 'uuid' key in 'existing_data_dict' during calling 'get_dataset_upload()' trigger method.")
 
     # It could be None if the dataset doesn't in any Upload
-    upload_dict = schema_neo4j_queries.get_dataset_upload(schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'])
+    upload_dict = schema_neo4j_queries.get_dataset_upload(schema_manager.get_neo4j_driver_instance(),
+                                                          existing_data_dict['uuid'])
 
     if upload_dict:
         # Exclude datasets from each resulting Upload
@@ -714,6 +776,46 @@ def get_dataset_upload(property_key, normalized_type, user_token, existing_data_
         return_dict = schema_manager.normalize_object_result_for_response('ENTITIES', complete_upload_dict)
 
     return property_key, return_dict
+
+
+"""
+Trigger event method for creating or recreating linkages between this new Collection and the Datasets it contains
+
+Parameters
+----------
+property_key : str
+    The target property key
+normalized_type : str
+    One of the types defined in the schema yaml: Dataset
+user_token: str
+    The user's globus nexus token
+existing_data_dict : dict
+    A dictionary that contains all existing entity properties
+new_data_dict : dict
+    A merged dictionary that contains all possible input data to be used
+
+Returns
+-------
+str: The target property key
+str: The uuid string of source entity
+"""
+def link_collection_to_datasets(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    if 'uuid' not in existing_data_dict:
+        raise KeyError("Missing 'uuid' key in 'existing_data_dict' during calling 'link_collection_to_datasets()' trigger method.")
+
+    if 'dataset_uuids' not in existing_data_dict:
+        raise KeyError("Missing 'dataset_uuids' key in 'existing_data_dict' during calling 'link_collection_to_datasets()' trigger method.")
+
+    dataset_uuids = existing_data_dict['dataset_uuids']
+
+    try:
+        # Create a linkage (without an Activity node) between the Collection node and each Dataset it contains.
+        schema_neo4j_queries.link_collection_to_datasets(neo4j_driver=schema_manager.get_neo4j_driver_instance()
+                                                         ,collection_uuid=existing_data_dict['uuid']
+                                                         ,dataset_uuid_list=dataset_uuids)
+    except TransactionError as te:
+        # No need to log
+        raise
 
 """
 Trigger event method for creating or recreating linkages between this new Collection and the Datasets it contains
@@ -775,20 +877,25 @@ Returns
 str: The target property key
 list: A list of associated direct ancestors with all the normalized information
 """
+
+
 def get_dataset_direct_ancestors(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     if 'uuid' not in existing_data_dict:
-        raise KeyError("Missing 'uuid' key in 'existing_data_dict' during calling 'get_dataset_direct_ancestors()' trigger method.")
+        raise KeyError(
+            "Missing 'uuid' key in 'existing_data_dict' during calling 'get_dataset_direct_ancestors()' trigger method.")
 
     # No property key needs to filter the result
     # Get back the list of ancestor dicts
-    direct_ancestors_list = schema_neo4j_queries.get_dataset_direct_ancestors(schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'])
+    direct_ancestors_list = schema_neo4j_queries.get_dataset_direct_ancestors(
+        schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'])
 
     # We don't want to show too much nested information
     # The direct ancestor of a Dataset could be: Dataset or Sample
     # Skip running the trigger methods for 'direct_ancestors' and 'collections' if the direct ancestor is Dataset
     # Skip running the trigger methods for 'direct_ancestor' if the direct ancestor is Sample
     properties_to_skip = ['direct_ancestors', 'collections', 'direct_ancestor']
-    complete_entities_list = schema_manager.get_complete_entities_list(user_token, direct_ancestors_list, properties_to_skip)
+    complete_entities_list = schema_manager.get_complete_entities_list(user_token, direct_ancestors_list,
+                                                                       properties_to_skip)
 
     return property_key, schema_manager.normalize_entities_list_for_response(complete_entities_list)
 
@@ -814,12 +921,16 @@ Returns
 str: The target property key
 str: The relative directory path
 """
+
+
 def get_local_directory_rel_path(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     if 'uuid' not in existing_data_dict:
-        raise KeyError("Missing 'uuid' key in 'existing_data_dict' during calling 'get_local_directory_rel_path()' trigger method.")
+        raise KeyError(
+            "Missing 'uuid' key in 'existing_data_dict' during calling 'get_local_directory_rel_path()' trigger method.")
 
     if 'data_access_level' not in existing_data_dict:
-        raise KeyError("Missing 'data_access_level' key in 'existing_data_dict' during calling 'get_local_directory_rel_path()' trigger method.")
+        raise KeyError(
+            "Missing 'data_access_level' key in 'existing_data_dict' during calling 'get_local_directory_rel_path()' trigger method.")
 
     uuid = existing_data_dict['uuid']
 
@@ -861,19 +972,85 @@ Returns
 str: The target property key
 str: The uuid string of source entity
 """
+
+
 def link_to_previous_revision(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     if 'uuid' not in existing_data_dict:
-        raise KeyError("Missing 'uuid' key in 'existing_data_dict' during calling 'link_to_previous_revision()' trigger method.")
+        raise KeyError(
+            "Missing 'uuid' key in 'existing_data_dict' during calling 'link_to_previous_revision()' trigger method.")
 
     if 'previous_revision_uuid' not in existing_data_dict:
-        raise KeyError("Missing 'previous_revision_uuid' key in 'existing_data_dict' during calling 'link_to_previous_revision()' trigger method.")
+        raise KeyError(
+            "Missing 'previous_revision_uuid' key in 'existing_data_dict' during calling 'link_to_previous_revision()' trigger method.")
 
     # Create a revision reltionship from this new Dataset node and its previous revision of dataset node in neo4j
     try:
-        schema_neo4j_queries.link_entity_to_previous_revision(schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'], existing_data_dict['previous_revision_uuid'])
+        schema_neo4j_queries.link_entity_to_previous_revision(schema_manager.get_neo4j_driver_instance(),
+                                                              existing_data_dict['uuid'],
+                                                              existing_data_dict['previous_revision_uuid'])
     except TransactionError:
         # No need to log
         raise
+
+
+"""
+Trigger event method of auto generating mapped metadata from 'living_donor_data' or 'organ_donor_data'
+
+Parameters
+----------
+property_key : str
+    The target property key
+normalized_type : str
+    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+user_token: str
+    The user's globus nexus token
+existing_data_dict : dict
+    A dictionary that contains all existing entity properties
+new_data_dict : dict
+    A merged dictionary that contains all possible input data to be used
+
+Returns
+-------
+str: The target property key
+dict: The auto generated mapped metadata
+"""
+
+
+def get_source_mapped_metadata(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    if not equals(Ontology.source_types().HUMAN, existing_data_dict['source_type']):
+        raise schema_errors.InvalidPropertyRequirementsException(
+            "Source type is not 'Human' and does not support the field 'source_mapped_metadata."
+        )
+    if 'metadata' not in existing_data_dict:
+        raise schema_errors.InvalidPropertyRequirementsException(
+            "Missing 'metadata' key in 'existing_data_dict' during calling 'get_source_mapped_metadata()' trigger method.")
+
+    if 'organ_donor_data' not in existing_data_dict['metadata'] and 'living_donor_data' not in existing_data_dict[
+        'metadata']:
+        raise schema_errors.InvalidPropertyRequirementsException(
+            "Missing 'organ_donor_data' or 'living_donor_data' key in 'existing_data_dict[metadata]' during calling 'get_source_mapped_metadata()' trigger method.")
+
+    metadata = json.loads(existing_data_dict['metadata'].replace("'", '"'))
+    donor_metadata = metadata.get('organ_donor_data') or metadata.get('living_donor_data') or {}
+    mapped_metadata = defaultdict(list)
+
+    for kv in donor_metadata:
+        term = kv['grouping_concept_preferred_term']
+        key = re.sub(r'\W+', '_', term).lower()
+        value = (
+            float(kv['data_value'])
+            if 'data_type' in kv and kv['data_type'] == 'Numeric'
+            else kv['preferred_term']
+        )
+
+        if 'units' not in kv or not len(kv['units']):
+            mapped_metadata[key].append(value)
+            continue
+        mapped_metadata[f'{key}_value'].append(value)
+        mapped_metadata[f'{key}_unit'].append(kv['units'])
+
+    return property_key, dict(mapped_metadata)
+
 
 """
 Trigger event method of auto generating the dataset title
@@ -896,6 +1073,8 @@ Returns
 str: The target property key
 str: The generated dataset title 
 """
+
+
 def get_dataset_title(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     if 'uuid' not in existing_data_dict:
         raise KeyError("Missing 'uuid' key in 'existing_data_dict' during calling 'get_dataset_title()' trigger method.")
@@ -1000,6 +1179,7 @@ def get_dataset_title(property_key, normalized_type, user_token, existing_data_d
 
     return property_key, generated_title
 
+
 """
 Trigger event method of getting the uuid of the previous revision dataset if exists
 
@@ -1021,13 +1201,17 @@ Returns
 str: The target property key
 str: The uuid string of previous revision entity or None if not found
 """
+
+
 def get_previous_revision_uuid(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     if 'uuid' not in existing_data_dict:
-        raise KeyError("Missing 'uuid' key in 'existing_data_dict' during calling 'get_previous_revision_uuid()' trigger method.")
+        raise KeyError(
+            "Missing 'uuid' key in 'existing_data_dict' during calling 'get_previous_revision_uuid()' trigger method.")
 
-    previous_revision_uuid = schema_neo4j_queries.get_previous_revision_uuid(schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'])
+    previous_revision_uuid = schema_neo4j_queries.get_previous_revision_uuid(schema_manager.get_neo4j_driver_instance(),
+                                                                             existing_data_dict['uuid'])
 
-    # previous_revision_uuid can be None, but will be filtered out by 
+    # previous_revision_uuid can be None, but will be filtered out by
     # schema_manager.normalize_entity_result_for_response()
     return property_key, previous_revision_uuid
 
@@ -1053,13 +1237,17 @@ Returns
 str: The target property key
 str: The uuid string of next version entity or None if not found
 """
+
+
 def get_next_revision_uuid(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     if 'uuid' not in existing_data_dict:
-        raise KeyError("Missing 'uuid' key in 'existing_data_dict' during calling 'get_next_revision_uuid()' trigger method.")
+        raise KeyError(
+            "Missing 'uuid' key in 'existing_data_dict' during calling 'get_next_revision_uuid()' trigger method.")
 
-    next_revision_uuid = schema_neo4j_queries.get_next_revision_uuid(schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'])
+    next_revision_uuid = schema_neo4j_queries.get_next_revision_uuid(schema_manager.get_neo4j_driver_instance(),
+                                                                     existing_data_dict['uuid'])
 
-    # next_revision_uuid can be None, but will be filtered out by 
+    # next_revision_uuid can be None, but will be filtered out by
     # schema_manager.normalize_entity_result_for_response()
     return property_key, next_revision_uuid
 
@@ -1094,6 +1282,8 @@ Returns
 -------
 dict: The updated generated dict
 """
+
+
 def commit_thumbnail_file(property_key, normalized_type, user_token, existing_data_dict, new_data_dict, generated_dict):
     # The name of the property where the file information is stored
     target_property_key = 'thumbnail_file'
@@ -1122,10 +1312,12 @@ def commit_thumbnail_file(property_key, normalized_type, user_token, existing_da
             'user_token': user_token
         }
 
-        logger.info(f"Commit the uploaded thumbnail file of tmp file id {tmp_file_id} for entity {entity_uuid} via ingest-api call...")
+        logger.info(
+            f"Commit the uploaded thumbnail file of tmp file id {tmp_file_id} for entity {entity_uuid} via ingest-api call...")
 
         # Disable ssl certificate verification
-        response = requests.post(url = ingest_api_target_url, headers = schema_manager._create_request_headers(user_token), json = json_to_post, verify = False)
+        response = requests.post(url=ingest_api_target_url, headers=schema_manager._create_request_headers(user_token),
+                                 json=json_to_post, verify=False)
 
         if response.status_code != 200:
             msg = f"Failed to commit the thumbnail file of tmp file id {tmp_file_id} via ingest-api for entity uuid: {entity_uuid}"
@@ -1174,35 +1366,39 @@ Returns
 -------
 dict: The updated generated dict
 """
+
+
 def delete_thumbnail_file(property_key, normalized_type, user_token, existing_data_dict, new_data_dict, generated_dict):
     # The name of the property where the file information is stored
     target_property_key = 'thumbnail_file'
 
-    # Do nothing if no thumbnail file to delete 
+    # Do nothing if no thumbnail file to delete
     # is provided in the field specified by property_key
     if (not property_key in new_data_dict) or (not new_data_dict[property_key]):
         return generated_dict
 
     if 'uuid' not in existing_data_dict:
-        raise KeyError(f"Missing 'uuid' key in 'existing_data_dict' during calling 'delete_thumbnail_file()' trigger method for property '{target_property_key}'.")
+        raise KeyError(
+            f"Missing 'uuid' key in 'existing_data_dict' during calling 'delete_thumbnail_file()' trigger method for property '{target_property_key}'.")
 
     entity_uuid = existing_data_dict['uuid']
 
     # The property_key (`thumbnail_file_to_remove`) is just a file uuid string
     file_uuid = new_data_dict[property_key]
 
-    #If POST or PUT where the target doesn't exist create the file info dict
-    #if generated_dict doesn't contain the property yet, copy it from the existing_data_dict
-    #if it isn't in the existing_dictionary throw and error
-    #or if it doesn't exist in existing_data_dict create it
+    # If POST or PUT where the target doesn't exist create the file info dict
+    # if generated_dict doesn't contain the property yet, copy it from the existing_data_dict
+    # if it isn't in the existing_dictionary throw and error
+    # or if it doesn't exist in existing_data_dict create it
     if not target_property_key in generated_dict:
         if not target_property_key in existing_data_dict:
-            raise KeyError(f"Missing '{target_property_key}' key missing during calling 'delete_thumbnail_file()' trigger method on entity {entity_uuid}.")
+            raise KeyError(
+                f"Missing '{target_property_key}' key missing during calling 'delete_thumbnail_file()' trigger method on entity {entity_uuid}.")
         # Otherwise this is a PUT where the target thumbnail file exists already
         else:
-            # Note: The property, name specified by `target_property_key`, 
+            # Note: The property, name specified by `target_property_key`,
             # is stored in Neo4j as a string representation of the Python dict
-            # It's not stored in Neo4j as a json string! And we can't store it as a json string 
+            # It's not stored in Neo4j as a json string! And we can't store it as a json string
             # due to the way that Cypher handles single/double quotes.
             file_info_dict = schema_manager.convert_str_to_data(existing_data_dict[target_property_key])
     else:
@@ -1222,7 +1418,8 @@ def delete_thumbnail_file(property_key, normalized_type, user_token, existing_da
     logger.info(f"Remove the uploaded thumbnail file {file_uuid} for entity {entity_uuid} via ingest-api call...")
 
     # Disable ssl certificate verification
-    response = requests.post(url = ingest_api_target_url, headers = schema_manager._create_request_headers(user_token), json = json_to_post, verify = False)
+    response = requests.post(url=ingest_api_target_url, headers=schema_manager._create_request_headers(user_token),
+                             json=json_to_post, verify=False)
 
     # response.json() returns an empty array because
     # there's no thumbnail file left once the only one gets removed
@@ -1231,7 +1428,7 @@ def delete_thumbnail_file(property_key, normalized_type, user_token, existing_da
         logger.error(msg)
         raise schema_errors.FileUploadException(msg)
 
-    # Update the value of target_property_key `thumbnail_file` to empty json string 
+    # Update the value of target_property_key `thumbnail_file` to empty json string
     generated_dict[target_property_key] = {}
 
     return generated_dict
@@ -1258,12 +1455,15 @@ existing_data_dict : dict
 new_data_dict : dict
     A merged dictionary that contains all possible input data to be used
 """
+
+
 def set_was_attributed_to(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     if 'uuid' not in existing_data_dict:
-        raise KeyError("Missing 'uuid' key in 'existing_data_dict' during calling 'set_was_attributed_to()' trigger method.")
+        raise
 
     if 'group_uuid' not in existing_data_dict:
-        raise KeyError("Missing 'group_uuid' key in 'existing_data_dict' during calling 'set_was_attributed_to()' trigger method.")
+        raise KeyError(
+            "Missing 'group_uuid' key in 'existing_data_dict' during calling 'set_was_attributed_to()' trigger method.")
 
     # Build a list of direct ancestor uuids
     # Only one uuid in the list in this case
@@ -1272,11 +1472,11 @@ def set_was_attributed_to(property_key, normalized_type, user_token, existing_da
 
     activity_data_dict = schema_manager.generate_activity_data(normalized_type, user_token, existing_data_dict)
 
-
     try:
         # Create a linkage
         # between the Entity node and the parent Agent node in neo4j
-        schema_neo4j_queries.link_entity_to_agent(schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'], direct_ancestor_uuids, activity_data_dict)
+        schema_neo4j_queries.link_entity_to_agent(schema_manager.get_neo4j_driver_instance(),
+                                                  existing_data_dict['uuid'], direct_ancestor_uuids, activity_data_dict)
     except TransactionError:
         # No need to log
         raise
@@ -1298,9 +1498,12 @@ existing_data_dict : dict
 new_data_dict : dict
     A merged dictionary that contains all possible input data to be used
 """
+
+
 def set_was_generated_by(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     if 'uuid' not in existing_data_dict:
-        raise KeyError("Missing 'uuid' key in 'existing_data_dict' during calling 'set_was_generated_by()' trigger method.")
+        raise KeyError(
+            "Missing 'uuid' key in 'existing_data_dict' during calling 'set_was_generated_by()' trigger method.")
 
     # Build a list of direct ancestor uuids
     # Only one uuid in the list in this case
@@ -1315,17 +1518,19 @@ def set_was_generated_by(property_key, normalized_type, user_token, existing_dat
                 "Missing 'direct_ancestor_uuid' key in 'existing_data_dict' during calling 'set_was_generated_by()' trigger method.")
         direct_ancestor_uuids = [existing_data_dict['direct_ancestor_uuid']]
 
-
     # Generate property values for Activity node
     activity_data_dict = schema_manager.generate_activity_data(normalized_type, user_token, existing_data_dict)
 
     try:
         # Create a linkage  (via Activity node)
         # between the Entity node and the parent Agent node in neo4j
-        schema_neo4j_queries.link_entity_to_entity_via_activity(schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'], direct_ancestor_uuids, activity_data_dict)
+        schema_neo4j_queries.link_entity_to_entity_via_activity(schema_manager.get_neo4j_driver_instance(),
+                                                                existing_data_dict['uuid'], direct_ancestor_uuids,
+                                                                activity_data_dict)
     except TransactionError:
         # No need to log
         raise
+
 
 """
 Trigger event method of building linkage between this new Entity and another Entity
@@ -1343,16 +1548,19 @@ existing_data_dict : dict
 new_data_dict : dict
     A merged dictionary that contains all possible input data to be used
 """
+
+
 def set_was_derived_from(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     if 'uuid' not in existing_data_dict:
         raise KeyError("Missing 'uuid' key in 'existing_data_dict' during calling 'was_derived_from()' trigger method.")
 
     if 'was_derived_from' not in existing_data_dict:
-        raise KeyError("Missing 'was_derived_from' key in 'existing_data_dict' during calling 'was_derived_from()' trigger method.")
+        raise KeyError(
+            "Missing 'was_derived_from' key in 'existing_data_dict' during calling 'was_derived_from()' trigger method.")
 
     # Build a list of direct ancestor uuids
     # Only one uuid in the list in this case
-    direct_ancestor_uuids =  schema_manager.convert_str_to_data(existing_data_dict['was_derived_from'])
+    direct_ancestor_uuids = schema_manager.convert_str_to_data(existing_data_dict['was_derived_from'])
 
     # Generate property values for Activity node
     activity_data_dict = schema_manager.generate_activity_data(normalized_type, user_token, existing_data_dict)
@@ -1360,10 +1568,13 @@ def set_was_derived_from(property_key, normalized_type, user_token, existing_dat
     try:
         # Create a linkage  (via Activity node)
         # between the Entity node and the parent Agent node in neo4j
-        schema_neo4j_queries.link_entity_to_entity(schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'], direct_ancestor_uuids, activity_data_dict)
+        schema_neo4j_queries.link_entity_to_entity(schema_manager.get_neo4j_driver_instance(),
+                                                   existing_data_dict['uuid'], direct_ancestor_uuids,
+                                                   activity_data_dict)
     except TransactionError:
         # No need to log
         raise
+
 
 ####################################################################################################
 ## Trigger methods specific to Collection - DO NOT RENAME
@@ -1385,22 +1596,28 @@ existing_data_dict : dict
 new_data_dict : dict
     A merged dictionary that contains all possible input data to be used
 """
+
+
 def set_in_collection(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     if 'uuid' not in existing_data_dict:
-        raise KeyError("Missing 'uuid' key in 'existing_data_dict' during calling 'set_in_collection()' trigger method.")
+        raise KeyError(
+            "Missing 'uuid' key in 'existing_data_dict' during calling 'set_in_collection()' trigger method.")
 
     if 'entities' not in existing_data_dict:
-        raise KeyError("Missing 'entities' key in 'existing_data_dict' during calling 'set_in_collection()' trigger method.")
+        raise KeyError(
+            "Missing 'entities' key in 'existing_data_dict' during calling 'set_in_collection()' trigger method.")
 
-    direct_ancestor_uuids =  schema_manager.convert_str_to_data(existing_data_dict['entities'])
+    direct_ancestor_uuids = schema_manager.convert_str_to_data(existing_data_dict['entities'])
 
     try:
         # Create a linkage
         # between the Entity node and the parent Agent node in neo4j
-        schema_neo4j_queries.link_collection_to_entity(schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'], direct_ancestor_uuids)
+        schema_neo4j_queries.link_collection_to_entity(schema_manager.get_neo4j_driver_instance(),
+                                                       existing_data_dict['uuid'], direct_ancestor_uuids)
     except TransactionError:
         # No need to log
         raise
+
 
 ####################################################################################################
 ## Trigger methods specific to Sample - DO NOT RENAME
@@ -1449,8 +1666,11 @@ Returns
 str: The target property key
 list: The file info dicts in a list
 """
+
+
 def commit_metadata_files(property_key, normalized_type, user_token, existing_data_dict, new_data_dict, generated_dict):
-    return _commit_files('metadata_files', property_key, normalized_type, user_token, existing_data_dict, new_data_dict, generated_dict)
+    return _commit_files('metadata_files', property_key, normalized_type, user_token, existing_data_dict, new_data_dict,
+                         generated_dict)
 
 
 """
@@ -1484,8 +1704,11 @@ Returns
 str: The target property key
 list: The file info dicts in a list
 """
+
+
 def delete_metadata_files(property_key, normalized_type, user_token, existing_data_dict, new_data_dict, generated_dict):
-    return _delete_files('metadata_files', property_key, normalized_type, user_token, existing_data_dict, new_data_dict, generated_dict)
+    return _delete_files('metadata_files', property_key, normalized_type, user_token, existing_data_dict, new_data_dict,
+                         generated_dict)
 
 
 """
@@ -1509,14 +1732,19 @@ Returns
 str: The target property key
 dict: The direct ancestor entity (either another Sample or a Source) with all the normalized information
 """
+
+
 def get_sample_direct_ancestor(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     if 'uuid' not in existing_data_dict:
-        raise KeyError("Missing 'uuid' key in 'existing_data_dict' during calling 'get_sample_direct_ancestor()' trigger method.")
+        raise KeyError(
+            "Missing 'uuid' key in 'existing_data_dict' during calling 'get_sample_direct_ancestor()' trigger method.")
 
-    direct_ancestor_dict = schema_neo4j_queries.get_sample_direct_ancestor(schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'])
+    direct_ancestor_dict = schema_neo4j_queries.get_sample_direct_ancestor(schema_manager.get_neo4j_driver_instance(),
+                                                                           existing_data_dict['uuid'])
 
     if 'entity_type' not in direct_ancestor_dict:
-        raise KeyError("The 'entity_type' property in the resulting 'direct_ancestor_dict' is not set during calling 'get_sample_direct_ancestor()' trigger method.")
+        raise KeyError(
+            "The 'entity_type' property in the resulting 'direct_ancestor_dict' is not set during calling 'get_sample_direct_ancestor()' trigger method.")
 
     # Generate trigger data for sample's direct_ancestor and skip the direct_ancestor's direct_ancestor
     properties_to_skip = ['direct_ancestor']
@@ -1552,6 +1780,8 @@ Returns
 str: The target property key
 str: The "New" status
 """
+
+
 def set_upload_status_new(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     return property_key, 'New'
 
@@ -1572,16 +1802,22 @@ existing_data_dict : dict
 new_data_dict : dict
     A merged dictionary that contains all possible input data to be used
 """
+
+
 def link_datasets_to_upload(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     if 'uuid' not in existing_data_dict:
-        raise KeyError("Missing 'uuid' key in 'existing_data_dict' during calling 'link_datasets_to_upload()' trigger method.")
+        raise KeyError(
+            "Missing 'uuid' key in 'existing_data_dict' during calling 'link_datasets_to_upload()' trigger method.")
 
     if 'dataset_uuids_to_link' not in existing_data_dict:
-        raise KeyError("Missing 'dataset_uuids_to_link' key in 'existing_data_dict' during calling 'link_datasets_to_upload()' trigger method.")
+        raise KeyError(
+            "Missing 'dataset_uuids_to_link' key in 'existing_data_dict' during calling 'link_datasets_to_upload()' trigger method.")
 
     try:
         # Create a direct linkage (Dataset) - [:IN_UPLOAD] -> (Submission) for each dataset
-        schema_neo4j_queries.link_datasets_to_upload(schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'], existing_data_dict['dataset_uuids_to_link'])
+        schema_neo4j_queries.link_datasets_to_upload(schema_manager.get_neo4j_driver_instance(),
+                                                     existing_data_dict['uuid'],
+                                                     existing_data_dict['dataset_uuids_to_link'])
     except TransactionError:
         # No need to log
         raise
@@ -1603,16 +1839,22 @@ existing_data_dict : dict
 new_data_dict : dict
     A merged dictionary that contains all possible input data to be used
 """
+
+
 def unlink_datasets_from_upload(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     if 'uuid' not in existing_data_dict:
-        raise KeyError("Missing 'uuid' key in 'existing_data_dict' during calling 'unlink_datasets_from_upload()' trigger method.")
+        raise KeyError(
+            "Missing 'uuid' key in 'existing_data_dict' during calling 'unlink_datasets_from_upload()' trigger method.")
 
     if 'dataset_uuids_to_unlink' not in existing_data_dict:
-        raise KeyError("Missing 'dataset_uuids_to_unlink' key in 'existing_data_dict' during calling 'unlink_datasets_from_upload()' trigger method.")
+        raise KeyError(
+            "Missing 'dataset_uuids_to_unlink' key in 'existing_data_dict' during calling 'unlink_datasets_from_upload()' trigger method.")
 
     try:
         # Delete the linkage (Dataset) - [:IN_UPLOAD] -> (Upload) for each dataset
-        schema_neo4j_queries.unlink_datasets_from_upload(schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'], existing_data_dict['dataset_uuids_to_unlink'])
+        schema_neo4j_queries.unlink_datasets_from_upload(schema_manager.get_neo4j_driver_instance(),
+                                                         existing_data_dict['uuid'],
+                                                         existing_data_dict['dataset_uuids_to_unlink'])
     except TransactionError:
         # No need to log
         raise
@@ -1638,13 +1880,17 @@ Returns
 str: The target property key
 list: A list of associated dataset dicts with all the normalized information
 """
+
+
 def get_upload_datasets(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     if 'uuid' not in existing_data_dict:
-        raise KeyError("Missing 'uuid' key in 'existing_data_dict' during calling 'get_upload_datasets()' trigger method.")
+        raise KeyError(
+            "Missing 'uuid' key in 'existing_data_dict' during calling 'get_upload_datasets()' trigger method.")
 
-    datasets_list = schema_neo4j_queries.get_upload_datasets(schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'])
+    datasets_list = schema_neo4j_queries.get_upload_datasets(schema_manager.get_neo4j_driver_instance(),
+                                                             existing_data_dict['uuid'])
 
-    # Additional properties of the datasets to exclude 
+    # Additional properties of the datasets to exclude
     # We don't want to show too much nested information due to performance consideration
     properties_to_skip = [
         'direct_ancestors',
@@ -1692,9 +1938,12 @@ Returns
 str: The target property key
 str: The creation_action string
 """
+
+
 def set_activity_creation_action(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     if 'normalized_entity_type' not in new_data_dict:
-        raise KeyError("Missing 'normalized_entity_type' key in 'existing_data_dict' during calling 'set_activity_creation_action()' trigger method.")
+        raise KeyError(
+            "Missing 'normalized_entity_type' key in 'existing_data_dict' during calling 'set_activity_creation_action()' trigger method.")
 
     return property_key, f"Create {new_data_dict['normalized_entity_type']} Activity"
 
@@ -1720,12 +1969,15 @@ Returns
 str: The target property key
 str: The protocol_url string
 """
+
+
 def set_activity_protocol_url(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     if 'entity_type' in new_data_dict and new_data_dict['entity_type'] in ['Dataset', 'Publication']:
         return property_key, None
     else:
         if 'protocol_url' not in new_data_dict:
-            raise KeyError("Missing 'protocol_url' key in 'existing_data_dict' during calling 'set_activity_creation_action()' trigger method.")
+            raise KeyError(
+                "Missing 'protocol_url' key in 'existing_data_dict' during calling 'set_activity_creation_action()' trigger method.")
 
         return property_key, new_data_dict['protocol_url']
 
@@ -1780,7 +2032,10 @@ Returns
 -------
 dict: The updated generated dict
 """
-def _commit_files(target_property_key, property_key, normalized_type, user_token, existing_data_dict, new_data_dict, generated_dict):
+
+
+def _commit_files(target_property_key, property_key, normalized_type, user_token, existing_data_dict, new_data_dict,
+                  generated_dict):
     # Do nothing if no files to add are provided (missing or empty property)
     # For image files the property name is "image_files_to_add"
     # For metadata files the property name is "metadata_files_to_add"
@@ -1788,16 +2043,16 @@ def _commit_files(target_property_key, property_key, normalized_type, user_token
     if (not property_key in new_data_dict) or (not new_data_dict[property_key]):
         return generated_dict
 
-    #If POST or PUT where the target doesn't exist create the file info array
-    #if generated_dict doesn't contain the property yet, copy it from the existing_data_dict
-    #or if it doesn't exist in existing_data_dict create it
+    # If POST or PUT where the target doesn't exist create the file info array
+    # if generated_dict doesn't contain the property yet, copy it from the existing_data_dict
+    # or if it doesn't exist in existing_data_dict create it
     if not target_property_key in generated_dict:
         if not target_property_key in existing_data_dict:
             files_info_list = []
         # Otherwise this is a PUT where the target array exists already
         else:
             # Note: The property, name specified by `target_property_key`, is stored in Neo4j as a string representation of the Python list
-            # It's not stored in Neo4j as a json string! And we can't store it as a json string 
+            # It's not stored in Neo4j as a json string! And we can't store it as a json string
             # due to the way that Cypher handles single/double quotes.
             files_info_list = schema_manager.convert_str_to_data(existing_data_dict[target_property_key])
     else:
@@ -1821,10 +2076,13 @@ def _commit_files(target_property_key, property_key, normalized_type, user_token
                 'user_token': user_token
             }
 
-            logger.info(f"Commit the uploaded file of temp_file_id {temp_file_id} for entity {entity_uuid} via ingest-api call...")
+            logger.info(
+                f"Commit the uploaded file of temp_file_id {temp_file_id} for entity {entity_uuid} via ingest-api call...")
 
             # Disable ssl certificate verification
-            response = requests.post(url = ingest_api_target_url, headers = schema_manager._create_request_headers(user_token), json = json_to_post, verify = False)
+            response = requests.post(url=ingest_api_target_url,
+                                     headers=schema_manager._create_request_headers(user_token), json=json_to_post,
+                                     verify=False)
 
             if response.status_code != 200:
                 msg = f"Failed to commit the file of temp_file_id {temp_file_id} via ingest-api for entity uuid: {entity_uuid}"
@@ -1887,27 +2145,32 @@ Returns
 -------
 dict: The updated generated dict
 """
-def _delete_files(target_property_key, property_key, normalized_type, user_token, existing_data_dict, new_data_dict, generated_dict):
-    #do nothing if no files to delete are provided in the field specified by property_key
+
+
+def _delete_files(target_property_key, property_key, normalized_type, user_token, existing_data_dict, new_data_dict,
+                  generated_dict):
+    # do nothing if no files to delete are provided in the field specified by property_key
     if (not property_key in new_data_dict) or (not new_data_dict[property_key]):
         return generated_dict
 
     if 'uuid' not in existing_data_dict:
-        raise KeyError(f"Missing 'uuid' key in 'existing_data_dict' during calling '_delete_files()' trigger method for property '{target_property_key}'.")
+        raise KeyError(
+            f"Missing 'uuid' key in 'existing_data_dict' during calling '_delete_files()' trigger method for property '{target_property_key}'.")
 
     entity_uuid = existing_data_dict['uuid']
 
-    #If POST or PUT where the target doesn't exist create the file info array
-    #if generated_dict doesn't contain the property yet, copy it from the existing_data_dict
-    #if it isn't in the existing_dictionary throw and error
-    #or if it doesn't exist in existing_data_dict create it
+    # If POST or PUT where the target doesn't exist create the file info array
+    # if generated_dict doesn't contain the property yet, copy it from the existing_data_dict
+    # if it isn't in the existing_dictionary throw and error
+    # or if it doesn't exist in existing_data_dict create it
     if not target_property_key in generated_dict:
         if not target_property_key in existing_data_dict:
-            raise KeyError(f"Missing '{target_property_key}' key missing during calling '_delete_files()' trigger method on entity {entity_uuid}.")
+            raise KeyError(
+                f"Missing '{target_property_key}' key missing during calling '_delete_files()' trigger method on entity {entity_uuid}.")
         # Otherwise this is a PUT where the target array exists already
         else:
             # Note: The property, name specified by `target_property_key`, is stored in Neo4j as a string representation of the Python list
-            # It's not stored in Neo4j as a json string! And we can't store it as a json string 
+            # It's not stored in Neo4j as a json string! And we can't store it as a json string
             # due to the way that Cypher handles single/double quotes.
             files_info_list = schema_manager.convert_str_to_data(existing_data_dict[target_property_key])
     else:
@@ -1929,7 +2192,8 @@ def _delete_files(target_property_key, property_key, normalized_type, user_token
     logger.info(f"Remove the uploaded files for entity {entity_uuid} via ingest-api call...")
 
     # Disable ssl certificate verification
-    response = requests.post(url = ingest_api_target_url, headers = schema_manager._create_request_headers(user_token), json = json_to_post, verify = False)
+    response = requests.post(url=ingest_api_target_url, headers=schema_manager._create_request_headers(user_token),
+                             json=json_to_post, verify=False)
 
     if response.status_code != 200:
         msg = f"Failed to remove the files via ingest-api for entity uuid: {entity_uuid}"
@@ -1956,6 +2220,8 @@ Returns
 -------
 str: The formatted assay type description
 """
+
+
 def _get_assay_type_description(data_types):
     assay_types = []
     assay_type_desc = ''
@@ -2017,10 +2283,11 @@ Returns
 -------
 str: The organ code description
 """
+
+
 def _get_organ_description(organ_code):
     ORGAN_TYPES = Ontology.organ_types(as_arr=False, as_data_dict=True, data_as_val=True)
 
     for key in ORGAN_TYPES:
         if ORGAN_TYPES[key]['rui_code'] == organ_code:
             return ORGAN_TYPES[key]['term'].lower()
-
