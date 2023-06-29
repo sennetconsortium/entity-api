@@ -978,13 +978,17 @@ dict: The auto generated mapped metadata
 
 
 def get_source_mapped_metadata(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    if not equals(Ontology.source_types().HUMAN, existing_data_dict['source_type']):
+        raise schema_errors.InvalidPropertyRequirementsException(
+            "Source type is not 'Human' and does not support the field 'source_mapped_metadata."
+        )
     if 'metadata' not in existing_data_dict:
-        raise KeyError(
+        raise schema_errors.InvalidPropertyRequirementsException(
             "Missing 'metadata' key in 'existing_data_dict' during calling 'get_source_mapped_metadata()' trigger method.")
 
     if 'organ_donor_data' not in existing_data_dict['metadata'] and 'living_donor_data' not in existing_data_dict[
         'metadata']:
-        raise KeyError(
+        raise schema_errors.InvalidPropertyRequirementsException(
             "Missing 'organ_donor_data' or 'living_donor_data' key in 'existing_data_dict[metadata]' during calling 'get_source_mapped_metadata()' trigger method.")
 
     metadata = json.loads(existing_data_dict['metadata'].replace("'", '"'))
@@ -1416,8 +1420,7 @@ new_data_dict : dict
 
 def set_was_attributed_to(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     if 'uuid' not in existing_data_dict:
-        raise KeyError(
-            "Missing 'uuid' key in 'existing_data_dict' during calling 'set_was_attributed_to()' trigger method.")
+        raise
 
     if 'group_uuid' not in existing_data_dict:
         raise KeyError(
