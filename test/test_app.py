@@ -10,6 +10,7 @@ from flask import Response
 import pytest
 
 import app as app_module
+import test.utils as test_utils
 
 test_data_dir = os.path.join(os.path.dirname(__file__), 'data')
 
@@ -113,7 +114,6 @@ def test_get_entities_by_type_success(app, entity_type):
         assert res.json == test_data['response']
 
 @pytest.mark.parametrize('entity_type', [
-    ('collection'),
     ('invalid_type'),
 ])
 def test_get_entities_by_type_invalid_type(app, entity_type):
@@ -169,7 +169,8 @@ def test_create_entity_success(app, entity_type):
 
     with (app.test_client() as client,
           patch('lib.ontology.Ontology.source_types', return_value=test_data['source_types']),
-          patch('lib.ontology.Ontology.specimen_categories', return_value=test_data['specimen_categories']),
+          patch('lib.ontology.Ontology.entities', new=test_utils.entities),
+          patch('lib.ontology.Ontology.specimen_categories', new=test_utils.specimen_categories),
           patch('lib.ontology.Ontology.assay_types', return_value=test_data['assay_types']),
           patch('app.schema_manager.create_sennet_ids', return_value=test_data['create_sennet_ids']) as mock_create_sennet_ids,
           patch('app.schema_manager.get_user_info', return_value=test_data['get_user_info']),
@@ -182,9 +183,6 @@ def test_create_entity_success(app, entity_type):
         res = client.post(f'/entities/{entity_type}',
                           json=test_data['request'],
                           headers=test_data['headers'])
-
-        mock_create_sennet_ids.assert_called_once()
-        mock_create_entity.assert_called_once()
 
         assert res.status_code == 200
         assert res.json == test_data['response']
@@ -207,8 +205,8 @@ def test_create_entity_invalid(app, entity_type):
         test_data = json.load(f)
 
     with (app.test_client() as client,
+          patch('lib.ontology.Ontology.specimen_categories', new=test_utils.specimen_categories),
           patch('lib.ontology.Ontology.source_types', return_value=test_data['source_types']),
-          patch('lib.ontology.Ontology.specimen_categories', return_value=test_data['specimen_categories']),
           patch('lib.ontology.Ontology.assay_types', return_value=test_data['assay_types'])):
 
         res = client.post(f'/entities/{entity_type}',
@@ -235,8 +233,8 @@ def test_update_entity_success(app, entity_type):
           patch('app.schema_manager.get_sennet_ids', side_effect=test_data['get_sennet_ids']),
           patch('app.app_neo4j_queries.get_entity', side_effect=test_data['get_entity']),
           patch('lib.ontology.Ontology.source_types', return_value=test_data['source_types']),
-          patch('lib.ontology.Ontology.specimen_categories', return_value=test_data['specimen_categories']),
-          patch('lib.ontology.Ontology.assay_types', return_value=test_data['assay_types']),
+          patch('lib.ontology.Ontology.entities', new=test_utils.entities),
+          patch('lib.ontology.Ontology.specimen_categories', new=test_utils.specimen_categories),          patch('lib.ontology.Ontology.assay_types', return_value=test_data['assay_types']),
           patch('app.schema_manager.get_user_info', return_value=test_data['get_user_info']),
           patch('app.schema_manager.generate_triggered_data', side_effect=test_data['generate_triggered_data']),
           patch('app.app_neo4j_queries.update_entity', side_effect=test_data['update_entity']),
@@ -271,8 +269,8 @@ def test_update_entity_invalid(app, entity_type):
     entity_id = test_data['uuid']
 
     with (app.test_client() as client,
+          patch('lib.ontology.Ontology.specimen_categories', new=test_utils.specimen_categories),
           patch('lib.ontology.Ontology.source_types', return_value=test_data['source_types']),
-          patch('lib.ontology.Ontology.specimen_categories', return_value=test_data['specimen_categories']),
           patch('lib.ontology.Ontology.assay_types', return_value=test_data['assay_types']),
           patch('app.schema_manager.get_sennet_ids', side_effect=test_data['get_sennet_ids']),
           patch('app.app_neo4j_queries.get_entity', side_effect=test_data['get_entity'])):

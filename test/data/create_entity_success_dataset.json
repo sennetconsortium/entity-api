@@ -46,24 +46,22 @@
     "uuid": "54c713f6ae44506d01a198f11dc37014"
   },
   "get_entity": {
-    "lab_source_id": "Mouse Source 1",
-    "group_name": "CODCC Testing Group",
-    "sennet_id": "SNT986.NQMB.577",
-    "last_modified_timestamp": 1681826894432,
-    "created_by_user_displayname": "Test User",
-    "description": "This is a mouse source.",
-    "source_type": "Mouse",
-    "group_uuid": "57192604-18e0-11ed-b79b-972795fc9504",
-    "created_timestamp": 1681826894432,
-    "created_by_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
-    "uuid": "8af152b82ea653a8e5189267a7e6f82a",
-    "last_modified_user_displayname": "Test User",
-    "created_by_user_email": "testuser@example.com",
-    "data_access_level": "consortium",
-    "entity_type": "Source",
-    "last_modified_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
-    "last_modified_user_email": "testuser@example.com",
-    "protocol_url": "dx.doi.org/10.17504/protocols.io.3byl4j398lo5/v1" 
+      "created_by_user_displayname": "Test User",
+      "created_by_user_email": "testuser@example.com",
+      "created_by_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
+      "created_timestamp": 1681828798636,
+      "data_access_level": "public",
+      "entity_type": "Sample",
+      "group_name": "CODCC Testing Group",
+      "group_uuid": "57192604-18e0-11ed-b79b-972795fc9504",
+      "last_modified_timestamp": 1681848982376,
+      "last_modified_user_displayname": "Test User",
+      "last_modified_user_email": "testuser@example.com",
+      "last_modified_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
+      "protocol_url": "dx.doi.org/10.17504/protocols.io.3byl4j398lo5/v1 ",
+      "sample_category": "Suspension",
+      "sennet_id": "SNT687.SFVJ.758",
+      "uuid": "5fa78f4fa272db58a7fcc7590376f5e7"
   },
   "create_sennet_ids": [
     {
@@ -77,12 +75,6 @@
     "HUMAN": "Human",
     "HUMAN_ORGANOID": "Human Organoid",
     "MOUSE_ORGANOID": "Mouse Organoid"
-  },
-  "specimen_categories": {
-    "ORGAN": "Organ",
-    "SUSPENSION": "Suspension",
-    "SECTION": "Section",
-    "BLOCK": "Block"
   },
   "assay_types": {"BULKRNA": "bulk-RNA", "CITESEQ": "CITE-Seq", "CODEX": "CODEX", "CODEXCYTOKIT": "codex_cytokit", "CODEXCYTOKITV1": "codex_cytokit_v1", "COSMX_RNA": "CosMX (RNA)", "DBITSEQ": "DBiT-seq", "FACS__FLUORESCENCEACTIVATED_CELL_SORTING": "FACS - Fluorescence-activated Cell Sorting", "GEOMX_RNA": "GeoMX (RNA)", "IMAGEPYRAMID": "image_pyramid", "LCMS": "LC-MS", "LIGHTSHEET": "Lightsheet", "MIBI": "MIBI", "MIBIDEEPCELL": "mibi_deepcell", "MINTCHIP": "Mint-ChIP", "PUBLICATION": "publication", "PUBLICATIONANCILLARY": "publication_ancillary", "SALMONRNASEQ10X": "salmon_rnaseq_10x", "SALMONRNASEQBULK": "salmon_rnaseq_bulk", "SALMONSNRNASEQ10X": "salmon_sn_rnaseq_10x", "SASP": "SASP", "SCRNASEQ": "scRNA-seq", "SNATACSEQ": "snATAC-seq", "SNRNASEQ": "snRNA-seq", "SNRNASEQ10XGENOMICSV3": "snRNAseq-10xGenomics-v3", "STAINED_SLIDES": "Stained Slides", "VISIUM": "Visium"},
   "get_user_info": {
