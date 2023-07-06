@@ -168,10 +168,10 @@ def test_create_entity_success(app, entity_type):
         test_data = json.load(f)
 
     with (app.test_client() as client,
-          patch('lib.ontology.Ontology.source_types', return_value=test_data['source_types']),
+          patch('lib.ontology.Ontology.assay_types', new=test_utils.assay_types),
           patch('lib.ontology.Ontology.entities', new=test_utils.entities),
+          patch('lib.ontology.Ontology.source_types', new=test_utils.source_types),
           patch('lib.ontology.Ontology.specimen_categories', new=test_utils.specimen_categories),
-          patch('lib.ontology.Ontology.assay_types', return_value=test_data['assay_types']),
           patch('app.schema_manager.create_sennet_ids', return_value=test_data['create_sennet_ids']) as mock_create_sennet_ids,
           patch('app.schema_manager.get_user_info', return_value=test_data['get_user_info']),
           patch('app.schema_manager.generate_triggered_data', return_value=test_data['generate_triggered_data']),
@@ -205,9 +205,9 @@ def test_create_entity_invalid(app, entity_type):
         test_data = json.load(f)
 
     with (app.test_client() as client,
+          patch('lib.ontology.Ontology.assay_types', new=test_utils.assay_types),
           patch('lib.ontology.Ontology.specimen_categories', new=test_utils.specimen_categories),
-          patch('lib.ontology.Ontology.source_types', return_value=test_data['source_types']),
-          patch('lib.ontology.Ontology.assay_types', return_value=test_data['assay_types'])):
+          patch('lib.ontology.Ontology.source_types', new=test_utils.source_types)):
 
         res = client.post(f'/entities/{entity_type}',
                           json=wrong_data['request'],
@@ -232,9 +232,10 @@ def test_update_entity_success(app, entity_type):
     with (app.test_client() as client,
           patch('app.schema_manager.get_sennet_ids', side_effect=test_data['get_sennet_ids']),
           patch('app.app_neo4j_queries.get_entity', side_effect=test_data['get_entity']),
-          patch('lib.ontology.Ontology.source_types', return_value=test_data['source_types']),
+          patch('lib.ontology.Ontology.assay_types', new=test_utils.assay_types),
           patch('lib.ontology.Ontology.entities', new=test_utils.entities),
-          patch('lib.ontology.Ontology.specimen_categories', new=test_utils.specimen_categories),          patch('lib.ontology.Ontology.assay_types', return_value=test_data['assay_types']),
+          patch('lib.ontology.Ontology.source_types', new=test_utils.source_types),
+          patch('lib.ontology.Ontology.specimen_categories', new=test_utils.specimen_categories),
           patch('app.schema_manager.get_user_info', return_value=test_data['get_user_info']),
           patch('app.schema_manager.generate_triggered_data', side_effect=test_data['generate_triggered_data']),
           patch('app.app_neo4j_queries.update_entity', side_effect=test_data['update_entity']),
@@ -269,9 +270,9 @@ def test_update_entity_invalid(app, entity_type):
     entity_id = test_data['uuid']
 
     with (app.test_client() as client,
+          patch('lib.ontology.Ontology.assay_types', new=test_utils.assay_types),
+          patch('lib.ontology.Ontology.source_types', new=test_utils.source_types),
           patch('lib.ontology.Ontology.specimen_categories', new=test_utils.specimen_categories),
-          patch('lib.ontology.Ontology.source_types', return_value=test_data['source_types']),
-          patch('lib.ontology.Ontology.assay_types', return_value=test_data['assay_types']),
           patch('app.schema_manager.get_sennet_ids', side_effect=test_data['get_sennet_ids']),
           patch('app.app_neo4j_queries.get_entity', side_effect=test_data['get_entity'])):
 
