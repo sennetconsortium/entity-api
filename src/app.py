@@ -1103,7 +1103,7 @@ def create_multiple_samples(count):
 
 
 """
-Update the properties of a given activity, primarily the protocol_url
+Update the properties of a given activity, primarily the protocol_url and ingest_dag_provenance
 
 Parameters
 ----------
@@ -1361,8 +1361,8 @@ def update_entity(id):
     # Will also filter the result based on schema
     normalized_complete_dict = schema_manager.normalize_object_result_for_response('ENTITIES', complete_dict)
 
-
-    if 'protocol_url' in json_data_dict:
+    if 'protocol_url' in json_data_dict or (
+            'metadata' in json_data_dict and 'dag_provenance_list' in json_data_dict['metadata']):
         # protocol_url = json_data_dict['protocol_url']
         activity_dict = query_activity_was_generated_by(id, user_token)
         # request.json = {'protocol_url': protocol_url}

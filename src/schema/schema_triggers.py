@@ -1982,6 +1982,39 @@ def set_activity_protocol_url(property_key, normalized_type, user_token, existin
         return property_key, new_data_dict['protocol_url']
 
 
+"""
+Trigger event method of passing the ingest_dag_provenance from the entity to the activity
+
+Parameters
+----------
+property_key : str
+    The target property key of the value to be generated
+normalized_type : str
+    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+user_token: str
+    The user's globus nexus token
+existing_data_dict : dict
+    A dictionary that contains all existing entity properties
+new_data_dict : dict
+    A merged dictionary that contains all possible input data to be used
+
+Returns
+-------
+str: The target property key
+str: The ingest_dag_provenance list
+"""
+
+
+def set_ingest_dag_provenance(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    if 'entity_type' in new_data_dict and not equals(new_data_dict['entity_type'], 'Dataset'):
+        return property_key, None
+    else:
+        if 'metadata' not in new_data_dict or ('metadata' in new_data_dict and 'dag_provenance_list' not in new_data_dict['metadata']):
+            raise KeyError(
+                "Missing 'metadata' key in 'existing_data_dict' during calling 'set_ingest_dag_provenance()' trigger method.")
+
+        return property_key, new_data_dict['metadata']['dag_provenance_list']
+
 ####################################################################################################
 ## Internal functions
 ####################################################################################################
