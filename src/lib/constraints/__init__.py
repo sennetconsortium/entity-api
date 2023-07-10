@@ -32,7 +32,7 @@ def determine_constraint_from_entity(constraint_unit, use_case=None) -> dict:
         error = f"No `entity_type` found with value `{entity_type}`"
     else:
         try:
-            _sub_type = f"{sub_type[0]}_" if sub_type is not None else ''
+            _sub_type = f"{sub_type[0].replace(' ', '_')}_" if sub_type is not None else ''
             _use_case = f"{use_case}_" if use_case is not None else ''
             func = f"build_{entity_type}_{_sub_type}{_use_case}constraints"
             constraints = globals()[func.lower()](entity_type)
@@ -134,7 +134,8 @@ def get_constraints(entry, key1, key2, is_match=False, use_case=None) -> dict:
 
                 if is_match:
                     entry_key2 = entry.get(key2)
-                    if entry_key2 is not None and validate_constraint_units_to_entry_units(entry_key2, const_key2):
+                    v = validate_constraint_units_to_entry_units(entry_key2, const_key2) 
+                    if entry_key2 is not None and v:
                         result = rest_ok(const_key2, True)
                     else:
                         result = rest_response(StatusCodes.NOT_FOUND, f"Match not found. Valid `{key2}` in description.", const_key2, True)
