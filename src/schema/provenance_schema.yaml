@@ -122,7 +122,7 @@ ACTIVITIES:
         before_update_trigger: set_activity_protocol_url
       processing_information:
         type: list
-        description: "The DAG provenance describing the various tools used during an ingest-pipeline run to generate a derived dataset"
+        description: "The information describing how this dataset was processed (e.g. the DAG provenance list describing the various tools used during an ingest-pipeline run to generate a derived dataset)"
         before_create_trigger: set_processing_information
         before_update_trigger: set_processing_information
 #TODO: We will possibly create additional activity types with different attributes
