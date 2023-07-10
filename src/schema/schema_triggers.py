@@ -1983,7 +1983,7 @@ def set_activity_protocol_url(property_key, normalized_type, user_token, existin
 
 
 """
-Trigger event method of passing the derivation_information from the entity to the activity
+Trigger event method of passing the processing_information from the entity to the activity
 
 Parameters
 ----------
@@ -2001,21 +2001,23 @@ new_data_dict : dict
 Returns
 -------
 str: The target property key
-str: The derivation_information list
+str: The processing_information list
 """
 
 
-def set_derivation_information(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+def set_processing_information(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     if 'entity_type' in new_data_dict and not equals(new_data_dict['entity_type'], 'Dataset'):
         return property_key, None
     else:
         if 'metadata' not in new_data_dict or ('metadata' in new_data_dict and 'dag_provenance_list' not in new_data_dict['metadata']):
             raise KeyError(
-                "Missing 'metadata' key in 'existing_data_dict' during calling 'set_derivation_information()' trigger method.")
+                "Missing 'metadata' key in 'existing_data_dict' during calling 'set_processing_information()' trigger method.")
 
     try:
+        metadata_to_return = {}
         metadata = schema_manager.convert_str_to_data(new_data_dict['metadata'])
-        return property_key, metadata['dag_provenance_list']
+        metadata_to_return['dag_provenance_list'] = metadata['dag_provenance_list']
+        return property_key, metadata_to_return
     except requests.exceptions.RequestException as e:
         raise requests.exceptions.RequestException(e)
 

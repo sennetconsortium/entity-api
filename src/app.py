@@ -1103,7 +1103,7 @@ def create_multiple_samples(count):
 
 
 """
-Update the properties of a given activity, primarily the protocol_url and derivation_information
+Update the properties of a given activity, primarily the protocol_url and processing_information
 
 Parameters
 ----------
