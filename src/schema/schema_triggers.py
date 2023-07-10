@@ -1983,7 +1983,7 @@ def set_activity_protocol_url(property_key, normalized_type, user_token, existin
 
 
 """
-Trigger event method of passing the ingest_dag_provenance from the entity to the activity
+Trigger event method of passing the derivation_information from the entity to the activity
 
 Parameters
 ----------
@@ -2001,19 +2001,24 @@ new_data_dict : dict
 Returns
 -------
 str: The target property key
-str: The ingest_dag_provenance list
+str: The derivation_information list
 """
 
 
-def set_ingest_dag_provenance(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+def set_derivation_information(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     if 'entity_type' in new_data_dict and not equals(new_data_dict['entity_type'], 'Dataset'):
         return property_key, None
     else:
         if 'metadata' not in new_data_dict or ('metadata' in new_data_dict and 'dag_provenance_list' not in new_data_dict['metadata']):
             raise KeyError(
-                "Missing 'metadata' key in 'existing_data_dict' during calling 'set_ingest_dag_provenance()' trigger method.")
+                "Missing 'metadata' key in 'existing_data_dict' during calling 'set_derivation_information()' trigger method.")
 
-        return property_key, new_data_dict['metadata']['dag_provenance_list']
+    try:
+        metadata = schema_manager.convert_str_to_data(new_data_dict['metadata'])
+        return property_key, metadata['dag_provenance_list']
+    except requests.exceptions.RequestException as e:
+        raise requests.exceptions.RequestException(e)
+
 
 ####################################################################################################
 ## Internal functions

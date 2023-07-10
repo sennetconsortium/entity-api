@@ -120,11 +120,11 @@ ACTIVITIES:
         description: "The protocols.io doi url pointing the protocol describing the source selection, inclusion/exclusion criteria"
         before_create_trigger: set_activity_protocol_url
         before_update_trigger: set_activity_protocol_url
-      ingest_dag_provenance:
+      derivation_information:
         type: list
         description: "The DAG provenance describing the various tools used during an ingest-pipeline run to generate a derived dataset"
-        before_create_trigger: set_ingest_dag_provenance
-        before_update_trigger: set_ingest_dag_provenance
+        before_create_trigger: set_derivation_information
+        before_update_trigger: set_derivation_information
 #TODO: We will possibly create additional activity types with different attributes
 
 ####################################################################################################
