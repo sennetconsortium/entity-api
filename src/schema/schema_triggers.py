@@ -1982,6 +1982,46 @@ def set_activity_protocol_url(property_key, normalized_type, user_token, existin
         return property_key, new_data_dict['protocol_url']
 
 
+"""
+Trigger event method of passing the processing_information from the entity to the activity
+
+Parameters
+----------
+property_key : str
+    The target property key of the value to be generated
+normalized_type : str
+    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+user_token: str
+    The user's globus nexus token
+existing_data_dict : dict
+    A dictionary that contains all existing entity properties
+new_data_dict : dict
+    A merged dictionary that contains all possible input data to be used
+
+Returns
+-------
+str: The target property key
+str: The processing_information list
+"""
+
+
+def set_processing_information(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    if 'entity_type' in new_data_dict and not equals(new_data_dict['entity_type'], 'Dataset'):
+        return property_key, None
+    else:
+        if 'metadata' not in new_data_dict or ('metadata' in new_data_dict and 'dag_provenance_list' not in new_data_dict['metadata']):
+            raise KeyError(
+                "Missing 'metadata' key in 'existing_data_dict' during calling 'set_processing_information()' trigger method.")
+
+    try:
+        metadata_to_return = {}
+        metadata = schema_manager.convert_str_to_data(new_data_dict['metadata'])
+        metadata_to_return['dag_provenance_list'] = metadata['dag_provenance_list']
+        return property_key, metadata_to_return
+    except requests.exceptions.RequestException as e:
+        raise requests.exceptions.RequestException(e)
+
+
 ####################################################################################################
 ## Internal functions
 ####################################################################################################
