@@ -1971,8 +1971,7 @@ def set_processing_information(property_key, normalized_type, user_token, existi
         return property_key, None
     else:
         if 'metadata' not in new_data_dict or ('metadata' in new_data_dict and 'dag_provenance_list' not in new_data_dict['metadata']):
-            raise KeyError(
-                "Missing 'metadata' key in 'existing_data_dict' during calling 'set_processing_information()' trigger method.")
+            return property_key, None
 
     try:
         metadata_to_return = {}
