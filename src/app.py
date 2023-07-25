@@ -18,6 +18,11 @@ import time
 from lib.constraints import get_constraints_by_ancestor, get_constraints_by_descendant, build_constraint, \
     build_constraint_unit
 
+# pymemcache.client.base.PooledClient is a thread-safe client pool
+# that provides the same API as pymemcache.client.base.Client
+from pymemcache.client.base import PooledClient
+from pymemcache import serde
+
 # Local modules
 import app_neo4j_queries
 import provenance
@@ -69,6 +74,17 @@ app.config['SEARCH_API_URL'] = app.config['SEARCH_API_URL'].strip('/')
 # This mode when set True disables the PUT and POST calls, used on STAGE to make entity-api READ-ONLY
 # to prevent developers from creating new UUIDs and new entities or updating existing entities
 READ_ONLY_MODE = app.config['READ_ONLY_MODE']
+
+# Whether Memcached is being used or not
+# Default to false if the property is missing in the configuration file
+
+if 'MEMCACHED_MODE' in app.config:
+    MEMCACHED_MODE = app.config['MEMCACHED_MODE']
+    # Use prefix to distinguish the cached data of same source across different deployments
+    MEMCACHED_PREFIX = app.config['MEMCACHED_PREFIX']
+else:
+    MEMCACHED_MODE = False
+    MEMCACHED_PREFIX = 'NONE'
 
 # Suppress InsecureRequestWarning warning when requesting status on https with ssl cert verify disabled
 requests.packages.urllib3.disable_warnings(category = InsecureRequestWarning)
@@ -128,6 +144,41 @@ except Exception:
     logger.exception(msg)
 
 
+####################################################################################################
+## Memcached client initialization
+####################################################################################################
+
+memcached_client_instance = None
+
+if MEMCACHED_MODE:
+    try:
+        # Use client pool to maintain a pool of already-connected clients for improved performance
+        # The uwsgi config launches the app across multiple threads (8) inside each process (32), making essentially 256 processes
+        # Set the connect_timeout and timeout to avoid blocking the process when memcached is slow, defaults to "forever"
+        # connect_timeout: seconds to wait for a connection to the memcached server
+        # timeout: seconds to wait for send or reveive calls on the socket connected to memcached
+        # Use the ignore_exc flag to treat memcache/network errors as cache misses on calls to the get* methods
+        # Set the no_delay flag to sent TCP_NODELAY (disable Nagle's algorithm to improve TCP/IP networks and decrease the number of packets)
+        # If you intend to use anything but str as a value, it is a good idea to use a serializer
+        memcached_client_instance = PooledClient(app.config['MEMCACHED_SERVER'],
+                                                 max_pool_size = 256,
+                                                 connect_timeout = 1,
+                                                 timeout = 30,
+                                                 ignore_exc = True,
+                                                 no_delay = True,
+                                                 serde = serde.pickle_serde)
+
+        # memcached_client_instance can be instantiated without connecting to the Memcached server
+        # A version() call will throw error (e.g., timeout) when failed to connect to server
+        # Need to convert the version in bytes to string
+        logger.info(f'Connected to Memcached server {memcached_client_instance.version().decode()} successfully :)')
+    except Exception:
+        msg = 'Failed to connect to the Memcached server :('
+        # Log the full stack trace, prepend a line with our message
+        logger.exception(msg)
+
+        # Turn off the caching
+        MEMCACHED_MODE = False
 """
 Close the current neo4j connection at the end of every request
 """
@@ -232,6 +283,57 @@ str
 @app.route('/', methods = ['GET'])
 def index():
     return "Hello! This is SenNet Entity API service :)"
+
+
+"""
+Delete ALL the following cached data from Memcached, Data Admin access is required in AWS API Gateway:
+    - cached individual entity dict
+    - cached IDs dict from uuid-api
+    - cached yaml content from github raw URLs
+    - cached TSV file content for reference DOIs redirect
+
+Returns
+-------
+str
+    A confirmation message
+"""
+@app.route('/flush-all-cache', methods = ['DELETE'])
+def flush_all_cache():
+    msg = ''
+
+    if MEMCACHED_MODE:
+        memcached_client_instance.flush_all()
+        msg = 'All cached data (entities, IDs, yamls, tsv) has been deleted from Memcached'
+    else:
+        msg = 'No caching is being used because Memcached mode is not enabled at all'
+
+    return msg
+
+
+"""
+Delete the cached data from Memcached for a given entity, Data Admin access is required in AWS API Gateway
+
+Parameters
+----------
+id : str
+    The HuBMAP ID (e.g. HBM123.ABCD.456) or UUID of target entity (Donor/Dataset/Sample/Upload/Collection/Publication)
+
+Returns
+-------
+str
+    A confirmation message
+"""
+@app.route('/flush-cache/<id>', methods = ['DELETE'])
+def flush_cache(id):
+    msg = ''
+
+    if MEMCACHED_MODE:
+        delete_cache(id)
+        msg = f'The cached data has been deleted from Memcached for entity {id}'
+    else:
+        msg = 'No caching is being used because Memcached mode is not enabled at all'
+
+    return msg
 
 """
 Show status of neo4j connection with the current VERSION and BUILD
@@ -4401,6 +4503,48 @@ def validate_metadata(data, user_token):
 
     return False
 
+
+"""
+Delete the cached data of all possible keys used for the given entity id
+
+Parameters
+----------
+id : str
+    The HuBMAP ID (e.g. HBM123.ABCD.456) or UUID of target entity (Donor/Dataset/Sample/Upload/Collection/Publication)
+"""
+def delete_cache(id):
+    if MEMCACHED_MODE:
+        # First delete the target entity cache
+        entity_dict = query_target_entity(id, get_internal_token())
+        entity_uuid = entity_dict['uuid']
+
+        # If the target entity is Sample (`direct_ancestor`) or Dataset/Publication (`direct_ancestors`)
+        # Delete the cache of all the direct descendants (children)
+        child_uuids = schema_neo4j_queries.get_children(neo4j_driver_instance, entity_uuid , 'uuid')
+
+        # If the target entity is Collection, delete the cache for each of its associated
+        # Datasets and Publications (via [:IN_COLLECTION] relationship) as well as just Publications (via [:USES_DATA] relationship)
+        collection_dataset_uuids = schema_neo4j_queries.get_collection_associated_datasets(neo4j_driver_instance, entity_uuid , 'uuid')
+
+        # If the target entity is Upload, delete the cache for each of its associated Datasets (via [:IN_UPLOAD] relationship)
+        upload_dataset_uuids = schema_neo4j_queries.get_upload_datasets(neo4j_driver_instance, entity_uuid , 'uuid')
+
+        # If the target entity is Datasets/Publication, delete the associated Collections cache, Upload cache
+        collection_uuids = schema_neo4j_queries.get_dataset_collections(neo4j_driver_instance, entity_uuid , 'uuid')
+        collection_dict = schema_neo4j_queries.get_publication_associated_collection(neo4j_driver_instance, entity_uuid)
+        upload_dict = schema_neo4j_queries.get_dataset_upload(neo4j_driver_instance, entity_uuid)
+
+        # We only use uuid in the cache key acorss all the cache types
+        uuids_list = [entity_uuid] + child_uuids + collection_dataset_uuids + upload_dataset_uuids + collection_uuids
+
+        # It's possible no linked collection or upload
+        if collection_dict:
+            uuids_list.append(collection_dict['uuid'])
+
+        if upload_dict:
+            uuids_list.append(upload_dict['uuid'])
+
+        schema_manager.delete_memcached_cache(uuids_list)
 
 ####################################################################################################
 ## For local development/testing

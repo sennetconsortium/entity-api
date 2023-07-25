@@ -1236,3 +1236,201 @@ def _nodes_to_dicts(nodes):
         dicts.append(entity_dict)
 
     return dicts
+
+"""
+Execute a unit of work in a managed read transaction
+
+Parameters
+----------
+tx : transaction_function
+    a function that takes a transaction as an argument and does work with the transaction
+query : str
+    The target cypher query to run
+
+Returns
+-------
+neo4j.Record or None
+    A single record returned from the Cypher query
+"""
+def execute_readonly_tx(tx, query):
+    result = tx.run(query)
+    record = result.single()
+    return record
+
+"""
+Convert the neo4j node into Python dict
+
+Parameters
+----------
+entity_node : neo4j.node
+    The target neo4j node to be converted
+
+Returns
+-------
+dict
+    A dictionary of target entity containing all property key/value pairs
+"""
+def node_to_dict(entity_node):
+    entity_dict = {}
+
+    for key, value in entity_node._properties.items():
+        entity_dict.setdefault(key, value)
+
+    return entity_dict
+
+"""
+Convert the list of neo4j nodes into a list of Python dicts
+
+Parameters
+----------
+nodes : list
+    The list of neo4j node to be converted
+
+Returns
+-------
+list
+    A list of target entity dicts containing all property key/value pairs
+"""
+def nodes_to_dicts(nodes):
+    dicts = []
+
+    for node in nodes:
+        entity_dict = node_to_dict(node)
+        dicts.append(entity_dict)
+
+    return dicts
+
+
+"""
+Get a list of associated Datasets and Publications (subclass of Dataset) uuids for a given collection
+
+Parameters
+----------
+neo4j_driver : neo4j.Driver object
+    The neo4j database connection pool
+uuid : str
+    The uuid of collection
+property_key : str
+    A target property key for result filtering
+
+Returns
+-------
+list
+    A list of datasets and publications
+"""
+def get_collection_associated_datasets(neo4j_driver, uuid, property_key = None):
+    results = []
+
+    if property_key:
+        query = (f"MATCH (e:Entity)-[:IN_COLLECTION|:USES_DATA]->(c:Collection) "
+                 f"WHERE c.uuid = '{uuid}' "
+                 f"RETURN apoc.coll.toSet(COLLECT(e.{property_key})) AS {record_field_name}")
+    else:
+        query = (f"MATCH (e:Entity)-[:IN_COLLECTION|:USES_DATA]->(c:Collection) "
+                 f"WHERE c.uuid = '{uuid}' "
+                 f"RETURN apoc.coll.toSet(COLLECT(e)) AS {record_field_name}")
+
+    logger.info("======get_collection_associated_datasets() query======")
+    logger.info(query)
+
+    with neo4j_driver.session() as session:
+        record = session.read_transaction(execute_readonly_tx, query)
+
+        if record and record[record_field_name]:
+            if property_key:
+                # Just return the list of property values from each entity node
+                results = record[record_field_name]
+            else:
+                # Convert the list of nodes to a list of dicts
+                results = nodes_to_dicts(record[record_field_name])
+
+    return results
+
+
+"""
+Get the associated collection for a given publication
+
+Parameters
+----------
+neo4j_driver : neo4j.Driver object
+    The neo4j database connection pool
+uuid : str
+    The uuid of publication
+property_key : str
+    A target property key for result filtering
+
+Returns
+-------
+dict
+    A dictionary representation of the collection
+"""
+def get_publication_associated_collection(neo4j_driver, uuid):
+    result = {}
+
+    query = (f"MATCH (p:Publication)-[:USES_DATA]->(c:Collection) "
+             f"WHERE p.uuid = '{uuid}' "
+             f"RETURN c as {record_field_name}")
+
+    logger.info("=====get_publication_associated_collection() query======")
+    logger.info(query)
+
+    with neo4j_driver.session() as session:
+        record = session.read_transaction(execute_readonly_tx, query)
+
+        if record and record[record_field_name]:
+            # Convert the neo4j node into Python dict
+            result = node_to_dict(record[record_field_name])
+
+    return result
+
+
+"""
+Get all children by uuid
+
+Parameters
+----------
+neo4j_driver : neo4j.Driver object
+    The neo4j database connection pool
+uuid : str
+    The uuid of target entity 
+property_key : str
+    A target property key for result filtering
+
+Returns
+-------
+dict
+    A list of unique child dictionaries returned from the Cypher query
+"""
+def get_children(neo4j_driver, uuid, property_key = None):
+    results = []
+
+    if property_key:
+        query = (f"MATCH (e:Entity)-[:ACTIVITY_INPUT]->(:Activity)-[:ACTIVITY_OUTPUT]->(child:Entity) "
+                 # The target entity can't be a Lab
+                 f"WHERE e.uuid='{uuid}' AND e.entity_type <> 'Lab' "
+                 # COLLECT() returns a list
+                 # apoc.coll.toSet() reruns a set containing unique nodes
+                 f"RETURN apoc.coll.toSet(COLLECT(child.{property_key})) AS {record_field_name}")
+    else:
+        query = (f"MATCH (e:Entity)-[:ACTIVITY_INPUT]->(:Activity)-[:ACTIVITY_OUTPUT]->(child:Entity) "
+                 # The target entity can't be a Lab
+                 f"WHERE e.uuid='{uuid}' AND e.entity_type <> 'Lab' "
+                 # COLLECT() returns a list
+                 # apoc.coll.toSet() reruns a set containing unique nodes
+                 f"RETURN apoc.coll.toSet(COLLECT(child)) AS {record_field_name}")
+
+    logger.info("======get_children() query======")
+    logger.info(query)
+
+    with neo4j_driver.session() as session:
+        record = session.read_transaction(execute_readonly_tx, query)
+
+        if record and record[record_field_name]:
+            if property_key:
+                # Just return the list of property values from each entity node
+                results = record[record_field_name]
+            else:
+                # Convert the list of nodes to a list of dicts
+                results = nodes_to_dicts(record[record_field_name])
+
+    return results

@@ -35,6 +35,8 @@ _search_api_url = None
 _auth_helper = None
 _neo4j_driver = None
 _ubkg = None
+_memcached_client = None
+_memcached_prefix = None
 
 # For handling cached requests to uuid-api and external static resources (github raw yaml files)
 request_cache = {}
@@ -62,7 +64,10 @@ def initialize(valid_yaml_file,
                search_api_url,
                auth_helper_instance,
                neo4j_driver_instance,
-               ubkg_instance):
+               ubkg_instance,
+               memcached_client_instance,
+               memcached_prefix):
+
     # Specify as module-scope variables
     global _schema
     global _uuid_api_url
@@ -71,6 +76,8 @@ def initialize(valid_yaml_file,
     global _auth_helper
     global _neo4j_driver
     global _ubkg
+    global _memcached_client
+    global _memcached_prefix
 
     _schema = load_provenance_schema(valid_yaml_file)
     _uuid_api_url = uuid_api_url
@@ -81,6 +88,9 @@ def initialize(valid_yaml_file,
     _auth_helper = auth_helper_instance
     _neo4j_driver = neo4j_driver_instance
     _ubkg = ubkg_instance
+
+    _memcached_client = memcached_client_instance
+    _memcached_prefix = memcached_prefix
 
 
 ####################################################################################################
@@ -1989,3 +1999,27 @@ def make_request_get(target_url, internal_token_used=False):
         }
 
     return response
+
+"""
+Delete the cached data for the given entity uuids
+
+Parameters
+----------
+uuids_list : list
+    A list of target uuids
+"""
+
+
+def delete_memcached_cache(uuids_list):
+    global _memcached_client
+    global _memcached_prefix
+
+    if _memcached_client and _memcached_prefix:
+        cache_keys = []
+        for uuid in uuids_list:
+            cache_keys.append(f'{_memcached_prefix}_neo4j_{uuid}')
+            cache_keys.append(f'{_memcached_prefix}_complete_{uuid}')
+
+        _memcached_client.delete_many(cache_keys)
+
+        logger.info(f"Deleted cache by key: {', '.join(cache_keys)}")
