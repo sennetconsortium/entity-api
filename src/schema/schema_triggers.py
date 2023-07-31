@@ -1018,13 +1018,9 @@ dict: The auto generated mapped metadata
 
 def get_source_mapped_metadata(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     if not equals(Ontology.source_types().HUMAN, existing_data_dict['source_type']):
-        raise schema_errors.InvalidPropertyRequirementsException(
-            "Source type is not 'Human' and does not support the field 'source_mapped_metadata."
-        )
+        return property_key, None
     if 'metadata' not in existing_data_dict:
-        raise schema_errors.InvalidPropertyRequirementsException(
-            "Missing 'metadata' key in 'existing_data_dict' during calling 'get_source_mapped_metadata()' trigger method.")
-
+        return property_key, None
     if 'organ_donor_data' not in existing_data_dict['metadata'] and 'living_donor_data' not in existing_data_dict[
         'metadata']:
         raise schema_errors.InvalidPropertyRequirementsException(
