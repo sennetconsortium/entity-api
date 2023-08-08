@@ -25,10 +25,10 @@ def app():
 @pytest.fixture(scope="session", autouse=True)
 def ontology_mock():
     """Automatically add ontology mock functions to all tests"""
-    with (patch('lib.ontology.Ontology.assay_types', new=test_utils.assay_types),
-          patch('lib.ontology.Ontology.entities', new=test_utils.entities),
-          patch('lib.ontology.Ontology.source_types', new=test_utils.source_types),
-          patch('lib.ontology.Ontology.specimen_categories', new=test_utils.specimen_categories)):
+    with (patch('lib.ontology.Ontology.ops().assay_types', new=test_utils.assay_types),
+          patch('lib.ontology.Ontology.ops().entities', new=test_utils.entities),
+          patch('lib.ontology.Ontology.ops().source_types', new=test_utils.source_types),
+          patch('lib.ontology.Ontology.ops().specimen_categories', new=test_utils.specimen_categories)):
         yield
 
 ### Index

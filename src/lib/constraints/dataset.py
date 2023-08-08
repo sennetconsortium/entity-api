@@ -15,8 +15,8 @@ def build_all_dataset_constraints(entity):
 
 def build_dataset_search_constraints(entity):
     descendant = build_constraint_unit(entity)
-    SpecimenCategories = Ontology.specimen_categories()
-    ancestor1 = build_search_constraint_unit('entity_type.keyword', Ontology.entities().DATASET)
+    SpecimenCategories = Ontology.ops().specimen_categories()
+    ancestor1 = build_search_constraint_unit('entity_type.keyword', Ontology.ops().entities().DATASET)
     ancestor2 = build_search_constraint_unit('sample_category.keyword', SpecimenCategories.BLOCK)
     ancestor3 = build_search_constraint_unit('sample_category.keyword', SpecimenCategories.SECTION)
     ancestor4 = build_search_constraint_unit('sample_category.keyword', SpecimenCategories.SUSPENSION)

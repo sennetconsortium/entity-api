@@ -2572,8 +2572,8 @@ def get_prov_info():
     HEADER_PROCESSED_DATASET_SENNET_ID = 'processed_dataset_sennet_id'
     HEADER_PROCESSED_DATASET_STATUS = 'processed_dataset_status'
     HEADER_PROCESSED_DATASET_PORTAL_URL = 'processed_dataset_portal_url'
-    ASSAY_TYPES = Ontology.assay_types(as_data_dict=True, prop_callback=None, data_as_val=True)
-    ORGAN_TYPES = Ontology.organ_types(as_data_dict=True, data_as_val=True)
+    ASSAY_TYPES = Ontology.ops(as_data_dict=True, prop_callback=None, data_as_val=True).assay_types()
+    ORGAN_TYPES = Ontology.ops(as_data_dict=True, data_as_val=True, val_key='rui_code').organ_types()
     HEADER_PREVIOUS_VERSION_SENNET_IDS = 'previous_version_sennet_ids'
 
     headers = [
@@ -2905,8 +2905,8 @@ def get_prov_info_for_dataset(id):
     HEADER_PROCESSED_DATASET_STATUS = 'processed_dataset_status'
     HEADER_PROCESSED_DATASET_PORTAL_URL = 'processed_dataset_portal_url'
     HEADER_DATASET_SAMPLES = "dataset_samples"
-    ASSAY_TYPES = Ontology.assay_types(as_data_dict=True, prop_callback=None, data_as_val=True)
-    ORGAN_TYPES = Ontology.organ_types(as_data_dict=True, data_as_val=True)
+    ASSAY_TYPES = Ontology.ops(as_data_dict=True, prop_callback=None, data_as_val=True).assay_types()
+    ORGAN_TYPES = Ontology.ops(as_data_dict=True, data_as_val=True, val_key='rui_code').organ_types()
 
     headers = [
         HEADER_DATASET_UUID, HEADER_DATASET_SENNET_ID, HEADER_DATASET_STATUS, HEADER_DATASET_GROUP_NAME,
@@ -3113,8 +3113,8 @@ def sankey_data():
     HEADER_ORGAN_TYPE = 'organ_type'
     HEADER_DATASET_DATA_TYPES = 'dataset_data_types'
     HEADER_DATASET_STATUS = 'dataset_status'
-    ASSAY_TYPES = Ontology.assay_types(as_data_dict=True, prop_callback=None, data_as_val=True)
-    ORGAN_TYPES = Ontology.organ_types(as_data_dict=True, data_as_val=True)
+    ASSAY_TYPES = Ontology.ops(as_data_dict=True, prop_callback=None, data_as_val=True).assay_types()
+    ORGAN_TYPES = Ontology.ops(as_data_dict=True, data_as_val=True, val_key='rui_code').organ_types()
     with open('sankey_mapping.json') as f:
         mapping_dict = json.load(f)
 
@@ -3189,7 +3189,7 @@ def get_sample_prov_info():
     HEADER_ORGAN_UUID = "organ_uuid"
     HEADER_ORGAN_TYPE = "organ_type"
     HEADER_ORGAN_SENNET_ID = "organ_sennet_id"
-    ORGAN_TYPES = Ontology.organ_types(as_data_dict=True, data_as_val=True)
+    ORGAN_TYPES = Ontology.ops(as_data_dict=True, data_as_val=True, val_key='rui_code').organ_types()
 
     # Processing and validating query parameters
     accepted_arguments = ['group_uuid']
@@ -3228,7 +3228,7 @@ def get_sample_prov_info():
                     break
             organ_sennet_id = sample['organ_sennet_id']
         else:
-            if sample['sample_sample_category'] == Ontology.specimen_categories().ORGAN:
+            if sample['sample_sample_category'] == Ontology.ops().specimen_categories().ORGAN:
                 organ_uuid = sample['sample_uuid']
                 for organ_type in ORGAN_TYPES:
                     if ORGAN_TYPES[organ_type]['rui_code'] == sample['sample_organ']:
@@ -4252,7 +4252,7 @@ Returns nothing. Raises abort_bad_req is organ code not found on organ_types.yam
 
 
 def validate_organ_code(organ_code):
-    ORGAN_TYPES = Ontology.organ_types(as_data_dict=True, data_as_val=True)
+    ORGAN_TYPES = Ontology.ops(as_data_dict=True, data_as_val=True, val_key='rui_code').organ_types()
 
     for organ_type in ORGAN_TYPES:
         if equals(ORGAN_TYPES[organ_type]['rui_code'], organ_code):
@@ -4262,9 +4262,9 @@ def validate_organ_code(organ_code):
 
 
 def verify_ubkg_properties(json_data_dict):
-    SOURCE_TYPES = Ontology.source_types(as_data_dict=True)
-    SAMPLE_CATEGORIES = Ontology.specimen_categories(as_data_dict=True)
-    DATA_TYPES = Ontology.assay_types(as_data_dict=True)
+    SOURCE_TYPES = Ontology.ops(as_data_dict=True).source_types()
+    SAMPLE_CATEGORIES = Ontology.ops(as_data_dict=True).specimen_categories()
+    DATA_TYPES = Ontology.ops(as_data_dict=True).assay_types()
 
     if 'source_type' in json_data_dict:
         compare_property_against_ubkg(SOURCE_TYPES, json_data_dict, 'source_type')

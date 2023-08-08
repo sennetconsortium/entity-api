@@ -326,7 +326,7 @@ list
 def get_ancestor_organs(neo4j_driver, entity_uuid):
     results = []
 
-    query = (f"MATCH (e:Entity {{uuid:'{entity_uuid}'}})-[*]->(organ:Sample {{sample_category:'{Ontology.specimen_categories().ORGAN}'}}) "
+    query = (f"MATCH (e:Entity {{uuid:'{entity_uuid}'}})-[*]->(organ:Sample {{sample_category:'{Ontology.ops().specimen_categories().ORGAN}'}}) "
              # COLLECT() returns a list
              # apoc.coll.toSet() reruns a set containing unique nodes
              f"RETURN apoc.coll.toSet(COLLECT(organ)) AS {record_field_name}")
@@ -1108,7 +1108,7 @@ uuid : str
 
 def get_associated_organs_from_dataset(neo4j_driver, dataset_uuid):
     results = []
-    query = (f"MATCH (ds:Dataset)-[*]->(organ:Sample {{sample_category:'{Ontology.specimen_categories().ORGAN}'}}) "
+    query = (f"MATCH (ds:Dataset)-[*]->(organ:Sample {{sample_category:'{Ontology.ops().specimen_categories().ORGAN}'}}) "
              f"WHERE ds.uuid='{dataset_uuid}'"
              f"RETURN apoc.coll.toSet(COLLECT(organ)) AS {record_field_name}")
 
@@ -1153,10 +1153,10 @@ def get_prov_info(neo4j_driver, param_dict, published_only):
     published_only_query_string = ''
     if 'group_uuid' in param_dict:
         group_uuid_query_string = f" AND toUpper(ds.group_uuid) = '{param_dict['group_uuid'].upper()}'"
-    if Ontology.specimen_categories().ORGAN in param_dict:
+    if Ontology.ops().specimen_categories().ORGAN in param_dict:
         organ_query_string = 'MATCH'
         # organ_where_clause = f", organ: '{param_dict['organ'].upper()}'"
-        organ_where_clause = f" WHERE toUpper(organ.organ) = '{param_dict[Ontology.specimen_categories().ORGAN].upper()}'"
+        organ_where_clause = f" WHERE toUpper(organ.organ) = '{param_dict[Ontology.ops().specimen_categories().ORGAN].upper()}'"
     if 'has_rui_info' in param_dict:
         rui_info_query_string = 'MATCH (ds)-[*]->(ruiSample:Sample)'
         if param_dict['has_rui_info'].lower() == 'false':
@@ -1180,7 +1180,7 @@ def get_prov_info(neo4j_driver, param_dict, published_only):
              f" {rui_info_query_string}"
              f" {rui_info_where_clause}"
              f" WITH ds, FIRSTSAMPLE, SOURCE, REVISIONS, METASAMPLE, collect(distinct ruiSample) as RUISAMPLE"
-             f" {organ_query_string} (source)<-[:USED]-(oa)<-[:WAS_GENERATED_BY]-(organ:Sample {{sample_category:'{Ontology.specimen_categories().ORGAN}'}})<-[*]-(ds)"
+             f" {organ_query_string} (source)<-[:USED]-(oa)<-[:WAS_GENERATED_BY]-(organ:Sample {{sample_category:'{Ontology.ops().specimen_categories().ORGAN}'}})<-[*]-(ds)"
              f" {organ_where_clause}"
              f" WITH ds, FIRSTSAMPLE, SOURCE, REVISIONS, METASAMPLE, RUISAMPLE, COLLECT(DISTINCT organ) AS ORGAN "
              f" OPTIONAL MATCH (ds)-[:USED]->(a3)-[:WAS_GENERATED_BY]->(processed_dataset:Dataset)"
@@ -1279,7 +1279,7 @@ def get_individual_prov_info(neo4j_driver, dataset_uuid):
         f" OPTIONAL MATCH (ds)-[*]->(ruiSample:Sample)"
         f" WHERE NOT ruiSample.rui_location IS NULL AND NOT TRIM(ruiSample.rui_location) = ''"
         f" WITH ds, FIRSTSAMPLE, SOURCE, METASAMPLE, COLLECT(distinct ruiSample) AS RUISAMPLE"
-        f" OPTIONAL match (source)<-[:USED]-(oa)<-[:WAS_GENERATED_BY]-(organ:Sample {{sample_category:'{Ontology.specimen_categories().ORGAN}'}})<-[*]-(ds)"
+        f" OPTIONAL match (source)<-[:USED]-(oa)<-[:WAS_GENERATED_BY]-(organ:Sample {{sample_category:'{Ontology.ops().specimen_categories().ORGAN}'}})<-[*]-(ds)"
         f" WITH ds, FIRSTSAMPLE, SOURCE, METASAMPLE, RUISAMPLE, COLLECT(distinct organ) AS ORGAN "
         f" OPTIONAL MATCH (ds)<-[:USED]-(a3)<-[:WAS_GENERATED_BY]-(processed_dataset:Dataset)"
         f" WITH ds, FIRSTSAMPLE, SOURCE, METASAMPLE, RUISAMPLE, ORGAN, COLLECT(distinct processed_dataset) AS PROCESSED_DATASET"
@@ -1348,7 +1348,7 @@ def get_individual_prov_info(neo4j_driver, dataset_uuid):
 
 """
 Returns group_name, data_types, and status for every primary dataset. Also returns the organ type for the closest 
-sample above the dataset in the provenance where {sample_category: '{Ontology.specimen_categories().ORGAN}'}.  
+sample above the dataset in the provenance where {sample_category: '{Ontology.ops().specimen_categories().ORGAN}'}.  
 
 Parameters
 ----------
@@ -1359,7 +1359,7 @@ neo4j_driver : neo4j.Driver object
 
 def get_sankey_info(neo4j_driver):
     query = (f"MATCH (ds:Dataset)-[]->(a)-[]->(:Sample)"
-             f"MATCH (source)<-[:USED]-(oa)<-[:WAS_GENERATED_BY]-(organ:Sample {{sample_category:'{Ontology.specimen_categories().ORGAN}'}})<-[*]-(ds)"
+             f"MATCH (source)<-[:USED]-(oa)<-[:WAS_GENERATED_BY]-(organ:Sample {{sample_category:'{Ontology.ops().specimen_categories().ORGAN}'}})<-[*]-(ds)"
              f"RETURN distinct ds.group_name, organ.organ, ds.data_types, ds.status, ds. uuid order by ds.group_name")
     logger.info("======get_sankey_info() query======")
     logger.info(query)
@@ -1412,7 +1412,7 @@ def get_sample_prov_info(neo4j_driver, param_dict):
         f" MATCH (s:Sample)-[*]->(d:Source)"
         f" {group_uuid_query_string}"
         f" WITH s, d"
-        f" OPTIONAL MATCH (s)-[*]->(organ:Sample{{sample_category: '{Ontology.specimen_categories().ORGAN}'}})"
+        f" OPTIONAL MATCH (s)-[*]->(organ:Sample{{sample_category: '{Ontology.ops().specimen_categories().ORGAN}'}})"
         f" WITH s, organ, d"
         f" MATCH (s)-[]->()-[]->(da)"
         f" RETURN s.uuid, s.lab_tissue_sample_id, s.group_name, s.created_by_user_email, s.metadata, s.rui_location,"

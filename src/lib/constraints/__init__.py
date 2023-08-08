@@ -26,7 +26,7 @@ def determine_constraint_from_entity(constraint_unit, use_case=None) -> dict:
     sub_type = constraint_unit.get('sub_type')
     error = None
     constraints = []
-    entities = Ontology.entities(as_arr=True, cb=enum_val_lower)
+    entities = Ontology.ops(as_arr=True, cb=enum_val_lower).entities()
 
     if entity_type not in entities:
         error = f"No `entity_type` found with value `{entity_type}`"
