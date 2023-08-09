@@ -38,7 +38,7 @@ from hubmap_commons.exceptions import HTTPException
 from atlas_consortia_commons.ubkg import initialize_ubkg
 from atlas_consortia_commons.rest import *
 from atlas_consortia_commons.string import equals
-from lib.ontology import Ontology
+from atlas_consortia_commons.ubkg.ubkg_sdk import init_ontology
 
 # Root logger configuration
 global logger
@@ -82,7 +82,7 @@ try:
         app.register_error_handler(exception, abort_err_handler)
     app.ubkg = initialize_ubkg(app.config)
     with app.app_context():
-        Ontology.init_ontology()
+        init_ontology()
 
     logger.info("Initialized ubkg module successfully :)")
 # Use a broad catch-all here
