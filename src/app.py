@@ -39,6 +39,7 @@ from atlas_consortia_commons.ubkg import initialize_ubkg
 from atlas_consortia_commons.rest import *
 from atlas_consortia_commons.string import equals
 from atlas_consortia_commons.ubkg.ubkg_sdk import init_ontology
+from lib.ontology import Ontology
 
 # Root logger configuration
 global logger
