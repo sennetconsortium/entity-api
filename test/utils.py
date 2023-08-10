@@ -1,5 +1,8 @@
 from dataclasses import dataclass, fields
 from atlas_consortia_commons.object import enum_val_lower
+from atlas_consortia_commons.string import to_snake_case_upper
+
+from lib.ontology import Ontology
 
 
 @dataclass
@@ -57,38 +60,43 @@ class AssayTypes:
     VISIUM: str = "Visium"
 
 
-def entities(as_arr: bool = False, cb=str, as_data_dict: bool = False):
-    if as_arr and cb == enum_val_lower:
-        return [e.default.lower() for e in fields(Entities)]
-    if as_arr and cb == str:
-        return [e.default for e in fields(Entities)]
-    if as_data_dict:
-        return {e.name: e.default for e in fields(Entities)}
-    return Entities
+class MockOntology(Ontology):
+    @staticmethod
+    def entities():
+        if Ontology.Ops.as_arr and MockOntology.Ops.cb == enum_val_lower:
+            return [e.default.lower() for e in fields(Entities)]
+        if MockOntology.Ops.as_arr and MockOntology.Ops.cb == str:
+            return [e.default for e in fields(Entities)]
+        if MockOntology.Ops.as_data_dict:
+            return {e.name: e.default for e in fields(Entities)}
+        return Entities
+
+    @staticmethod     
+    def specimen_categories():
+        if MockOntology.Ops.as_arr and MockOntology.Ops.cb == enum_val_lower:
+            return [e.default.lower() for e in fields(SpecimenCategories)]
+        if MockOntology.Ops.as_arr and MockOntology.Ops.cb == str:
+            return [e.default for e in fields(SpecimenCategories)]
+        if MockOntology.Ops.as_data_dict:
+            return {e.name: e.default for e in fields(SpecimenCategories)}
+        return SpecimenCategories
     
-def specimen_categories(as_arr: bool = False, cb=str, as_data_dict: bool = False):
-    if as_arr and cb == enum_val_lower:
-        return [e.default.lower() for e in fields(SpecimenCategories)]
-    if as_arr and cb == str:
-        return [e.default for e in fields(SpecimenCategories)]
-    if as_data_dict:
-        return {e.name: e.default for e in fields(SpecimenCategories)}
-    return SpecimenCategories
-
-def source_types(as_arr: bool = False, cb=str, as_data_dict: bool = False):
-    if as_arr and cb == enum_val_lower:
-        return [e.default.lower() for e in fields(SourceTypes)]
-    if as_arr and cb == str:
-        return [e.default for e in fields(SourceTypes)]
-    if as_data_dict:
-        return {e.name: e.default for e in fields(SourceTypes)}
-    return SourceTypes
-
-def assay_types(as_arr: bool = False, cb=str, as_data_dict: bool = False):
-    if as_arr and cb == enum_val_lower:
-        return [e.default.lower() for e in fields(AssayTypes)]
-    if as_arr and cb == str:
-        return [e.default for e in fields(AssayTypes)]
-    if as_data_dict:
-        return {e.name: e.default for e in fields(AssayTypes)}
-    return AssayTypes
+    @staticmethod
+    def source_types():
+        if MockOntology.Ops.as_arr and MockOntology.Ops.cb == enum_val_lower:
+            return [e.default.lower() for e in fields(SourceTypes)]
+        if MockOntology.Ops.as_arr and MockOntology.Ops.cb == str:
+            return [e.default for e in fields(SourceTypes)]
+        if Ontology.Ops.as_data_dict:
+            return {e.name: e.default for e in fields(SourceTypes)}
+        return SourceTypes
+    
+    @staticmethod
+    def assay_types():
+        if Ontology.Ops.as_arr and Ontology.Ops.cb == enum_val_lower:
+            return [e.default.lower() for e in fields(AssayTypes)]
+        if Ontology.Ops.as_arr and Ontology.Ops.cb == str:
+            return [e.default for e in fields(AssayTypes)]
+        if Ontology.Ops.as_data_dict:
+            return {e.name: e.default for e in fields(AssayTypes)}
+        return AssayTypes
