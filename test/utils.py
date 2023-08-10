@@ -1,6 +1,5 @@
 from dataclasses import dataclass, fields
-
-from lib.ontology import enum_val_lower
+from atlas_consortia_commons.object import enum_val_lower
 
 
 @dataclass
