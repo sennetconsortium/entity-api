@@ -15,7 +15,7 @@ PyYAML==5.4.1
 # Default is main branch specified in docker-compose.development.yml if not set
 # git+https://github.com/hubmapconsortium/commons.git@${COMMONS_BRANCH}#egg=hubmap-commons
 hubmap-commons==2.1.9
-atlas-consortia-commons==1.0.3
+atlas-consortia-commons==1.0.4
 
 # For unit test
 nose2==0.10.0
