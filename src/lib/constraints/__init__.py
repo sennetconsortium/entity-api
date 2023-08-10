@@ -5,7 +5,8 @@ from lib.constraints.dataset import *
 from deepdiff import DeepDiff
 
 from atlas_consortia_commons.rest import rest_ok, rest_response, StatusCodes, rest_bad_req
-from lib.ontology import Ontology, enum_val_lower
+from atlas_consortia_commons.object import enum_val_lower
+from lib.ontology import Ontology
 
 
 def build_source_constraints(entity) -> list:
