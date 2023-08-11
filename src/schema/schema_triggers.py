@@ -978,7 +978,7 @@ dict: The auto generated mapped metadata
 
 
 def get_source_mapped_metadata(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
-    if not equals(Ontology.source_types().HUMAN, existing_data_dict['source_type']):
+    if not equals(Ontology.ops().source_types().HUMAN, existing_data_dict['source_type']):
         return property_key, None
     if 'metadata' not in existing_data_dict:
         return property_key, None
@@ -1077,7 +1077,7 @@ def get_dataset_title(property_key, normalized_type, user_token, existing_data_d
         # due to the way that Cypher handles single/double quotes.
         ancestor_metadata_dict = schema_manager.convert_str_to_data(source_metadata)
 
-        if equals(source_type, Ontology.source_types().MOUSE):
+        if equals(source_type, Ontology.ops().source_types().MOUSE):
             sex = 'female' if equals(ancestor_metadata_dict['sex'], 'F') else 'male'
             is_embryo = ancestor_metadata_dict['is_embryo']
             embryo = ' embryo' if is_embryo is True or equals(is_embryo, 'True') else ''
@@ -1108,8 +1108,8 @@ def get_dataset_title(property_key, normalized_type, user_token, existing_data_d
                 if data['grouping_concept_preferred_term'].lower() == 'sex':
                     sex = data['preferred_term'].lower()
 
-    if equals(source_type, Ontology.source_types().MOUSE) or \
-            equals(source_type, Ontology.source_types().MOUSE_ORGANOID):
+    if equals(source_type, Ontology.ops().source_types().MOUSE) or \
+            equals(source_type, Ontology.ops().source_types().MOUSE_ORGANOID):
         generated_title = f"{assay_type_desc} data from the {organ_desc} of a source of unknown strain, sex, and age"
         return property_key, generated_title
 
@@ -2282,7 +2282,7 @@ str: The organ code description
 
 
 def _get_organ_description(organ_code):
-    ORGAN_TYPES = Ontology.organ_types(as_arr=False, as_data_dict=True, data_as_val=True)
+    ORGAN_TYPES = Ontology.ops().organ_types(as_arr=False, as_data_dict=True, data_as_val=True)
 
     for key in ORGAN_TYPES:
         if ORGAN_TYPES[key]['rui_code'] == organ_code:
