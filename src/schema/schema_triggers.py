@@ -2321,7 +2321,7 @@ str: The organ code description
 
 
 def _get_organ_description(organ_code):
-    ORGAN_TYPES = Ontology.ops().organ_types(as_arr=False, as_data_dict=True, data_as_val=True)
+    ORGAN_TYPES = Ontology.ops(as_arr=False, as_data_dict=True, data_as_val=True).organ_types()
 
     for key in ORGAN_TYPES:
         if ORGAN_TYPES[key]['rui_code'] == organ_code:
