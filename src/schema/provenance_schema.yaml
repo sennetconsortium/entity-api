@@ -440,7 +440,7 @@ ENTITIES:
         immutable: true
         description: "The email address provided by the authorization mechanism for the person or process authenticated when published.  Cannot be set directly must be set with the /datasets/<id>/publish method."
       pipeline_message:
-        #todo: where is this attribute sourced from?  Is it stored in the database? <- Not in neo4j
+        # Generated from the Ingest Pipeline during processing of a derived dataset
         type: string
       local_directory_rel_path:
         # Example: protected/<TMC>/<uuid>
