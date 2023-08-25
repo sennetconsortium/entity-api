@@ -206,7 +206,9 @@ try:
                               app.config['SEARCH_API_URL'],
                               auth_helper_instance,
                               neo4j_driver_instance,
-                              app.ubkg)
+                              app.ubkg,
+                              memcached_client_instance,
+                              app.config['MEMCACHED_PREFIX'])
 
     logger.info("Initialized schema_manager module successfully :)")
 # Use a broad catch-all here
