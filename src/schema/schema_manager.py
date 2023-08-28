@@ -1962,22 +1962,21 @@ flask.Response
 """
 
 
-def make_request_get(target_url, internal_token_used=False):
+def make_request_get(target_url, internal_token_used = False):
+    global _memcached_client
+    global _memcached_prefix
+
     response = None
 
-    current_datetime = datetime.now()
-    current_timestamp = int(round(current_datetime.timestamp()))
+    if _memcached_client and _memcached_prefix:
+        cache_key = f'{_memcached_prefix}{target_url}'
+        response = _memcached_client.get(cache_key)
 
-    # Use the cached response of the given url if exists and valid
-    # Otherwise make a fresh request and add the response to the cache pool
-    if (target_url in request_cache) and (
-            current_timestamp <= request_cache[target_url]['created_timestamp'] + SchemaConstants.REQUEST_CACHE_TTL):
-        logger.info(f'Useing the cached HTTP response of GET {target_url} at time {current_datetime}')
-
-        response = request_cache[target_url]['response']
-    else:
-        logger.info(
-            f'Cache not found or expired. Making a new HTTP request of GET {target_url} at time {current_datetime}')
+    # Use the cached data if found and still valid
+    # Otherwise, make a fresh query and add to cache
+    if response is None:
+        if _memcached_client and _memcached_prefix:
+            logger.info(f'HTTP response cache not found or expired. Making a new HTTP request of GET {target_url} at time {datetime.now()}')
 
         if internal_token_used:
             # Use modified version of globus app secret from configuration as the internal token
@@ -1985,18 +1984,17 @@ def make_request_get(target_url, internal_token_used=False):
             request_headers = _create_request_headers(auth_helper_instance.getProcessSecret())
 
             # Disable ssl certificate verification
-            response = requests.get(url=target_url, headers=request_headers, verify=False)
+            response = requests.get(url = target_url, headers = request_headers, verify = False)
         else:
-            response = requests.get(url=target_url, verify=False)
+            response = requests.get(url = target_url, verify = False)
 
-        # Add or update cache
-        new_datetime = datetime.now()
-        new_timestamp = int(round(new_datetime.timestamp()))
+        if _memcached_client and _memcached_prefix:
+            logger.info(f'Creating HTTP response cache of GET {target_url} at time {datetime.now()}')
 
-        request_cache[target_url] = {
-            'created_timestamp': new_timestamp,
-            'response': response
-        }
+            cache_key = f'{_memcached_prefix}{target_url}'
+            _memcached_client.set(cache_key, response, expire = SchemaConstants.MEMCACHED_TTL)
+    else:
+        logger.info(f'Using HTTP response cache of GET {target_url} at time {datetime.now()}')
 
     return response
 
