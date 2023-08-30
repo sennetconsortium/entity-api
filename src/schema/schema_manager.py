@@ -35,6 +35,8 @@ _search_api_url = None
 _auth_helper = None
 _neo4j_driver = None
 _ubkg = None
+_memcached_client = None
+_memcached_prefix = None
 
 # For handling cached requests to uuid-api and external static resources (github raw yaml files)
 request_cache = {}
@@ -62,7 +64,10 @@ def initialize(valid_yaml_file,
                search_api_url,
                auth_helper_instance,
                neo4j_driver_instance,
-               ubkg_instance):
+               ubkg_instance,
+               memcached_client_instance,
+               memcached_prefix):
+
     # Specify as module-scope variables
     global _schema
     global _uuid_api_url
@@ -71,6 +76,8 @@ def initialize(valid_yaml_file,
     global _auth_helper
     global _neo4j_driver
     global _ubkg
+    global _memcached_client
+    global _memcached_prefix
 
     _schema = load_provenance_schema(valid_yaml_file)
     _uuid_api_url = uuid_api_url
@@ -81,6 +88,9 @@ def initialize(valid_yaml_file,
     _auth_helper = auth_helper_instance
     _neo4j_driver = neo4j_driver_instance
     _ubkg = ubkg_instance
+
+    _memcached_client = memcached_client_instance
+    _memcached_prefix = memcached_prefix
 
 
 ####################################################################################################
@@ -1952,22 +1962,21 @@ flask.Response
 """
 
 
-def make_request_get(target_url, internal_token_used=False):
+def make_request_get(target_url, internal_token_used = False):
+    global _memcached_client
+    global _memcached_prefix
+
     response = None
 
-    current_datetime = datetime.now()
-    current_timestamp = int(round(current_datetime.timestamp()))
+    if _memcached_client and _memcached_prefix:
+        cache_key = f'{_memcached_prefix}{target_url}'
+        response = _memcached_client.get(cache_key)
 
-    # Use the cached response of the given url if exists and valid
-    # Otherwise make a fresh request and add the response to the cache pool
-    if (target_url in request_cache) and (
-            current_timestamp <= request_cache[target_url]['created_timestamp'] + SchemaConstants.REQUEST_CACHE_TTL):
-        logger.info(f'Useing the cached HTTP response of GET {target_url} at time {current_datetime}')
-
-        response = request_cache[target_url]['response']
-    else:
-        logger.info(
-            f'Cache not found or expired. Making a new HTTP request of GET {target_url} at time {current_datetime}')
+    # Use the cached data if found and still valid
+    # Otherwise, make a fresh query and add to cache
+    if response is None:
+        if _memcached_client and _memcached_prefix:
+            logger.info(f'HTTP response cache not found or expired. Making a new HTTP request of GET {target_url} at time {datetime.now()}')
 
         if internal_token_used:
             # Use modified version of globus app secret from configuration as the internal token
@@ -1975,17 +1984,40 @@ def make_request_get(target_url, internal_token_used=False):
             request_headers = _create_request_headers(auth_helper_instance.getProcessSecret())
 
             # Disable ssl certificate verification
-            response = requests.get(url=target_url, headers=request_headers, verify=False)
+            response = requests.get(url = target_url, headers = request_headers, verify = False)
         else:
-            response = requests.get(url=target_url, verify=False)
+            response = requests.get(url = target_url, verify = False)
 
-        # Add or update cache
-        new_datetime = datetime.now()
-        new_timestamp = int(round(new_datetime.timestamp()))
+        if _memcached_client and _memcached_prefix:
+            logger.info(f'Creating HTTP response cache of GET {target_url} at time {datetime.now()}')
 
-        request_cache[target_url] = {
-            'created_timestamp': new_timestamp,
-            'response': response
-        }
+            cache_key = f'{_memcached_prefix}{target_url}'
+            _memcached_client.set(cache_key, response, expire = SchemaConstants.MEMCACHED_TTL)
+    else:
+        logger.info(f'Using HTTP response cache of GET {target_url} at time {datetime.now()}')
 
     return response
+
+"""
+Delete the cached data for the given entity uuids
+
+Parameters
+----------
+uuids_list : list
+    A list of target uuids
+"""
+
+
+def delete_memcached_cache(uuids_list):
+    global _memcached_client
+    global _memcached_prefix
+
+    if _memcached_client and _memcached_prefix:
+        cache_keys = []
+        for uuid in uuids_list:
+            cache_keys.append(f'{_memcached_prefix}_neo4j_{uuid}')
+            cache_keys.append(f'{_memcached_prefix}_complete_{uuid}')
+
+        _memcached_client.delete_many(cache_keys)
+
+        logger.info(f"Deleted cache by key: {', '.join(cache_keys)}")
