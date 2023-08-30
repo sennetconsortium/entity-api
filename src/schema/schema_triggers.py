@@ -1,6 +1,8 @@
 import os
 import ast
 import json
+import urllib
+
 import yaml
 import logging
 import datetime
@@ -2224,7 +2226,7 @@ def _get_assay_type_description(data_types):
 
     for data_type in data_types:
         # The assaytype endpoint in search-api is public accessible, no token needed
-        search_api_target_url = schema_manager.get_search_api_url() + f"/assaytype/{data_type}"
+        search_api_target_url = schema_manager.get_search_api_url() + f"/assaytype/{urllib.parse.quote(data_type)}"
 
         # Function cache to improve performance
         response = schema_manager.make_request_get(search_api_target_url)
