@@ -5,7 +5,7 @@ import urllib
 
 import yaml
 import logging
-import datetime
+from datetime import datetime
 import requests
 from atlas_consortia_commons.string import equals
 from neo4j.exceptions import TransactionError
@@ -620,6 +620,90 @@ def get_collection_datasets(property_key, normalized_type, user_token, existing_
     return property_key, schema_manager.normalize_entities_list_for_response(complete_entities_list)
 
 
+"""
+Trigger event method of getting the associated collection for this publication
+
+Parameters
+----------
+property_key : str
+    The target property key
+normalized_type : str
+    One of the types defined in the schema yaml: Dataset
+user_token: str
+    The user's globus nexus token
+existing_data_dict : dict
+    A dictionary that contains all existing entity properties
+new_data_dict : dict
+    A merged dictionary that contains all possible input data to be used
+
+Returns
+-------
+str: The target property key
+dict: A dictionary representation of the associated collection with all the normalized information
+"""
+
+
+def get_publication_associated_collection(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    if 'uuid' not in existing_data_dict:
+        raise KeyError(
+            "Missing 'uuid' key in 'existing_data_dict' during calling 'get_publication_associated_collection()' trigger method.")
+
+    logger.info(
+        f"Executing 'get_publication_associated_collection()' trigger method on uuid: {existing_data_dict['uuid']}")
+
+    collection_dict = schema_neo4j_queries.get_publication_associated_collection(
+        schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'])
+
+    # Get rid of the entity node properties that are not defined in the yaml schema
+    # as well as the ones defined as `exposed: false` in the yaml schema
+    return property_key, schema_manager.normalize_entity_result_for_response(collection_dict)
+
+
+"""
+Trigger event method of creating or recreating linkages between this new publication and its associated_collection
+
+Parameters
+----------
+property_key : str
+    The target property key
+normalized_type : str
+    One of the types defined in the schema yaml: Publication
+user_token: str
+    The user's globus nexus token
+existing_data_dict : dict
+    A dictionary that contains all existing entity properties
+new_data_dict : dict
+    A merged dictionary that contains all possible input data to be used
+"""
+
+
+def link_publication_to_associated_collection(property_key, normalized_type, user_token, existing_data_dict,
+                                              new_data_dict):
+    if 'uuid' not in existing_data_dict:
+        raise KeyError(
+            "Missing 'uuid' key in 'existing_data_dict' during calling 'link_publication_to_associated_collection()' trigger method.")
+
+    if 'associated_collection_uuid' not in existing_data_dict:
+        raise KeyError(
+            "Missing 'associated_collection_uuid' key in 'existing_data_dict' during calling 'link_publication_to_associated_collection()' trigger method.")
+
+    associated_collection_uuid = existing_data_dict['associated_collection_uuid']
+
+    # No activity node. We are creating a direct link to the associated collection
+
+    try:
+        # Create a linkage
+        # between the Publication node and the Collection node in neo4j
+        schema_neo4j_queries.link_publication_to_associated_collection(schema_manager.get_neo4j_driver_instance(),
+                                                                       existing_data_dict['uuid'],
+                                                                       associated_collection_uuid)
+
+        # Will need to delete the collection cache if later we add `Collection.associated_publications` field - 7/16/2023 Zhou
+    except TransactionError:
+        # No need to log
+        raise
+
+
 ####################################################################################################
 ## Trigger methods specific to Dataset - DO NOT RENAME
 ####################################################################################################
@@ -801,23 +885,72 @@ Returns
 str: The target property key
 str: The uuid string of source entity
 """
+
+
 def link_collection_to_datasets(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     if 'uuid' not in existing_data_dict:
-        raise KeyError("Missing 'uuid' key in 'existing_data_dict' during calling 'link_collection_to_datasets()' trigger method.")
+        raise KeyError(
+            "Missing 'uuid' key in 'existing_data_dict' during calling 'link_collection_to_datasets()' trigger method.")
 
     if 'dataset_uuids' not in existing_data_dict:
-        raise KeyError("Missing 'dataset_uuids' key in 'existing_data_dict' during calling 'link_collection_to_datasets()' trigger method.")
+        raise KeyError(
+            "Missing 'dataset_uuids' key in 'existing_data_dict' during calling 'link_collection_to_datasets()' trigger method.")
 
     dataset_uuids = existing_data_dict['dataset_uuids']
 
     try:
         # Create a linkage (without an Activity node) between the Collection node and each Dataset it contains.
         schema_neo4j_queries.link_collection_to_datasets(neo4j_driver=schema_manager.get_neo4j_driver_instance()
-                                                         ,collection_uuid=existing_data_dict['uuid']
-                                                         ,dataset_uuid_list=dataset_uuids)
+                                                         , collection_uuid=existing_data_dict['uuid']
+                                                         , dataset_uuid_list=dataset_uuids)
     except TransactionError as te:
         # No need to log
         raise
+
+
+"""
+Trigger event method for creating or recreating linkages between this new Collection and the Datasets it contains
+
+Parameters
+----------
+property_key : str
+    The target property key
+normalized_type : str
+    One of the types defined in the schema yaml: Dataset
+user_token: str
+    The user's globus nexus token
+existing_data_dict : dict
+    A dictionary that contains all existing entity properties
+new_data_dict : dict
+    A merged dictionary that contains all possible input data to be used
+
+Returns
+-------
+str: The target property key
+str: The uuid string of source entity
+"""
+
+
+def link_collection_to_datasets(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    if 'uuid' not in existing_data_dict:
+        raise KeyError(
+            "Missing 'uuid' key in 'existing_data_dict' during calling 'link_collection_to_datasets()' trigger method.")
+
+    if 'dataset_uuids' not in existing_data_dict:
+        raise KeyError(
+            "Missing 'dataset_uuids' key in 'existing_data_dict' during calling 'link_collection_to_datasets()' trigger method.")
+
+    dataset_uuids = existing_data_dict['dataset_uuids']
+
+    try:
+        # Create a linkage (without an Activity node) between the Collection node and each Dataset it contains.
+        schema_neo4j_queries.link_collection_to_datasets(neo4j_driver=schema_manager.get_neo4j_driver_instance()
+                                                         , collection_uuid=existing_data_dict['uuid']
+                                                         , dataset_uuid_list=dataset_uuids)
+    except TransactionError as te:
+        # No need to log
+        raise
+
 
 """
 Trigger event method of getting source uuid
@@ -1036,7 +1169,8 @@ str: The generated dataset title
 
 def get_dataset_title(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     if 'uuid' not in existing_data_dict:
-        raise KeyError("Missing 'uuid' key in 'existing_data_dict' during calling 'get_dataset_title()' trigger method.")
+        raise KeyError(
+            "Missing 'uuid' key in 'existing_data_dict' during calling 'get_dataset_title()' trigger method.")
 
     # Assume organ_desc is always available, otherwise will throw parsing error
     organ_desc = '<organ_desc>'
@@ -1058,7 +1192,8 @@ def get_dataset_title(property_key, normalized_type, user_token, existing_data_d
     assay_type_desc = schema_manager.convert_str_to_data(existing_data_dict['data_types'])[0]
 
     # Get the sample organ name and source metadata information of this dataset
-    organ_name, source_metadata, source_type = schema_neo4j_queries.get_dataset_organ_and_source_info(schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'])
+    organ_name, source_metadata, source_type = schema_neo4j_queries.get_dataset_organ_and_source_info(
+        schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'])
 
     # Can we move organ_types.yaml to commons or make it an API call to avoid parsing the raw yaml?
     # Parse the organ description
@@ -1085,7 +1220,6 @@ def get_dataset_title(property_key, normalized_type, user_token, existing_data_d
             embryo = ' embryo' if is_embryo is True or equals(is_embryo, 'True') else ''
             generated_title = f"{assay_type_desc} data from the {organ_desc} of a {ancestor_metadata_dict['strain']} {sex} mouse{embryo}"
             return property_key, generated_title
-
 
         data_list = []
 
@@ -1715,6 +1849,39 @@ def get_sample_direct_ancestor(property_key, normalized_type, user_token, existi
 
 
 ####################################################################################################
+## Trigger methods specific to Publication - DO NOT RENAME
+####################################################################################################
+
+"""
+Trigger event method of truncating the time part of publication_date if provided by users
+
+Parameters
+----------
+property_key : str
+    The target property key of the value to be generated
+normalized_type : str
+    One of the types defined in the schema yaml: Publication
+user_token: str
+    The user's globus nexus token
+existing_data_dict : dict
+    A dictionary that contains all existing entity properties
+new_data_dict : dict
+    A merged dictionary that contains all possible input data to be used
+
+Returns
+-------
+str: The date part YYYY-MM-DD of ISO 8601
+"""
+
+
+def set_publication_date(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    # We only store the date part 'YYYY-MM-DD', base on the ISO 8601 format, it's fine if the user entered the time part
+    date_obj = datetime.fromisoformat(new_data_dict[property_key])
+
+    return property_key, date_obj.date().isoformat()
+
+
+####################################################################################################
 ## Trigger methods specific to Upload - DO NOT RENAME
 ####################################################################################################
 
@@ -1746,6 +1913,52 @@ def set_upload_status_new(property_key, normalized_type, user_token, existing_da
 
 
 """
+Trigger event method of building linkage between this new Upload and Lab
+Parameters
+----------
+property_key : str
+    The target property key
+normalized_type : str
+    One of the types defined in the schema yaml: Upload
+user_token: str
+    The user's globus nexus token
+existing_data_dict : dict
+    A dictionary that contains all existing entity properties
+new_data_dict : dict
+    A merged dictionary that contains all possible input data to be used
+"""
+
+
+def link_upload_to_lab(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    if 'uuid' not in existing_data_dict:
+        raise KeyError(
+            "Missing 'uuid' key in 'existing_data_dict' during calling 'link_upload_to_lab()' trigger method.")
+
+    if 'group_uuid' not in existing_data_dict:
+        raise KeyError(
+            "Missing 'group_uuid' key in 'existing_data_dict' during calling 'link_upload_to_lab()' trigger method.")
+
+    # Build a list of direct ancestor uuids
+    # Only one uuid in the list in this case
+    direct_ancestor_uuids = [existing_data_dict['group_uuid']]
+
+    # Generate property values for Activity node
+    activity_data_dict = schema_manager.generate_activity_data(normalized_type, user_token, existing_data_dict)
+
+    try:
+        # Create a linkage (via Activity node)
+        # between the Submission node and the parent Lab node in neo4j
+        schema_neo4j_queries.link_entity_to_entity_via_activity(schema_manager.get_neo4j_driver_instance(),
+                                                                existing_data_dict['uuid'], direct_ancestor_uuids,
+                                                                activity_data_dict)
+
+        # No need to delete any cache here since this is one-time upload creation
+    except TransactionError:
+        # No need to log
+        raise
+
+
+"""
 Trigger event method of building linkages between this Submission and the given datasets
 
 Parameters
@@ -1753,7 +1966,7 @@ Parameters
 property_key : str
     The target property key
 normalized_type : str
-    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+    One of the types defined in the schema yaml: Upload
 user_token: str
     The user's globus nexus token
 existing_data_dict : dict
@@ -1772,11 +1985,18 @@ def link_datasets_to_upload(property_key, normalized_type, user_token, existing_
         raise KeyError(
             "Missing 'dataset_uuids_to_link' key in 'existing_data_dict' during calling 'link_datasets_to_upload()' trigger method.")
 
+    upload_uuid = existing_data_dict['uuid']
+    dataset_uuids = existing_data_dict['dataset_uuids_to_link']
+
     try:
         # Create a direct linkage (Dataset) - [:IN_UPLOAD] -> (Submission) for each dataset
-        schema_neo4j_queries.link_datasets_to_upload(schema_manager.get_neo4j_driver_instance(),
-                                                     existing_data_dict['uuid'],
-                                                     existing_data_dict['dataset_uuids_to_link'])
+        schema_neo4j_queries.link_datasets_to_upload(schema_manager.get_neo4j_driver_instance(), upload_uuid,
+                                                     dataset_uuids)
+
+        # Delete the cache of each associated dataset and the target upload if any cache exists
+        # Because the `Dataset.upload` and `Upload.datasets` fields, and
+        uuids_list = [upload_uuid] + dataset_uuids
+        schema_manager.delete_memcached_cache(uuids_list)
     except TransactionError:
         # No need to log
         raise
@@ -1790,7 +2010,7 @@ Parameters
 property_key : str
     The target property key
 normalized_type : str
-    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+    One of the types defined in the schema yaml: Upload
 user_token: str
     The user's globus nexus token
 existing_data_dict : dict
@@ -1809,11 +2029,18 @@ def unlink_datasets_from_upload(property_key, normalized_type, user_token, exist
         raise KeyError(
             "Missing 'dataset_uuids_to_unlink' key in 'existing_data_dict' during calling 'unlink_datasets_from_upload()' trigger method.")
 
+    upload_uuid = existing_data_dict['uuid']
+    dataset_uuids = existing_data_dict['dataset_uuids_to_unlink']
+
     try:
         # Delete the linkage (Dataset) - [:IN_UPLOAD] -> (Upload) for each dataset
-        schema_neo4j_queries.unlink_datasets_from_upload(schema_manager.get_neo4j_driver_instance(),
-                                                         existing_data_dict['uuid'],
-                                                         existing_data_dict['dataset_uuids_to_unlink'])
+        schema_neo4j_queries.unlink_datasets_from_upload(schema_manager.get_neo4j_driver_instance(), upload_uuid,
+                                                         dataset_uuids)
+
+        # Delete the cache of each associated dataset and the upload itself if any cache exists
+        # Because the associated datasets have this `Dataset.upload` field and Upload has `Upload.datasets` field
+        uuids_list = dataset_uuids + [upload_uuid]
+        schema_manager.delete_memcached_cache(uuids_list)
     except TransactionError:
         # No need to log
         raise
@@ -1827,7 +2054,7 @@ Parameters
 property_key : str
     The target property key of the value to be generated
 normalized_type : str
-    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+    One of the types defined in the schema yaml: Upload
 user_token: str
     The user's globus nexus token
 existing_data_dict : dict
@@ -1846,23 +2073,14 @@ def get_upload_datasets(property_key, normalized_type, user_token, existing_data
         raise KeyError(
             "Missing 'uuid' key in 'existing_data_dict' during calling 'get_upload_datasets()' trigger method.")
 
+    logger.info(f"Executing 'get_upload_datasets()' trigger method on uuid: {existing_data_dict['uuid']}")
+
     datasets_list = schema_neo4j_queries.get_upload_datasets(schema_manager.get_neo4j_driver_instance(),
                                                              existing_data_dict['uuid'])
 
-    # Additional properties of the datasets to exclude
-    # We don't want to show too much nested information due to performance consideration
-    properties_to_skip = [
-        'direct_ancestors',
-        'collections',
-        'upload',
-        'title',
-        'previous_revision_uuid',
-        'next_revision_uuid'
-    ]
-
-    complete_entities_list = schema_manager.get_complete_entities_list(user_token, datasets_list, properties_to_skip)
-
-    return property_key, schema_manager.normalize_entities_list_for_response(complete_entities_list)
+    # Get rid of the entity node properties that are not defined in the yaml schema
+    # as well as the ones defined as `exposed: false` in the yaml schema
+    return property_key, schema_manager.normalize_entities_list_for_response(datasets_list)
 
 
 ####################################################################################################
@@ -1931,7 +2149,7 @@ str: The protocol_url string
 
 
 def set_activity_protocol_url(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
-    if 'entity_type' in new_data_dict and new_data_dict['entity_type'] in ['Dataset', 'Publication']:
+    if 'entity_type' in new_data_dict and new_data_dict['entity_type'] in ['Dataset', 'Upload', 'Publication']:
         return property_key, None
     else:
         if 'protocol_url' not in new_data_dict:
@@ -1968,7 +2186,8 @@ def set_processing_information(property_key, normalized_type, user_token, existi
     if 'entity_type' in new_data_dict and not equals(new_data_dict['entity_type'], 'Dataset'):
         return property_key, None
     else:
-        if 'metadata' not in new_data_dict or ('metadata' in new_data_dict and 'dag_provenance_list' not in new_data_dict['metadata']):
+        if 'metadata' not in new_data_dict or (
+                'metadata' in new_data_dict and 'dag_provenance_list' not in new_data_dict['metadata']):
             return property_key, None
 
     try:
