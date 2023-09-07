@@ -1948,9 +1948,9 @@ def link_upload_to_lab(property_key, normalized_type, user_token, existing_data_
     try:
         # Create a linkage (via Activity node)
         # between the Submission node and the parent Lab node in neo4j
-        schema_neo4j_queries.link_entity_to_agent(schema_manager.get_neo4j_driver_instance(),
-                                                  existing_data_dict['uuid'], direct_ancestor_uuids,
-                                                  activity_data_dict)
+        schema_neo4j_queries.link_entity_to_entity_via_activity(schema_manager.get_neo4j_driver_instance(),
+                                                                existing_data_dict['uuid'], direct_ancestor_uuids,
+                                                                activity_data_dict)
 
         # No need to delete any cache here since this is one-time upload creation
     except TransactionError:
@@ -2149,7 +2149,7 @@ str: The protocol_url string
 
 
 def set_activity_protocol_url(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
-    if 'entity_type' in new_data_dict and new_data_dict['entity_type'] in ['Dataset', 'Publication']:
+    if 'entity_type' in new_data_dict and new_data_dict['entity_type'] in ['Dataset', 'Upload', 'Publication']:
         return property_key, None
     else:
         if 'protocol_url' not in new_data_dict:
