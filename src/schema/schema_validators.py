@@ -1,6 +1,7 @@
 import yaml
 import logging
 import requests
+from datetime import datetime
 
 # Local modules
 from schema import schema_manager
@@ -9,7 +10,6 @@ from schema import schema_neo4j_queries
 from schema.schema_constants import SchemaConstants
 
 logger = logging.getLogger(__name__)
-
 
 ####################################################################################################
 ## Entity Level Validators
@@ -26,6 +26,8 @@ normalized_type : str
 request: Flask request
     The instance of Flask request passed in from application request
 """
+
+
 def validate_application_header_before_entity_create(normalized_entity_type, request):
     # A list of applications allowed to create this new entity
     # Currently only ingest-api and ingest-pipeline are allowed
@@ -56,25 +58,34 @@ existing_data_dict : dict
 new_data_dict : dict
     The json data in request body, already after the regular validations
 """
+
+
 def validate_no_duplicates_in_list(property_key, normalized_entity_type, request, existing_data_dict, new_data_dict):
     # Use lowercase for comparision via list comprehensions
     target_list = [v.lower() for v in new_data_dict[property_key]]
     if len(set(target_list)) != len(target_list):
         raise ValueError(f"The {property_key} field must only contain unique items")
 
+
 """
 If an entity has a DOI, do not allow it to be updated 
 """
+
+
 def halt_update_if_DOI_exists(property_key, normalized_entity_type, request, existing_data_dict, new_data_dict):
     if 'doi_url' in existing_data_dict or 'registered_doi' in existing_data_dict:
         raise ValueError(f"Unable to modify existing {existing_data_dict['entity_type']}"
                          f" {existing_data_dict['uuid']} due DOI.")
 
+
 """
 Do not allow a Collection to be created or updated with DOI information if it does not meet all the
 criteria of being a public entity.
 """
-def halt_DOI_if_collection_missing_elements(property_key, normalized_entity_type, request, existing_data_dict, new_data_dict):
+
+
+def halt_DOI_if_collection_missing_elements(property_key, normalized_entity_type, request, existing_data_dict,
+                                            new_data_dict):
     if 'contacts' not in existing_data_dict:
         raise ValueError(f"Unable to modify existing {existing_data_dict['entity_type']}"
                          f" {existing_data_dict['uuid']} for DOI because it has no contacts.")
@@ -83,9 +94,12 @@ def halt_DOI_if_collection_missing_elements(property_key, normalized_entity_type
                          f" {existing_data_dict['uuid']} for DOI because it has no creators.")
     # Count up other validations to check 'datasets', since a transient property
 
+
 """
 Do not allow a Collection to be created or updated with DOI information if any Dataset in the Collection is not public.
 """
+
+
 def halt_DOI_if_unpublished_dataset(property_key, normalized_entity_type, request, existing_data_dict, new_data_dict):
     # If the request is not trying to create/update DOI, simply return so the request can proceed.
     if 'doi_url' not in new_data_dict or 'registered_doi' not in new_data_dict:
@@ -102,7 +116,7 @@ def halt_DOI_if_unpublished_dataset(property_key, normalized_entity_type, reques
         for dataset_uuid in dataset_uuids:
             try:
                 ds = schema_neo4j_queries.get_entity(neo4j_driver_instance
-                                                     ,dataset_uuid)
+                                                     , dataset_uuid)
                 if ds['data_access_level'] not in distinct_dataset_levels:
                     distinct_dataset_levels.append(ds['data_access_level'])
             except Exception as nfe:
@@ -113,25 +127,28 @@ def halt_DOI_if_unpublished_dataset(property_key, normalized_entity_type, reques
         # For an Update PUT request without 'dataset_uuids' specified,
         # simply get the existing, distinct 'data_access_level' setting for all the Datasets in the Collection
         distinct_dataset_statuses = schema_neo4j_queries.get_collection_datasets_statuses(neo4j_driver_instance
-                                                                                          ,existing_data_dict['uuid'])
-    if len( distinct_dataset_statuses) != 1 or \
+                                                                                          , existing_data_dict['uuid'])
+    if len(distinct_dataset_statuses) != 1 or \
             distinct_dataset_statuses[0].lower() != SchemaConstants.DATASET_STATUS_PUBLISHED:
         raise ValueError(f"Unable to modify existing {existing_data_dict['entity_type']}"
                          f" {existing_data_dict['uuid']} for DOI since it contains unpublished Datasets.")
+
 
 """
 Validate the DOI parameters are presented as a pair during creation or modification.
 Even if one is populated already, disallow setting the other, so the data is consciously synced.
 Verify the values are compatible with each other.
 """
+
+
 def verify_DOI_pair(property_key, normalized_entity_type, request, existing_data_dict, new_data_dict):
     # Disallow providing one DOI parameter but not the other
     if ('doi_url' in new_data_dict and 'registered_doi' not in new_data_dict) or \
-       ('doi_url' not in new_data_dict and 'registered_doi' in new_data_dict):
-        raise ValueError(   f"The properties 'doi_url' and 'registered_doi' must both be set in the same operation.")
+            ('doi_url' not in new_data_dict and 'registered_doi' in new_data_dict):
+        raise ValueError(f"The properties 'doi_url' and 'registered_doi' must both be set in the same operation.")
     # Since both DOI parameters are present, make sure neither is the empty string
     if new_data_dict['doi_url'] == '' or new_data_dict['registered_doi'] == '':
-        raise ValueError(   f"The properties 'doi_url' and 'registered_doi' cannot be empty, when specified.")
+        raise ValueError(f"The properties 'doi_url' and 'registered_doi' cannot be empty, when specified.")
 
     # Check if doi_url matches registered_doi with the expected prefix
     try:
@@ -142,8 +159,9 @@ def verify_DOI_pair(property_key, normalized_entity_type, request, existing_data
         logger.error(f"During verify_DOI_pair schema validator, unexpected exception e={str(e)}")
         raise ValueError(f"An unexpected error occurred during evaluation of DOI parameters.  See logs.")
     if expected_doi_url and new_data_dict['doi_url'] != expected_doi_url:
-        raise ValueError(   f"The 'doi_url' property should match the 'registered_doi' property, after"
-                            f" the prefix {SchemaConstants.DOI_BASE_URL}.")
+        raise ValueError(f"The 'doi_url' property should match the 'registered_doi' property, after"
+                         f" the prefix {SchemaConstants.DOI_BASE_URL}.")
+
 
 """
 Validate every entity in a list is of entity_type accepted
@@ -161,7 +179,10 @@ existing_data_dict : dict
 new_data_dict : dict
     The json data in request body, already after the regular validations
 """
-def collection_entities_are_existing_datasets(property_key, normalized_entity_type, request, existing_data_dict, new_data_dict):
+
+
+def collection_entities_are_existing_datasets(property_key, normalized_entity_type, request, existing_data_dict,
+                                              new_data_dict):
     # `dataset_uuids` is required for creating a Collection
     # Verify each UUID specified exists in the uuid-api, exists in Neo4j, and is for a Dataset before
     # proceeding with creation of Collection.
@@ -194,14 +215,15 @@ def collection_entities_are_existing_datasets(property_key, normalized_entity_ty
                 bad_dataset_uuids.append(dataset_uuid)
         except Exception as nfe:
             # If the dataset_uuid is not found, fail the validation.
-            logger.error(   f"Request for {dataset_uuid} inclusion in Collection"
-                            f" failed uuid-api retrieval due to {str(nfe)}")
+            logger.error(f"Request for {dataset_uuid} inclusion in Collection"
+                         f" failed uuid-api retrieval due to {str(nfe)}")
             bad_dataset_uuids.append(dataset_uuid)
     # If any uuids in the request dataset_uuids are not for an existing Dataset entity which
     # exists in uuid-api and Neo4j, raise an Exception so the validation fails and the
     # operation can be rejected.
     if bad_dataset_uuids:
         raise ValueError(f"Unable to find Datasets for {bad_dataset_uuids}.")
+
 
 """
 Validate the provided value of Dataset.status on update via PUT
@@ -219,7 +241,10 @@ existing_data_dict : dict
 new_data_dict : dict
     The json data in request body, already after the regular validations
 """
-def validate_application_header_before_property_update(property_key, normalized_entity_type, request, existing_data_dict, new_data_dict):
+
+
+def validate_application_header_before_property_update(property_key, normalized_entity_type, request,
+                                                       existing_data_dict, new_data_dict):
     # A list of applications allowed to update this property
     # Currently only ingest-api, ingest-pipeline, and portal-ui are allowed
     # to update Dataset.status or Upload.status
@@ -246,6 +271,8 @@ existing_data_dict : dict
 new_data_dict : dict
     The json data in request body, already after the regular validations
 """
+
+
 def validate_dataset_status_value(property_key, normalized_entity_type, request, existing_data_dict, new_data_dict):
     # Use lowercase for comparison
     accepted_status_values = ['new', 'processing', 'published', 'qa', 'error', 'hold', 'invalid', 'submitted']
@@ -255,7 +282,8 @@ def validate_dataset_status_value(property_key, normalized_entity_type, request,
         raise ValueError("The provided status value of Dataset is not valid")
 
     if 'status' not in existing_data_dict:
-        raise KeyError("Missing 'status' key in 'existing_data_dict' during calling 'validate_dataset_status_value()' validator method.")
+        raise KeyError(
+            "Missing 'status' key in 'existing_data_dict' during calling 'validate_dataset_status_value()' validator method.")
 
     # If status == 'Published' already in Neo4j, then fail for any changes at all
     # Because once published, the dataset should be read-only
@@ -268,8 +296,10 @@ def validate_dataset_status_value(property_key, normalized_entity_type, request,
 
     # Change status to 'Published' can only happen via ingest-api 
     # because file system changes are needed
-    if (new_status == SchemaConstants.DATASET_STATUS_PUBLISHED) and (app_header.lower() != SchemaConstants.INGEST_API_APP):
+    if (new_status == SchemaConstants.DATASET_STATUS_PUBLISHED) and (
+            app_header.lower() != SchemaConstants.INGEST_API_APP):
         raise ValueError(f"Dataset status change to 'Published' can only be made via {SchemaConstants.INGEST_API_APP}")
+
 
 """
 Validate the sub_status field is also provided when Dataset.retraction_reason is provided on update via PUT
@@ -287,9 +317,12 @@ existing_data_dict : dict
 new_data_dict : dict
     The json data in request body, already after the regular validations
 """
+
+
 def validate_if_retraction_permitted(property_key, normalized_entity_type, request, existing_data_dict, new_data_dict):
     if 'status' not in existing_data_dict:
-        raise KeyError("Missing 'status' key in 'existing_data_dict' during calling 'validate_if_retraction_permitted()' validator method.")
+        raise KeyError(
+            "Missing 'status' key in 'existing_data_dict' during calling 'validate_if_retraction_permitted()' validator method.")
 
     # Only published dataset can be retracted
     if existing_data_dict['status'].lower() != SchemaConstants.DATASET_STATUS_PUBLISHED:
@@ -331,9 +364,12 @@ existing_data_dict : dict
 new_data_dict : dict
     The json data in request body, already after the regular validations
 """
+
+
 def validate_sub_status_provided(property_key, normalized_entity_type, request, existing_data_dict, new_data_dict):
     if 'sub_status' not in new_data_dict:
         raise ValueError("Missing sub_status field when retraction_reason is provided")
+
 
 """
 Validate the reaction_reason field is also provided when Dataset.sub_status is provided on update via PUT
@@ -351,9 +387,13 @@ existing_data_dict : dict
 new_data_dict : dict
     The json data in request body, already after the regular validations
 """
-def validate_retraction_reason_provided(property_key, normalized_entity_type, request, existing_data_dict, new_data_dict):
+
+
+def validate_retraction_reason_provided(property_key, normalized_entity_type, request, existing_data_dict,
+                                        new_data_dict):
     if 'retraction_reason' not in new_data_dict:
         raise ValueError("Missing retraction_reason field when sub_status is provided")
+
 
 """
 Validate the provided value of Dataset.sub_status on update via PUT
@@ -371,13 +411,17 @@ existing_data_dict : dict
 new_data_dict : dict
     The json data in request body, already after the regular validations
 """
-def validate_retracted_dataset_sub_status_value(property_key, normalized_entity_type, request, existing_data_dict, new_data_dict):
+
+
+def validate_retracted_dataset_sub_status_value(property_key, normalized_entity_type, request, existing_data_dict,
+                                                new_data_dict):
     # Use lowercase for comparison
     accepted_sub_status_values = ['retracted']
     sub_status = new_data_dict[property_key].lower()
 
     if sub_status not in accepted_sub_status_values:
         raise ValueError("Invalid sub_status value of the Dataset to be retracted")
+
 
 """
 Validate the provided value of Upload.status on update via PUT
@@ -395,6 +439,8 @@ existing_data_dict : dict
 new_data_dict : dict
     The json data in request body, already after the regular validations
 """
+
+
 def validate_upload_status_value(property_key, normalized_entity_type, request, existing_data_dict, new_data_dict):
     # Use lowercase for comparison
     accepted_status_values = ['new', 'valid', 'invalid', 'error', 'reorganized', 'processing', 'submitted']
@@ -402,6 +448,38 @@ def validate_upload_status_value(property_key, normalized_entity_type, request, 
 
     if new_status not in accepted_status_values:
         raise ValueError(f"Invalid status value: {new_status}")
+
+
+"""
+Validate the provided value of Publication.publication_date is in the correct format against ISO 8601 Format: 
+'2022-10-31T09:00:00Z' for example, but we only care the date part 'YYYY-MM-DD'
+on create via POST and update via PUT
+
+Note: we allow users to use a future date value
+
+Parameters
+----------
+property_key : str
+    The target property key
+normalized_type : str
+    Submission
+request: Flask request object
+    The instance of Flask request passed in from application request
+existing_data_dict : dict
+    A dictionary that contains all existing entity properties
+new_data_dict : dict
+    The json data in request body, already after the regular validations
+"""
+
+
+def validate_publication_date(property_key, normalized_entity_type, request, existing_data_dict, new_data_dict):
+    try:
+        # The user provided date string is valid if we can convert it to a datetime object
+        # base on the ISO 8601 format, 'YYYY-MM-DD', it's fine if the user entered the time part
+        date_obj = datetime.fromisoformat(new_data_dict[property_key])
+    except ValueError:
+        raise ValueError(f"Invalid {property_key} format, must be YYYY-MM-DD")
+
 
 ####################################################################################################
 ## Internal Functions
@@ -417,6 +495,8 @@ applications_allowed : list
 request_headers: Flask request.headers object, behaves like a dict
     The instance of Flask request.headers passed in from application request
 """
+
+
 def _validate_application_header(applications_allowed, request_headers):
     # HTTP header names are case-insensitive
     # request_headers.get('X-Hubmap-Application') returns None if the header doesn't exist
@@ -440,6 +520,8 @@ Returns
 -------
 list: The list of defined tissue types
 """
+
+
 def _get_tissue_types():
     TISSUE_TYPES = schema_manager.get_ubkg_instance.get_ubkg_valueset(
         schema_manager.get_ubkg_instance.specimen_categories)
