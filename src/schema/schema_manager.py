@@ -605,7 +605,7 @@ Parameters
 merged_dict : dict
     A merged dict that may contain properties with None values
 normalized_entity_type : str
-    One of the normalized entity types: Dataset, Collection, Sample, Source
+    One of the normalized entity types: Dataset, Collection, Sample, Source, Upload, Publication
 
 Returns
 -------
@@ -849,7 +849,7 @@ Parameters
 json_data_dict : dict
     The json data dict from user request
 normalized_entity_type : str
-    One of the normalized entity types: Dataset, Collection, Sample, Source
+    One of the normalized entity types: Dataset, Collection, Sample, Source, Upload, Publication
 existing_entity_dict : dict
     Entity dict for creating new entity, otherwise pass in the existing entity dict for update validation
 """
@@ -983,7 +983,7 @@ Parameters
 validator_type : str
     One of the validator types: before_entity_create_validator
 normalized_entity_type : str
-    One of the normalized entity types defined in the schema yaml: Source, Sample, Dataset, Upload
+    One of the normalized entity types defined in the schema yaml: Source, Sample, Dataset, Upload, Publication
 request: Flask request object
     The instance of Flask request passed in from application request
 """
@@ -1031,7 +1031,7 @@ Parameters
 validator_type : str
     before_property_create_validators|before_property_update_validators (support multiple validators)
 normalized_entity_type : str
-    One of the normalized entity types defined in the schema yaml: Source, Sample, Dataset, Upload
+    One of the normalized entity types defined in the schema yaml: Source, Sample, Dataset, Upload, Publication
 request: Flask request object
     The instance of Flask request passed in from application request
 existing_data_dict : dict
@@ -1133,14 +1133,14 @@ Lowercase and captalize the entity type string
 Parameters
 ----------
 normalized_entity_type : str
-    One of the normalized entity types: Dataset, Collection, Sample, Source
+    One of the normalized entity types: Dataset, Collection, Sample, Source, Upload, Publication
 id : str
     The uuid of target entity 
 
 Returns
 -------
 string
-    One of the normalized entity types: Dataset, Collection, Sample, Source
+    One of the normalized entity types: Dataset, Collection, Sample, Source, Upload, Publication
 """
 
 
@@ -1245,7 +1245,7 @@ Validate the normalized entity class
 Parameters
 ----------
 normalized_entity_type : str
-    The normalized entity class: Collection|Source|Sample|Dataset
+    The normalized entity class: Collection|Source|Sample|Dataset|Upload|Publication
 """
 
 
