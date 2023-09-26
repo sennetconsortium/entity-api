@@ -501,7 +501,7 @@ new_data_dict : dict
 
 def validate_creation_action(property_key, normalized_entity_type, request, existing_data_dict, new_data_dict):
     creation_action = new_data_dict[property_key]
-    if creation_action and creation_action not in ["CODCC Process", "Lab Process"]:
+    if creation_action and creation_action not in SchemaConstants.ALLOWED_CREATION_ACTIONS:
         raise ValueError(f"Invalid {property_key} value")
 
 
