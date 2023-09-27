@@ -443,10 +443,12 @@ dict
 def get_previous_revision_uuid(neo4j_driver, uuid):
     result = None
 
+    match_case = f" IN {uuid}" if type(uuid) is list else f" = '{uuid}'"
+
     # Don't use [r:REVISION_OF] because 
     # Binding a variable length relationship pattern to a variable ('r') is deprecated
     query = (f"MATCH (e:Entity)-[:REVISION_OF]->(previous_revision:Entity) "
-             f"WHERE e.uuid='{uuid}' "
+             f"WHERE e.uuid{match_case} "
              f"RETURN previous_revision.uuid AS {record_field_name}")
 
     logger.info("======get_previous_revision_uuid() query======")
@@ -481,10 +483,12 @@ dict
 def get_next_revision_uuid(neo4j_driver, uuid):
     result = None
 
+    match_case = f" IN {uuid}" if type(uuid) is list else f" = '{uuid}'"
+
     # Don't use [r:REVISION_OF] because 
     # Binding a variable length relationship pattern to a variable ('r') is deprecated
     query = (f"MATCH (e:Entity)<-[:REVISION_OF]-(next_revision:Entity) "
-             f"WHERE e.uuid='{uuid}' "
+             f"WHERE e.uuid{match_case} "
              f"RETURN next_revision.uuid AS {record_field_name}")
 
     logger.info("======get_next_revision_uuid() query======")
@@ -1286,8 +1290,10 @@ def _create_relationship_tx(tx, source_node_uuid, target_node_uuid, relationship
     if direction == "->":
         outgoing = direction
 
+    match_case = f" IN {target_node_uuid}" if type(target_node_uuid) is list else f" = '{target_node_uuid}'"
+
     query = (f"MATCH (s), (t) "
-             f"WHERE s.uuid = '{source_node_uuid}' AND t.uuid = '{target_node_uuid}' "
+             f"WHERE s.uuid = '{source_node_uuid}' AND t.uuid {match_case} "
              f"CREATE (s){incoming}[r:{relationship}]{outgoing}(t) "
              f"RETURN type(r) AS {record_field_name}")
 
@@ -1597,3 +1603,27 @@ def get_children(neo4j_driver, uuid, property_key=None):
                 results = nodes_to_dicts(record[record_field_name])
 
     return results
+
+
+def _create_relationships_tx(tx, source_node_uuid, target_node_uuids, relationship, direction):
+    incoming = "-"
+    outgoing = "-"
+
+    if direction == "<-":
+        incoming = direction
+
+    if direction == "->":
+        outgoing = direction
+
+    query = (
+            f"MATCH (s), (t) "
+            f"WHERE s.uuid = '{source_node_uuid}' AND t.uuid IN {target_node_uuids} "
+            f"MERGE (s){incoming}[:{relationship}]{outgoing}(t) "
+            f"RETURN type(r) AS {record_field_name}"
+    )
+
+    logger.info("======_create_relationships_tx() query======")
+    logger.info(query)
+
+    result = tx.run(query)
+

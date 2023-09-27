@@ -1046,6 +1046,46 @@ def get_local_directory_rel_path(property_key, normalized_type, user_token, exis
 
     return property_key, dir_path
 
+"""
+Trigger event method of building linkage from this new Dataset to the dataset of its previous revision
+
+Parameters
+----------
+property_key : str
+    The target property key
+normalized_type : str
+    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+user_token: str
+    The user's globus nexus token
+existing_data_dict : dict
+    A dictionary that contains all existing entity properties
+new_data_dict : dict
+    A merged dictionary that contains all possible input data to be used
+
+Returns
+-------
+str: The target property key
+str: The uuid string of source entity
+"""
+
+
+def link_to_previous_revisions(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    if 'uuid' not in existing_data_dict:
+        raise KeyError(
+            "Missing 'uuid' key in 'existing_data_dict' during calling 'link_to_previous_revision()' trigger method.")
+
+    if 'previous_revision_uuid' not in existing_data_dict:
+        raise KeyError(
+            "Missing 'previous_revision_uuid' key in 'existing_data_dict' during calling 'link_to_previous_revision()' trigger method.")
+
+    # Create a revision reltionship from this new Dataset node and its previous revision of dataset node in neo4j
+    try:
+        schema_neo4j_queries.link_entity_to_previous_revision(schema_manager.get_neo4j_driver_instance(),
+                                                              existing_data_dict['uuid'],
+                                                              existing_data_dict['previous_revision_uuids'])
+    except TransactionError:
+        # No need to log
+        raise
 
 """
 Trigger event method of building linkage from this new Dataset to the dataset of its previous revision
