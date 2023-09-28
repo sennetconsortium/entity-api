@@ -1074,9 +1074,9 @@ def link_to_previous_revisions(property_key, normalized_type, user_token, existi
         raise KeyError(
             "Missing 'uuid' key in 'existing_data_dict' during calling 'link_to_previous_revision()' trigger method.")
 
-    if 'previous_revision_uuid' not in existing_data_dict:
+    if 'previous_revision_uuids' not in existing_data_dict:
         raise KeyError(
-            "Missing 'previous_revision_uuid' key in 'existing_data_dict' during calling 'link_to_previous_revision()' trigger method.")
+            "Missing 'previous_revision_uuids' key in 'existing_data_dict' during calling 'link_to_previous_revision()' trigger method.")
 
     # Create a revision reltionship from this new Dataset node and its previous revision of dataset node in neo4j
     try:
