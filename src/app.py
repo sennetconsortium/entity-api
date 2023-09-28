@@ -1070,9 +1070,8 @@ def create_entity(entity_type):
 
         json_data_dict['direct_ancestor_uuids'] = direct_ancestor_uuids
 
-        # Also check existence of the previous revision dataset if specified
-        if 'previous_revision_uuid' in json_data_dict:
-            previous_version_dict = query_target_entity(json_data_dict['previous_revision_uuid'], user_token)
+        def check_previous_revision(previous_revision_uuid):
+            previous_version_dict = query_target_entity(previous_revision_uuid, user_token)
 
             # Make sure the previous version entity is either a Dataset or Sample
             if previous_version_dict['entity_type'] not in ['Dataset', 'Sample']:
@@ -1089,8 +1088,17 @@ def create_entity(entity_type):
 
             # Only published datasets can have revisions made of them. Verify that that status of the Dataset specified
             # by previous_revision_uuid is published. Else, bad request error.
-            if 'status' not in previous_version_dict or previous_version_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
-                abort_bad_req(f"The previous_revision_uuid specified for this dataset must be 'Published' in order to create a new revision from it")
+            # if 'status' not in previous_version_dict or previous_version_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
+            #     abort_bad_req(f"The previous_revision_uuid specified for this dataset must be 'Published' in order to create a new revision from it")
+
+
+        # Also check existence of the previous revision dataset if specified
+        if 'previous_revision_uuid' in json_data_dict:
+            check_previous_revision(json_data_dict['previous_revision_uuid'])
+
+        if 'previous_revision_uuids' in json_data_dict:
+            for previous_revision_uuid in json_data_dict['previous_revision_uuids']:
+                check_previous_revision(previous_revision_uuid)
 
         # Generate 'before_create_triiger' data and create the entity details in Neo4j
         merged_dict = create_entity_details(request, normalized_entity_type, user_token, json_data_dict)
@@ -2492,6 +2500,108 @@ def get_revisions_list(id):
         revision_number -= 1
 
     return jsonify(results)
+
+
+"""
+Retrieve a list of all multi revisions of a dataset from the id of any dataset in the chain. 
+E.g: If there are 5 revisions, and the id for revision 4 is given, a list of revisions
+1-5 will be returned with oldest at index 0. Non-public access is only required to 
+retrieve information on non-published datasets. Output will be a list of dictionaries. Each dictionary
+contains the dataset revision number and its list of uuids. Optionally, the full dataset can be included for each.
+
+By default, only the revision number and uuids are included. To include the full dataset, the query 
+parameter "include_dataset" can be given with the value of "true". If this parameter is not included or 
+is set to false, the dataset will not be included. For example, to include the full datasets for each revision,
+use '/datasets/<id>/multi-revisions?include_dataset=true'. To omit the datasets, either set include_dataset=false, or
+simply do not include this parameter. 
+
+Parameters
+----------
+id : str
+    The SenNet ID (e.g. SNT123.ABCD.456) or UUID of target dataset 
+
+Returns
+-------
+list
+    The list of revision datasets
+"""
+@app.route('/entities/<id>/multi-revisions', methods=['GET'])
+@app.route('/datasets/<id>/multi-revisions', methods=['GET'])
+def get_multi_revisions_list(id):
+    # By default, do not return dataset. Only return dataset if return_dataset is true
+    show_dataset = False
+    if bool(request.args):
+        include_dataset = request.args.get('include_dataset')
+        if (include_dataset is not None) and (include_dataset.lower() == 'true'):
+            show_dataset = True
+    # Token is not required, but if an invalid token provided,
+    # we need to tell the client with a 401 error
+    validate_token_if_auth_header_exists(request)
+
+    # Use the internal token to query the target entity
+    # since public entities don't require user token
+    token = get_internal_token()
+
+    # Query target entity against uuid-api and neo4j and return as a dict if exists
+    entity_dict = query_target_entity(id, token)
+    normalized_entity_type = entity_dict['entity_type']
+
+    # Only for Dataset
+    if not schema_manager.entity_type_instanceof(normalized_entity_type, 'Dataset'):
+        abort_bad_req("The entity is not a Dataset. Found entity type:" + normalized_entity_type)
+
+    # Only published/public datasets don't require token
+    if entity_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
+        # Token is required and the user must belong to SenNet-READ group
+        token = get_user_token(request, non_public_access_required=True)
+
+    # By now, either the entity is public accessible or
+    # the user token has the correct access level
+    # Get the all the sorted (DESC based on creation timestamp) revisions
+    sorted_revisions_list = app_neo4j_queries.get_sorted_multi_revisions(neo4j_driver_instance, entity_dict['uuid'])
+
+    # Skip some of the properties that are time-consuming to generate via triggers
+    properties_to_skip = [
+        'direct_ancestors',
+        'collections',
+        'upload',
+        'title'
+    ]
+    complete_revisions_list = []
+    normalized_revisions_list = []
+    sorted_revisions_list_merged = sorted_revisions_list[0] + sorted_revisions_list[1]
+
+    for revision in sorted_revisions_list_merged:
+        complete_revision_list = schema_manager.get_complete_entities_list(token, revision, properties_to_skip)
+        normal = schema_manager.normalize_entities_list_for_response(complete_revision_list)
+        normalized_revisions_list.append(normal)
+
+    # TODO: Refactor
+    # # Only check the very last revision (the first revision dict since normalized_revisions_list is already sorted DESC)
+    # # to determine if send it back or not
+    # if not user_in_globus_read_group(request):
+    #     latest_revision = normalized_revisions_list[0]
+    #
+    #     if latest_revision['status'].lower() != DATASET_STATUS_PUBLISHED:
+    #         normalized_revisions_list.pop(0)
+    #
+    #         # Also hide the 'next_revision_uuid' of the second last revision from response
+    #         if 'next_revision_uuid' in normalized_revisions_list[0]:
+    #             normalized_revisions_list[0].pop('next_revision_uuid')
+
+    # Now all we need to do is to compose the result list
+    results = []
+    revision_number = 1
+    for revision in normalized_revisions_list:
+        result = {
+            'revision_number': revision_number,
+            'uuid': revision if show_dataset is True else schema_manager.get_filtered_entities_list(revision, ['uuid'], flat_array=True)
+        }
+        results.append(result)
+        revision_number += 1
+
+    return jsonify(results)
+
 
 """
 Get all organs associated with a given dataset
