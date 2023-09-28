@@ -2118,12 +2118,12 @@ str: The creation_action string
 
 
 def set_activity_creation_action(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    if 'creation_action' in new_data_dict:
+        return property_key, new_data_dict['creation_action']
+
     if 'normalized_entity_type' not in new_data_dict:
         raise KeyError(
             "Missing 'normalized_entity_type' key in 'existing_data_dict' during calling 'set_activity_creation_action()' trigger method.")
-
-    if 'creation_action' in new_data_dict:
-        return property_key, new_data_dict['creation_action']
 
     return property_key, f"Create {new_data_dict['normalized_entity_type']} Activity"
 
