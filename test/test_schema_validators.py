@@ -9,15 +9,17 @@ from schema import schema_validators
 @pytest.mark.parametrize('creation_action, succeeds', [
     ('Central Process', True),
     ('Multi-Assay Split', True),
+    ('Lab Process', True),
     ('central process', True),
     ('multi-assay split', True),
+    ('lab process', True),
     (None, True),
     ('', False),
     ('bad_creation_action', False),
 ])
 def test_validate_creation_action(creation_action, succeeds):
-    """ Test that validate creation action raises a ValueError when creation
-        action is invalid"""
+    """Test that validate creation action raises a ValueError when creation
+       action is invalid"""
 
     property_key = 'creation_action'
     normalized_entity_type = 'Dataset'
