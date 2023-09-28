@@ -787,6 +787,120 @@ def get_sorted_revisions(neo4j_driver, uuid):
 
 
 """
+Get all revisions for a given dataset uuid and sort them in descending order based on their creation time
+
+Parameters
+----------
+neo4j_driver : neo4j.Driver object
+    The neo4j database connection pool
+uuid : str
+    The uuid of target entity 
+
+Returns
+-------
+dict
+    A multi-dimensional list [prev_revisions<list<list>>, next_revisions<list<list>>]
+"""
+
+
+def get_sorted_multi_revisions(neo4j_driver, uuid):
+
+    """
+        uuid : str
+            The uuid of target entity
+        pick_out_rev_uuid : str
+            A uuid to find and return in a revision list
+        replacement : list
+            A replacement list upon find
+    """
+    def get_revision_paths(_uuid, pick_out_rev_uuid=None, replacement=None):
+        results = []
+
+        query = (
+                 "MATCH (e:Dataset), (next:Dataset), (prev:Dataset),"
+                 "p = shortestPath((e)-[:REVISION_OF *0..]->(prev)),"
+                 "n = shortestPath((e)<-[:REVISION_OF *0..]-(next))"
+                 f"WHERE e.uuid='{_uuid}' "
+                 "WITH length(p) AS p_len, prev, length(n) AS n_len, next "
+                 "ORDER BY prev.created_timestamp, next.created_timestamp DESC "
+                 "WITH p_len, collect(distinct prev) AS prev_revisions, n_len, collect(distinct next) AS next_revisions "
+                 f"RETURN [collect(distinct prev_revisions), collect(distinct next_revisions)] AS {record_field_name}"
+        )
+
+        logger.info("======get_sorted_multi_revisions.get_revision_paths() query======")
+        logger.info(query)
+
+        with neo4j_driver.session() as session:
+            record = session.read_transaction(_execute_readonly_tx, query)
+            has_replaced = False
+            if record and record[record_field_name]:
+                collections = []
+                for collection in record[record_field_name]:  # two sections
+                    revs = []
+                    for rev in collection:
+                        # Convert the list of nodes to a list of dicts
+                        nodes_to_dicts = _nodes_to_dicts(rev)
+
+                        if pick_out_rev_uuid is None:
+                            if replacement is None:
+                                revs.append(nodes_to_dicts)
+                            else:
+                                if len(nodes_to_dicts) == 1 and nodes_to_dicts[0]['uuid'] == _uuid:
+                                    if has_replaced is False:
+                                        has_replaced = True
+                                        revs.append(replacement)
+                                else:
+                                    revs.append(nodes_to_dicts)
+
+                        else:
+                            for _rev in nodes_to_dicts:
+                                if _rev['uuid'] == pick_out_rev_uuid:
+                                    return nodes_to_dicts
+
+                    collections.append(revs)
+                results.append(collections)
+
+        return results
+
+
+    def get_closest_neighbor(_uuid):
+        results = []
+
+        query = (
+            f"MATCH (e:Dataset) WHERE e.uuid = '{_uuid}' "
+            "CALL apoc.neighbors.tohop(e, 'REVISION_OF', 1) "
+            "YIELD node "
+            f"RETURN node AS {record_field_name}"
+        )
+
+        logger.info("======get_sorted_multi_revisions.get_closest_neighbor() query======")
+        logger.info(query)
+
+        result = None
+
+        with neo4j_driver.session() as session:
+            record = session.read_transaction(_execute_readonly_tx, query)
+
+            if record and record[record_field_name]:
+                result = _node_to_dict(record[record_field_name])
+
+        if result is not None and result['uuid']:
+            results = get_revision_paths(result['uuid'], pick_out_rev_uuid=_uuid)
+
+        return results
+
+    # retrieve closest neighbor paths so to reveal full list of entities which the target entity belongs to
+    # because when we do a shortest path, this will not include all entities in the revision of the target entity
+    # this is to facility multi-to-multi and a use-case described in #entity-api/issues/190
+    revision_paths_of_nearest_neighbors = get_closest_neighbor(uuid)
+    revision_paths = get_revision_paths(uuid, replacement=revision_paths_of_nearest_neighbors)
+
+    return revision_paths[0]
+
+
+
+
+"""
 Returns all of the Sample information associated with a Dataset, back to each Source. Returns a dictionary
 containing all of the provenance info for a given dataset. Each Sample is in its own dictionary, converted
 from its neo4j node and placed into a list. 
