@@ -2505,7 +2505,7 @@ def get_revisions_list(id):
 """
 Retrieve a list of all multi revisions of a dataset from the id of any dataset in the chain. 
 E.g: If there are 5 revisions, and the id for revision 4 is given, a list of revisions
-1-5 will be returned with oldest at index 0. Non-public access is only required to 
+1-5 will be returned in reverse order (newest first). Non-public access is only required to 
 retrieve information on non-published datasets. Output will be a list of dictionaries. Each dictionary
 contains the dataset revision number and its list of uuids. Optionally, the full dataset can be included for each.
 
@@ -2567,16 +2567,18 @@ def get_multi_revisions_list(id):
         'upload',
         'title'
     ]
-    complete_revisions_list = []
+
     normalized_revisions_list = []
-    sorted_revisions_list_merged = sorted_revisions_list[0] + sorted_revisions_list[1]
+    # flip the array ...
+    next_list = sorted_revisions_list[1][::-1]
+    sorted_revisions_list_merged = next_list + sorted_revisions_list[0]
 
     for revision in sorted_revisions_list_merged:
         complete_revision_list = schema_manager.get_complete_entities_list(token, revision, properties_to_skip)
         normal = schema_manager.normalize_entities_list_for_response(complete_revision_list)
         normalized_revisions_list.append(normal)
 
-    # TODO: Refactor
+    # TODO: Refactor to context if needed
     # # Only check the very last revision (the first revision dict since normalized_revisions_list is already sorted DESC)
     # # to determine if send it back or not
     # if not user_in_globus_read_group(request):
@@ -2591,14 +2593,14 @@ def get_multi_revisions_list(id):
 
     # Now all we need to do is to compose the result list
     results = []
-    revision_number = 1
+    revision_number = len(normalized_revisions_list)
     for revision in normalized_revisions_list:
         result = {
             'revision_number': revision_number,
-            'uuid': revision if show_dataset is True else schema_manager.get_filtered_entities_list(revision, ['uuid'], flat_array=True)
+            'uuids': revision if show_dataset is True else schema_manager.get_filtered_entities_list(revision, ['uuid'], flat_array=True)
         }
         results.append(result)
-        revision_number += 1
+        revision_number -= 1
 
     return jsonify(results)
 
