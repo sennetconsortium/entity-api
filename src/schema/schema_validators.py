@@ -499,10 +499,10 @@ new_data_dict : dict
 """
 
 
-def validate_creation_action(property_key, normalized_entity_type, request, existing_data_dict, new_data_dict):
+def validate_single_creation_action(property_key, normalized_entity_type, request, existing_data_dict, new_data_dict):
     creation_action = new_data_dict.get(property_key)
-    if creation_action is not None and creation_action.lower() not in SchemaConstants.ALLOWED_CREATION_ACTIONS:
-        raise ValueError(f"Invalid {property_key} value. Allowed values are: {', '.join(SchemaConstants.ALLOWED_CREATION_ACTIONS)}")
+    if creation_action is not None and creation_action.lower() not in SchemaConstants.ALLOWED_SINGLE_CREATION_ACTIONS:
+        raise ValueError(f"Invalid {property_key} value. Allowed values are: {', '.join(SchemaConstants.ALLOWED_SINGLE_CREATION_ACTIONS)}")
 
 
 ####################################################################################################

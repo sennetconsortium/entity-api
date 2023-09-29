@@ -500,7 +500,7 @@ ENTITIES:
         transient: true
         description: "An optional value that is stored in the activity's creation_action field, if specified."
         before_property_create_validators:
-          - validate_creation_action
+          - validate_single_creation_action
 
   ############################################# Publication #############################################
   Publication:
