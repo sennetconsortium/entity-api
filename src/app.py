@@ -1019,7 +1019,7 @@ def create_entity(entity_type):
     except schema_errors.InvalidApplicationHeaderException as e:
         abort_bad_req(e)
 
-    json_data_dict = check_for_metadata(entity_type, user_token)
+    json_data_dict = check_for_metadata(normalized_entity_type, user_token)
     verify_ubkg_properties(json_data_dict)
 
     # Validate request json against the yaml schema
