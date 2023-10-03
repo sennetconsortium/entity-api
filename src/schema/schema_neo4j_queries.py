@@ -1290,10 +1290,11 @@ def _create_relationship_tx(tx, source_node_uuid, target_node_uuid, relationship
     if direction == "->":
         outgoing = direction
 
-    match_case = f" IN {target_node_uuid}" if type(target_node_uuid) is list else f" = '{target_node_uuid}'"
+    match_case_source = f" IN {source_node_uuid}" if type(source_node_uuid) is list else f" = '{source_node_uuid}'"
+    match_case_target = f" IN {target_node_uuid}" if type(target_node_uuid) is list else f" = '{target_node_uuid}'"
 
     query = (f"MATCH (s), (t) "
-             f"WHERE s.uuid = '{source_node_uuid}' AND t.uuid {match_case} "
+             f"WHERE s.uuid {match_case_source} AND t.uuid {match_case_target} "
              f"CREATE (s){incoming}[r:{relationship}]{outgoing}(t) "
              f"RETURN type(r) AS {record_field_name}")
 
