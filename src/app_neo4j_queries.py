@@ -810,21 +810,21 @@ def get_sorted_multi_revisions(neo4j_driver, uuid):
             The uuid of target entity
         pick_out_rev_uuid : str
             A uuid to find in a revision list and return that list
-        replacement : list
-            A replacement list for target
+        path_length : str
+            Boundary for searching ...
     """
-    def get_revisions(_uuid, pick_out_rev_uuid=None, replacement=None):
+    def get_revisions(_uuid, pick_out_rev_uuid=None, path_length=''):
         results = []
 
         query = (
                  "MATCH (e:Dataset), (next:Dataset), (prev:Dataset),"
-                 "p = shortestPath((e)-[:REVISION_OF *0..]->(prev)),"
-                 "n = shortestPath((e)<-[:REVISION_OF *0..]-(next))"
+                 f"p = shortestPath((e)-[:REVISION_OF *0..{path_length}]->(prev)),"
+                 f"n = shortestPath((e)<-[:REVISION_OF *0..{path_length}]-(next))"
                  f"WHERE e.uuid='{_uuid}' "
                  "WITH length(p) AS p_len, prev, length(n) AS n_len, next "
                  "ORDER BY prev.created_timestamp, next.created_timestamp DESC "
                  "WITH p_len, collect(distinct prev) AS prev_revisions, n_len, collect(distinct next) AS next_revisions "
-                 f"RETURN [collect(distinct prev_revisions), collect(distinct next_revisions)] AS {record_field_name}"
+                 f"RETURN [collect(distinct next_revisions), collect(distinct prev_revisions)] AS {record_field_name}"
         )
 
         logger.info("======get_sorted_multi_revisions.get_revision_paths() query======")
@@ -832,29 +832,25 @@ def get_sorted_multi_revisions(neo4j_driver, uuid):
 
         with neo4j_driver.session() as session:
             record = session.read_transaction(_execute_readonly_tx, query)
-            has_replaced = False
             if record and record[record_field_name]:
                 collections = []
-                for collection in record[record_field_name]:  # two sections, prev and next
+                has_target_added = False
+                for collection in record[record_field_name]:  # two collections: next, prev
                     revs = []
-                    for rev in collection: # each collection list contains revision lists, so 2 dimensional array
+                    for rev in collection:  # each collection list contains revision lists, so 2 dimensional array
                         # Convert the list of nodes to a list of dicts
                         nodes_to_dicts = _nodes_to_dicts(rev)
 
                         if pick_out_rev_uuid is None:
-                            if replacement is None:
-                                revs.append(nodes_to_dicts)
+                            entity = nodes_to_dicts[0]
+                            if entity['uuid'] == uuid:
+                                # The target will appear both in next and prev from the shortestPath query.
+                                # So include it in the final result only once
+                                if has_target_added is False:
+                                    has_target_added = True
+                                    revs.append(get_revision_from_nearest_neighbor(entity['uuid']))
                             else:
-                                # the revision list of the target id will always be a list of size 1
-                                # based on our data AND how shortestPath works
-                                # we want to replace this with full list (replacement)
-                                if len(nodes_to_dicts) == 1 and nodes_to_dicts[0]['uuid'] == _uuid:
-                                    if has_replaced is False:
-                                        has_replaced = True
-                                        revs.append(replacement)
-                                else:
-                                    revs.append(nodes_to_dicts) # otherwise another list, keep it
-
+                                revs.append(get_revision_from_nearest_neighbor(entity['uuid']))
                         else:
                             for _rev in nodes_to_dicts:
                                 #  we just want a particular revision list
@@ -866,12 +862,11 @@ def get_sorted_multi_revisions(neo4j_driver, uuid):
 
         return results
 
-
     def get_revision_from_nearest_neighbor(_uuid):
         results = []
 
         query = (
-            f"MATCH (e:Dataset) WHERE e.uuid = '{_uuid}' "
+            f"MATCH (e:Entity) WHERE e.uuid = '{_uuid}' "
             "CALL apoc.neighbors.tohop(e, 'REVISION_OF', 1) "
             "YIELD node "
             f"RETURN node AS {record_field_name}"
@@ -889,20 +884,12 @@ def get_sorted_multi_revisions(neo4j_driver, uuid):
                 result = _node_to_dict(record[record_field_name])
 
         if result is not None and result['uuid']:
-            results = get_revisions(result['uuid'], pick_out_rev_uuid=_uuid)
+            results = get_revisions(result['uuid'], pick_out_rev_uuid=_uuid, path_length='1')
 
         return results
 
-    # retrieve the revision of the target from a neighbor because when we do a shortestPath on our data structure,
-    # for the target the other entities for the revision it belongs to will not be included (we need full revision list)
-    # See: #entity-api/issues/190
-    revision_from_nearest_neighbor = get_revision_from_nearest_neighbor(uuid)
-
-    # get all revisions prev and next of target,
-    # replace the 1 size list containing the target with full list: revision_from_nearest_neighbor
-    revisions = get_revisions(uuid, replacement=revision_from_nearest_neighbor)
-
-    return revisions[0]
+    solution = get_revisions(uuid)
+    return solution[0]
 
 
 
