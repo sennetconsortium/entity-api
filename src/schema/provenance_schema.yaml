@@ -473,14 +473,14 @@ ENTITIES:
         immutable: true
         description: "The list of uuids of previous revision datasets"
         after_create_trigger: link_to_previous_revisions
-        on_read_trigger: get_previous_revision_uuids
+        on_read_trigger: get_previous_revision_uuid
       next_revision_uuids:
         type: list
         generated: true
         transient: true
         immutable: true
         description: "The list of uuids of next revision datasets"
-        on_read_trigger: get_next_revision_uuids
+        on_read_trigger: get_next_revision_uuid
       previous_revision_uuid:
         type: string
         transient: true
