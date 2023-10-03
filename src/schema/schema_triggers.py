@@ -2194,7 +2194,8 @@ def set_processing_information(property_key, normalized_type, user_token, existi
         metadata_to_return = {}
         metadata = schema_manager.convert_str_to_data(new_data_dict['metadata'])
         metadata_to_return['dag_provenance_list'] = metadata['dag_provenance_list']
-        return property_key, metadata_to_return
+        # Need to hard set `processing_information` as this gets called when `metadata` is passed in the payload
+        return 'processing_information', metadata_to_return
     except requests.exceptions.RequestException as e:
         raise requests.exceptions.RequestException(e)
 
