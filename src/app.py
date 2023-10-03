@@ -2569,9 +2569,7 @@ def get_multi_revisions_list(id):
     ]
 
     normalized_revisions_list = []
-    # flip the array ...
-    next_list = sorted_revisions_list[1][::-1]
-    sorted_revisions_list_merged = next_list + sorted_revisions_list[0]
+    sorted_revisions_list_merged = sorted_revisions_list[0] + sorted_revisions_list[1][::-1]
 
     for revision in sorted_revisions_list_merged:
         complete_revision_list = schema_manager.get_complete_entities_list(token, revision, properties_to_skip)
