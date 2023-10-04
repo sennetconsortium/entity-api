@@ -885,6 +885,98 @@ property_key : str
 Returns
 -------
 dict
+    A 2 dimensional list of unique previous revisions dictionaries returned from the Cypher query
+"""
+
+
+def get_previous_multi_revisions(neo4j_driver, uuid, property_key=None):
+    results = []
+
+    collect_prop = f".{property_key}" if property_key else ''
+    query = (f"MATCH p=(e:Entity)-[:REVISION_OF*]->(prev:Entity) "
+             f"WHERE e.uuid='{uuid}' "
+             f"WITH length(p) as p_len, collect(distinct prev{collect_prop}) as prev_revisions "
+             f"RETURN collect(distinct prev_revisions) AS {record_field_name}")
+
+    logger.info("======get_previous_multi_revisions() query======")
+    logger.info(query)
+
+    with neo4j_driver.session() as session:
+        record = session.read_transaction(_execute_readonly_tx, query)
+
+        if record and record[record_field_name]:
+            if property_key:
+                # Just return the list of property values from each entity node
+                results = record[record_field_name]
+            else:
+                # Convert the list of nodes to a list of dicts
+                for rev in record[record_field_name]:
+                    results.append(_nodes_to_dicts(rev))
+
+
+    return results
+
+
+"""
+Get all next revisions of the target entity by uuid
+
+Parameters
+----------
+neo4j_driver : neo4j.Driver object
+    The neo4j database connection pool
+uuid : str
+    The uuid of target entity 
+property_key : str
+    A target property key for result filtering
+
+Returns
+-------
+dict
+    A 2 dimensional list of unique next revisions dictionaries returned from the Cypher query
+"""
+
+
+def get_next_multi_revisions(neo4j_driver, uuid, property_key=None):
+    results = []
+
+    collect_prop = f".{property_key}" if property_key else ''
+    query = (f"MATCH n=(e:Entity)<-[:REVISION_OF*]-(next:Entity) "
+             f"WHERE e.uuid='{uuid}' "
+             f"WITH length(n) as n_len, collect(distinct next{collect_prop}) as next_revisions "
+             f"RETURN collect(distinct next_revisions) AS {record_field_name}")
+
+    logger.info("======get_next_multi_revisions() query======")
+    logger.info(query)
+
+    with neo4j_driver.session() as session:
+        record = session.read_transaction(_execute_readonly_tx, query)
+
+        if record and record[record_field_name]:
+            if property_key:
+                # Just return the list of property values from each entity node
+                results = record[record_field_name]
+            else:
+                # Convert the list of nodes to a list of dicts
+                for rev in record[record_field_name]:
+                    results.append(_nodes_to_dicts(rev))
+
+    return results
+
+"""
+Get all previous revisions of the target entity by uuid
+
+Parameters
+----------
+neo4j_driver : neo4j.Driver object
+    The neo4j database connection pool
+uuid : str
+    The uuid of target entity 
+property_key : str
+    A target property key for result filtering
+
+Returns
+-------
+dict
     A list of unique previous revisions dictionaries returned from the Cypher query
 """
 

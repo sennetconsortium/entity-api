@@ -1890,15 +1890,20 @@ def get_previous_revisions(id):
                 abort_bad_req(f"Only the following property keys are supported in the query string: {COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}")
 
             # Only return a list of the filtered property value of each entity
-            property_list = app_neo4j_queries.get_previous_revisions(neo4j_driver_instance, uuid, property_key)
+            # property_list = app_neo4j_queries.get_previous_revisions(neo4j_driver_instance, uuid, property_key)
+            property_multi_list = app_neo4j_queries.get_previous_multi_revisions(neo4j_driver_instance, uuid, property_key)
 
             # Final result
-            final_result = property_list
+            # final_result = property_list
+            final_result = property_multi_list
         else:
             abort_bad_req("The specified query string is not supported. Use '?property=<key>' to filter the result")
+
+        return jsonify(final_result)
     # Return all the details if no property filtering
     else:
-        descendants_list = app_neo4j_queries.get_previous_revisions(neo4j_driver_instance, uuid)
+        # descendants_list = app_neo4j_queries.get_previous_revisions(neo4j_driver_instance, uuid)
+        descendants_multi_list = app_neo4j_queries.get_previous_multi_revisions(neo4j_driver_instance, uuid)
 
         # Generate trigger data and merge into a big dict
         # and skip some of the properties that are time-consuming to generate via triggers
@@ -1909,12 +1914,13 @@ def get_previous_revisions(id):
             'direct_ancestors'
         ]
 
-        complete_entities_list = schema_manager.get_complete_entities_list(user_token, descendants_list, properties_to_skip)
+        final_results = []
+        for multi_list in descendants_multi_list:
+            complete_entities_list = schema_manager.get_complete_entities_list(user_token, multi_list, properties_to_skip)
+            # Final result after normalization
+            final_results.append(schema_manager.normalize_entities_list_for_response(complete_entities_list))
 
-        # Final result after normalization
-        final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list)
-
-    return jsonify(final_result)
+        return jsonify(final_results)
 
 
 """
@@ -1954,15 +1960,19 @@ def get_next_revisions(id):
                 abort_bad_req(f"Only the following property keys are supported in the query string: {COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}")
 
             # Only return a list of the filtered property value of each entity
-            property_list = app_neo4j_queries.get_next_revisions(neo4j_driver_instance, uuid, property_key)
+            # property_list = app_neo4j_queries.get_next_revisions(neo4j_driver_instance, uuid, property_key)
+            property_multi_list = app_neo4j_queries.get_next_multi_revisions(neo4j_driver_instance, uuid, property_key)
 
             # Final result
-            final_result = property_list
+            final_result = property_multi_list
         else:
             abort_bad_req("The specified query string is not supported. Use '?property=<key>' to filter the result")
+
+        return jsonify(final_result)
     # Return all the details if no property filtering
     else:
-        descendants_list = app_neo4j_queries.get_next_revisions(neo4j_driver_instance, uuid)
+        # descendants_list = app_neo4j_queries.get_next_revisions(neo4j_driver_instance, uuid)
+        descendants_multi_list = app_neo4j_queries.get_next_multi_revisions(neo4j_driver_instance, uuid)
 
         # Generate trigger data and merge into a big dict
         # and skip some of the properties that are time-consuming to generate via triggers
@@ -1973,12 +1983,14 @@ def get_next_revisions(id):
             'direct_ancestors'
         ]
 
-        complete_entities_list = schema_manager.get_complete_entities_list(user_token, descendants_list, properties_to_skip)
 
-        # Final result after normalization
-        final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list)
+        final_results = []
+        for multi_list in descendants_multi_list:
+            complete_entities_list = schema_manager.get_complete_entities_list(user_token, multi_list, properties_to_skip)
+            # Final result after normalization
+            final_results.append(schema_manager.normalize_entities_list_for_response(complete_entities_list))
 
-    return jsonify(final_result)
+        return jsonify(final_results)
 
 
 """
