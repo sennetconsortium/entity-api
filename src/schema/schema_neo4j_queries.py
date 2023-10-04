@@ -442,14 +442,17 @@ dict
 
 def get_previous_revision_uuid(neo4j_driver, uuid):
     result = None
+    is_list = type(uuid) is list
 
-    match_case = f" IN {uuid}" if type(uuid) is list else f" = '{uuid}'"
+    wild_card = "*" if is_list else ""
+    match_case = f" IN {uuid}" if is_list else f" = '{uuid}'"
+    return_format = "collect(previous_revision.uuid)" if is_list else "previous_revision.uuid"
 
     # Don't use [r:REVISION_OF] because 
     # Binding a variable length relationship pattern to a variable ('r') is deprecated
-    query = (f"MATCH (e:Entity)-[:REVISION_OF]->(previous_revision:Entity) "
+    query = (f"MATCH (e:Entity)-[:REVISION_OF{wild_card}]->(previous_revision:Entity) "
              f"WHERE e.uuid{match_case} "
-             f"RETURN previous_revision.uuid AS {record_field_name}")
+             f"RETURN {return_format} AS {record_field_name}")
 
     logger.info("======get_previous_revision_uuid() query======")
     logger.info(query)
@@ -482,14 +485,17 @@ dict
 
 def get_next_revision_uuid(neo4j_driver, uuid):
     result = None
+    is_list = type(uuid) is list
 
-    match_case = f" IN {uuid}" if type(uuid) is list else f" = '{uuid}'"
+    wild_card = "*" if is_list else ""
+    match_case = f" IN {uuid}" if is_list else f" = '{uuid}'"
+    return_format = "collect(next_revision.uuid)" if is_list else "next_revision.uuid"
 
     # Don't use [r:REVISION_OF] because 
     # Binding a variable length relationship pattern to a variable ('r') is deprecated
-    query = (f"MATCH (e:Entity)<-[:REVISION_OF]-(next_revision:Entity) "
+    query = (f"MATCH (e:Entity)<-[:REVISION_OF{wild_card}]-(next_revision:Entity) "
              f"WHERE e.uuid{match_case} "
-             f"RETURN next_revision.uuid AS {record_field_name}")
+             f"RETURN {return_format} AS {record_field_name}")
 
     logger.info("======get_next_revision_uuid() query======")
     logger.info(query)
