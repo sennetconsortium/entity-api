@@ -1679,25 +1679,3 @@ def get_children(neo4j_driver, uuid, property_key=None):
     return results
 
 
-def _create_relationships_tx(tx, source_node_uuid, target_node_uuids, relationship, direction):
-    incoming = "-"
-    outgoing = "-"
-
-    if direction == "<-":
-        incoming = direction
-
-    if direction == "->":
-        outgoing = direction
-
-    query = (
-            f"MATCH (s), (t) "
-            f"WHERE s.uuid = '{source_node_uuid}' AND t.uuid IN {target_node_uuids} "
-            f"MERGE (s){incoming}[:{relationship}]{outgoing}(t) "
-            f"RETURN type(r) AS {record_field_name}"
-    )
-
-    logger.info("======_create_relationships_tx() query======")
-    logger.info(query)
-
-    result = tx.run(query)
-
