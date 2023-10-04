@@ -804,93 +804,37 @@ dict
 
 
 def get_sorted_multi_revisions(neo4j_driver, uuid):
+    results = []
 
-    """
-        uuid : str
-            The uuid of target entity
-        pick_out_rev_uuid : str
-            A uuid to find in a revision list and return that list
-        path_length : str
-            Boundary for searching ...
-    """
-    def get_revisions(_uuid, pick_out_rev_uuid=None, path_length=''):
-        results = []
+    query = (
+        "MATCH (e:Dataset), (next:Dataset), (prev:Dataset),"
+        f"p = (e)-[:REVISION_OF *0..]->(prev),"
+        f"n = (e)<-[:REVISION_OF *0..]-(next)"
+        f"WHERE e.uuid='{uuid}' "
+        "WITH length(p) AS p_len, prev, length(n) AS n_len, next "
+        "ORDER BY prev.created_timestamp, next.created_timestamp DESC "
+        "WITH p_len, collect(distinct prev) AS prev_revisions, n_len, collect(distinct next) AS next_revisions "
+        f"RETURN [collect(distinct next_revisions), collect(distinct prev_revisions)] AS {record_field_name}"
+    )
 
-        query = (
-                 "MATCH (e:Dataset), (next:Dataset), (prev:Dataset),"
-                 f"p = shortestPath((e)-[:REVISION_OF *0..{path_length}]->(prev)),"
-                 f"n = shortestPath((e)<-[:REVISION_OF *0..{path_length}]-(next))"
-                 f"WHERE e.uuid='{_uuid}' "
-                 "WITH length(p) AS p_len, prev, length(n) AS n_len, next "
-                 "ORDER BY prev.created_timestamp, next.created_timestamp DESC "
-                 "WITH p_len, collect(distinct prev) AS prev_revisions, n_len, collect(distinct next) AS next_revisions "
-                 f"RETURN [collect(distinct next_revisions), collect(distinct prev_revisions)] AS {record_field_name}"
-        )
+    logger.info("======get_sorted_revisions() query======")
+    logger.info(query)
 
-        logger.info("======get_sorted_multi_revisions.get_revision_paths() query======")
-        logger.info(query)
+    with neo4j_driver.session() as session:
+        record = session.read_transaction(_execute_readonly_tx, query)
 
-        with neo4j_driver.session() as session:
-            record = session.read_transaction(_execute_readonly_tx, query)
-            if record and record[record_field_name]:
-                collections = []
-                has_target_added = False
-                for collection in record[record_field_name]:  # two collections: next, prev
-                    revs = []
-                    for rev in collection:  # each collection list contains revision lists, so 2 dimensional array
-                        # Convert the list of nodes to a list of dicts
-                        nodes_to_dicts = _nodes_to_dicts(rev)
+        if record and record[record_field_name] and len(record[record_field_name]) > 0:
+            record[record_field_name][0].pop()  # the target will appear twice, pop it from the next list
+            for collection in record[record_field_name]:  # two collections: next, prev
+                revs = []
+                for rev in collection:  # each collection list contains revision lists, so 2 dimensional array
+                    # Convert the list of nodes to a list of dicts
+                    nodes_to_dicts = _nodes_to_dicts(rev)
+                    revs.append(nodes_to_dicts)
 
-                        if pick_out_rev_uuid is None:
-                            entity = nodes_to_dicts[0]
-                            if entity['uuid'] == uuid:
-                                # The target will appear both in next and prev from the shortestPath query.
-                                # So include it in the final result only once
-                                if has_target_added is False:
-                                    has_target_added = True
-                                    revs.append(get_revision_from_nearest_neighbor(entity['uuid']))
-                            else:
-                                revs.append(get_revision_from_nearest_neighbor(entity['uuid']))
-                        else:
-                            for _rev in nodes_to_dicts:
-                                #  we just want a particular revision list
-                                if _rev['uuid'] == pick_out_rev_uuid:
-                                    return nodes_to_dicts
+                results.append(revs)
 
-                    collections.append(revs)
-                results.append(collections)
-
-        return results
-
-    def get_revision_from_nearest_neighbor(_uuid):
-        results = []
-
-        query = (
-            f"MATCH (e:Entity) WHERE e.uuid = '{_uuid}' "
-            "CALL apoc.neighbors.tohop(e, 'REVISION_OF', 1) "
-            "YIELD node "
-            f"RETURN node AS {record_field_name}"
-        )
-
-        logger.info("======get_sorted_multi_revisions.get_closest_neighbor() query======")
-        logger.info(query)
-
-        result = None
-
-        with neo4j_driver.session() as session:
-            record = session.read_transaction(_execute_readonly_tx, query)
-
-            if record and record[record_field_name]:
-                result = _node_to_dict(record[record_field_name])
-
-        if result is not None and result['uuid']:
-            results = get_revisions(result['uuid'], pick_out_rev_uuid=_uuid, path_length='1')
-
-        return results
-
-    solution = get_revisions(uuid)
-    return solution[0]
-
+    return results
 
 
 
