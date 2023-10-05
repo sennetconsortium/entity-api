@@ -479,7 +479,7 @@ dict
 
 
 def get_next_revision_uuids(neo4j_driver, uuid):
-    result = None
+    result = []
 
     # Don't use [r:REVISION_OF] because
     # Binding a variable length relationship pattern to a variable ('r') is deprecated

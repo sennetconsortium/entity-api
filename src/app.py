@@ -766,7 +766,9 @@ def build_nodes(raw_provenance_dict, normalized_provenance_dict, token):
                 'direct_ancestors',
                 'direct_ancestor',
                 'next_revision_uuid',
-                'previous_revision_uuid'
+                'previous_revision_uuid',
+                'next_revision_uuids',
+                'previous_revision_uuids'
             ]
 
             # We'll need to return all the properties (except the ones to skip from above list)
@@ -879,7 +881,9 @@ def get_entities_by_type(entity_type):
             'upload',
             'title',
             'previous_revision_uuid',
-            'next_revision_uuid'
+            'next_revision_uuid',
+            'next_revision_uuids',
+            'previous_revision_uuids'
         ]
         if normalized_entity_type == 'Collection':
             # Use the internal token since no user token is required to access public collections
@@ -1128,7 +1132,9 @@ def create_entity(entity_type):
             'upload',
             'title',
             'previous_revision_uuid',
-            'next_revision_uuid'
+            'next_revision_uuid',
+            'next_revision_uuids',
+            'previous_revision_uuids'
         ]
     elif normalized_entity_type in ['Upload', 'Collection']:
         properties_to_skip = [
@@ -1458,7 +1464,9 @@ def update_entity(id):
             'upload',
             'title',
             'previous_revision_uuid',
-            'next_revision_uuid'
+            'next_revision_uuid',
+            'next_revision_uuids',
+            'previous_revision_uuids'
         ]
     elif normalized_entity_type in ['Upload', 'Collection']:
         properties_to_skip = [
@@ -1594,7 +1602,9 @@ def get_ancestors(id):
             'upload',
             'title',
             'next_revision_uuid',
-            'previous_revision_uuid'
+            'previous_revision_uuid',
+            'next_revision_uuids',
+            'previous_revision_uuids'
         ]
 
         complete_entities_list = schema_manager.get_complete_entities_list(token, ancestors_list, properties_to_skip)
@@ -1668,7 +1678,9 @@ def get_descendants(id):
             'upload',
             'title',
             'next_revision_uuid',
-            'previous_revision_uuid'
+            'previous_revision_uuid',
+            'next_revision_uuids',
+            'previous_revision_uuids'
         ]
 
         complete_entities_list = schema_manager.get_complete_entities_list(user_token, descendants_list, properties_to_skip)
@@ -1769,7 +1781,9 @@ def get_parents(id):
             'upload',
             'title',
             'next_revision_uuid',
-            'previous_revision_uuid'
+            'previous_revision_uuid',
+            'next_revision_uuids',
+            'previous_revision_uuids'
         ]
 
         complete_entities_list = schema_manager.get_complete_entities_list(token, parents_list, properties_to_skip)
@@ -1842,7 +1856,9 @@ def get_children(id):
             'upload',
             'title',
             'next_revision_uuid',
-            'previous_revision_uuid'
+            'previous_revision_uuid',
+            'next_revision_uuids',
+            'previous_revision_uuids'
         ]
 
         complete_entities_list = schema_manager.get_complete_entities_list(user_token, children_list, properties_to_skip)
@@ -2263,7 +2279,8 @@ def get_dataset_latest_revision(id):
     # Here we skip the 'next_revision_uuid' property becase when the "public" latest revision dataset
     # is not the real latest revision, we don't want the users to see it
     properties_to_skip = [
-        'next_revision_uuid'
+        'next_revision_uuid',
+        'next_revision_uuids'
     ]
 
     # On entity retrieval, the 'on_read_trigger' doesn't really need a token
