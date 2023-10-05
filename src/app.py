@@ -2618,6 +2618,9 @@ def get_multi_revisions_list(id):
                 if 'next_revision_uuid' in normalized_revisions_list[0][x]:
                     normalized_revisions_list[0][x].pop('next_revision_uuid')
 
+                if 'next_revision_uuids' in normalized_revisions_list[0][x]:
+                    normalized_revisions_list[0][x].pop('next_revision_uuids')
+
             x += 1
 
     # Now all we need to do is to compose the result list
