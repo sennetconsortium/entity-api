@@ -2605,18 +2605,20 @@ def get_multi_revisions_list(id):
         normal = schema_manager.normalize_entities_list_for_response(complete_revision_list)
         normalized_revisions_list.append(normal)
 
-    # TODO: Refactor to context if needed
     # # Only check the very last revision (the first revision dict since normalized_revisions_list is already sorted DESC)
     # # to determine if send it back or not
-    # if not user_in_globus_read_group(request):
-    #     latest_revision = normalized_revisions_list[0]
-    #
-    #     if latest_revision['status'].lower() != DATASET_STATUS_PUBLISHED:
-    #         normalized_revisions_list.pop(0)
-    #
-    #         # Also hide the 'next_revision_uuid' of the second last revision from response
-    #         if 'next_revision_uuid' in normalized_revisions_list[0]:
-    #             normalized_revisions_list[0].pop('next_revision_uuid')
+    if not user_in_globus_read_group(request):
+        latest_revisions = normalized_revisions_list[0]
+        x = 0
+        for latest_revision in latest_revisions:
+            if latest_revision['status'].lower() != DATASET_STATUS_PUBLISHED:
+                normalized_revisions_list[0].pop(x)
+
+                # Also hide the 'next_revision_uuid' of the second last revision from response
+                if 'next_revision_uuid' in normalized_revisions_list[0][x]:
+                    normalized_revisions_list[0][x].pop('next_revision_uuid')
+
+            x += 1
 
     # Now all we need to do is to compose the result list
     results = []
