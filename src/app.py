@@ -1019,7 +1019,7 @@ def create_entity(entity_type):
     except schema_errors.InvalidApplicationHeaderException as e:
         abort_bad_req(e)
 
-    json_data_dict = check_for_metadata(entity_type, user_token)
+    json_data_dict = check_for_metadata(normalized_entity_type, user_token)
     verify_ubkg_properties(json_data_dict)
 
     # Validate request json against the yaml schema
@@ -1335,11 +1335,11 @@ def update_entity(id):
     # Get target entity and return as a dict if exists
     entity_dict = query_target_entity(id, user_token)
 
-    json_data_dict = check_for_metadata(entity_dict.get('entity_type'), user_token)
-    verify_ubkg_properties(json_data_dict)
-
     # Normalize user provided entity_type
     normalized_entity_type = schema_manager.normalize_entity_type(entity_dict['entity_type'])
+
+    json_data_dict = check_for_metadata(normalized_entity_type, user_token)
+    verify_ubkg_properties(json_data_dict)
 
     # Note, we don't support entity level validators on entity update via PUT
     # Only entity create via POST is supported at the entity level
@@ -1397,7 +1397,7 @@ def update_entity(id):
         # Generate 'before_update_trigger' data and update the entity details in Neo4j
         merged_updated_dict = update_object_details('ENTITIES', request, normalized_entity_type, user_token, json_data_dict, entity_dict)
 
-        # Handle linkages update via `after_update_trigger` methods 
+        # Handle linkages update via `after_update_trigger` methods
         if has_direct_ancestor_uuids:
             after_update(normalized_entity_type, user_token, merged_updated_dict)
     elif normalized_entity_type == 'Upload':
