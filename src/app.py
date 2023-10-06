@@ -1092,8 +1092,8 @@ def create_entity(entity_type):
 
             # Only published datasets can have revisions made of them. Verify that that status of the Dataset specified
             # by previous_revision_uuid is published. Else, bad request error.
-            # if 'status' not in previous_version_dict or previous_version_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
-            #     abort_bad_req(f"The previous_revision_uuid specified for this dataset must be 'Published' in order to create a new revision from it")
+            if 'status' not in previous_version_dict or previous_version_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
+                abort_bad_req(f"The previous_revision_uuid specified for this dataset must be 'Published' in order to create a new revision from it")
 
 
         # Also check existence of the previous revision dataset if specified
