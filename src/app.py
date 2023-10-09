@@ -2613,13 +2613,19 @@ def get_multi_revisions_list(id):
         for latest_revision in latest_revisions:
             if latest_revision['status'].lower() != DATASET_STATUS_PUBLISHED:
                 normalized_revisions_list[0].pop(x)
+                if len(normalized_revisions_list[0]) == 0:
+                    normalized_revisions_list.pop(0)
 
-                # Also hide the 'next_revision_uuid' of the second last revision from response
-                if 'next_revision_uuid' in normalized_revisions_list[0][x]:
-                    normalized_revisions_list[0][x].pop('next_revision_uuid')
+                y = 0
+                # Also hide the 'next_revision_uuid(s)' of the second to last revision from response
+                for second_to_last in normalized_revisions_list[0]:
+                    if 'next_revision_uuid' in second_to_last:
+                        normalized_revisions_list[0][y].pop('next_revision_uuid')
 
-                if 'next_revision_uuids' in normalized_revisions_list[0][x]:
-                    normalized_revisions_list[0][x].pop('next_revision_uuids')
+                    if 'next_revision_uuids' in second_to_last:
+                        normalized_revisions_list[0][y].pop('next_revision_uuids')
+
+                    y += 1
 
             x += 1
 
