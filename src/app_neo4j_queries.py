@@ -810,7 +810,7 @@ def get_sorted_multi_revisions(neo4j_driver, uuid, fetch_all=True):
     query = (
         "MATCH (e:Dataset), (next:Dataset), (prev:Dataset),"
         f"p = (e)-[:REVISION_OF *0..]->(prev),"
-        f"n = (e)<-[:REVISION_OF *0..]-(next)"
+        f"n = (e)<-[:REVISION_OF *0..]-(next) "
         f"WHERE e.uuid='{uuid}' {match_case}"
         "WITH length(p) AS p_len, prev, length(n) AS n_len, next "
         "ORDER BY prev.created_timestamp, next.created_timestamp DESC "
