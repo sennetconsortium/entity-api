@@ -803,14 +803,15 @@ dict
 """
 
 
-def get_sorted_multi_revisions(neo4j_driver, uuid):
+def get_sorted_multi_revisions(neo4j_driver, uuid, fetch_all=True):
     results = []
+    match_case = '' if fetch_all is True else 'AND prev.status = "Published" AND next.status = "Published" '
 
     query = (
         "MATCH (e:Dataset), (next:Dataset), (prev:Dataset),"
         f"p = (e)-[:REVISION_OF *0..]->(prev),"
-        f"n = (e)<-[:REVISION_OF *0..]-(next)"
-        f"WHERE e.uuid='{uuid}' "
+        f"n = (e)<-[:REVISION_OF *0..]-(next) "
+        f"WHERE e.uuid='{uuid}' {match_case}"
         "WITH length(p) AS p_len, prev, length(n) AS n_len, next "
         "ORDER BY prev.created_timestamp, next.created_timestamp DESC "
         "WITH p_len, collect(distinct prev) AS prev_revisions, n_len, collect(distinct next) AS next_revisions "

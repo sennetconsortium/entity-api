@@ -2587,7 +2587,8 @@ def get_multi_revisions_list(id):
     # By now, either the entity is public accessible or
     # the user token has the correct access level
     # Get the all the sorted (DESC based on creation timestamp) revisions
-    sorted_revisions_list = app_neo4j_queries.get_sorted_multi_revisions(neo4j_driver_instance, entity_dict['uuid'])
+    sorted_revisions_list = app_neo4j_queries.get_sorted_multi_revisions(neo4j_driver_instance, entity_dict['uuid'],
+                                                                         fetch_all=user_in_globus_read_group(request))
 
     # Skip some of the properties that are time-consuming to generate via triggers
     properties_to_skip = [
@@ -2604,24 +2605,6 @@ def get_multi_revisions_list(id):
         complete_revision_list = schema_manager.get_complete_entities_list(token, revision, properties_to_skip)
         normal = schema_manager.normalize_entities_list_for_response(complete_revision_list)
         normalized_revisions_list.append(normal)
-
-    # # Only check the very last revision (the first revision dict since normalized_revisions_list is already sorted DESC)
-    # # to determine if send it back or not
-    if not user_in_globus_read_group(request):
-        latest_revisions = normalized_revisions_list[0]
-        x = 0
-        for latest_revision in latest_revisions:
-            if latest_revision['status'].lower() != DATASET_STATUS_PUBLISHED:
-                normalized_revisions_list[0].pop(x)
-
-                # Also hide the 'next_revision_uuid' of the second last revision from response
-                if 'next_revision_uuid' in normalized_revisions_list[0][x]:
-                    normalized_revisions_list[0][x].pop('next_revision_uuid')
-
-                if 'next_revision_uuids' in normalized_revisions_list[0][x]:
-                    normalized_revisions_list[0][x].pop('next_revision_uuids')
-
-            x += 1
 
     # Now all we need to do is to compose the result list
     results = []
