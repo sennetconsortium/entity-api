@@ -83,7 +83,7 @@
     "hmroleids": [],
     "hmscopes": ["test_scope"]
   },
-  "get_default_read_group_uuid": "cd386b52-0cd8-4e07-87cc-d84b2f27b70a",
+  "has_read_privs":  true,
   "get_sennet_ids": {
     "ancestor_id": "5fa78f4fa272db58a7fcc7590376f5e7",
     "ancestor_ids": ["5fa78f4fa272db58a7fcc7590376f5e7"],
