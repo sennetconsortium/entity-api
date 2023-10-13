@@ -1046,6 +1046,46 @@ def get_local_directory_rel_path(property_key, normalized_type, user_token, exis
 
     return property_key, dir_path
 
+"""
+Trigger event method of building linkage from this new Dataset to the dataset of its previous revision
+
+Parameters
+----------
+property_key : str
+    The target property key
+normalized_type : str
+    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+user_token: str
+    The user's globus nexus token
+existing_data_dict : dict
+    A dictionary that contains all existing entity properties
+new_data_dict : dict
+    A merged dictionary that contains all possible input data to be used
+
+Returns
+-------
+str: The target property key
+str: The uuid string of source entity
+"""
+
+
+def link_to_previous_revisions(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    if 'uuid' not in existing_data_dict:
+        raise KeyError(
+            "Missing 'uuid' key in 'existing_data_dict' during calling 'link_to_previous_revision()' trigger method.")
+
+    if 'previous_revision_uuids' not in existing_data_dict:
+        raise KeyError(
+            "Missing 'previous_revision_uuids' key in 'existing_data_dict' during calling 'link_to_previous_revision()' trigger method.")
+
+    # Create a revision reltionship from this new Dataset node and its previous revision of dataset node in neo4j
+    try:
+        schema_neo4j_queries.link_entity_to_previous_revision(schema_manager.get_neo4j_driver_instance(),
+                                                              existing_data_dict['uuid'],
+                                                              existing_data_dict['previous_revision_uuids'])
+    except TransactionError:
+        # No need to log
+        raise
 
 """
 Trigger event method of building linkage from this new Dataset to the dataset of its previous revision
@@ -1271,6 +1311,77 @@ def get_dataset_title(property_key, normalized_type, user_token, existing_data_d
     generated_title = f"{assay_type_desc} data from the {organ_desc} of a {age_race_sex_info}"
 
     return property_key, generated_title
+
+"""
+Trigger event method of getting the list of uuids of the previous revision datasets if exists
+
+Parameters
+----------
+property_key : str
+    The target property key
+normalized_type : str
+    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+user_token: str
+    The user's globus nexus token
+existing_data_dict : dict
+    A dictionary that contains all existing entity properties
+new_data_dict : dict
+    A merged dictionary that contains all possible input data to be used
+
+Returns
+-------
+str: The target property key
+str: The uuid list of previous revision entities or [] if not found
+"""
+
+
+def get_previous_revision_uuids(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    if 'uuid' not in existing_data_dict:
+        raise KeyError(
+            "Missing 'uuid' key in 'existing_data_dict' during calling 'get_previous_revision_uuids()' trigger method.")
+
+    previous_revision_uuid = schema_neo4j_queries.get_previous_revision_uuids(schema_manager.get_neo4j_driver_instance(),
+                                                                             existing_data_dict['uuid'])
+
+    # previous_revision_uuid can be None, but will be filtered out by
+    # schema_manager.normalize_entity_result_for_response()
+    return property_key, previous_revision_uuid
+
+
+"""
+Trigger event method of getting the uuid of the next version dataset if exists
+
+Parameters
+----------
+property_key : str
+    The target property key
+normalized_type : str
+    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+user_token: str
+    The user's globus nexus token
+existing_data_dict : dict
+    A dictionary that contains all existing entity properties
+new_data_dict : dict
+    A merged dictionary that contains all possible input data to be used
+
+Returns
+-------
+str: The target property key
+str: The uuid list of next revision entities or [] if not found
+"""
+
+
+def get_next_revision_uuids(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    if 'uuid' not in existing_data_dict:
+        raise KeyError(
+            "Missing 'uuid' key in 'existing_data_dict' during calling 'get_next_revision_uuids()' trigger method.")
+
+    next_revision_uuids = schema_neo4j_queries.get_next_revision_uuids(schema_manager.get_neo4j_driver_instance(),
+                                                                     existing_data_dict['uuid'])
+
+    # next_revision_uuid can be None, but will be filtered out by
+    # schema_manager.normalize_entity_result_for_response()
+    return property_key, next_revision_uuids
 
 
 """
@@ -2194,7 +2305,8 @@ def set_processing_information(property_key, normalized_type, user_token, existi
         metadata_to_return = {}
         metadata = schema_manager.convert_str_to_data(new_data_dict['metadata'])
         metadata_to_return['dag_provenance_list'] = metadata['dag_provenance_list']
-        return property_key, metadata_to_return
+        # Need to hard set `processing_information` as this gets called when `metadata` is passed in the payload
+        return 'processing_information', metadata_to_return
     except requests.exceptions.RequestException as e:
         raise requests.exceptions.RequestException(e)
 

@@ -123,7 +123,13 @@ ACTIVITIES:
       processing_information:
         type: list
         description: "The information describing how this dataset was processed (e.g. the DAG provenance list describing the various tools used during an ingest-pipeline run to generate a derived dataset)"
-        after_create_trigger: set_processing_information
+        before_create_trigger: set_processing_information
+        before_update_trigger: set_processing_information
+      # Allows us to set processing_information when metadata is passed in the payload
+      metadata:
+        type: json_string # dict
+        description: "The metadata returned from the processing at data submission time."
+        transient: true
         before_update_trigger: set_processing_information
 #TODO: We will possibly create additional activity types with different attributes
 
@@ -467,6 +473,20 @@ ENTITIES:
         immutable: true
         description: "The displayname of globus group which the user who created this entity is a member of"
         before_create_trigger: set_group_name #same as group_uuid, except set group_name
+      previous_revision_uuids:
+        type: list
+        transient: true
+        immutable: true
+        description: "The list of uuids of previous revision datasets"
+        after_create_trigger: link_to_previous_revisions
+        on_read_trigger: get_previous_revision_uuids
+      next_revision_uuids:
+        type: list
+        generated: true
+        transient: true
+        immutable: true
+        description: "The list of uuids of next revision datasets"
+        on_read_trigger: get_next_revision_uuids
       previous_revision_uuid:
         type: string
         transient: true
