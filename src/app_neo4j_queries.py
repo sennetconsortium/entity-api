@@ -787,6 +787,59 @@ def get_sorted_revisions(neo4j_driver, uuid):
 
 
 """
+Get all revisions for a given dataset uuid and sort them in descending order based on their creation time
+
+Parameters
+----------
+neo4j_driver : neo4j.Driver object
+    The neo4j database connection pool
+uuid : str
+    The uuid of target entity 
+
+Returns
+-------
+dict
+    A multi-dimensional list [prev_revisions<list<list>>, next_revisions<list<list>>]
+"""
+
+
+def get_sorted_multi_revisions(neo4j_driver, uuid, fetch_all=True):
+    results = []
+    match_case = '' if fetch_all is True else 'AND prev.status = "Published" AND next.status = "Published" '
+
+    query = (
+        "MATCH (e:Dataset), (next:Dataset), (prev:Dataset),"
+        f"p = (e)-[:REVISION_OF *0..]->(prev),"
+        f"n = (e)<-[:REVISION_OF *0..]-(next) "
+        f"WHERE e.uuid='{uuid}' {match_case}"
+        "WITH length(p) AS p_len, prev, length(n) AS n_len, next "
+        "ORDER BY prev.created_timestamp, next.created_timestamp DESC "
+        "WITH p_len, collect(distinct prev) AS prev_revisions, n_len, collect(distinct next) AS next_revisions "
+        f"RETURN [collect(distinct next_revisions), collect(distinct prev_revisions)] AS {record_field_name}"
+    )
+
+    logger.info("======get_sorted_revisions() query======")
+    logger.info(query)
+
+    with neo4j_driver.session() as session:
+        record = session.read_transaction(_execute_readonly_tx, query)
+
+        if record and record[record_field_name] and len(record[record_field_name]) > 0:
+            record[record_field_name][0].pop()  # the target will appear twice, pop it from the next list
+            for collection in record[record_field_name]:  # two collections: next, prev
+                revs = []
+                for rev in collection:  # each collection list contains revision lists, so 2 dimensional array
+                    # Convert the list of nodes to a list of dicts
+                    nodes_to_dicts = _nodes_to_dicts(rev)
+                    revs.append(nodes_to_dicts)
+
+                results.append(revs)
+
+    return results
+
+
+
+"""
 Returns all of the Sample information associated with a Dataset, back to each Source. Returns a dictionary
 containing all of the provenance info for a given dataset. Each Sample is in its own dictionary, converted
 from its neo4j node and placed into a list. 
@@ -817,6 +870,98 @@ def get_all_dataset_samples(neo4j_driver, dataset_uuid):
                             dataset_sample_list[node["uuid"]] = {'sample_category': node["sample_category"]}
     return dataset_sample_list
 
+
+"""
+Get all previous revisions of the target entity by uuid
+
+Parameters
+----------
+neo4j_driver : neo4j.Driver object
+    The neo4j database connection pool
+uuid : str
+    The uuid of target entity 
+property_key : str
+    A target property key for result filtering
+
+Returns
+-------
+dict
+    A 2 dimensional list of unique previous revisions dictionaries returned from the Cypher query
+"""
+
+
+def get_previous_multi_revisions(neo4j_driver, uuid, property_key=None):
+    results = []
+
+    collect_prop = f".{property_key}" if property_key else ''
+    query = (f"MATCH p=(e:Entity)-[:REVISION_OF*]->(prev:Entity) "
+             f"WHERE e.uuid='{uuid}' "
+             f"WITH length(p) as p_len, collect(distinct prev{collect_prop}) as prev_revisions "
+             f"RETURN collect(distinct prev_revisions) AS {record_field_name}")
+
+    logger.info("======get_previous_multi_revisions() query======")
+    logger.info(query)
+
+    with neo4j_driver.session() as session:
+        record = session.read_transaction(_execute_readonly_tx, query)
+
+        if record and record[record_field_name]:
+            if property_key:
+                # Just return the list of property values from each entity node
+                results = record[record_field_name]
+            else:
+                # Convert the list of nodes to a list of dicts
+                for rev in record[record_field_name]:
+                    results.append(_nodes_to_dicts(rev))
+
+
+    return results
+
+
+"""
+Get all next revisions of the target entity by uuid
+
+Parameters
+----------
+neo4j_driver : neo4j.Driver object
+    The neo4j database connection pool
+uuid : str
+    The uuid of target entity 
+property_key : str
+    A target property key for result filtering
+
+Returns
+-------
+dict
+    A 2 dimensional list of unique next revisions dictionaries returned from the Cypher query
+"""
+
+
+def get_next_multi_revisions(neo4j_driver, uuid, property_key=None):
+    results = []
+
+    collect_prop = f".{property_key}" if property_key else ''
+    query = (f"MATCH n=(e:Entity)<-[:REVISION_OF*]-(next:Entity) "
+             f"WHERE e.uuid='{uuid}' "
+             f"WITH length(n) as n_len, collect(distinct next{collect_prop}) as next_revisions "
+             f"RETURN collect(distinct next_revisions) AS {record_field_name}")
+
+    logger.info("======get_next_multi_revisions() query======")
+    logger.info(query)
+
+    with neo4j_driver.session() as session:
+        record = session.read_transaction(_execute_readonly_tx, query)
+
+        if record and record[record_field_name]:
+            if property_key:
+                # Just return the list of property values from each entity node
+                results = record[record_field_name]
+            else:
+                # Convert the list of nodes to a list of dicts
+                for rev in record[record_field_name]:
+                    results.append(_nodes_to_dicts(rev))
+
+    return results
 
 """
 Get all previous revisions of the target entity by uuid

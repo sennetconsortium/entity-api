@@ -54,7 +54,7 @@ def test_get_entity_by_id_success(app, entity_type):
 
     with (app.test_client() as client,
           patch('app.auth_helper_instance.getUserInfo', return_value=test_data['getUserInfo']),
-          patch('app.auth_helper_instance.get_default_read_group_uuid', return_value=test_data['get_default_read_group_uuid']),
+          patch('app.auth_helper_instance.has_read_privs', return_value=test_data['has_read_privs']),
           patch('app.schema_manager.get_sennet_ids', return_value=test_data['get_sennet_ids']),
           patch('app.app_neo4j_queries.get_entity', return_value=test_data['get_entity']),
           patch('app.schema_manager.get_complete_entity_result', return_value=test_data['get_complete_entity_result'])):
@@ -85,7 +85,7 @@ def test_get_entity_by_id_query(app, entity_type, query_key, query_value, status
 
     with (app.test_client() as client,
           patch('app.auth_helper_instance.getUserInfo', return_value=test_data['getUserInfo']),
-          patch('app.auth_helper_instance.get_default_read_group_uuid', return_value=test_data['get_default_read_group_uuid']),
+          patch('app.auth_helper_instance.has_read_privs', return_value=test_data['has_read_privs']),
           patch('app.schema_manager.get_sennet_ids', return_value=test_data['get_sennet_ids']),
           patch('app.app_neo4j_queries.get_entity', return_value=test_data['get_entity']),
           patch('app.schema_manager.get_complete_entity_result', return_value=test_data['get_complete_entity_result'])):
@@ -291,7 +291,7 @@ def test_get_ancestors_success(app, entity_type):
 
     with (app.test_client() as client,
           patch('app.auth_helper_instance.getUserInfo', return_value=test_data['getUserInfo']),
-          patch('app.auth_helper_instance.get_default_read_group_uuid', return_value=test_data['get_default_read_group_uuid']),
+          patch('app.auth_helper_instance.has_read_privs', return_value=test_data['has_read_privs']),
           patch('app.schema_manager.get_sennet_ids', return_value=test_data['get_sennet_ids']),
           patch('app.app_neo4j_queries.get_entity', return_value=test_data['get_entity']),
           patch('app.app_neo4j_queries.get_ancestors', return_value=test_data['get_ancestors'])):
@@ -318,7 +318,7 @@ def test_get_descendants_success(app, entity_type):
 
     with (app.test_client() as client,
           patch('app.auth_helper_instance.getUserInfo', return_value=test_data['getUserInfo']),
-          patch('app.auth_helper_instance.get_default_read_group_uuid', return_value=test_data['get_default_read_group_uuid']),
+          patch('app.auth_helper_instance.has_read_privs', return_value=test_data['has_read_privs']),
           patch('app.schema_manager.get_sennet_ids', return_value=test_data['get_sennet_ids']),
           patch('app.app_neo4j_queries.get_entity', return_value=test_data['get_entity']),
           patch('app.app_neo4j_queries.get_descendants', return_value=test_data['get_descendants'])):
