@@ -556,7 +556,7 @@ def _get_entity_visibility(normalized_entity_type, entity_dict):
         # Upload entities require authorization to access, so keep the
         # entity_visibility as non-public, as initialized outside block.
         pass
-    elif normalized_entity_type in ['Donor','Sample'] and \
+    elif normalized_entity_type in ['Source','Sample'] and \
          entity_dict['data_access_level'] == ACCESS_LEVEL_PUBLIC:
         entity_visibility = DataVisibilityEnum.PUBLIC
     return entity_visibility
@@ -766,7 +766,9 @@ def build_nodes(raw_provenance_dict, normalized_provenance_dict, token):
                 'direct_ancestors',
                 'direct_ancestor',
                 'next_revision_uuid',
-                'previous_revision_uuid'
+                'previous_revision_uuid',
+                'next_revision_uuids',
+                'previous_revision_uuids'
             ]
 
             # We'll need to return all the properties (except the ones to skip from above list)
@@ -879,7 +881,9 @@ def get_entities_by_type(entity_type):
             'upload',
             'title',
             'previous_revision_uuid',
-            'next_revision_uuid'
+            'next_revision_uuid',
+            'next_revision_uuids',
+            'previous_revision_uuids'
         ]
         if normalized_entity_type == 'Collection':
             # Use the internal token since no user token is required to access public collections
@@ -1019,7 +1023,7 @@ def create_entity(entity_type):
     except schema_errors.InvalidApplicationHeaderException as e:
         abort_bad_req(e)
 
-    json_data_dict = check_for_metadata(entity_type, user_token)
+    json_data_dict = check_for_metadata(normalized_entity_type, user_token)
     verify_ubkg_properties(json_data_dict)
 
     # Validate request json against the yaml schema
@@ -1070,9 +1074,8 @@ def create_entity(entity_type):
 
         json_data_dict['direct_ancestor_uuids'] = direct_ancestor_uuids
 
-        # Also check existence of the previous revision dataset if specified
-        if 'previous_revision_uuid' in json_data_dict:
-            previous_version_dict = query_target_entity(json_data_dict['previous_revision_uuid'], user_token)
+        def check_previous_revision(previous_revision_uuid):
+            previous_version_dict = query_target_entity(previous_revision_uuid, user_token)
 
             # Make sure the previous version entity is either a Dataset or Sample
             if previous_version_dict['entity_type'] not in ['Dataset', 'Sample']:
@@ -1091,6 +1094,15 @@ def create_entity(entity_type):
             # by previous_revision_uuid is published. Else, bad request error.
             if 'status' not in previous_version_dict or previous_version_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
                 abort_bad_req(f"The previous_revision_uuid specified for this dataset must be 'Published' in order to create a new revision from it")
+
+
+        # Also check existence of the previous revision dataset if specified
+        if 'previous_revision_uuid' in json_data_dict:
+            check_previous_revision(json_data_dict['previous_revision_uuid'])
+
+        if 'previous_revision_uuids' in json_data_dict:
+            for previous_revision_uuid in json_data_dict['previous_revision_uuids']:
+                check_previous_revision(previous_revision_uuid)
 
         # Generate 'before_create_triiger' data and create the entity details in Neo4j
         merged_dict = create_entity_details(request, normalized_entity_type, user_token, json_data_dict)
@@ -1120,7 +1132,9 @@ def create_entity(entity_type):
             'upload',
             'title',
             'previous_revision_uuid',
-            'next_revision_uuid'
+            'next_revision_uuid',
+            'next_revision_uuids',
+            'previous_revision_uuids'
         ]
     elif normalized_entity_type in ['Upload', 'Collection']:
         properties_to_skip = [
@@ -1327,11 +1341,11 @@ def update_entity(id):
     # Get target entity and return as a dict if exists
     entity_dict = query_target_entity(id, user_token)
 
-    json_data_dict = check_for_metadata(entity_dict.get('entity_type'), user_token)
-    verify_ubkg_properties(json_data_dict)
-
     # Normalize user provided entity_type
     normalized_entity_type = schema_manager.normalize_entity_type(entity_dict['entity_type'])
+
+    json_data_dict = check_for_metadata(normalized_entity_type, user_token)
+    verify_ubkg_properties(json_data_dict)
 
     # Note, we don't support entity level validators on entity update via PUT
     # Only entity create via POST is supported at the entity level
@@ -1389,7 +1403,7 @@ def update_entity(id):
         # Generate 'before_update_trigger' data and update the entity details in Neo4j
         merged_updated_dict = update_object_details('ENTITIES', request, normalized_entity_type, user_token, json_data_dict, entity_dict)
 
-        # Handle linkages update via `after_update_trigger` methods 
+        # Handle linkages update via `after_update_trigger` methods
         if has_direct_ancestor_uuids:
             after_update(normalized_entity_type, user_token, merged_updated_dict)
     elif normalized_entity_type == 'Upload':
@@ -1450,7 +1464,9 @@ def update_entity(id):
             'upload',
             'title',
             'previous_revision_uuid',
-            'next_revision_uuid'
+            'next_revision_uuid',
+            'next_revision_uuids',
+            'previous_revision_uuids'
         ]
     elif normalized_entity_type in ['Upload', 'Collection']:
         properties_to_skip = [
@@ -1586,7 +1602,9 @@ def get_ancestors(id):
             'upload',
             'title',
             'next_revision_uuid',
-            'previous_revision_uuid'
+            'previous_revision_uuid',
+            'next_revision_uuids',
+            'previous_revision_uuids'
         ]
 
         complete_entities_list = schema_manager.get_complete_entities_list(token, ancestors_list, properties_to_skip)
@@ -1660,7 +1678,9 @@ def get_descendants(id):
             'upload',
             'title',
             'next_revision_uuid',
-            'previous_revision_uuid'
+            'previous_revision_uuid',
+            'next_revision_uuids',
+            'previous_revision_uuids'
         ]
 
         complete_entities_list = schema_manager.get_complete_entities_list(user_token, descendants_list, properties_to_skip)
@@ -1761,7 +1781,9 @@ def get_parents(id):
             'upload',
             'title',
             'next_revision_uuid',
-            'previous_revision_uuid'
+            'previous_revision_uuid',
+            'next_revision_uuids',
+            'previous_revision_uuids'
         ]
 
         complete_entities_list = schema_manager.get_complete_entities_list(token, parents_list, properties_to_skip)
@@ -1834,7 +1856,9 @@ def get_children(id):
             'upload',
             'title',
             'next_revision_uuid',
-            'previous_revision_uuid'
+            'previous_revision_uuid',
+            'next_revision_uuids',
+            'previous_revision_uuids'
         ]
 
         complete_entities_list = schema_manager.get_complete_entities_list(user_token, children_list, properties_to_skip)
@@ -1882,15 +1906,20 @@ def get_previous_revisions(id):
                 abort_bad_req(f"Only the following property keys are supported in the query string: {COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}")
 
             # Only return a list of the filtered property value of each entity
-            property_list = app_neo4j_queries.get_previous_revisions(neo4j_driver_instance, uuid, property_key)
+            # property_list = app_neo4j_queries.get_previous_revisions(neo4j_driver_instance, uuid, property_key)
+            property_multi_list = app_neo4j_queries.get_previous_multi_revisions(neo4j_driver_instance, uuid, property_key)
 
             # Final result
-            final_result = property_list
+            # final_result = property_list
+            final_result = property_multi_list
         else:
             abort_bad_req("The specified query string is not supported. Use '?property=<key>' to filter the result")
+
+        return jsonify(final_result)
     # Return all the details if no property filtering
     else:
-        descendants_list = app_neo4j_queries.get_previous_revisions(neo4j_driver_instance, uuid)
+        # descendants_list = app_neo4j_queries.get_previous_revisions(neo4j_driver_instance, uuid)
+        descendants_multi_list = app_neo4j_queries.get_previous_multi_revisions(neo4j_driver_instance, uuid)
 
         # Generate trigger data and merge into a big dict
         # and skip some of the properties that are time-consuming to generate via triggers
@@ -1901,12 +1930,13 @@ def get_previous_revisions(id):
             'direct_ancestors'
         ]
 
-        complete_entities_list = schema_manager.get_complete_entities_list(user_token, descendants_list, properties_to_skip)
+        final_results = []
+        for multi_list in descendants_multi_list:
+            complete_entities_list = schema_manager.get_complete_entities_list(user_token, multi_list, properties_to_skip)
+            # Final result after normalization
+            final_results.append(schema_manager.normalize_entities_list_for_response(complete_entities_list))
 
-        # Final result after normalization
-        final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list)
-
-    return jsonify(final_result)
+        return jsonify(final_results)
 
 
 """
@@ -1946,15 +1976,19 @@ def get_next_revisions(id):
                 abort_bad_req(f"Only the following property keys are supported in the query string: {COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}")
 
             # Only return a list of the filtered property value of each entity
-            property_list = app_neo4j_queries.get_next_revisions(neo4j_driver_instance, uuid, property_key)
+            # property_list = app_neo4j_queries.get_next_revisions(neo4j_driver_instance, uuid, property_key)
+            property_multi_list = app_neo4j_queries.get_next_multi_revisions(neo4j_driver_instance, uuid, property_key)
 
             # Final result
-            final_result = property_list
+            final_result = property_multi_list
         else:
             abort_bad_req("The specified query string is not supported. Use '?property=<key>' to filter the result")
+
+        return jsonify(final_result)
     # Return all the details if no property filtering
     else:
-        descendants_list = app_neo4j_queries.get_next_revisions(neo4j_driver_instance, uuid)
+        # descendants_list = app_neo4j_queries.get_next_revisions(neo4j_driver_instance, uuid)
+        descendants_multi_list = app_neo4j_queries.get_next_multi_revisions(neo4j_driver_instance, uuid)
 
         # Generate trigger data and merge into a big dict
         # and skip some of the properties that are time-consuming to generate via triggers
@@ -1965,12 +1999,14 @@ def get_next_revisions(id):
             'direct_ancestors'
         ]
 
-        complete_entities_list = schema_manager.get_complete_entities_list(user_token, descendants_list, properties_to_skip)
 
-        # Final result after normalization
-        final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list)
+        final_results = []
+        for multi_list in descendants_multi_list:
+            complete_entities_list = schema_manager.get_complete_entities_list(user_token, multi_list, properties_to_skip)
+            # Final result after normalization
+            final_results.append(schema_manager.normalize_entities_list_for_response(complete_entities_list))
 
-    return jsonify(final_result)
+        return jsonify(final_results)
 
 
 """
@@ -2243,7 +2279,8 @@ def get_dataset_latest_revision(id):
     # Here we skip the 'next_revision_uuid' property becase when the "public" latest revision dataset
     # is not the real latest revision, we don't want the users to see it
     properties_to_skip = [
-        'next_revision_uuid'
+        'next_revision_uuid',
+        'next_revision_uuids'
     ]
 
     # On entity retrieval, the 'on_read_trigger' doesn't really need a token
@@ -2492,6 +2529,96 @@ def get_revisions_list(id):
         revision_number -= 1
 
     return jsonify(results)
+
+
+"""
+Retrieve a list of all multi revisions of a dataset from the id of any dataset in the chain. 
+E.g: If there are 5 revisions, and the id for revision 4 is given, a list of revisions
+1-5 will be returned in reverse order (newest first). Non-public access is only required to 
+retrieve information on non-published datasets. Output will be a list of dictionaries. Each dictionary
+contains the dataset revision number and its list of uuids. Optionally, the full dataset can be included for each.
+
+By default, only the revision number and uuids are included. To include the full dataset, the query 
+parameter "include_dataset" can be given with the value of "true". If this parameter is not included or 
+is set to false, the dataset will not be included. For example, to include the full datasets for each revision,
+use '/datasets/<id>/multi-revisions?include_dataset=true'. To omit the datasets, either set include_dataset=false, or
+simply do not include this parameter. 
+
+Parameters
+----------
+id : str
+    The SenNet ID (e.g. SNT123.ABCD.456) or UUID of target dataset 
+
+Returns
+-------
+list
+    The list of revision datasets
+"""
+@app.route('/entities/<id>/multi-revisions', methods=['GET'])
+@app.route('/datasets/<id>/multi-revisions', methods=['GET'])
+def get_multi_revisions_list(id):
+    # By default, do not return dataset. Only return dataset if return_dataset is true
+    show_dataset = False
+    if bool(request.args):
+        include_dataset = request.args.get('include_dataset')
+        if (include_dataset is not None) and (include_dataset.lower() == 'true'):
+            show_dataset = True
+    # Token is not required, but if an invalid token provided,
+    # we need to tell the client with a 401 error
+    validate_token_if_auth_header_exists(request)
+
+    # Use the internal token to query the target entity
+    # since public entities don't require user token
+    token = get_internal_token()
+
+    # Query target entity against uuid-api and neo4j and return as a dict if exists
+    entity_dict = query_target_entity(id, token)
+    normalized_entity_type = entity_dict['entity_type']
+
+    # Only for Dataset
+    if not schema_manager.entity_type_instanceof(normalized_entity_type, 'Dataset'):
+        abort_bad_req("The entity is not a Dataset. Found entity type:" + normalized_entity_type)
+
+    # Only published/public datasets don't require token
+    if entity_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
+        # Token is required and the user must belong to SenNet-READ group
+        token = get_user_token(request, non_public_access_required=True)
+
+    # By now, either the entity is public accessible or
+    # the user token has the correct access level
+    # Get the all the sorted (DESC based on creation timestamp) revisions
+    sorted_revisions_list = app_neo4j_queries.get_sorted_multi_revisions(neo4j_driver_instance, entity_dict['uuid'],
+                                                                         fetch_all=user_in_globus_read_group(request))
+
+    # Skip some of the properties that are time-consuming to generate via triggers
+    properties_to_skip = [
+        'direct_ancestors',
+        'collections',
+        'upload',
+        'title'
+    ]
+
+    normalized_revisions_list = []
+    sorted_revisions_list_merged = sorted_revisions_list[0] + sorted_revisions_list[1][::-1]
+
+    for revision in sorted_revisions_list_merged:
+        complete_revision_list = schema_manager.get_complete_entities_list(token, revision, properties_to_skip)
+        normal = schema_manager.normalize_entities_list_for_response(complete_revision_list)
+        normalized_revisions_list.append(normal)
+
+    # Now all we need to do is to compose the result list
+    results = []
+    revision_number = len(normalized_revisions_list)
+    for revision in normalized_revisions_list:
+        result = {
+            'revision_number': revision_number,
+            'uuids': revision if show_dataset is True else schema_manager.get_filtered_entities_list(revision, ['uuid'], flat_array=True)
+        }
+        results.append(result)
+        revision_number -= 1
+
+    return jsonify(results)
+
 
 """
 Get all organs associated with a given dataset
@@ -3446,10 +3573,13 @@ def user_in_globus_read_group(request):
         return False
 
     try:
-        # The property 'hmgroupids' is ALWASYS in the output with using schema_manager.get_user_info()
-        # when the token in request is a groups token
-        user_info = schema_manager.get_user_info(request)
-        sennet_read_group_uuid = auth_helper_instance.get_default_read_group_uuid()
+        user_token = get_user_token(request)
+        read_privs = auth_helper_instance.has_read_privs(user_token)
+        if isinstance(read_privs, Response):
+            msg = read_privs.get_data().decode()
+            logger.exception(msg)
+            return False
+
     except Exception as e:
         # Log the full stack trace, prepend a line with our message
         logger.exception(e)
@@ -3459,8 +3589,7 @@ def user_in_globus_read_group(request):
         # We treat such cases as the user not in the SenNet-READ group
         return False
 
-
-    return (sennet_read_group_uuid in user_info['hmgroupids'])
+    return read_privs
 
 
 """
