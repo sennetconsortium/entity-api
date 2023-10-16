@@ -556,7 +556,7 @@ def _get_entity_visibility(normalized_entity_type, entity_dict):
         # Upload entities require authorization to access, so keep the
         # entity_visibility as non-public, as initialized outside block.
         pass
-    elif normalized_entity_type in ['Donor','Sample'] and \
+    elif normalized_entity_type in ['Source','Sample'] and \
          entity_dict['data_access_level'] == ACCESS_LEVEL_PUBLIC:
         entity_visibility = DataVisibilityEnum.PUBLIC
     return entity_visibility
@@ -3446,10 +3446,13 @@ def user_in_globus_read_group(request):
         return False
 
     try:
-        # The property 'hmgroupids' is ALWASYS in the output with using schema_manager.get_user_info()
-        # when the token in request is a groups token
-        user_info = schema_manager.get_user_info(request)
-        sennet_read_group_uuid = auth_helper_instance.get_default_read_group_uuid()
+        user_token = get_user_token(request)
+        read_privs = auth_helper_instance.has_read_privs(user_token)
+        if isinstance(read_privs, Response):
+            msg = read_privs.get_data().decode()
+            logger.exception(msg)
+            return False
+
     except Exception as e:
         # Log the full stack trace, prepend a line with our message
         logger.exception(e)
@@ -3459,8 +3462,7 @@ def user_in_globus_read_group(request):
         # We treat such cases as the user not in the SenNet-READ group
         return False
 
-
-    return (sennet_read_group_uuid in user_info['hmgroupids'])
+    return read_privs
 
 
 """
