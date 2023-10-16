@@ -31,14 +31,14 @@ def test_validate_single_creation_action(creation_action, succeeds):
 
     if succeeds:
         # Test valid creation action
-        schema_validators.validate_single_creation_action(
+        schema_validators.validate_creation_action(
             property_key, normalized_entity_type, request,
             existing_data_dict, new_data_dict
         )
     else:
         # Test invalid creation action
         with pytest.raises(ValueError):
-            schema_validators.validate_single_creation_action(
+            schema_validators.validate_creation_action(
                 property_key, normalized_entity_type, request,
                 existing_data_dict, new_data_dict
             )

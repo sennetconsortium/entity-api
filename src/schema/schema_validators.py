@@ -480,10 +480,10 @@ def validate_publication_date(property_key, normalized_entity_type, request, exi
     except ValueError:
         raise ValueError(f"Invalid {property_key} format, must be YYYY-MM-DD")
 
+
 """
 Validate the provided value of the activity creation action. Only very specific
 values are allowed.
-
 Parameters
 ----------
 property_key : str
@@ -497,12 +497,13 @@ existing_data_dict : dict
 new_data_dict : dict
     The json data in request body, already after the regular validations
 """
-
-
-def validate_single_creation_action(property_key, normalized_entity_type, request, existing_data_dict, new_data_dict):
+def validate_creation_action(property_key, normalized_entity_type, request, existing_data_dict, new_data_dict):
+    accepted_creation_action_values = SchemaConstants.ALLOWED_SINGLE_CREATION_ACTIONS
     creation_action = new_data_dict.get(property_key)
-    if creation_action is not None and creation_action.lower() not in SchemaConstants.ALLOWED_SINGLE_CREATION_ACTIONS:
-        raise ValueError(f"Invalid {property_key} value. Allowed values are: {', '.join(SchemaConstants.ALLOWED_SINGLE_CREATION_ACTIONS)}")
+    if creation_action and creation_action.lower() not in accepted_creation_action_values:
+        raise ValueError("Invalid {} value. Accepted values are: {}".format(property_key, ", ".join(accepted_creation_action_values)))
+    if creation_action == '':
+        raise ValueError(f"The property {property_key} cannot be empty, when specified.")
 
 
 ####################################################################################################
