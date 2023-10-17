@@ -2557,12 +2557,12 @@ list
 @app.route('/entities/<id>/multi-revisions', methods=['GET'])
 @app.route('/datasets/<id>/multi-revisions', methods=['GET'])
 def get_multi_revisions_list(id):
-    # By default, do not return dataset. Only return dataset if return_dataset is true
-    show_dataset = False
+    # By default, do not return dataset. Only return dataset if include_dataset is true
+    property_key = 'uuid'
     if bool(request.args):
         include_dataset = request.args.get('include_dataset')
         if (include_dataset is not None) and (include_dataset.lower() == 'true'):
-            show_dataset = True
+            property_key = None
     # Token is not required, but if an invalid token provided,
     # we need to tell the client with a 401 error
     validate_token_if_auth_header_exists(request)
@@ -2588,7 +2588,8 @@ def get_multi_revisions_list(id):
     # the user token has the correct access level
     # Get the all the sorted (DESC based on creation timestamp) revisions
     sorted_revisions_list = app_neo4j_queries.get_sorted_multi_revisions(neo4j_driver_instance, entity_dict['uuid'],
-                                                                         fetch_all=user_in_globus_read_group(request))
+                                                                         fetch_all=user_in_globus_read_group(request),
+                                                                         property_key=property_key)
 
     # Skip some of the properties that are time-consuming to generate via triggers
     properties_to_skip = [
@@ -2601,10 +2602,13 @@ def get_multi_revisions_list(id):
     normalized_revisions_list = []
     sorted_revisions_list_merged = sorted_revisions_list[0] + sorted_revisions_list[1][::-1]
 
-    for revision in sorted_revisions_list_merged:
-        complete_revision_list = schema_manager.get_complete_entities_list(token, revision, properties_to_skip)
-        normal = schema_manager.normalize_entities_list_for_response(complete_revision_list)
-        normalized_revisions_list.append(normal)
+    if property_key is None:
+        for revision in sorted_revisions_list_merged:
+            complete_revision_list = schema_manager.get_complete_entities_list(token, revision, properties_to_skip)
+            normal = schema_manager.normalize_entities_list_for_response(complete_revision_list)
+            normalized_revisions_list.append(normal)
+    else:
+        normalized_revisions_list = sorted_revisions_list_merged
 
     # Now all we need to do is to compose the result list
     results = []
@@ -2612,7 +2616,7 @@ def get_multi_revisions_list(id):
     for revision in normalized_revisions_list:
         result = {
             'revision_number': revision_number,
-            'uuids': revision if show_dataset is True else schema_manager.get_filtered_entities_list(revision, ['uuid'], flat_array=True)
+            'uuids': revision
         }
         results.append(result)
         revision_number -= 1
