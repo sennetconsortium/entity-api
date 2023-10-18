@@ -1781,7 +1781,7 @@ dict: A dict of gnerated Activity data
 """
 
 
-def generate_activity_data(normalized_entity_type, user_token, user_info_dict):
+def generate_activity_data(normalized_entity_type, user_token, user_info_dict, creation_action=None):
     # Activity is not an Entity
     normalized_activity_type = 'Activity'
 
@@ -1795,6 +1795,8 @@ def generate_activity_data(normalized_entity_type, user_token, user_info_dict):
                                           user_info_dict=None)
     data_dict_for_activity = {**user_info_dict, **normalized_entity_type_dict, **new_ids_dict_list[0]}
 
+    if creation_action:
+        data_dict_for_activity['creation_action'] = creation_action
     # Generate property values for Activity node
     generated_activity_data_dict = generate_triggered_data('before_create_trigger', normalized_activity_type,
                                                            user_token, {}, data_dict_for_activity)
