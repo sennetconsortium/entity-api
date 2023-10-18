@@ -4141,7 +4141,7 @@ def create_multiple_component_details(request, normalized_entity_type, user_toke
     # Create new ids for the new entity
     try:
         # we only need the json data from one of the datasets. The info will be the same for both, so we just grab the first in the list
-        new_ids_dict_list = schema_manager.create_hubmap_ids(normalized_entity_type, json_data_dict_list[0], user_token, user_info_dict, len(json_data_dict_list))
+        new_ids_dict_list = schema_manager.create_sennet_ids(normalized_entity_type, json_data_dict_list[0], user_token, user_info_dict, len(json_data_dict_list))
     # When group_uuid is provided by user, it can be invalid
     except KeyError as e:
         # Log the full stack trace, prepend a line with our message
