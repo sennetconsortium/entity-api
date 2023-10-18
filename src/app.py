@@ -3938,7 +3938,7 @@ def create_multiple_samples_details(request, normalized_entity_type, user_token,
     # and properties with None value
     # Meaning the returned target property key is different from the original key
     # in the trigger method, e.g., Source.image_files_to_add
-    filtered_merged_dict = schema_manager.remove_transient_and_none_values(merged_dict, normalized_entity_type)
+    filtered_merged_dict = schema_manager.remove_transient_and_none_values('ENTITIES', merged_dict, normalized_entity_type)
 
     samples_dict_list = []
     for new_ids_dict in new_ids_dict_list:
@@ -4148,10 +4148,10 @@ def create_multiple_component_details(request, normalized_entity_type, user_toke
         logger.exception(e)
         abort_bad_req(e)
     except requests.exceptions.RequestException as e:
-        msg = f"Failed to create new HuBMAP ids via the uuid-api service"
+        msg = f"Failed to create new SenNet ids via the uuid-api service"
         logger.exception(msg)
 
-        # Due to the use of response.raise_for_status() in schema_manager.create_hubmap_ids()
+        # Due to the use of response.raise_for_status() in schema_manager.create_sennet_ids()
         # we can access the status codes from the exception
         status_code = e.response.status_code
 
@@ -4208,7 +4208,7 @@ def create_multiple_component_details(request, normalized_entity_type, user_toke
         # and properties with None value
         # Meaning the returned target property key is different from the original key
         # in the trigger method, e.g., Donor.image_files_to_add
-        filtered_merged_dict = schema_manager.remove_transient_and_none_values(merged_dict, normalized_entity_type)
+        filtered_merged_dict = schema_manager.remove_transient_and_none_values('ENTITIES', merged_dict, normalized_entity_type)
         dataset_dict = {**filtered_merged_dict, **new_ids_dict_list[i]}
         dataset_dict['dataset_link_abs_dir'] = dataset_link_abs_dir
         datasets_dict_list.append(dataset_dict)
