@@ -4097,7 +4097,7 @@ def multiple_components():
         complete_dict = schema_manager.get_complete_entity_result(user_token, dataset, properties_to_skip)
 
         # Will also filter the result based on schema
-        normalized_complete_dict = schema_manager.normalize_entity_result_for_response(complete_dict)
+        normalized_complete_dict = schema_manager.normalize_object_result_for_response(provenance_type='ENTITIES', entity_dict=complete_dict)
 
 
         # Also index the new entity node in elasticsearch via search-api
@@ -4213,8 +4213,8 @@ def create_multiple_component_details(request, normalized_entity_type, user_toke
         dataset_dict['dataset_link_abs_dir'] = dataset_link_abs_dir
         datasets_dict_list.append(dataset_dict)
 
-    activity_data_dict = schema_manager.generate_activity_data(normalized_entity_type, user_token, user_info_dict)
-    activity_data_dict['creation_action'] = creation_action
+    activity_data_dict = schema_manager.generate_activity_data(normalized_entity_type, user_token, user_info_dict, creation_action)
+    # activity_data_dict['creation_action'] = creation_action
     try:
         created_datasets = app_neo4j_queries.create_multiple_datasets(neo4j_driver_instance, datasets_dict_list, activity_data_dict, direct_ancestor)
     except TransactionError:

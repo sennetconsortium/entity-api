@@ -1839,7 +1839,7 @@ def create_multiple_datasets(neo4j_driver, datasets_dict_list, activity_data_dic
             _create_activity_tx(tx, activity_data_dict)
 
             # Step 2: create relationship from source entity node to this Activity node
-            _create_relationship_tx(tx, direct_ancestor_uuid, activity_uuid, 'ACTIVITY_INPUT', '->')
+            _create_relationship_tx(tx, direct_ancestor_uuid, activity_uuid, 'USED', '<-')
 
             # Step 3: create each new sample node and link to the Activity node at the same time
             output_dicts_list = []
@@ -1852,7 +1852,7 @@ def create_multiple_datasets(neo4j_driver, datasets_dict_list, activity_data_dic
                          f"WHERE a.uuid = '{activity_uuid}' "
                          # Always define the Entity label in addition to the target `entity_type` label
                          f"CREATE (e:Entity:Dataset {node_properties_map} ) "
-                         f"CREATE (a)-[:ACTIVITY_OUTPUT]->(e)"
+                         f"CREATE (a)<-[:WAS_GENERATED_BY]-(e)"
                          f"RETURN e AS {record_field_name}")
 
                 logger.info("======create_multiple_samples() individual query======")

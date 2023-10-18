@@ -2263,6 +2263,8 @@ str: The protocol_url string
 
 
 def set_activity_protocol_url(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    if normalized_type in ['Activity'] and 'protocol_url' not in new_data_dict:
+        return property_key, None
     if 'entity_type' in new_data_dict and new_data_dict['entity_type'] in ['Dataset', 'Upload', 'Publication']:
         return property_key, None
     else:
