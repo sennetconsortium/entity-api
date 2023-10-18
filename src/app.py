@@ -4056,7 +4056,7 @@ def multiple_components():
         # Execute property level validators defined in the schema yaml before entity property creation
         # Use empty dict {} to indicate there's no existing_data_dict
         try:
-            schema_manager.execute_property_level_validators('before_property_create_validators', "Dataset", request, {}, dataset)
+            schema_manager.execute_property_level_validators('ENTITIES', 'before_property_create_validators', "Dataset", request, {}, dataset)
         # Currently only ValueError
         except ValueError as e:
             abort_bad_req(e)
