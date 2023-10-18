@@ -4049,7 +4049,7 @@ def multiple_components():
         dataset['group_uuid'] = json_data_dict.get('group_uuid')
         dataset['direct_ancestor_uuids'] = direct_ancestor_uuids
         try:
-            schema_manager.validate_json_data_against_schema(dataset, 'Dataset')
+            schema_manager.validate_json_data_against_schema('ENTITIES', dataset, 'Dataset')
         except schema_errors.SchemaValidationException as e:
             # No need to log validation errors
             abort_bad_req(str(e))
