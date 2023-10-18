@@ -4044,6 +4044,8 @@ def multiple_components():
         # validation. Remove it here and add it back after validation. We do the same for creating the entities. Doing
         # this makes it easier to keep the dataset_link_abs_dir with the associated dataset instead of adding additional lists and keeping track of which value is tied to which dataset
         dataset_link_abs_dir = dataset.pop('dataset_link_abs_dir', None)
+        if not dataset_link_abs_dir:
+            abort_bad_req(f"Missing required field in datasets: dataset_link_abs_dir")
         dataset['group_uuid'] = json_data_dict.get('group_uuid')
         dataset['direct_ancestor_uuids'] = direct_ancestor_uuids
         try:
@@ -4141,25 +4143,6 @@ def create_multiple_component_details(request, normalized_entity_type, user_toke
         # we only need the json data from one of the datasets. The info will be the same for both, so we just grab the first in the list
         new_ids_dict_list = schema_manager.create_hubmap_ids(normalized_entity_type, json_data_dict_list[0], user_token, user_info_dict, len(json_data_dict_list))
     # When group_uuid is provided by user, it can be invalid
-    except schema_errors.NoDataProviderGroupException:
-        # Log the full stack trace, prepend a line with our message
-        if 'group_uuid' in json_data_dict_list[0]:
-            msg = "Invalid 'group_uuid' value, can't create the entity"
-        else:
-            msg = "The user does not have the correct Globus group associated with, can't create the entity"
-
-        logger.exception(msg)
-        abort_bad_req(msg)
-    except schema_errors.UnmatchedDataProviderGroupException:
-        # Log the full stack trace, prepend a line with our message
-        msg = "The user does not belong to the given Globus group, can't create the entity"
-        logger.exception(msg)
-        abort_bad_req(msg)
-    except schema_errors.MultipleDataProviderGroupException:
-        # Log the full stack trace, prepend a line with our message
-        msg = "The user has mutiple Globus groups associated with, please specify one using 'group_uuid'"
-        logger.exception(msg)
-        abort_bad_req(msg)
     except KeyError as e:
         # Log the full stack trace, prepend a line with our message
         logger.exception(e)
@@ -4195,7 +4178,7 @@ def create_multiple_component_details(request, normalized_entity_type, user_toke
             abort_internal_err(msg)
         except schema_errors.NoDataProviderGroupException:
             # Log the full stack trace, prepend a line with our message
-            if 'group_uuid' in json_data_dict_list[0]:
+            if 'group_uuid' in json_data_dict_list[i]:
                 msg = "Invalid 'group_uuid' value, can't create the entity"
             else:
                 msg = "The user does not have the correct Globus group associated with, can't create the entity"
@@ -4206,7 +4189,7 @@ def create_multiple_component_details(request, normalized_entity_type, user_toke
             # Log the full stack trace, prepend a line with our message
             msg = "The user does not belong to the given Globus group, can't create the entity"
             logger.exception(msg)
-            abort_bad_req(msg)
+            abort_forbidden(msg)
         except schema_errors.MultipleDataProviderGroupException:
             # Log the full stack trace, prepend a line with our message
             msg = "The user has mutiple Globus groups associated with, please specify one using 'group_uuid'"
@@ -4243,7 +4226,6 @@ def create_multiple_component_details(request, normalized_entity_type, user_toke
 
 
     return created_datasets
-
 
 
 """
