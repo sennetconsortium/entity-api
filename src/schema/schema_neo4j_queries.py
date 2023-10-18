@@ -1679,3 +1679,114 @@ def get_children(neo4j_driver, uuid, property_key=None):
     return results
 
 
+"""
+Build the property key-value pairs to be used in the Cypher clause for node creation/update
+
+Parameters
+----------
+entity_data_dict : dict
+    The target Entity node to be created
+
+Returns
+-------
+str
+    A string representation of the node properties map containing 
+    key-value pairs to be used in Cypher clause
+"""
+def build_properties_map(entity_data_dict):
+    separator = ', '
+    node_properties_list = []
+
+    for key, value in entity_data_dict.items():
+        if isinstance(value, (int, bool)):
+            # Treat integer and boolean as is
+            key_value_pair = f"{key}: {value}"
+        elif isinstance(value, str):
+            # Special case is the value is 'TIMESTAMP()' string
+            # Remove the quotes since neo4j only takes TIMESTAMP() as a function
+            if value == 'TIMESTAMP()':
+                key_value_pair = f"{key}: {value}"
+            else:
+                # Escape single quote
+                escaped_str = value.replace("'", r"\'")
+                # Quote the value
+                key_value_pair = f"{key}: '{escaped_str}'"
+        else:
+            # Convert list and dict to string, retain the original data without removing any control characters
+            # Will need to call schema_manager.convert_str_literal() to convert the list/dict literal back to object
+            # Note that schema_manager.convert_str_literal() removes any control characters to avoid SyntaxError
+            # Must also escape single quotes in the string to build a valid Cypher query
+            escaped_str = str(value).replace("'", r"\'")
+            # Also need to quote the string value
+            key_value_pair = f"{key}: '{escaped_str}'"
+
+        # Add to the list
+        node_properties_list.append(key_value_pair)
+
+    # Example: {uuid: 'eab7fd6911029122d9bbd4d96116db9b', rui_location: 'Joe <info>', lab_tissue_sample_id: 'dadsadsd'}
+    # Note: all the keys are not quoted, otherwise Cypher syntax error
+    node_properties_map = f"{{ {separator.join(node_properties_list)} }}"
+
+    return node_properties_map
+
+
+
+"""
+Update the properties of an existing entity node in neo4j
+
+Parameters
+----------
+neo4j_driver : neo4j.Driver object
+    The neo4j database connection pool
+entity_type : str
+    One of the normalized entity types: Dataset, Collection, Sample, Donor
+entity_data_dict : dict
+    The target entity with properties to be updated
+uuid : str
+    The uuid of target entity 
+
+Returns
+-------
+dict
+    A dictionary of updated entity details returned from the Cypher query
+"""
+def update_entity(neo4j_driver, entity_type, entity_data_dict, uuid):
+    node_properties_map = build_properties_map(entity_data_dict)
+
+    query = (f"MATCH (e:{entity_type}) "
+             f"WHERE e.uuid = '{uuid}' "
+             f"SET e += {node_properties_map} "
+             f"RETURN e AS {record_field_name}")
+
+    logger.info("======update_entity() query======")
+    logger.info(query)
+
+    try:
+        with neo4j_driver.session() as session:
+            entity_dict = {}
+
+            tx = session.begin_transaction()
+
+            result = tx.run(query)
+            record = result.single()
+            entity_node = record[record_field_name]
+
+            tx.commit()
+
+            entity_dict = node_to_dict(entity_node)
+
+            # logger.info("======update_entity() resulting entity_dict======")
+            # logger.info(entity_dict)
+
+            return entity_dict
+    except TransactionError as te:
+        msg = f"TransactionError from calling create_entity(): {te.value}"
+        # Log the full stack trace, prepend a line with our message
+        logger.exception(msg)
+
+        if tx.closed() == False:
+            logger.info("Failed to commit update_entity() transaction, rollback")
+
+            tx.rollback()
+
+        raise TransactionError(msg)
