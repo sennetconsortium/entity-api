@@ -19,6 +19,9 @@ class SchemaConstants(object):
 
     DOI_BASE_URL = 'https://doi.org/'
 
+    ALLOWED_SINGLE_CREATION_ACTIONS = ['central process', 'lab process']
+    ALLOWED_MULTI_CREATION_ACTIONS = ['multi-assay split']
+
 # Define an enumeration to classify an entity's visibility, which can be combined with
 # authorization info when verify operations on a request.
 class DataVisibilityEnum(Enum):
