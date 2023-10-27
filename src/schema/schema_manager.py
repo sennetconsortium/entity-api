@@ -704,34 +704,6 @@ def get_complete_entities_list(token, entities_list, properties_to_skip=[]):
     return complete_entities_list
 
 
-"""
-Pluck out select entity properties
-
-Parameters
-----------
-entities_list : list
-    A list of entity dictionaries 
-properties_to_include : list
-    Any properties to include
-
-Returns
--------
-list
-    A filtered list
-"""
-def get_filtered_entities_list(entities_list, properties_to_include=[], flat_array = False):
-    complete_entities_list = []
-    for entity_dict in entities_list:
-        result = {}
-        for prop in properties_to_include:
-            if flat_array:
-                complete_entities_list.append(entity_dict[prop])
-            else:
-                result[prop] = entity_dict[prop]
-                complete_entities_list.append(result)
-
-    return complete_entities_list
-
 
 """
 Normalize the activity result by filtering out properties that are not defined in the yaml schema
@@ -1809,7 +1781,7 @@ dict: A dict of gnerated Activity data
 """
 
 
-def generate_activity_data(normalized_entity_type, user_token, user_info_dict):
+def generate_activity_data(normalized_entity_type, user_token, user_info_dict, creation_action=None):
     # Activity is not an Entity
     normalized_activity_type = 'Activity'
 
@@ -1823,6 +1795,8 @@ def generate_activity_data(normalized_entity_type, user_token, user_info_dict):
                                           user_info_dict=None)
     data_dict_for_activity = {**user_info_dict, **normalized_entity_type_dict, **new_ids_dict_list[0]}
 
+    if creation_action:
+        data_dict_for_activity['creation_action'] = creation_action
     # Generate property values for Activity node
     generated_activity_data_dict = generate_triggered_data('before_create_trigger', normalized_activity_type,
                                                            user_token, {}, data_dict_for_activity)
