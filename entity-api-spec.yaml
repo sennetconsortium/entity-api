@@ -12,14 +12,13 @@ info:
 servers:
   - url: 'https://entity.api.sennetconsortium.org'
 security:
-  - bearerAuth: []
+  - BearerAuth: []
 components:
   securitySchemes:
-    bearerAuth:
-      type: apiKey
-      name: Authorization
-      in: header
-      description: Globus bearer token to authorize requests. Have to use apiKey to pass AWS API Gateway import validation
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: Globus Bearer token to authorize requests
   schemas:
     Person:
       type: object
