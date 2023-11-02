@@ -11,6 +11,8 @@ info:
     url: 'https://github.com/sennetconsortium/entity-api/blob/main/license.txt'
 servers:
   - url: 'https://entity.api.sennetconsortium.org'
+security:
+  - bearerAuth: []
 components:
   securitySchemes:
     bearerAuth:
