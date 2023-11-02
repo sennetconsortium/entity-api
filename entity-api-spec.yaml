@@ -33,7 +33,7 @@ components:
           description: The middle name or initial of the person.
         orcid_id:
           type: string
-          description: The ORCID iD of the person.
+          description: The ORCID ID of the person.
         affiliation:
           type: string
           description: The institution that the person is affiliated with.
@@ -675,13 +675,13 @@ components:
           items:
             $ref: '#/components/schemas/Dataset'
           description: The datasets that are contained in the Collection.
-      Instanceof:
-        type: object
-        description: "Returned by /entities/type/{type_a}/instanceof/{type_b}"
-        properties:
-          instanceof:
-            type: boolean
-            description: "True of False depending on whether the Entity id is an instance of the type"
+    Instanceof:
+      type: object
+      description: "Returned by /entities/type/{type_a}/instanceof/{type_b}"
+      properties:
+        instanceof:
+          type: boolean
+          description: "True of False depending on whether the Entity id is an instance of the type"
 paths:
   /entities/{id}:
     get:
