@@ -4887,7 +4887,7 @@ def delete_cache(id):
 
 if __name__ == "__main__":
     try:
-        app.run(host='0.0.0.0', port="5002", debug=True)
+        app.run(host='0.0.0.0', port="5002")
     except Exception as e:
         print("Error during starting debug server.")
         print(str(e))
