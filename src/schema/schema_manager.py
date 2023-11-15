@@ -23,6 +23,12 @@ from atlas_consortia_commons.rest import *
 
 logger = logging.getLogger(__name__)
 
+try:
+    logger.info("logger initialized")
+except Exception as e:
+    print("Error opening log file during startup")
+    print(str(e))
+
 # Suppress InsecureRequestWarning warning when requesting status on https with ssl cert verify disabled
 requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
 
@@ -79,7 +85,10 @@ def initialize(valid_yaml_file,
     global _memcached_client
     global _memcached_prefix
 
+    logger.info(f"Initialize schema_manager using valid_yaml_file={valid_yaml_file}.")
     _schema = load_provenance_schema(valid_yaml_file)
+    if _schema is None:
+        logger.error(f"Failed to load _schema using {valid_yaml_file}.")
     _uuid_api_url = uuid_api_url
     _ingest_api_url = ingest_api_url
     _search_api_url = search_api_url
