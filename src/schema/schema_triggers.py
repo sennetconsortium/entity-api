@@ -1183,6 +1183,44 @@ def get_source_mapped_metadata(property_key, normalized_type, user_token, existi
 
     return property_key, dict(mapped_metadata)
 
+"""
+Trigger event method of auto generating the dataset abstract
+
+Parameters
+----------
+property_key : str
+    The target property key
+normalized_type : str
+    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+user_token: str
+    The user's globus nexus token
+existing_data_dict : dict
+    A dictionary that contains all existing entity properties
+new_data_dict : dict
+    A merged dictionary that contains all possible input data to be used
+
+Returns
+-------
+str: The target property key
+str: The generated dataset abstract 
+"""
+
+
+def get_dataset_abstract(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    if 'purpose' not in existing_data_dict:
+        raise KeyError(
+            "Missing 'purpose' key in 'existing_data_dict' during calling 'get_dataset_abstract()' trigger method.")
+    if 'method' not in existing_data_dict:
+        raise KeyError(
+            "Missing 'method' key in 'existing_data_dict' during calling 'get_dataset_abstract()' trigger method.")
+    if 'result' not in existing_data_dict:
+        raise KeyError(
+            "Missing 'result' key in 'existing_data_dict' during calling 'get_dataset_abstract()' trigger method.")
+
+    abstract = existing_data_dict['purpose'].strip() + " " + existing_data_dict['method'].strip() + " " + \
+               existing_data_dict['result'].strip()
+    return property_key, abstract
+
 
 """
 Trigger event method of auto generating the dataset title

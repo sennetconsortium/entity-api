@@ -401,9 +401,19 @@ components:
           items:
             $ref: '#/components/schemas/Person'
           description: A list of the people who are the main contacts to get information about the entity.
-        description:
+        abstract:
           type: string
-          description: Free text description of the dataset
+          readOnly: true
+          description: The generated abstract that concatenates purpose, method, and result fields used when publishing Datasts.
+        purpose:
+          type: string
+          description: Indicates purpose or thesis, outlines the aim behind the experiment. Used to generate the abstract property.
+        method:
+          type: string
+          description: Provides information on design, procedures, data analysis, etc. Used to generate the abstract property.
+        result:
+          type: string
+          description: Indicates results and key findings. Used to generate the abstract property.
         data_access_level:
           type: string
           readOnly: true
@@ -427,6 +437,7 @@ components:
           description: 'One of: New|Processing|QA|Published|Error|Hold|Invalid'
         title:
           type: string
+          readOnly: true
           description: The dataset title.
         data_types:
           type: array
