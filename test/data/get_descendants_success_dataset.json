@@ -2,6 +2,7 @@
   "uuid": "6a7be8e95c62c74545a29666111899d9",
   "response": [
     {
+      "abstract": "Abstract purpose. Abstract method. Abstract result",
       "contains_human_genetic_sequences": false,
       "created_by_user_displayname": "Test User",
       "created_by_user_email": "TESTUSER@example.com",
@@ -9,7 +10,9 @@
       "created_timestamp": 1681841991272,
       "data_access_level": "consortium",
       "data_types": ["snRNA-seq"],
-      "description": "HBM876.ZBTD.373\nsnRNA-seq [Salmon]\n\nLarge Intestine",
+      "purpose": "Abstract purpose.",
+      "method": "Abstract method.",
+      "result": "Abstract result",
       "entity_type": "Dataset",
       "group_name": "CODCC Testing Group",
       "group_uuid": "57192604-18e0-11ed-b79b-972795fc9504",
@@ -81,6 +84,7 @@
   },
   "get_descendants": [
     {
+      "abstract": "Abstract purpose. Abstract method. Abstract result",
       "contains_human_genetic_sequences": false,
       "created_by_user_displayname": "Test User",
       "created_by_user_email": "TESTUSER@example.com",
@@ -88,7 +92,9 @@
       "created_timestamp": 1681841991272,
       "data_access_level": "consortium",
       "data_types": ["snRNA-seq"],
-      "description": "HBM876.ZBTD.373\nsnRNA-seq [Salmon]\n\nLarge Intestine",
+      "purpose": "Abstract purpose.",
+      "method": "Abstract method.",
+      "result": "Abstract result",
       "entity_type": "Dataset",
       "group_name": "CODCC Testing Group",
       "group_uuid": "57192604-18e0-11ed-b79b-972795fc9504",

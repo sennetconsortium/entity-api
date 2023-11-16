@@ -1,6 +1,7 @@
 {
   "response": [
     {
+      "abstract": "Abstract purpose. Abstract method. Abstract result",
       "contains_human_genetic_sequences": true,
       "created_by_user_displayname": "Test User",
       "created_by_user_email": "TESTUSER@example.com",
@@ -9,7 +10,9 @@
       "data_access_level": "protected",
       "data_types": ["CODEX"],
       "dataset_info": "lab notes",
-      "description": "Unit test for dataset",
+      "purpose": "Abstract purpose.",
+      "method": "Abstract method.",
+      "result": "Abstract result",
       "entity_type": "Dataset",
       "group_name": "University of Pittsburgh TMC",
       "group_uuid": "28db7a2b-ed8a-11ec-8b0a-9fe9b51132b1",
@@ -24,6 +27,7 @@
       "uuid": "6a7be8e95c62c74545a29666111899d9"
     },
     {
+      "abstract": "Abstract purpose. Abstract method. Abstract result",
       "contains_human_genetic_sequences": true,
       "created_by_user_displayname": "Test User",
       "created_by_user_email": "TESTUSER@example.com",
@@ -32,7 +36,9 @@
       "data_access_level": "protected",
       "data_types": ["CODEX"],
       "dataset_info": "lab notes",
-      "description": "Unit test for dataset",
+      "purpose": "Abstract purpose.",
+      "method": "Abstract method.",
+      "result": "Abstract result",
       "entity_type": "Dataset",
       "group_name": "University of Pittsburgh TMC",
       "group_uuid": "28db7a2b-ed8a-11ec-8b0a-9fe9b51132b1",
@@ -49,6 +55,7 @@
   ],
   "get_entities_by_type": [
     {
+      "abstract": "Abstract purpose. Abstract method. Abstract result",
       "contains_human_genetic_sequences": true,
       "created_by_user_displayname": "Test User",
       "created_by_user_email": "TESTUSER@example.com",
@@ -57,7 +64,9 @@
       "data_access_level": "protected",
       "data_types": ["CODEX"],
       "dataset_info": "lab notes",
-      "description": "Unit test for dataset",
+      "purpose": "Abstract purpose.",
+      "method": "Abstract method.",
+      "result": "Abstract result",
       "entity_type": "Dataset",
       "group_name": "University of Pittsburgh TMC",
       "group_uuid": "28db7a2b-ed8a-11ec-8b0a-9fe9b51132b1",
@@ -72,6 +81,7 @@
       "uuid": "6a7be8e95c62c74545a29666111899d9"
     },
     {
+      "abstract": "Abstract purpose. Abstract method. Abstract result",
       "contains_human_genetic_sequences": true,
       "created_by_user_displayname": "Test User",
       "created_by_user_email": "TESTUSER@example.com",
@@ -80,7 +90,9 @@
       "data_access_level": "protected",
       "data_types": ["CODEX"],
       "dataset_info": "lab notes",
-      "description": "Unit test for dataset",
+      "purpose": "Abstract purpose.",
+      "method": "Abstract method.",
+      "result": "Abstract result",
       "entity_type": "Dataset",
       "group_name": "University of Pittsburgh TMC",
       "group_uuid": "28db7a2b-ed8a-11ec-8b0a-9fe9b51132b1",
