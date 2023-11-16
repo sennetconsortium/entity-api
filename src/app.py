@@ -51,17 +51,27 @@ global logger
 
 # Use `getLogger()` instead of `getLogger(__name__)` to apply the config to the root logger
 # will be inherited by the sub-module loggers
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+try:
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
 
-# All the API logging is gets written into the same log file
-# The uWSGI logging for each deployment disables the request logging
-# but still captures the 4xx and 5xx errors to the file `log/uwsgi-entity-api.log`
-# Log rotation is handled via logrotate on the host system with a configuration file
-# Do NOT handle log file and rotation via the Python logging to avoid issues with multi-worker processes
-log_file_handler = logging.FileHandler('../log/entity-api-' + time.strftime("%m-%d-%Y-%H-%M-%S") + '.log')
-log_file_handler.setFormatter(logging.Formatter('[%(asctime)s] %(levelname)s in %(module)s: %(message)s'))
-logger.addHandler(log_file_handler)
+    # All the API logging is gets written into the same log file
+    # The uWSGI logging for each deployment disables the request logging
+    # but still captures the 4xx and 5xx errors to the file `log/uwsgi-entity-api.log`
+    # Log rotation is handled via logrotate on the host system with a configuration file
+    # Do NOT handle log file and rotation via the Python logging to avoid issues with multi-worker processes
+    log_file_handler = logging.FileHandler('../log/entity-api-' + time.strftime("%m-%d-%Y-%H-%M-%S") + '.log')
+    log_file_handler.setFormatter(logging.Formatter('[%(asctime)s] %(levelname)s in %(module)s: %(message)s'))
+    logger.addHandler(log_file_handler)
+except Exception as e:
+    print("Error setting up global log file.")
+    print(str(e))
+
+try:
+    logger.info("logger initialized")
+except Exception as e:
+    print("Error opening log file during startup")
+    print(str(e))
 
 # Specify the absolute path of the instance folder and use the config file relative to the instance path
 app = Flask(__name__, instance_path=os.path.join(os.path.abspath(os.path.dirname(__file__)), 'instance'), instance_relative_config=True)
@@ -348,10 +358,21 @@ json
 """
 @app.route('/status', methods = ['GET'])
 def get_status():
+
+    try:
+        file_version_content = (Path(__file__).absolute().parent.parent / 'VERSION').read_text().strip()
+    except Exception as e:
+        file_version_content = str(e)
+
+    try:
+        file_build_content = (Path(__file__).absolute().parent.parent / 'BUILD').read_text().strip()
+    except Exception as e:
+        file_build_content = str(e)
+
     status_data = {
         # Use strip() to remove leading and trailing spaces, newlines, and tabs
-        'version': (Path(__file__).absolute().parent.parent / 'VERSION').read_text().strip(),
-        'build': (Path(__file__).absolute().parent.parent / 'BUILD').read_text().strip(),
+        'version': file_version_content,
+        'build': file_build_content,
         'neo4j_connection': False
     }
 
@@ -445,83 +466,6 @@ def get_ancestor_organs(id):
     final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list)
 
     return jsonify(final_result)
-
-
-"""
-Retrieve the collection detail by id
-
-The gateway treats this endpoint as public accessible
-
-An optional Globus groups token can be provided in a standard Authentication Bearer header. If a valid token
-is provided with group membership in the HuBMAP-Read group any collection matching the id will be returned.
-otherwise if no token is provided or a valid token with no HuBMAP-Read group membership then
-only a public collection will be returned.  Public collections are defined as being published via a DOI 
-(collection.registered_doi not null) and at least one of the connected datasets is public
-(dataset.status == 'Published'). For public collections only connected datasets that are
-public are returned with it.
-
-Parameters
-----------
-id : str
-    The HuBMAP ID (e.g. HBM123.ABCD.456) or UUID of target collection 
-
-Returns
--------
-json
-    The collection detail with a list of connected datasets (only public datasets 
-    if user doesn't have the right access permission)
-"""
-@app.route('/collections/<id>', methods = ['GET'])
-def get_collection(id):
-    # Token is not required, but if an invalid token provided,
-    # we need to tell the client with a 401 error
-    validate_token_if_auth_header_exists(request)
-
-    # Use the internal token to query the target collection
-    # since public collections don't require user token
-    token = get_internal_token()
-
-    # Get the entity dict from cache if exists
-    # Otherwise query against uuid-api and neo4j to get the entity dict if the id exists
-    collection_dict = query_target_entity(id, token)
-
-    # A bit validation
-    if collection_dict['entity_type'] != 'Collection':
-        abort_bad_req("Target entity of the given id is not a collection")
-
-    # Try to get user token from Authorization header
-    # It's highly possible that there's no token provided
-    user_token = get_user_token(request)
-
-    # The user_token is flask.Response on error
-    # Without token, the user can only access public collections, modify the collection result
-    # by only returning public datasets attached to this collection
-    if isinstance(user_token, Response):
-        # When the requested collection is not public, send back 401
-        if ('registered_doi' not in collection_dict) or ('doi_url' not in collection_dict):
-            # Require a valid token in this case
-            abort_unauthorized("The requested collection is not public, a Globus token with the right access permission is required.")
-
-        # Otherwise only return the public datasets attached to this collection
-        # for Collection.datasets property
-        complete_dict = get_complete_public_collection_dict(collection_dict)
-    else:
-        # When the groups token is valid, but the user doesn't belong to HuBMAP-READ group
-        # Or the token is valid but doesn't contain group information (auth token or transfer token)
-        # Only return the public datasets attached to this Collection
-        if not user_in_globus_read_group(request):
-            complete_dict = get_complete_public_collection_dict(collection_dict)
-        else:
-            # We'll need to return all the properties including those
-            # generated by `on_read_trigger` to have a complete result
-            complete_dict = schema_manager.get_complete_entity_result(user_token, collection_dict)
-
-    # Will also filter the result based on schema
-    normalized_complete_dict = schema_manager.normalize_object_result_for_response( provenance_type='ENTITIES'
-                                                                                    ,entity_dict=complete_dict)
-
-    # Response with the final result
-    return jsonify(normalized_complete_dict)
 
 def _get_entity_visibility(normalized_entity_type, entity_dict):
     if normalized_entity_type not in schema_manager.get_all_entity_types():
@@ -819,8 +763,7 @@ It's only used by search-api with making internal calls during index/reindex tim
 Parameters
 ----------
 entity_type : str
-    One of the supported entity types: Dataset, Sample, Source
-    Will handle Collection via API endpoint `/collections`
+    One of the supported entity types: Dataset, Collection, Sample, Source
 
 Returns
 -------
@@ -851,15 +794,11 @@ def get_entities_by_type(entity_type):
             if property_key not in result_filtering_accepted_property_keys:
                 abort_bad_req(f"Only the following property keys are supported in the query string: {COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}")
 
-            if normalized_entity_type == 'Collection':
-                # Only return a list of the filtered property value of each public collection
-                final_result = app_neo4j_queries.get_public_collections(neo4j_driver_instance, property_key)
-            else:
-                # Only return a list of the filtered property value of each entity
-                property_list = app_neo4j_queries.get_entities_by_type(neo4j_driver_instance, normalized_entity_type, property_key)
+            # Only return a list of the filtered property value of each entity
+            property_list = app_neo4j_queries.get_entities_by_type(neo4j_driver_instance, normalized_entity_type, property_key)
 
-                # Final result
-                final_result = property_list
+            # Final result
+            final_result = property_list
         else:
             abort_bad_req("The specified query string is not supported. Use '?property=<key>' to filter the result")
     # Return all the details if no property filtering
@@ -885,19 +824,10 @@ def get_entities_by_type(entity_type):
             'next_revision_uuids',
             'previous_revision_uuids'
         ]
-        if normalized_entity_type == 'Collection':
-            # Use the internal token since no user token is required to access public collections
-            token = get_internal_token()
-
-            # Get back a list of public collections dicts
-            entities_list = app_neo4j_queries.get_public_collections(neo4j_driver_instance)
-        else:
-            # Get user token from Authorization header.  Since this endpoint is not exposed through the
-            # AWS Gateway,
-            token = get_user_token(request)
-
-            # Get back a list of entity dicts for the given entity type
-            entities_list = app_neo4j_queries.get_entities_by_type(neo4j_driver_instance, normalized_entity_type)
+        # Get user token from Authorization header.  Since this endpoint is not exposed through the AWS Gateway
+        token = get_user_token(request)
+        # Get back a list of entity dicts for the given entity type
+        entities_list = app_neo4j_queries.get_entities_by_type(neo4j_driver_instance, normalized_entity_type)
 
         complete_entities_list = schema_manager.get_complete_entities_list(token, entities_list, properties_to_skip)
 
@@ -907,81 +837,6 @@ def get_entities_by_type(entity_type):
 
     # Response with the final result
     return jsonify(final_result)
-
-
-"""
-Retrieve all the public collections
-
-The gateway treats this endpoint as public accessible
-
-Result filtering is supported based on query string
-For example: /collections?property=uuid
-
-Only return public collections, for either 
-- a valid token in SenNet-Read group, 
-- a valid token with no SenNet-Read group or 
-- no token at all
-
-Public collections are defined as being published via a DOI 
-(collection.registered_doi is not null) and at least one of the connected datasets is published
-(dataset.status == 'Published'). For public collections only connected datasets that are
-published are returned with it.
-
-Returns
--------
-json
-    A list of all the public collection dictionaries (with attached public datasets)
-"""
-@app.route('/collections', methods = ['GET'])
-def get_collections():
-    final_result = []
-
-    # Token is not required, but if an invalid token provided,
-    # we need to tell the client with a 401 error
-    validate_token_if_auth_header_exists(request)
-
-    normalized_entity_type = 'Collection'
-
-    # Result filtering based on query string
-    if bool(request.args):
-        property_key = request.args.get('property')
-
-        if property_key is not None:
-            result_filtering_accepted_property_keys = ['uuid']
-
-            # Validate the target property
-            if property_key not in result_filtering_accepted_property_keys:
-                abort_bad_req(f"Only the following property keys are supported in the query string: {COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}")
-
-            # Only return a list of the filtered property value of each public collection
-            final_result = app_neo4j_queries.get_public_collections(neo4j_driver_instance, property_key)
-        else:
-            abort_bad_req("The specified query string is not supported. Use '?property=<key>' to filter the result")
-    # Return all the details if no property filtering
-    else:
-        # Use the internal token since no user token is requried to access public collections
-        token = get_internal_token()
-
-        # Get back a list of public collections dicts
-        collections_list = app_neo4j_queries.get_public_collections(neo4j_driver_instance)
-
-        # Modify the Collection.datasets property for each collection dict
-        # to contain only public datasets
-        for collection_dict in collections_list:
-            # Only return the public datasets attached to this collection for Collection.datasets property
-            collection_dict = get_complete_public_collection_dict(collection_dict)
-
-        # Generate trigger data and merge into a big dict
-        # and skip some of the properties that are time-consuming to generate via triggers
-        properties_to_skip = ['datasets']
-        complete_collections_list = schema_manager.get_complete_entities_list(token, collections_list, properties_to_skip)
-
-        # Final result after normalization
-        final_result = schema_manager.normalize_entities_list_for_response(complete_collections_list)
-
-    # Response with the final result
-    return jsonify(final_result)
-
 
 """
 Create an entity of the target type in neo4j
@@ -1158,19 +1013,12 @@ def create_entity(entity_type):
     normalized_complete_dict = schema_manager.normalize_object_result_for_response('ENTITIES', complete_dict)
 
     # Also index the new entity node in elasticsearch via search-api
-    if complete_dict['entity_type'] in ['Collection']:
-        logger.log(logging.DEBUG
-                   ,f"Skipping re-indexing {complete_dict['entity_type']}"
-                    f" with UUID {complete_dict['uuid']}"
-                    f" until supported by search-api.")
-    else:
-        logger.log(logging.INFO
-                   ,f"Re-indexing for creation of {complete_dict['entity_type']}"
-                    f" with UUID {complete_dict['uuid']}")
-        reindex_entity(complete_dict['uuid'], user_token)
+    logger.log(logging.INFO
+               ,f"Re-indexing for creation of {complete_dict['entity_type']}"
+                f" with UUID {complete_dict['uuid']}")
+    reindex_entity(complete_dict['uuid'], user_token)
 
     return jsonify(normalized_complete_dict)
-
 
 """
 Create multiple samples from the same source entity
@@ -1297,6 +1145,44 @@ def get_entities_type_instanceof(type_a, type_b):
         abort_bad_req('Unable to process request')
     return make_response(jsonify({'instanceof': instanceof}), 200)
 
+"""
+Endpoint which sends the "visibility" of an entity using values from DataVisibilityEnum.
+Not exposed through the gateway.  Used by services like search-api to, for example, determine if
+a Collection can be in a public index while encapsulating the logic to determine that in this service.
+Parameters
+----------
+id : str
+    The HuBMAP ID (e.g. HBM123.ABCD.456) or UUID of target collection 
+Returns
+-------
+json
+    A value from DataVisibilityEnum
+"""
+@app.route('/visibility/<id>', methods = ['GET'])
+def get_entity_visibility(id):
+    # Token is not required, but if an invalid token provided,
+    # we need to tell the client with a 401 error
+    validate_token_if_auth_header_exists(request)
+
+    # Use the internal token to query the target entity
+    # since public entities don't require user token
+    token = get_internal_token()
+
+    # Get the entity dict from cache if exists
+    # Otherwise query against uuid-api and neo4j to get the entity dict if the id exists
+    entity_dict = query_target_entity(id, token)
+    normalized_entity_type = entity_dict['entity_type']
+
+    # Get the generated complete entity result from cache if exists
+    # Otherwise re-generate on the fly.  To verify if a Collection is public, it is
+    # necessary to have its Datasets, which are populated as triggered data, so
+    # pull back the complete entity
+    complete_dict = schema_manager.get_complete_entity_result(token, entity_dict)
+
+    # Determine if the entity is publicly visible base on its data, only.
+    entity_scope = _get_entity_visibility(normalized_entity_type=normalized_entity_type, entity_dict=complete_dict)
+
+    return jsonify(entity_scope.value)
 
 """
 Update the properties of a given entity
@@ -1439,6 +1325,13 @@ def update_entity(id):
         if has_dataset_uuids_to_link or has_dataset_uuids_to_unlink:
             after_update(normalized_entity_type, user_token, merged_updated_dict)
     elif normalized_entity_type == 'Collection':
+        entity_visibility = _get_entity_visibility(  normalized_entity_type=normalized_entity_type
+                                                    ,entity_dict=entity_dict)
+        # Prohibit update of an existing Collection if it meets criteria of being visible to public e.g. has DOI.
+        if entity_visibility == DataVisibilityEnum.PUBLIC:
+            logger.info(f"Attempt to update {normalized_entity_type} with id={id} which has visibility {entity_visibility}.")
+            abort_bad_req(f"Cannot update {normalized_entity_type} due '{entity_visibility.value}' visibility.")
+
         # Generate 'before_update_trigger' data and update the entity details in Neo4j
         merged_updated_dict = update_object_details('ENTITIES', request, normalized_entity_type, user_token, json_data_dict,
                                                     entity_dict)
@@ -1498,16 +1391,10 @@ def update_entity(id):
 
     # How to handle reindex collection?
     # Also reindex the updated entity node in elasticsearch via search-api
-    if entity_dict['entity_type'] in ['Collection']:
-        logger.log(logging.DEBUG
-                   ,f"Skipping re-indexing {entity_dict['entity_type']}"
-                    f" with UUID {entity_dict['uuid']}"
-                    f" until supported by search-api.")
-    else:
-        logger.log(logging.INFO
-                   ,f"Re-indexing for creation of {entity_dict['entity_type']}"
-                    f" with UUID {entity_dict['uuid']}")
-        reindex_entity(entity_dict['uuid'], user_token)
+    logger.log(logging.INFO
+               ,"Re-indexing for modification of {entity_dict['entity_type']}"
+                f" with UUID {entity_dict['uuid']}")
+    reindex_entity(entity_dict['uuid'], user_token)
 
     return jsonify(normalized_complete_dict)
 
@@ -3639,44 +3526,6 @@ str
 def get_internal_token():
     return auth_helper_instance.getProcessSecret()
 
-
-"""
-Return the complete collection dict for a given raw collection dict
-
-Parameters
-----------
-collection_dict : dict
-    The raw collection dict returned by Neo4j
-
-Returns
--------
-dict
-    A dictionary of complete collection detail with all the generated 'on_read_trigger' data
-    The generated Collection.datasts contains only public datasets 
-    if user/token doesn't have the right access permission
-"""
-def get_complete_public_collection_dict(collection_dict):
-    # Use internal token to query entity since
-    # no user token is required to access a public collection
-    token = get_internal_token()
-
-    # Collection.datasets is transient property and generated by the trigger method
-    # We'll need to return all the properties including those
-    # generated by `on_read_trigger` to have a complete result
-    complete_dict = schema_manager.get_complete_entity_result(token, collection_dict)
-
-    # Loop through Collection.datasets and only return the published/public datasets
-    public_datasets = []
-    for dataset in complete_dict['datasets']:
-        if dataset['status'].lower() == DATASET_STATUS_PUBLISHED:
-            public_datasets.append(dataset)
-
-    # Modify the result and only show the public datasets in this collection
-    complete_dict['datasets'] = public_datasets
-
-    return complete_dict
-
-
 """
 Generate 'before_create_triiger' data and create the entity details in Neo4j
 
@@ -4676,7 +4525,7 @@ def validate_constraints_by_entities(ancestor, descendant, descendant_entity_typ
 
     result = get_constraints_by_ancestor(constraint, True)
     if result.get('code') is not StatusCodes.OK:
-        abort_bad_req(f"Invalid entity constraints. Valid descendants include: {result.get('description')}")
+        abort_bad_req(f"Invalid entity constraints for ancestor of type {ancestor.get('entity_type')}. Valid descendants include: {result.get('description')}")
     return result
 
 """
@@ -4887,9 +4736,13 @@ def delete_cache(id):
 
 if __name__ == "__main__":
     try:
-        app.run(host='0.0.0.0', port="5002", debug=True)
+        app.run(host='0.0.0.0', port="5002")
+        print(f"Flask app.run() done")
     except Exception as e:
         print("Error during starting debug server.")
         print(str(e))
         logger.error(e, exc_info=True)
         print("Error during startup check the log file for further information")
+    except SystemExit as se:
+        logger.exception(se,stack_info=True)
+        print(f"SystemExit exception with code {se.code}.")
