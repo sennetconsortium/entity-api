@@ -348,15 +348,12 @@ ENTITIES:
         on_read_trigger: get_dataset_abstract
       purpose:
         type: string
-        required_on_create: true
         description: "Indicates purpose or thesis, outlines the aim behind the experiment. Used to generate the abstract property."
       method:
         type: string
-        required_on_create: true
         description: "Provides information on design, procedures, data analysis, etc. Used to generate the abstract property."
       result:
         type: string
-        required_on_create: true
         description: "Indicates results and key findings. Used to generate the abstract property."
       antibodies:
         type: list
