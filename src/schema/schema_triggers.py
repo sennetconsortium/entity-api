@@ -2303,11 +2303,14 @@ def set_processing_information(property_key, normalized_type, user_token, existi
             and not equals(new_data_dict['entity_type'], 'Dataset')):
         return 'processing_information', None
 
-    if ('metadata' not in new_data_dict
-            or 'dag_provenance_list' not in new_data_dict['metadata']):
+    metadata = None
+    for key in ['metadata', 'ingest_metadata']:
+        if key in new_data_dict:
+            metadata = schema_manager.convert_str_to_data(new_data_dict[key])
+            break
+    if metadata is None or 'dag_provenance_list' not in metadata:
         return 'processing_information', None
 
-    metadata = schema_manager.convert_str_to_data(new_data_dict['metadata'])
     dag_provs = metadata['dag_provenance_list']
 
     if len(dag_provs) < 1:
