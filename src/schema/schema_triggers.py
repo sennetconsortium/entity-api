@@ -1,5 +1,3 @@
-import os
-import ast
 import json
 import urllib
 
@@ -14,9 +12,10 @@ import re
 
 # Use the current_app proxy, which points to the application handling the current activity
 from flask import current_app as app
-from lib.ontology import Ontology
 
 # Local modules
+from lib import github
+from lib.ontology import Ontology
 from schema import schema_manager
 from schema import schema_errors
 from schema import schema_neo4j_queries
@@ -56,7 +55,6 @@ def set_timestamp(property_key, normalized_type, user_token, existing_data_dict,
     # Will be proessed in app_neo4j_queries._build_properties_map()
     # and schema_neo4j_queries._build_properties_map()
     return property_key, 'TIMESTAMP()'
-
 
 """
 Trigger event method of setting the entity type of a given entity
@@ -2299,21 +2297,71 @@ str: The processing_information list
 
 
 def set_processing_information(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
-    if 'entity_type' in new_data_dict and not equals(new_data_dict['entity_type'], 'Dataset'):
-        return property_key, None
-    else:
-        if 'metadata' not in new_data_dict or (
-                'metadata' in new_data_dict and 'dag_provenance_list' not in new_data_dict['metadata']):
-            return property_key, None
+    # Need to hard set `processing_information` as this gets called
+    # when `metadata` is passed in the payload
+    if ('entity_type' in new_data_dict
+            and not equals(new_data_dict['entity_type'], 'Dataset')):
+        return 'processing_information', None
 
-    try:
-        metadata_to_return = {}
-        metadata = schema_manager.convert_str_to_data(new_data_dict['metadata'])
-        metadata_to_return['dag_provenance_list'] = metadata['dag_provenance_list']
-        # Need to hard set `processing_information` as this gets called when `metadata` is passed in the payload
-        return 'processing_information', metadata_to_return
-    except requests.exceptions.RequestException as e:
-        raise requests.exceptions.RequestException(e)
+    metadata = None
+    for key in ['metadata', 'ingest_metadata']:
+        if key in new_data_dict:
+            metadata = schema_manager.convert_str_to_data(new_data_dict[key])
+            break
+    if metadata is None or 'dag_provenance_list' not in metadata:
+        return 'processing_information', None
+
+    dag_provs = metadata['dag_provenance_list']
+
+    if len(dag_provs) < 1:
+        # dag_provenance_list is empty
+        return 'processing_information', None
+
+    if any([d.get('hash') is None or d.get('origin') is None for d in dag_provs]):
+        # dag_provenance_list contains invalid entries
+        # entries must have both hash and origin
+        return 'processing_information', None
+
+    proc_info = {
+        'description': '',
+        'pipelines': []
+    }
+    for idx, dag_prov in enumerate(dag_provs):
+        parts = github.parse_repo_name(dag_prov['origin'])
+        if parts is None:
+            continue
+        owner, repo = parts
+
+        if idx == 0 and repo != SchemaConstants.INGEST_PIPELINE_APP:
+            # first entry must be the SenNet ingest pipeline
+            return 'processing_information', None
+
+        if idx > 0 and repo == SchemaConstants.INGEST_PIPELINE_APP:
+            # Ignore duplicate ingest pipeline entries
+            continue
+
+        # Set description to first non ingest pipeline repo
+        if (proc_info.get('description') == ""
+                and repo != SchemaConstants.INGEST_PIPELINE_APP):
+            proc_info['description'] = github.get_repo_description(owner, repo)
+
+        hash = dag_prov['hash']
+        tag = github.get_tag(owner, repo, hash)
+        if tag:
+            url = github.create_tag_url(owner, repo, tag)
+        else:
+            url = github.create_commit_url(owner, repo, hash)
+            if url is None:
+                continue
+        info = {'github': url}
+
+        if 'name' in dag_prov:
+            cwl_url = github.create_commonwl_url(owner, repo, hash, dag_prov['name'])
+            info['commonwl'] = cwl_url
+
+        proc_info['pipelines'].append({repo: info})
+
+    return 'processing_information', proc_info
 
 
 ####################################################################################################
