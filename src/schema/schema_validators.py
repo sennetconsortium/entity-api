@@ -1,6 +1,4 @@
-import yaml
 import logging
-import requests
 from datetime import datetime
 
 # Local modules
@@ -497,6 +495,8 @@ existing_data_dict : dict
 new_data_dict : dict
     The json data in request body, already after the regular validations
 """
+
+
 def validate_creation_action(property_key, normalized_entity_type, request, existing_data_dict, new_data_dict):
     accepted_creation_action_values = SchemaConstants.ALLOWED_SINGLE_CREATION_ACTIONS
     creation_action = new_data_dict.get(property_key)
