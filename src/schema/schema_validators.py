@@ -506,6 +506,70 @@ def validate_creation_action(property_key, normalized_entity_type, request, exis
         raise ValueError(f"The property {property_key} cannot be empty, when specified.")
 
 
+"""
+Validate that the user is in  Hubmap-Data-Admin before creating or updating field 'assigned_to_group_name'
+Parameters
+----------
+property_key : str
+    The target property key
+normalized_type : str
+    Submission
+request: Flask request object
+    The instance of Flask request passed in from application request
+existing_data_dict : dict
+    A dictionary that contains all existing entity properties
+new_data_dict : dict
+    The json data in request body, already after the regular validations
+"""
+
+
+def validate_in_admin_group(property_key, normalized_entity_type, request, existing_data_dict, new_data_dict):
+    try:
+        # The property 'hmgroupids' is ALWAYS in the output with using schema_manager.get_user_info()
+        # when the token in request is a nexus_token
+        user_info = schema_manager.get_user_info(request)
+        admin_group_uuid = schema_manager.get_auth_helper_instance().groupNameToId('SenNet-Data-Admin')['uuid']
+    except Exception as e:
+        # Log the full stack trace, prepend a line with our message
+        logger.exception(e)
+
+        # If the token is not a groups token, no group information available
+        # The commons.hm_auth.AuthCache would return a Response with 500 error message
+        # We treat such cases as the user not in the SenNet-Data-Admin group
+        raise ValueError("Failed to parse the permission based on token, retraction is not allowed")
+
+    if admin_group_uuid not in user_info['hmgroupids']:
+        raise ValueError(f"Permission denied, not permitted to set property {property_key}")
+
+
+"""
+Validate that the provided group_name is one of the group name 'shortname' values where data_provider == true available
+from hubmap-commons in the xxx-globus-groups.json file on entity creation
+Parameters
+----------
+property_key : str
+    The target property key
+normalized_type : str
+    Submission
+request: Flask request object
+    The instance of Flask request passed in from application request
+existing_data_dict : dict
+    A dictionary that contains all existing entity properties
+new_data_dict : dict
+    The json data in request body, already after the regular validations
+"""
+
+
+def validate_group_name(property_key, normalized_entity_type, request, existing_data_dict, new_data_dict):
+    assigned_to_group_name = new_data_dict['assigned_to_group_name']
+    globus_groups = schema_manager.get_auth_helper_instance().getHuBMAPGroupInfo()
+    globus_group = next((v for v in globus_groups.values() if v.get("shortname") == assigned_to_group_name), None)
+    if globus_group is None:
+        raise ValueError("Invalid value for 'assigned_to_group_name'")
+    if not globus_group.get("data_provider", False):
+        raise ValueError("Invalid group in 'assigned_to_group_name'. Must be a data provider")
+
+
 ####################################################################################################
 ## Internal Functions
 ####################################################################################################

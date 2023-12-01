@@ -522,6 +522,22 @@ ENTITIES:
         description: "An optional value that is stored in the activity's creation_action field, if specified."
         before_property_create_validators:
           - validate_creation_action
+      assigned_to_group_name:
+        type: string
+        description: The group who is responsible for the next step in the ingest process
+        before_property_create_validators:
+          - validate_in_admin_group
+          - validate_group_name
+        before_property_update_validators:
+          - validate_in_admin_group
+          - validate_group_name
+      ingest_task:
+        type: string
+        description: A description of the next task in the ingest process
+        before_property_create_validators:
+          - validate_in_admin_group
+        before_property_update_validators:
+          - validate_in_admin_group
 
   ############################################# Publication #############################################
   Publication:
@@ -1147,3 +1163,19 @@ ENTITIES:
         description: "The datasets that are contained in this Upload."
         # A few time-consuming properties (with read triggers) of each dataset are excluded
         on_read_trigger: get_upload_datasets
+      assigned_to_group_name:
+        type: string
+        description: The group who is responsible for the next step in the ingest process
+        before_property_create_validators:
+          - validate_in_admin_group
+          - validate_group_name
+        before_property_update_validators:
+          - validate_in_admin_group
+          - validate_group_name
+      ingest_task:
+        type: string
+        description: A description of the next task in the ingest process
+        before_property_create_validators:
+          - validate_in_admin_group
+        before_property_update_validators:
+          - validate_in_admin_group
