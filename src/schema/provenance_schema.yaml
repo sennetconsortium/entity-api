@@ -111,8 +111,6 @@ ACTIVITIES:
         description: "Usage is the beginning of utilizing an entity by an activity."
       creation_action:
         type: string
-        generated: true
-        immutable: true
         description: "The activity that was performed."
         before_create_trigger: set_activity_creation_action
       protocol_url:
@@ -517,6 +515,29 @@ ENTITIES:
       provider_info:
         type: string
         description: 'Information recorded about the data provider before an analysis pipeline is run on the data.'
+      creation_action:
+        type: string
+        transient: true
+        immutable: true
+        description: "An optional value that is stored in the activity's creation_action field, if specified."
+        before_property_create_validators:
+          - validate_creation_action
+      assigned_to_group_name:
+        type: string
+        description: The group who is responsible for the next step in the ingest process
+        before_property_create_validators:
+          - validate_in_admin_group
+          - validate_group_name
+        before_property_update_validators:
+          - validate_in_admin_group
+          - validate_group_name
+      ingest_task:
+        type: string
+        description: A description of the next task in the ingest process
+        before_property_create_validators:
+          - validate_in_admin_group
+        before_property_update_validators:
+          - validate_in_admin_group
 
   ############################################# Publication #############################################
   Publication:
@@ -542,6 +563,13 @@ ENTITIES:
         type: string
         description: "Additional information about the dataset, which can be used to find this dataset, including lab specific (non-PHI) identifiers."
       # The Dataset.data_access_level is based on Dataset.status and Dataset.contains_human_genetic_sequences
+      creation_action:
+        type: string
+        transient: true
+        immutable: true
+        description: "The activity that was performed."
+        before_property_create_validators:
+          - validate_creation_action
       data_access_level:
         type: string
         generated: true
@@ -1135,3 +1163,19 @@ ENTITIES:
         description: "The datasets that are contained in this Upload."
         # A few time-consuming properties (with read triggers) of each dataset are excluded
         on_read_trigger: get_upload_datasets
+      assigned_to_group_name:
+        type: string
+        description: The group who is responsible for the next step in the ingest process
+        before_property_create_validators:
+          - validate_in_admin_group
+          - validate_group_name
+        before_property_update_validators:
+          - validate_in_admin_group
+          - validate_group_name
+      ingest_task:
+        type: string
+        description: A description of the next task in the ingest process
+        before_property_create_validators:
+          - validate_in_admin_group
+        before_property_update_validators:
+          - validate_in_admin_group

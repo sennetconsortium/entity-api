@@ -1,77 +1,31 @@
 openapi: 3.0.0
 info:
-  description: The SenNet Entity API is a standard RESTful web service with create, update and read operations for the standard SenNet provenance graph entities.
-  version: 1.0.0
+  description: 'The SenNet Entity API is a standard RESTful web service with create, update and read operations for the standard SenNet provenance graph entities.'
+  version: 1.3.11
   title: SenNet Entity API
   contact:
     name: SenNet Help Desk
     email: help@sennetconsortium.org
+  license:
+    name: MIT License
+    url: 'https://github.com/sennetconsortium/entity-api/blob/main/license.txt'
 servers:
-  - url: https://entity.api.sennetconsortium.org
+  - url: 'https://entity.api.sennetconsortium.org'
+security:
+  - BearerAuth: []
 components:
   securitySchemes:
-    bearerAuth:
-      type: apiKey
-      name: Authorization
-      in: header
-      description: Globus bearer token to authorize requests. Have to use apiKey to pass AWS API Gateway import validation
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: Globus Bearer token to authorize requests
   schemas:
-    Activity:
-      type: object
-      properties:
-        created_timestamp:
-          type: integer
-          readOnly: true
-          description: The timestamp of when the node was created.  The format is an integer representing milliseconds since midnight Jan 1, 1970
-        created_by_user_displayname:
-          type: string
-          readOnly: true
-          description: The name of the person or process authenticated when creating the object
-        created_by_user_email:
-          type: string
-          readOnly: true
-          description: The email address of the person or process authenticated when creating the object.
-        created_by_user_sub:
-          type: string
-          readOnly: true
-          description: The subject id as provided by the authorization mechanism for the person or process authenticated when creating the object.
-        uuid:
-          type: string
-          readOnly: true
-          description: The SenNet unique identifier, intended for internal software use only.  This is a 32 digit hexadecimal uuid e.g. 461bbfdc353a2673e381f632510b0f17
-        sennet_id:
-          type: string
-          readOnly: true
-          description: A SenNet Consortium wide unique identifier randomly generated in the format SNT###.ABCD.### for every entity.
-        started_at_time:
-          type: integer
-          readOnly: true
-          description: The time and date of when the activity was started. The format is a datetime, e.g. 2012-04-25T01:30:00Z
-        ended_at_time:
-          type: integer
-          readOnly: true
-          description: The time and date of when the activity was ended.  The format is a datetime, e.g. 2012-04-25T01:30:00Z
-        was_associated_with:
-          type: string
-          readOnly: true
-          description: An activity association is an assignment of responsibility to an agent for an activity, indicating that the agent had a role in the activity.
-        used:
-          type: string
-          readOnly: true
-          description: Usage is the beginning of utilizing an entity by an activity.
-        creation_action:
-          type: string
-          readOnly: true
-          description: The activity that was performed
-        protocol_url:
-          type: string
-          description: "The protocols.io doi url pointing the protocol describing the donor selection, inclusion/exclusion criteria"
     Person:
       type: object
       properties:
         first_name:
           type: string
-          description: "The full name of the person."
+          description: The full name of the person.
         last_name:
           type: string
           description: The last name of the person.
@@ -80,41 +34,11 @@ components:
           description: The middle name or initial of the person.
         orcid_id:
           type: string
-          description: The ORCID iD of the person.
+          description: The ORCID ID of the person.
         affiliation:
           type: string
           description: The institution that the person is affiliated with.
-    Lab:
-      type: object
-      properties:
-        created_timestamp:
-          type: integer
-          readOnly: true
-          description: The timestamp of when the node was created.  The format is an integer representing milliseconds since midnight Jan 1, 1970
-        created_by_user_displayname:
-          type: string
-          readOnly: true
-          description: The name of the person or process authenticated when creating the object
-        created_by_user_email:
-          type: string
-          readOnly: true
-          description: The email address of the person or process authenticated when creating the object.
-        created_by_user_sub:
-          type: string
-          readOnly: true
-          description: The subject id as provided by the authorization mechanism for the person or process authenticated when creating the object.
-        uuid:
-          type: string
-          readOnly: true
-          description: The SenNet unique identifier, intended for internal software use only.  This is a 32 digit hexadecimal uuid e.g. 461bbfdc353a2673e381f632510b0f17
-        sennet_id:
-          type: string
-          readOnly: true
-          description: A SenNet Consortium wide unique identifier randomly generated in the format SNT###.ABCD.### for every entity.
-        acted_on_behalf_of:
-          type: string
-          readOnly: true
-          description: Delegation is the assignment of authority and responsibility to an agent (by itself or by another agent) to carry out a specific activity as a delegate or representative, while the agent it acts on behalf of retains some responsibility for the outcome of the delegated work.
+
     File:
       type: object
       properties:
@@ -127,13 +51,14 @@ components:
         file_uuid:
           type: string
           description: The SenNet unique identifier for the file.
+
     Source:
       type: object
       properties:
         created_timestamp:
           type: integer
           readOnly: true
-          description: The timestamp of when the node was created.  The format is an integer representing milliseconds since midnight Jan 1, 1970
+          description: The timestamp of when the node was created. The format is an integer representing milliseconds since midnight Jan 1, 1970
         created_by_user_displayname:
           type: string
           readOnly: true
@@ -149,7 +74,7 @@ components:
         uuid:
           type: string
           readOnly: true
-          description: The SenNet unique identifier, intended for internal software use only.  This is a 32 digit hexadecimal uuid e.g. 461bbfdc353a2673e381f632510b0f17
+          description: The SenNet unique identifier, intended for internal software use only. This is a 32 digit hexadecimal uuid e.g. 461bbfdc353a2673e381f632510b0f17
         sennet_id:
           type: string
           readOnly: true
@@ -157,7 +82,7 @@ components:
         last_modified_timestamp:
           type: integer
           readOnly: true
-          description: The timestamp of when the object was last modified.  The format is an integer representing milliseconds since midnight, Jan 1, 1970
+          description: The timestamp of when the object was last modified. The format is an integer representing milliseconds since midnight, Jan 1, 1970
         last_modified_user_sub:
           type: string
           readOnly: true
@@ -176,7 +101,7 @@ components:
           description: 'One of the normalized entity types: Dataset, Collection, Sample, Source, Upload'
         registered_doi:
           type: string
-          description: The doi of a the registered entity. e.g. 10.35079/snt289.pcbm.487.  This is set during the publication process and currently available for certain Collections and Datasets.
+          description: The doi of a the registered entity. e.g. 10.35079/snt289.pcbm.487. This is set during the publication process and currently available for certain Collections and Datasets.
         doi_url:
           type: string
           readOnly: true
@@ -226,7 +151,7 @@ components:
           description: A lab specific identifier for the source.
         group_uuid:
           type: string
-          description: The uuid of globus group which the user who created this entity is a member of.  This is required on Create/POST if the user creating the Source is a member of more than one write group.  This property cannot be set via PUT (only on Create/POST).
+          description: The UUID of globus group which the user who created this entity is a member of.  This is required on Create/POST if the user creating the Source is a member of more than one write group.  This property cannot be set via PUT (only on Create/POST).
         group_name:
           readOnly: true
           type: string
@@ -236,14 +161,20 @@ components:
           description: Lab provided, de-identified name for the source
         source_type:
           type: string
-          description: A high level description of where this source originates from.
+          enum:
+            - Human
+            - Human Organoid
+            - Mouse
+            - Mouse Organoid
+          description: "A high level description of where this source originates from. Valid values found in: [source types](https://ontology.api.hubmapconsortium.org/valueset?parent_sab=SENNET&parent_code=C050020&child_sabs=SENNET)"
+
     Sample:
       type: object
       properties:
         created_timestamp:
           type: integer
           readOnly: true
-          description: The timestamp of when the node was created.  The format is an integer representing milliseconds since midnight Jan 1, 1970
+          description: The timestamp of when the node was created. The format is an integer representing milliseconds since midnight Jan 1, 1970
         created_by_user_displayname:
           type: string
           readOnly: true
@@ -259,7 +190,7 @@ components:
         uuid:
           type: string
           readOnly: true
-          description: The SenNet unique identifier, intended for internal software use only.  This is a 32 digit hexadecimal uuid e.g. 461bbfdc353a2673e381f632510b0f17
+          description: The SenNet unique identifier, intended for internal software use only. This is a 32 digit hexadecimal UUID e.g. 461bbfdc353a2673e381f632510b0f17
         sennet_id:
           type: string
           readOnly: true
@@ -267,7 +198,7 @@ components:
         last_modified_timestamp:
           type: integer
           readOnly: true
-          description: The timestamp of when the object was last modified.  The format is an integer representing milliseconds since midnight, Jan 1, 1970
+          description: The timestamp of when the object was last modified. The format is an integer representing milliseconds since midnight, Jan 1, 1970
         last_modified_user_sub:
           type: string
           readOnly: true
@@ -286,7 +217,7 @@ components:
           description: 'One of the normalized entity types: Dataset, Collection, Sample, Source'
         registered_doi:
           type: string
-          description: The doi of a the registered entity. e.g. 10.35079/snt289.pcbm.487.  This is set during the publication process and currently available for certain Collections and Datasets.
+          description: The doi of a the registered entity. e.g. 10.35079/snt289.pcbm.487. This is set during the publication process and currently available for certain Collections and Datasets.
         doi_url:
           type: string
           readOnly: true
@@ -312,40 +243,48 @@ components:
           description: 'One of the values: public, consortium.'
         group_uuid:
           type: string
-          description: The uuid of globus group which the user who created this entity is a member of.  This is required on Create/POST if the user creating the Source is a member of more than one write group.  This property cannot be set via PUT (only on Create/POST).
+          description: The UUID of globus group which the user who created this entity is a member of. This is required on Create/POST if the user creating the Source is a member of more than one write group. This property cannot be set via PUT (only on Create/POST).
         group_name:
           readOnly: true
           type: string
           description: The displayname of globus group which the user who created this entity is a member of
         sample_category:
           type: string
-          description: The category of the sample (Block/Section/Suspension/Bodily Fluid/Organ/Organ Piece/Other)
+          enum:
+            - Block
+            - Organ
+            - Section
+            - Suspension
+          description: "The category of the sample. Valid values found in: [sample categories](https://ontology.api.hubmapconsortium.org/valueset?parent_sab=SENNET&parent_code=C020076&child_sabs=SENNET)"
         organ:
           type: string
           enum:
-            - AO
+            - AD
             - BD
+            - BM
             - BR
             - BS
+            - LK
+            - RK
             - LI
             - LV
             - LL
             - RL
-            - LK
-            - RK
+            - LN
             - MU
             - LO
             - RO
+            - PA
+            - PL
             - SK
-            - OT
-          description: 'Organ code specifier, only set if sample_type == organ.  Valid values found in: [organ types](https://github.com/sennetconsortium/search-api/blob/master/src/search-schema/data/definitions/enums/organ_types.yaml)'
+          description: "Organ code specifier, only set if sample_type == organ. Valid values found in: [organ types](https://ontology.api.hubmapconsortium.org/organs?application_context=sennet)"
         organ_other:
           type: string
           description: The organ type provided by the user if "other" organ type is selected
         direct_ancestor_uuid:
           type: string
           writeOnly: true
-          description: The uuid of source entity from which this new entity is derived from. Used on creation or edit to create an action and relationship to the ancestor.  The direct ancestor must be a Source or Sample.  If the direct ancestor is a Source, the sample must be of type organ.
+          description: The UUID of source entity from which this new entity is derived from. Used on creation or edit to create an action and relationship to the ancestor.  The direct ancestor must be a Source or Sample.  If the direct ancestor is a Source, the sample must be of type organ.
         direct_ancestor:
           readOnly: true
           type: object
@@ -397,6 +336,7 @@ components:
             type: string
             format: file_uuid
           description: 'List of image files previously uploaded to delete. Provide as a json array of the file_uuids of the file like: ["232934234234234234234270c0ea6c51d604a850558ef2247d0b4", "230948203482234234234a57bfe9c056d08a0f8e6cd612baa3bfa"]'
+
     Dataset:
       type: object
       properties:
@@ -419,7 +359,7 @@ components:
         uuid:
           type: string
           readOnly: true
-          description: The SenNet unique identifier, intended for internal software use only.  This is a 32 digit hexadecimal uuid e.g. 461bbfdc353a2673e381f632510b0f17
+          description: The SenNet unique identifier, intended for internal software use only. This is a 32 digit hexadecimal UUID e.g. 461bbfdc353a2673e381f632510b0f17
         sennet_id:
           type: string
           readOnly: true
@@ -427,7 +367,7 @@ components:
         last_modified_timestamp:
           type: integer
           readOnly: true
-          description: The timestamp of when the object was last modified.  The format is an integer representing milliseconds since midnight, Jan 1, 1970
+          description: The timestamp of when the object was last modified. The format is an integer representing milliseconds since midnight, Jan 1, 1970
         last_modified_user_sub:
           type: string
           readOnly: true
@@ -446,7 +386,7 @@ components:
           description: 'One of the normalized entity types: Dataset, Collection, Sample, Source'
         registered_doi:
           type: string
-          description: The doi of a the registered entity. e.g. 10.35079/snt289.pcbm.487.  This is set during the publication process and currently available for certain Collections and Datasets.
+          description: The doi of a the registered entity. e.g. 10.35079/snt289.pcbm.487. This is set during the publication process and currently available for certain Collections and Datasets.
         doi_url:
           type: string
           readOnly: true
@@ -493,25 +433,36 @@ components:
           items:
             type: string
             enum:
-              - Bulk RNA-seq
-              - CITE-seq
+              - 10x-multiome
+              - bulk-RNA
+              - CITE-Seq
               - CODEX
-              - CosMX
+              - codex_cytokit
+              - codex_cytokit_v1
+              - CosMX (RNA)
               - DBiT-seq
-              - FACS
-              - GeoMX
+              - FACS - Fluorescence-activated Cell Sorting
+              - GeoMX (RNA) 
+              - image_pyramid
               - LC-MS
+              - Lightsheet
               - MIBI
+              - mibi_deepcell
               - Mint-ChIP
-              - Multiplexed
+              - publication
+              - publication_ancillary
+              - salmon_rnaseq_10x
+              - salmon_rnaseq_bulk
+              - salmon_sn_rnaseq_10x
               - SASP
               - scRNA-seq
+              - sn_atac_seq
               - snATAC-seq
               - snRNA-seq
+              - snRNAseq-10xGenomics-v3
               - Stained Slides
               - Visium
-              - Other
-          description: The data or assay types contained in this dataset as a json array of strings.  Each is an assay code from [assay types](https://github.com/sennetconsortium/search-api/blob/master/src/search-schema/data/definitions/enums/assay_types.yaml).
+          description: The data or assay types contained in this dataset as a json array of strings. Each is an assay code from [assay types](https://ontology.api.hubmapconsortium.org/datasets?application_context=Sennet).
         collections:
           readOnly: true
           type: array
@@ -523,7 +474,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Person'
-          description: A list of people who contributed to the creation of this dataset.  Returned as an array of contributor where the structure of a contributor is
+          description: A list of people who contributed to the creation of this dataset. Returned as an array of contributor where the structure of a contributor is
         direct_ancestors:
           readOnly: true
           type: array
@@ -535,7 +486,7 @@ components:
         published_timestamp:
           readOnly: true
           type: integer
-          description: The timestamp of when the dataset was published.  The format is an integer representing milliseconds since midnight, Jan 1, 1970.
+          description: The timestamp of when the dataset was published. The format is an integer representing milliseconds since midnight, Jan 1, 1970.
         published_user_displayname:
           readOnly: true
           type: string
@@ -550,25 +501,25 @@ components:
           description: The email address of the user who published the provided by the authorization mechanism for the person or process authenticated when published.
         ingest_metadata:
           type: object
-          description: The metadata returned from the ingest pipeline processing at data submission time.  Provided as json.
+          description: The metadata returned from the ingest pipeline processing at data submission time. Provided as json.
         local_directory_rel_path:
           type: string
           readOnly: true
           description: The path on the local HIVE file system, relative to the base data directory, where the data is stored.
         group_uuid:
           type: string
-          description: The uuid of globus group which the user who created this entity is a member of.  This is required on Create/POST if the user creating the Source is a member of more than one write group.  This property cannot be set via PUT (only on Create/POST).
+          description: The UUID of globus group which the user who created this entity is a member of. This is required on Create/POST if the user creating the Source is a member of more than one write group.  This property cannot be set via PUT (only on Create/POST).
         group_name:
           type: string
           readOnly: true
           description: The displayname of globus group which the user who created this entity is a member of
         previous_revision_uuid:
           type: string
-          description: The uuid of previous revision dataset. Can only be set at Create/POST time.
+          description: The UUID of previous revision dataset. Can only be set at Create/POST time.
         next_revision_uuid:
           type: string
           readOnly: true
-          description: The uuid of next revision dataset
+          description: The UUID of next revision dataset
         thumbnail_file:
           readOnly: true
           description: 'The dataset thumbnail file detail. Stored in db as a stringfied json, e.g., {"filename": "thumbnail.jpg", "file_uuid": "c35002f9c3d49f8b77e1e2cd4a01803d"}'
@@ -582,13 +533,14 @@ components:
           type: string
           format: file_uuid
           description: 'The thumbnail image file previously uploaded to delete. Provide as a string of the file_uuid like: "c35002f9c3d49f8b77e1e2cd4a01803d"'
-    Collection:
+
+    Upload:
       type: object
       properties:
         created_timestamp:
           type: integer
           readOnly: true
-          description: The timestamp of when the node was created.  The format is an integer representing milliseconds since midnight Jan 1, 1970
+          description: The timestamp of when the node was created. The format is an integer representing milliseconds since midnight Jan 1, 1970
         created_by_user_displayname:
           type: string
           readOnly: true
@@ -604,7 +556,7 @@ components:
         uuid:
           type: string
           readOnly: true
-          description: The SenNet unique identifier, intended for internal software use only.  This is a 32 digit hexadecimal uuid e.g. 461bbfdc353a2673e381f632510b0f17
+          description: The SenNet unique identifier, intended for internal software use only. This is a 32 digit hexadecimal UUID e.g. 461bbfdc353a2673e381f632510b0f17
         sennet_id:
           type: string
           readOnly: true
@@ -612,7 +564,92 @@ components:
         last_modified_timestamp:
           type: integer
           readOnly: true
-          description: The timestamp of when the object was last modified.  The format is an integer representing milliseconds since midnight, Jan 1, 1970
+          description: The timestamp of when the object was last modified. The format is an integer representing milliseconds since midnight, Jan 1, 1970
+        last_modified_user_sub:
+          type: string
+          readOnly: true
+          description: The subject id of the user who last modified the entity as provided by the authorization mechanism for the person or process authenticated when the object was modified.
+        last_modified_user_email:
+          type: string
+          readOnly: true
+          description: The email address of the person or process which authenticated when the object was last modified.
+        last_modified_user_displayname:
+          type: string
+          readOnly: true
+          description: The name of the person or process which authenticated when the object was last modified.
+        entity_type:
+          type: string
+          readOnly: true
+          description: 'One of the normalized entity types: Dataset, Collection, Sample, Source, Upload'
+        description:
+          type: string
+          description: Free text description of the data being submitted.
+        title:
+          type: string
+          description: Title of the datasets, a sentance or less
+        status:
+          type: string
+          description: 'One of: New|Valid|Invalid|Error|Submitted'
+        validation_message:
+          type: string
+          description: A message from the validataion tools describing what is invalid with the upload.
+        group_uuid:
+          type: string
+          description: The UUID of globus group which the user who created this entity is a member of. This is required on Create/POST if the user creating the Source is a member of more than one write group. This property cannot be set via PUT (only on Create/POST).
+        group_name:
+          type: string
+          readOnly: true
+          description: The displayname of globus group which the user who created this entity is a member of
+        dataset_uuids_to_link:
+          type: array
+          items:
+            type: string
+          writeOnly: true
+          description: 'List of datasets to add to the Upload. Provide as a json array of the dataset UUIDs like: ["232934234234234234234270c0ea6c51d604a850558ef2247d0b4", "230948203482234234234a57bfe9c056d08a0f8e6cd612baa3bfa"]'
+        dataset_uuids_to_unlink:
+          type: array
+          items:
+            type: string
+          writeOnly: true
+          description: 'List of datasets to remove from a Upload. Provide as a json array of the dataset UUIDs like: ["232934234234234234234270c0ea6c51d604a850558ef2247d0b4", "230948203482234234234a57bfe9c056d08a0f8e6cd612baa3bfa"]'
+        datasets:
+          type: array
+          items:
+            $ref: '#/components/schemas/Dataset'
+          readOnly: true
+          description: The datasets that are contained in this Upload.
+
+    Collection:
+      type: object
+      properties:
+        created_timestamp:
+          type: integer
+          readOnly: true
+          description: The timestamp of when the node was created. The format is an integer representing milliseconds since midnight Jan 1, 1970
+        created_by_user_displayname:
+          type: string
+          readOnly: true
+          description: The name of the person or process authenticated when creating the object
+        created_by_user_email:
+          type: string
+          readOnly: true
+          description: The email address of the person or process authenticated when creating the object.
+        created_by_user_sub:
+          type: string
+          readOnly: true
+          description: The subject id as provided by the authorization mechanism for the person or process authenticated when creating the object.
+        uuid:
+          type: string
+          readOnly: true
+          description: The SenNet unique identifier, intended for internal software use only. This is a 32 digit hexadecimal UUID e.g. 461bbfdc353a2673e381f632510b0f17
+        sennet_id:
+          type: string
+          readOnly: true
+          description: A SenNet Consortium wide unique identifier randomly generated in the format SNT###.ABCD.### for every entity.
+        last_modified_timestamp:
+          type: integer
+          readOnly: true
+          description: The timestamp of when the object was last modified. The format is an integer representing milliseconds since midnight, Jan 1, 1970
         last_modified_user_sub:
           type: string
           readOnly: true
@@ -631,7 +668,7 @@ components:
           description: 'One of the normalized entity types: Dataset, Collection, Sample, Source'
         registered_doi:
           type: string
-          description: The doi of a the registered entity. e.g. 10.35079/snt289.pcbm.487.  This is set during the publication process and currently available for certain Collections and Datasets.
+          description: The doi of a the registered entity. e.g. 10.35079/snt289.pcbm.487. This is set during the publication process and currently available for certain Collections and Datasets.
         doi_url:
           type: string
           readOnly: true
@@ -655,20 +692,31 @@ components:
           items:
             $ref: '#/components/schemas/Dataset'
           description: The datasets that are contained in the Collection.
+
+    Instanceof:
+      type: object
+      description: "Returned by /entities/type/{type_a}/instanceof/{type_b}"
+      properties:
+        instanceof:
+          type: boolean
+          description: "True of False depending on whether the Entity id is an instance of the type"
+
 paths:
   /entities/{id}:
     get:
-      summary: Retrieve a provenance entity by id.  Entity types of Source, Sample and Datasets.
+      tags:
+        - entities
+      summary: Retrieve a provenance entity by id. Entity types of Source, Sample, Dataset, and Upload.
       parameters:
         - name: id
           in: path
-          description: The unique identifier of entity.  This identifier can be either an SenNet ID (e.g. SNT123.ABCD.456) or UUID (32 digit hexadecimal number)
+          description: The unique identifier of entity. This identifier can be either an SenNet ID (e.g. SNT123.ABCD.456) or UUID (32 digit hexadecimal number)
           required: true
           schema:
             type: string
       responses:
         '200':
-          description: The json of the **[Source](http://somewhere.org)**, **[Sample](http://somewhere.org)** or **[Dataset](http://somewhere.org)**
+          description: The json of the **[Source](http://somewhere.org)**, **[Sample](http://somewhere.org)**, **[Dataset](http://somewhere.org)**, or **[Upload](http://somewhere.org)**
           content:
             application/json:
               schema:
@@ -676,6 +724,7 @@ paths:
                   - $ref: '#/components/schemas/Source'
                   - $ref: '#/components/schemas/Sample'
                   - $ref: '#/components/schemas/Dataset'
+                  - $ref: '#/components/schemas/Upload'
         '400':
           description: Invalid or misformatted entity identifier was provided.
         '401':
@@ -687,6 +736,8 @@ paths:
         '500':
           description: An unexpected error occurred.
     put:
+      tags:
+        - entities
       summary: Update the properties of a given Source, Sample, Dataset or Upload
       parameters:
         - name: id
@@ -703,6 +754,7 @@ paths:
                 - $ref: '#/components/schemas/Source'
                 - $ref: '#/components/schemas/Sample'
                 - $ref: '#/components/schemas/Dataset'
+                - $ref: '#/components/schemas/Upload'
       responses:
         '200':
           description: The entity was successfully updated and is returned
@@ -713,6 +765,7 @@ paths:
                   - $ref: '#/components/schemas/Source'
                   - $ref: '#/components/schemas/Sample'
                   - $ref: '#/components/schemas/Dataset'
+                  - $ref: '#/components/schemas/Upload'
         '400':
           description: Invalid or misformatted entity identifier
         '401':
@@ -721,8 +774,11 @@ paths:
           description: The target entity could not be found
         '500':
           description: Internal error
+
   /entity-types:
     get:
+      tags:
+        - entities types
       summary: Get a list of all the available entity types defined in the schema yaml
       responses:
         '200':
@@ -736,16 +792,19 @@ paths:
         '401':
           description: The user's token has expired or the user did not supply a valid token
         '403':
-          description: THe user is not authorized to use this method
+          description: The user is not authorized to use this method
         '500':
           description: Internal error
+
   /ancestors/{id}:
     get:
-      summary: Get the ancestor list for an Entity.  The ancestors are the nodes connected "upstream" from the current node.  This list traverses all the levels in the graph.
+      tags:
+        - ancestors
+      summary: Get the ancestor list for an Entity. The ancestors are the nodes connected "upstream" from the current node. This list traverses all the levels in the graph.
       parameters:
         - name: id
           in: path
-          description: The unique identifier of entity.  This identifier can be either an SenNet ID (e.g. SNT123.ABCD.456) or UUID
+          description: The unique identifier of entity. This identifier can be either an SenNet ID (e.g. SNT123.ABCD.456) or UUID
           required: true
           schema:
             type: string
@@ -771,13 +830,16 @@ paths:
           description: The target entity could not be found
         '500':
           description: Internal error
+
   /descendants/{id}:
     get:
-      summary: Get the descendant list for an Entity.  The descendants are the nodes "downstream" from the current node.  This list traverses all the levels in the graph. Returns all descendants as an array of Entities.
+      tags:
+        - descendants
+      summary: Get the descendant list for an Entity. The descendants are the nodes "downstream" from the current node.  This list traverses all the levels in the graph. Returns all descendants as an array of Entities.
       parameters:
         - name: id
           in: path
-          description: The unique identifier of entity.  This identifier can be either an SenNet ID (e.g. SNT123.ABCD.456) or UUID
+          description: The unique identifier of entity. This identifier can be either an SenNet ID (e.g. SNT123.ABCD.456) or UUID
           required: true
           schema:
             type: string
@@ -802,13 +864,16 @@ paths:
           description: The target entity could not be found
         '500':
           description: Internal error
+
   /parents/{id}:
     get:
-      summary: Get the immediate parent list for an Entity.  The parents are the nodes connected one level "upstream" from the current node.  This list only goes to the next higher level in the graph.
+      tags:
+        - parents
+      summary: Get the immediate parent list for an Entity. The parents are the nodes connected one level "upstream" from the current node.  This list only goes to the next higher level in the graph.
       parameters:
         - name: id
           in: path
-          description: The unique identifier of entity.  This identifier can be either an SenNet ID (e.g. SNT123.ABCD.456) or UUID
+          description: The unique identifier of entity. This identifier can be either an SenNet ID (e.g. SNT123.ABCD.456) or UUID
           required: true
           schema:
             type: string
@@ -834,13 +899,16 @@ paths:
           description: The target entity could not be found
         '500':
           description: Internal error
+
   /children/{id}:
     get:
-      summary: Get the list of children directly connected to an Entity.  The children are the nodes one level below the current node.  This list only returns the items one level below in the graph.
+      tags:
+        - children
+      summary: Get the list of children directly connected to an Entity. The children are the nodes one level below the current node. This list only returns the items one level below in the graph.
       parameters:
         - name: id
           in: path
-          description: The unique identifier of entity.  This identifier can be either an SenNet ID (e.g. SNT123.ABCD.456) or UUID
+          description: The unique identifier of entity. This identifier can be either an SenNet ID (e.g. SNT123.ABCD.456) or UUID
           required: true
           schema:
             type: string
@@ -865,19 +933,22 @@ paths:
           description: The target entity could not be found
         '500':
           description: Internal error
+
   /entities/{id}/provenance:
     get:
-      summary: Get Provenance Data for Entity.  This returns a PROV JSON compliant representation of the entity's provenance. Refer to this document for more information regarding [PROV JSON format](https://www.w3.org/Submission/2013/SUBM-prov-json-20130424/)
+      tags:
+        - entities
+      summary: Get Provenance Data for Entity. This returns a PROV JSON compliant representation of the entity's provenance. Refer to this document for more information regarding [PROV JSON format](https://www.w3.org/Submission/2013/SUBM-prov-json-20130424/)
       parameters:
         - name: id
           in: path
-          description: The unique identifier of entity.  This identifier can be either an SenNet ID (e.g. SNT123.ABCD.456) or UUID
+          description: The unique identifier of entity. This identifier can be either an SenNet ID (e.g. SNT123.ABCD.456) or UUID
           required: true
           schema:
             type: string
       responses:
         '200':
-          description: successful operation
+          description: Successful operation
           content:
             application/json: {}
         '400':
@@ -890,13 +961,52 @@ paths:
           description: The target entity could not be found
         '500':
           description: Internal error
+
+  /entities/type/{type_a}/instanceof/{type_b}:
+    get:
+      tags:
+        - entities
+      summary: Determines if the Entity type type_a is an instance of type_b
+      parameters:
+        - name: type_a
+          in: path
+          description: The unique identifier of entity (e.g. Published)
+          required: true
+          schema:
+            type: string
+        - name: type_b
+          in: path
+          description: The Entity Type Class as defined in entity-api-spec.yaml (e.g. Dataset)
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: An object with the attribute 'instanceof' that has a value of either 'true' of 'false'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Instanceof'
+        '400':
+          description: Invalid or misformatted entity identifie
+        '401':
+          description: The user's token has expired or the user did not supply a valid token
+        '403':
+          description: The user is not authorized to retrieve the entity
+        '404':
+          description: The target entity could not be found
+        '500':
+          description: Internal error
+
   /entities/{id}/ancestor-organs:
     get:
-      summary: Retrievea list of ancestor organ(s) of a given uuid
+      tags:
+        - entities
+      summary: Retrieve a list of ancestor organ(s) of a given UUID
       parameters:
         - name: id
           in: path
-          description: The unique identifier of entity.  This identifier can be either an SenNet ID (e.g. SNT123.ABCD.456) or UUID
+          description: The unique identifier of entity. This identifier can be either an SenNet ID (e.g. SNT123.ABCD.456) or UUID
           required: true
           schema:
             type: string
@@ -919,35 +1029,11 @@ paths:
           description: The target entity could not be found
         '500':
           description: Internal error
-  /collections/{id}:
-    get:
-      summary: Returns the information of the Collection specified by the uuid with all connected datasets. If a valid token is provided with group membership in the SenNet-Read group any collection matching the id will be returned.  Otherwise if no token is provided or a valid token with no SenNet-Read group membership then only a public collection will be returned.  Public collections are defined as being published via a DOI (collection.doi_registered == true) and at least one of the connected datasets is public (dataset.metadata.data_access_level == 'public'). For public collections only connected datasets that are public are returned with it.
-      parameters:
-        - name: id
-          in: path
-          description: The unique identifier of entity.  This identifier can be either an SenNet ID (e.g. SNT123.ABCD.456) or UUID
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: The collection is returned
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Collection'
-        '400':
-          description: Invalid or misformatted entity identifier
-        '401':
-          description: The user's token has expired or the user did not supply a valid token
-        '404':
-          description: The target entity could not be found
-        '500':
-          description: Internal error
+
   /entities/{entity_type}:
     post:
+      tags:
+        - entities
       summary: Create a new entity of the target type
       parameters:
         - name: entity_type
@@ -964,6 +1050,7 @@ paths:
                 - $ref: '#/components/schemas/Source'
                 - $ref: '#/components/schemas/Sample'
                 - $ref: '#/components/schemas/Dataset'
+                - $ref: '#/components/schemas/Upload'
       responses:
         '200':
           description: The entity was successfully created and is returned
@@ -976,6 +1063,7 @@ paths:
                     - $ref: '#/components/schemas/Source'
                     - $ref: '#/components/schemas/Sample'
                     - $ref: '#/components/schemas/Dataset'
+                    - $ref: '#/components/schemas/Upload'
         '400':
           description: Invalid entity type provided
         '401':
@@ -984,9 +1072,12 @@ paths:
           description: The user is not authorized to create the entity
         '500':
           description: Internal error
+
   /entities/multiple-samples/{count}:
     post:
-      summary: Create multiple samples from the same source entity. 'count' samples will be generated each with individual uuids and sennet_ids.
+      tags:
+        - entities
+      summary: Create multiple samples from the same source entity. 'count' samples will be generated each with individual UUIDs and SenNet IDs.
       parameters:
         - name: count
           in: path
@@ -996,7 +1087,7 @@ paths:
             type: string
       responses:
         '200':
-          description: The samples were successfully created.  An array of objects each containing a uuid and sennet_id associated with each newly created sample.
+          description: The samples were successfully created. An array of objects each containing a UUID and SenNet ID associated with each newly created sample.
           content:
             application/json:
               schema:
@@ -1014,31 +1105,11 @@ paths:
           description: The user's token has expired or the user did not supply a valid token
         '500':
           description: Internal error
-  /collections/{id}/add-entities:
-    put:
-      summary: Link the given list of entities to the target collection
-      parameters:
-        - name: id
-          in: path
-          description: The UUID of target collection
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: successful operation
-        '400':
-          description: Invalid or misformatted collection uuid
-        '401':
-          description: The user's token has expired or the user did not supply a valid token
-        '403':
-          description: The user is not authorized to add entities to the collection
-        '404':
-          description: The target entity could not be found
-        '500':
-          description: Internal error
+
   /doi/redirect/{id}:
     get:
+      tags:
+        - doi
       summary: Redirect a request from a doi service
       parameters:
         - name: id
@@ -1054,13 +1125,16 @@ paths:
           description: Invalid or misformatted collection identifier
         '500':
           description: Internal error
+
   /entities/{id}/globus-url:
     get:
+      tags:
+        - entities
       summary: Get the Globus URL to the given Dataset or Upload entity
       parameters:
         - name: id
           in: path
-          description: The HuBMA`P ID (e.g. SNT123.ABCD.456) or UUID of the given ntity
+          description: The ID (e.g. SNT123.ABCD.456) or UUID of the given ntity
           required: true
           schema:
             type: string
@@ -1082,19 +1156,22 @@ paths:
           description: The target entity could not be found
         '500':
           description: Internal error
+
   /datasets/{id}/latest-revision:
     get:
-      summary: Retrive the latest (newest) revision of a given Dataset. Public/Consortium access rules apply - if no token/consortium access then must be for a public dataset and the returned Dataset must be the latest public version. If the given dataset itself is the latest revision, meaning it has no next revisions, this dataset gets returned.
+      tags:
+        - datasets
+      summary: Retrieve the latest (newest) revision of a given Dataset. Public/Consortium access rules apply - if no token/consortium access then must be for a public dataset and the returned Dataset must be the latest public version. If the given dataset itself is the latest revision, meaning it has no next revisions, this dataset gets returned.
       parameters:
         - name: id
           in: path
-          description: The unique identifier of entity.  This identifier can be either an SenNet ID (e.g. SNT123.ABCD.456) or UUID
+          description: The unique identifier of entity. This identifier can be either an SenNet ID (e.g. SNT123.ABCD.456) or UUID
           required: true
           schema:
             type: string
       responses:
         '200':
-          description: successful operation
+          description: Successful operation
           content:
             application/json:
               schema:
@@ -1109,13 +1186,16 @@ paths:
           description: The target dataset could not be found
         '500':
           description: Internal error
+
   /datasets/{id}/revision:
     get:
-      summary: Retrive the calculated revision number of a Dataset. The calculated revision is number is based on the [:REVISION_OF] relationships to the oldest dataset in a revision chain. Where the oldest dataset = 1 and each newer version is incremented by one (1, 2, 3 ...). Public/Consortium access rules apply, if is for a non-public dataset and no token or a token without membership in SenNet-Read group is sent with the request then a 403 response should be returned.
+      tags:
+        - datasets
+      summary: Retrieve the calculated revision number of a Dataset. The calculated revision is number is based on the [:REVISION_OF] relationships to the oldest dataset in a revision chain. Where the oldest dataset = 1 and each newer version is incremented by one (1, 2, 3 ...). Public/Consortium access rules apply, if is for a non-public dataset and no token or a token without membership in SenNet-Read group is sent with the request then a 403 response should be returned.
       parameters:
         - name: id
           in: path
-          description: The unique identifier of entity.  This identifier can be either an SenNet ID (e.g. SNT123.ABCD.456) or UUID
+          description: The unique identifier of entity. This identifier can be either an SenNet ID (e.g. SNT123.ABCD.456) or UUID
           required: true
           schema:
             type: string
@@ -1132,13 +1212,16 @@ paths:
           description: The target dataset could not be found
         '500':
           description: Internal error
+
   /datasets/{id}/revisions:
     get:
-      summary: From a given ID of a versioned dataset, retrieve a list of every dataset in the chain ordered from most recent to oldest. The revision number, as well as the dataset uuid will be included. An optional parameter ?include_dataset=true will include the full dataset for each revision as well. Public/Consortium access rules apply, if is for a non-public dataset and no token or a token without membership in SenNet-Read group is sent with the request then a 403 response should be returned. If the given id is published, but later revisions are not and the user is not in SenNet-Read group, only published revisions will be returned. The field next_revision_uuid will not be returned if the next revision is unpublished
+      tags:
+        - datasets
+      summary: From a given ID of a versioned dataset, retrieve a list of every dataset in the chain ordered from most recent to oldest. The revision number, as well as the dataset UUID will be included. An optional parameter ?include_dataset=true will include the full dataset for each revision as well. Public/Consortium access rules apply, if is for a non-public dataset and no token or a token without membership in SenNet-Read group is sent with the request then a 403 response should be returned. If the given id is published, but later revisions are not and the user is not in SenNet-Read group, only published revisions will be returned. The field next_revision_uuid will not be returned if the next revision is unpublished
       parameters:
         - name: id
           in: path
-          description: The unique identifier of entity.  This identifier can be either an SenNet ID (e.g. SNT123.ABCD.456) or UUID
+          description: The unique identifier of entity. This identifier can be either an SenNet ID (e.g. SNT123.ABCD.456) or UUID
           required: true
           schema:
             type: string
@@ -1177,13 +1260,16 @@ paths:
           description: The target dataset could not be found
         '500':
           description: Internal error
+
   /datasets/{id}/retract:
     put:
+      tags:
+        - datasets
       summary: 'Retracts a dataset after it has been published. Requires a json body with a single field {retraction_reason: string}. The dataset for the given id is modified to include this new retraction_reason field and sets the dataset property sub_status to Retracted. The complete modified dataset is returned. Requires that the dataset being retracted has already been published (dataset.status == Published. Requires a user token with membership in the SenNet-Data-Admin group otherwise then a 403 will be returned.'
       parameters:
         - name: id
           in: path
-          description: The unique identifier of entity. This identifier can be either a HubMAP ID (e.g. SNT123.ABCD.456) or UUID
+          description: The unique identifier of entity. This identifier can be either a SenNet ID (e.g. SNT123.ABCD.456) or UUID
           required: true
           schema:
             type: string
@@ -1205,14 +1291,17 @@ paths:
         '401':
           description: The user's token has expired or the user did not supply a valid token
         '403':
-          description: The user is not authorized to query the retract the given dataset.  The user must be a member of the SenNet-Data-Admin group
+          description: The user is not authorized to query the retract the given dataset. The user must be a member of the SenNet-Data-Admin group
         '404':
           description: The target dataset could not be found
         '500':
           description: Internal error
+
   /datasets/prov-info:
     get:
-      summary: returns ALL provenance information for ALL datasets in a default table/tsv format or optionally a json format when an optional ?format=json parameter is provided
+      tags:
+        - datasets
+      summary: Returns ALL provenance information for ALL datasets in a default table/tsv format or optionally a json format when an optional ?format=json parameter is provided
       parameters:
         - name: format
           in: query
@@ -1225,7 +1314,7 @@ paths:
               - tsv
         - name: group_uuid
           in: query
-          description: The uuid of the group
+          description: The UUID of the group
           required: false
           schema:
             type: string
@@ -1256,7 +1345,7 @@ paths:
               - published
       responses:
         '200':
-          description: all provenance information for every dataset in the database either as a json list or as a tsv file to be downloaded
+          description: All provenance information for every dataset in the database either as a json list or as a tsv file to be downloaded
           content:
             text/tsv:
               schema:
@@ -1267,55 +1356,55 @@ paths:
                 properties:
                   dataset_uuid:
                     type: string
-                    description: The uuid of the dataset
+                    description: The UUID of the dataset
                   dataset_sennet_id:
                     type: string
                     description: The SenNet ID of the dataset like SNT123.ABCD.456
                   dataset_status:
                     type: string
-                    description: status of the dataset New, QA, Published, etc ...
+                    description: The status of the dataset New, QA, Published, etc ...
                   dataset_group_name:
                     type: string
-                    description: name of the data provider group who created the dataset
+                    description: The name of the data provider group who created the dataset
                   dataset_group_uuid:
                     type: string
-                    description: internal id for the data provider group
+                    description: The internal id for the data provider group
                   dataset_date_time_created:
                     type: string
-                    description: the date/time that the dataset was created
+                    description: The date/time that the dataset was created
                   dataset_created_by_email:
                     type: string
-                    description: the email address of the person who created the dataset
+                    description: The email address of the person who created the dataset
                   dataset_date_time_modified:
                     type: string
-                    description: the date/time that the dataset was last modified
+                    description: The date/time that the dataset was last modified
                   dataset_modified_by_email:
                     type: string
-                    description: the email address of the person who last modified the dataset
+                    description: The email address of the person who last modified the dataset
                   dataset_lab_id:
                     type: string
-                    description: identifier used by the data provider
+                    description: The identifier used by the data provider
                   dataset_data_types:
                     type: string
-                    description: the data/assay types (can be multiple types for pipeline derived data, so a comma separated list for tsv output or a json array for json output)
+                    description: The data/assay types (can be multiple types for pipeline derived data, so a comma separated list for tsv output or a json array for json output)
                   dataset_portl_url:
                     type: string
-                    description: the url to open the dataset in the data portal
+                    description: The url to open the dataset in the data portal
                   first_sample_sennet_id:
                     type: array
                     items:
                       type: string
-                      description: SenNet ID of the tissue sample nearest to this dataset in the provenance chain
+                      description: The SenNet ID of the tissue sample nearest to this dataset in the provenance chain
                   first_sample_submission_id:
                     type: array
                     items:
                       type: string
-                      description: Submission ID of the tissue sample nearest to this dataset in the provenance chain
+                      description: The Submission ID of the tissue sample nearest to this dataset in the provenance chain
                   first_sample_uuid:
                     type: array
                     items:
                       type: string
-                      description: UUID of the tissue sample nearest to this dataset in the provenance chain
+                      description: The UUID of the tissue sample nearest to this dataset in the provenance chain
                   first_sample_type:
                     type: array
                     items:
@@ -1330,17 +1419,17 @@ paths:
                     type: array
                     items:
                       type: string
-                      description: SenNet ID of the organ associated to this dataset in the provenance chain
+                      description: The SenNet ID of the organ associated to this dataset in the provenance chain
                   organ_submission_id:
                     type: array
                     items:
                       type: string
-                      description: Submission ID of the organ associated to this dataset in the provenance chain
+                      description: The submission ID of the organ associated to this dataset in the provenance chain
                   organ_uuid:
                     type: array
                     items:
                       type: string
-                      description: UUID of the organ associated to this dataset in the provenance chain
+                      description: The UUID of the organ associated to this dataset in the provenance chain
                   organ_type:
                     type: array
                     items:
@@ -1380,7 +1469,7 @@ paths:
                     type: array
                     items:
                       type: string
-                      description: The uuid of the tissue sample that contains RUI location json for this dataset
+                      description: The UUID of the tissue sample that contains RUI location json for this dataset
                   sample_metadata_sennet_id:
                     type: array
                     items:
@@ -1395,20 +1484,23 @@ paths:
                     type: array
                     items:
                       type: string
-                      description: The uuid of the tissue sample(s) containing sample metadata
+                      description: The UUID of the tissue sample(s) containing sample metadata
         '401':
           description: The user's token has expired or the user did not supply a valid token
         '403':
-          description: THe user is not authorized to use this method
+          description: The user is not authorized to use this method
         '500':
           description: Internal error
+
   /datasets/{id}/prov-info:
     get:
-      summary: returns aLL provenance information for a single dataset in a default table/tsv format or optionally a json format when an optional ?format=json parameter is provided
+      tags:
+        - datasets
+      summary: Returns ALL provenance information for a single dataset in a default table/tsv format or optionally a json format when an optional ?format=json parameter is provided
       parameters:
         - name: id
           in: path
-          description: he unique identifier of entity.  This identifier can be either an SenNet ID (e.g. SNT123.ABCD.456) or UUID (32 digit hexadecimal number)
+          description: The unique identifier of entity. This identifier can be either an SenNet ID (e.g. SNT123.ABCD.456) or UUID (32 digit hexadecimal number)
           required: true
           schema:
             type: string
@@ -1423,7 +1515,7 @@ paths:
               - tsv
       responses:
         '200':
-          description: all provenance information for the given dataset either as a json list or as a tsv file to be downloaded
+          description: All provenance information for the given dataset either as a json list or as a tsv file to be downloaded
           content:
             text/tsv:
               schema:
@@ -1434,55 +1526,55 @@ paths:
                 properties:
                   dataset_uuid:
                     type: string
-                    description: The uuid of the dataset
+                    description: The UUID of the dataset
                   dataset_sennet_id:
                     type: string
                     description: The SenNet ID of the dataset like SNT123.ABCD.456
                   dataset_status:
                     type: string
-                    description: status of the dataset New, QA, Published, etc ...
+                    description: All status of the dataset New, QA, Published, etc ...
                   dataset_group_name:
                     type: string
-                    description: name of the data provider group who created the dataset
+                    description: The name of the data provider group who created the dataset
                   dataset_group_uuid:
                     type: string
-                    description: internal id for the data provider group
+                    description: The internal id for the data provider group
                   dataset_date_time_created:
                     type: string
-                    description: the date/time that the dataset was created
+                    description: The date/time that the dataset was created
                   dataset_created_by_email:
                     type: string
-                    description: the email address of the person who created the dataset
+                    description: The email address of the person who created the dataset
                   dataset_date_time_modified:
                     type: string
-                    description: the date/time that the dataset was last modified
+                    description: The date/time that the dataset was last modified
                   dataset_modified_by_email:
                     type: string
-                    description: the email address of the person who last modified the dataset
+                    description: The email address of the person who last modified the dataset
                   dataset_lab_id:
                     type: string
-                    description: identifier used by the data provider
+                    description: Identifier used by the data provider
                   dataset_data_types:
                     type: string
-                    description: the data/assay types (can be multiple types for pipeline derived data, so a comma separated list for tsv output or a json array for json output)
+                    description: The data/assay types (can be multiple types for pipeline derived data, so a comma separated list for tsv output or a json array for json output)
                   dataset_portl_url:
                     type: string
-                    description: the url to open the dataset in the data portal
+                    description: The url to open the dataset in the data portal
                   first_sample_sennet_id:
                     type: array
                     items:
                       type: string
-                      description: SenNet ID of the tissue sample nearest to this dataset in the provenance chain
+                      description: The SenNet ID of the tissue sample nearest to this dataset in the provenance chain
                   first_sample_submission_id:
                     type: array
                     items:
                       type: string
-                      description: Submission ID of the tissue sample nearest to this dataset in the provenance chain
+                      description: The Submission ID of the tissue sample nearest to this dataset in the provenance chain
                   first_sample_uuid:
                     type: array
                     items:
                       type: string
-                      description: UUID of the tissue sample nearest to this dataset in the provenance chain
+                      description: The UUID of the tissue sample nearest to this dataset in the provenance chain
                   first_sample_type:
                     type: array
                     items:
@@ -1497,17 +1589,17 @@ paths:
                     type: array
                     items:
                       type: string
-                      description: SenNet ID of the organ associated to this dataset in the provenance chain
+                      description: The SenNet ID of the organ associated to this dataset in the provenance chain
                   organ_submission_id:
                     type: array
                     items:
                       type: string
-                      description: Submission ID of the organ associated to this dataset in the provenance chain
+                      description: The submission ID of the organ associated to this dataset in the provenance chain
                   organ_uuid:
                     type: array
                     items:
                       type: string
-                      description: UUID of the organ associated to this dataset in the provenance chain
+                      description: The UUID of the organ associated to this dataset in the provenance chain
                   organ_type:
                     type: array
                     items:
@@ -1522,7 +1614,7 @@ paths:
                     type: array
                     items:
                       type: string
-                      description: The Submission ID of the source associated to this dataset in the provenance chain
+                      description: The submission ID of the source associated to this dataset in the provenance chain
                   source_uuid:
                     type: array
                     items:
@@ -1547,7 +1639,7 @@ paths:
                     type: array
                     items:
                       type: string
-                      description: The uuid of the tissue sample that contains RUI location json for this dataset
+                      description: The UUID of the tissue sample that contains RUI location json for this dataset
                   sample_metadata_sennet_id:
                     type: array
                     items:
@@ -1562,15 +1654,18 @@ paths:
                     type: array
                     items:
                       type: string
-                      description: The uuid of the tissue sample(s) containing sample metadata
+                      description: The UUID of the tissue sample(s) containing sample metadata
         '401':
           description: The user's token has expired or the user did not supply a valid token
         '403':
-          description: THe user is not authorized to use this method
+          description: The user is not authorized to use this method
         '500':
           description: Internal error
+
   /datasets/sankey_data:
     get:
+      tags:
+        - datasets
       summary: Retrieves the information needed to generate the sankey on software-docs as a json.
       responses:
         '200':
@@ -1588,25 +1683,28 @@ paths:
                     description: The organ type of the organ associated to this dataset in the provenance chain
                   dataset_data_types:
                     type: string
-                    description: the data/assay types (if more than one, output is a comma separated string)
+                    description: The data/assay types (if more than one, output is a comma separated string)
                   dataset_status:
                     type: string
-                    description: status of the dataset New, QA, Published, etc ...
+                    description: The status of the dataset New, QA, Published, etc ...
         '500':
           description: Internal error
+
   /samples/prov-info:
     get:
-      summary: returns aLL provenance information for a each sample in a json format
+      tags:
+        - samples
+      summary: Returns all provenance information for a each sample in a json format
       parameters:
         - name: group_uuid
           in: query
-          description: The uuid of the group
+          description: The UUID of the group
           required: false
           schema:
             type: string
       responses:
         '200':
-          description: all provenance information for the every sample given as a json list
+          description: All provenance information for the every sample given as a json list
           content:
             application/json:
               schema:
@@ -1614,25 +1712,25 @@ paths:
                 properties:
                   sample_uuid:
                     type: string
-                    description: The uuid of the sample
+                    description: The UUID of the sample
                   sample_group_name:
                     type: string
-                    description: name of the data provider group who created the sample
+                    description: The name of the data provider group who created the sample
                   sample_created_by_email:
                     type: string
-                    description: the email address of the person who created the sample
+                    description: The email address of the person who created the sample
                   lab_tissue_sample_id:
                     type: string
-                    description: identifier used by the data provider
+                    description: The identifier used by the data provider
                   sample_ancestor_id:
                     type: string
-                    description: uuid of the source or sample nearest to this dataset in the provenance chain
+                    description: The UUID of the source or sample nearest to this dataset in the provenance chain
                   sample_ancestor_entity:
                     type: string
-                    description: the entity type of the nearest ancestor to the sample. Will be a source or another sample
+                    description: The entity type of the nearest ancestor to the sample. Will be a source or another sample
                   organ_uuid:
                     type: string
-                    description: UUID of the organ associated to this sample in the provenance chain. If the sample is itself an organ, the id will be the same as sample uuid.
+                    description: The UUID of the organ associated to this sample in the provenance chain. If the sample is itself an organ, the id will be the same as sample UUID.
                   organ_type:
                     type: string
                     description: The organ type of the organ associated to this sample in the provenance chain (return the organ code resolved to the organ name via the organ.yaml file)
@@ -1654,6 +1752,51 @@ paths:
         '401':
           description: The user's token has expired or the user did not supply a valid token
         '403':
-          description: THe user is not authorized to use this method
+          description: The user is not authorized to use this method
+        '500':
+          description: Internal error
+
+  /datasets/components:
+    post:
+      tags:
+        - datasets
+      summary: Create multiple component datasets from a single Multi-Assay ancestor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                creation_action:
+                  type: string
+                  description: The action event that will describe the activity node. Allowed values are "Multi-Assay Split"
+                group_uuid:
+                  type: string
+                  description: The group UUID for the new component datasets
+                direct_ancestor_uuids:
+                  type: string
+                  description: The UUID for the parent multi assay dataset
+                datasets:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Dataset'
+      responses:
+        '200':
+          description: The entities were successfully created and are returned.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Dataset'
+        '400':
+          description: Invalid input.
+        '404':
+          description: Not found. No matching datasets were found, or the none were found that the user is authorized to see.
+        '401':
+          description: The user's token has expired or the user did not supply a valid token
+        '403':
+          description: The given dataset is unpublished and the user does not have the authorization to view it.
         '500':
           description: Internal error

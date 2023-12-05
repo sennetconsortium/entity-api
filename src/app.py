@@ -26,7 +26,7 @@ from pymemcache import serde
 # Local modules
 import app_neo4j_queries
 import provenance
-from schema import schema_manager
+from schema import schema_manager, schema_validators, schema_triggers
 from schema import schema_errors
 from schema import schema_neo4j_queries
 from schema.schema_constants import SchemaConstants
@@ -51,17 +51,27 @@ global logger
 
 # Use `getLogger()` instead of `getLogger(__name__)` to apply the config to the root logger
 # will be inherited by the sub-module loggers
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+try:
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
 
-# All the API logging is gets written into the same log file
-# The uWSGI logging for each deployment disables the request logging
-# but still captures the 4xx and 5xx errors to the file `log/uwsgi-entity-api.log`
-# Log rotation is handled via logrotate on the host system with a configuration file
-# Do NOT handle log file and rotation via the Python logging to avoid issues with multi-worker processes
-log_file_handler = logging.FileHandler('../log/entity-api-' + time.strftime("%m-%d-%Y-%H-%M-%S") + '.log')
-log_file_handler.setFormatter(logging.Formatter('[%(asctime)s] %(levelname)s in %(module)s: %(message)s'))
-logger.addHandler(log_file_handler)
+    # All the API logging is gets written into the same log file
+    # The uWSGI logging for each deployment disables the request logging
+    # but still captures the 4xx and 5xx errors to the file `log/uwsgi-entity-api.log`
+    # Log rotation is handled via logrotate on the host system with a configuration file
+    # Do NOT handle log file and rotation via the Python logging to avoid issues with multi-worker processes
+    log_file_handler = logging.FileHandler('../log/entity-api-' + time.strftime("%m-%d-%Y-%H-%M-%S") + '.log')
+    log_file_handler.setFormatter(logging.Formatter('[%(asctime)s] %(levelname)s in %(module)s: %(message)s'))
+    logger.addHandler(log_file_handler)
+except Exception as e:
+    print("Error setting up global log file.")
+    print(str(e))
+
+try:
+    logger.info("logger initialized")
+except Exception as e:
+    print("Error opening log file during startup")
+    print(str(e))
 
 # Specify the absolute path of the instance folder and use the config file relative to the instance path
 app = Flask(__name__, instance_path=os.path.join(os.path.abspath(os.path.dirname(__file__)), 'instance'), instance_relative_config=True)
@@ -348,10 +358,21 @@ json
 """
 @app.route('/status', methods = ['GET'])
 def get_status():
+
+    try:
+        file_version_content = (Path(__file__).absolute().parent.parent / 'VERSION').read_text().strip()
+    except Exception as e:
+        file_version_content = str(e)
+
+    try:
+        file_build_content = (Path(__file__).absolute().parent.parent / 'BUILD').read_text().strip()
+    except Exception as e:
+        file_build_content = str(e)
+
     status_data = {
         # Use strip() to remove leading and trailing spaces, newlines, and tabs
-        'version': (Path(__file__).absolute().parent.parent / 'VERSION').read_text().strip(),
-        'build': (Path(__file__).absolute().parent.parent / 'BUILD').read_text().strip(),
+        'version': file_version_content,
+        'build': file_build_content,
         'neo4j_connection': False
     }
 
@@ -445,83 +466,6 @@ def get_ancestor_organs(id):
     final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list)
 
     return jsonify(final_result)
-
-
-"""
-Retrieve the collection detail by id
-
-The gateway treats this endpoint as public accessible
-
-An optional Globus groups token can be provided in a standard Authentication Bearer header. If a valid token
-is provided with group membership in the HuBMAP-Read group any collection matching the id will be returned.
-otherwise if no token is provided or a valid token with no HuBMAP-Read group membership then
-only a public collection will be returned.  Public collections are defined as being published via a DOI 
-(collection.registered_doi not null) and at least one of the connected datasets is public
-(dataset.status == 'Published'). For public collections only connected datasets that are
-public are returned with it.
-
-Parameters
-----------
-id : str
-    The HuBMAP ID (e.g. HBM123.ABCD.456) or UUID of target collection 
-
-Returns
--------
-json
-    The collection detail with a list of connected datasets (only public datasets 
-    if user doesn't have the right access permission)
-"""
-@app.route('/collections/<id>', methods = ['GET'])
-def get_collection(id):
-    # Token is not required, but if an invalid token provided,
-    # we need to tell the client with a 401 error
-    validate_token_if_auth_header_exists(request)
-
-    # Use the internal token to query the target collection
-    # since public collections don't require user token
-    token = get_internal_token()
-
-    # Get the entity dict from cache if exists
-    # Otherwise query against uuid-api and neo4j to get the entity dict if the id exists
-    collection_dict = query_target_entity(id, token)
-
-    # A bit validation
-    if collection_dict['entity_type'] != 'Collection':
-        abort_bad_req("Target entity of the given id is not a collection")
-
-    # Try to get user token from Authorization header
-    # It's highly possible that there's no token provided
-    user_token = get_user_token(request)
-
-    # The user_token is flask.Response on error
-    # Without token, the user can only access public collections, modify the collection result
-    # by only returning public datasets attached to this collection
-    if isinstance(user_token, Response):
-        # When the requested collection is not public, send back 401
-        if ('registered_doi' not in collection_dict) or ('doi_url' not in collection_dict):
-            # Require a valid token in this case
-            abort_unauthorized("The requested collection is not public, a Globus token with the right access permission is required.")
-
-        # Otherwise only return the public datasets attached to this collection
-        # for Collection.datasets property
-        complete_dict = get_complete_public_collection_dict(collection_dict)
-    else:
-        # When the groups token is valid, but the user doesn't belong to HuBMAP-READ group
-        # Or the token is valid but doesn't contain group information (auth token or transfer token)
-        # Only return the public datasets attached to this Collection
-        if not user_in_globus_read_group(request):
-            complete_dict = get_complete_public_collection_dict(collection_dict)
-        else:
-            # We'll need to return all the properties including those
-            # generated by `on_read_trigger` to have a complete result
-            complete_dict = schema_manager.get_complete_entity_result(user_token, collection_dict)
-
-    # Will also filter the result based on schema
-    normalized_complete_dict = schema_manager.normalize_object_result_for_response( provenance_type='ENTITIES'
-                                                                                    ,entity_dict=complete_dict)
-
-    # Response with the final result
-    return jsonify(normalized_complete_dict)
 
 def _get_entity_visibility(normalized_entity_type, entity_dict):
     if normalized_entity_type not in schema_manager.get_all_entity_types():
@@ -819,8 +763,7 @@ It's only used by search-api with making internal calls during index/reindex tim
 Parameters
 ----------
 entity_type : str
-    One of the supported entity types: Dataset, Sample, Source
-    Will handle Collection via API endpoint `/collections`
+    One of the supported entity types: Dataset, Collection, Sample, Source
 
 Returns
 -------
@@ -851,15 +794,11 @@ def get_entities_by_type(entity_type):
             if property_key not in result_filtering_accepted_property_keys:
                 abort_bad_req(f"Only the following property keys are supported in the query string: {COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}")
 
-            if normalized_entity_type == 'Collection':
-                # Only return a list of the filtered property value of each public collection
-                final_result = app_neo4j_queries.get_public_collections(neo4j_driver_instance, property_key)
-            else:
-                # Only return a list of the filtered property value of each entity
-                property_list = app_neo4j_queries.get_entities_by_type(neo4j_driver_instance, normalized_entity_type, property_key)
+            # Only return a list of the filtered property value of each entity
+            property_list = app_neo4j_queries.get_entities_by_type(neo4j_driver_instance, normalized_entity_type, property_key)
 
-                # Final result
-                final_result = property_list
+            # Final result
+            final_result = property_list
         else:
             abort_bad_req("The specified query string is not supported. Use '?property=<key>' to filter the result")
     # Return all the details if no property filtering
@@ -885,19 +824,10 @@ def get_entities_by_type(entity_type):
             'next_revision_uuids',
             'previous_revision_uuids'
         ]
-        if normalized_entity_type == 'Collection':
-            # Use the internal token since no user token is required to access public collections
-            token = get_internal_token()
-
-            # Get back a list of public collections dicts
-            entities_list = app_neo4j_queries.get_public_collections(neo4j_driver_instance)
-        else:
-            # Get user token from Authorization header.  Since this endpoint is not exposed through the
-            # AWS Gateway,
-            token = get_user_token(request)
-
-            # Get back a list of entity dicts for the given entity type
-            entities_list = app_neo4j_queries.get_entities_by_type(neo4j_driver_instance, normalized_entity_type)
+        # Get user token from Authorization header.  Since this endpoint is not exposed through the AWS Gateway
+        token = get_user_token(request)
+        # Get back a list of entity dicts for the given entity type
+        entities_list = app_neo4j_queries.get_entities_by_type(neo4j_driver_instance, normalized_entity_type)
 
         complete_entities_list = schema_manager.get_complete_entities_list(token, entities_list, properties_to_skip)
 
@@ -907,81 +837,6 @@ def get_entities_by_type(entity_type):
 
     # Response with the final result
     return jsonify(final_result)
-
-
-"""
-Retrieve all the public collections
-
-The gateway treats this endpoint as public accessible
-
-Result filtering is supported based on query string
-For example: /collections?property=uuid
-
-Only return public collections, for either 
-- a valid token in SenNet-Read group, 
-- a valid token with no SenNet-Read group or 
-- no token at all
-
-Public collections are defined as being published via a DOI 
-(collection.registered_doi is not null) and at least one of the connected datasets is published
-(dataset.status == 'Published'). For public collections only connected datasets that are
-published are returned with it.
-
-Returns
--------
-json
-    A list of all the public collection dictionaries (with attached public datasets)
-"""
-@app.route('/collections', methods = ['GET'])
-def get_collections():
-    final_result = []
-
-    # Token is not required, but if an invalid token provided,
-    # we need to tell the client with a 401 error
-    validate_token_if_auth_header_exists(request)
-
-    normalized_entity_type = 'Collection'
-
-    # Result filtering based on query string
-    if bool(request.args):
-        property_key = request.args.get('property')
-
-        if property_key is not None:
-            result_filtering_accepted_property_keys = ['uuid']
-
-            # Validate the target property
-            if property_key not in result_filtering_accepted_property_keys:
-                abort_bad_req(f"Only the following property keys are supported in the query string: {COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}")
-
-            # Only return a list of the filtered property value of each public collection
-            final_result = app_neo4j_queries.get_public_collections(neo4j_driver_instance, property_key)
-        else:
-            abort_bad_req("The specified query string is not supported. Use '?property=<key>' to filter the result")
-    # Return all the details if no property filtering
-    else:
-        # Use the internal token since no user token is requried to access public collections
-        token = get_internal_token()
-
-        # Get back a list of public collections dicts
-        collections_list = app_neo4j_queries.get_public_collections(neo4j_driver_instance)
-
-        # Modify the Collection.datasets property for each collection dict
-        # to contain only public datasets
-        for collection_dict in collections_list:
-            # Only return the public datasets attached to this collection for Collection.datasets property
-            collection_dict = get_complete_public_collection_dict(collection_dict)
-
-        # Generate trigger data and merge into a big dict
-        # and skip some of the properties that are time-consuming to generate via triggers
-        properties_to_skip = ['datasets']
-        complete_collections_list = schema_manager.get_complete_entities_list(token, collections_list, properties_to_skip)
-
-        # Final result after normalization
-        final_result = schema_manager.normalize_entities_list_for_response(complete_collections_list)
-
-    # Response with the final result
-    return jsonify(final_result)
-
 
 """
 Create an entity of the target type in neo4j
@@ -1158,19 +1013,12 @@ def create_entity(entity_type):
     normalized_complete_dict = schema_manager.normalize_object_result_for_response('ENTITIES', complete_dict)
 
     # Also index the new entity node in elasticsearch via search-api
-    if complete_dict['entity_type'] in ['Collection']:
-        logger.log(logging.DEBUG
-                   ,f"Skipping re-indexing {complete_dict['entity_type']}"
-                    f" with UUID {complete_dict['uuid']}"
-                    f" until supported by search-api.")
-    else:
-        logger.log(logging.INFO
-                   ,f"Re-indexing for creation of {complete_dict['entity_type']}"
-                    f" with UUID {complete_dict['uuid']}")
-        reindex_entity(complete_dict['uuid'], user_token)
+    logger.log(logging.INFO
+               ,f"Re-indexing for creation of {complete_dict['entity_type']}"
+                f" with UUID {complete_dict['uuid']}")
+    reindex_entity(complete_dict['uuid'], user_token)
 
     return jsonify(normalized_complete_dict)
-
 
 """
 Create multiple samples from the same source entity
@@ -1297,6 +1145,44 @@ def get_entities_type_instanceof(type_a, type_b):
         abort_bad_req('Unable to process request')
     return make_response(jsonify({'instanceof': instanceof}), 200)
 
+"""
+Endpoint which sends the "visibility" of an entity using values from DataVisibilityEnum.
+Not exposed through the gateway.  Used by services like search-api to, for example, determine if
+a Collection can be in a public index while encapsulating the logic to determine that in this service.
+Parameters
+----------
+id : str
+    The HuBMAP ID (e.g. HBM123.ABCD.456) or UUID of target collection 
+Returns
+-------
+json
+    A value from DataVisibilityEnum
+"""
+@app.route('/visibility/<id>', methods = ['GET'])
+def get_entity_visibility(id):
+    # Token is not required, but if an invalid token provided,
+    # we need to tell the client with a 401 error
+    validate_token_if_auth_header_exists(request)
+
+    # Use the internal token to query the target entity
+    # since public entities don't require user token
+    token = get_internal_token()
+
+    # Get the entity dict from cache if exists
+    # Otherwise query against uuid-api and neo4j to get the entity dict if the id exists
+    entity_dict = query_target_entity(id, token)
+    normalized_entity_type = entity_dict['entity_type']
+
+    # Get the generated complete entity result from cache if exists
+    # Otherwise re-generate on the fly.  To verify if a Collection is public, it is
+    # necessary to have its Datasets, which are populated as triggered data, so
+    # pull back the complete entity
+    complete_dict = schema_manager.get_complete_entity_result(token, entity_dict)
+
+    # Determine if the entity is publicly visible base on its data, only.
+    entity_scope = _get_entity_visibility(normalized_entity_type=normalized_entity_type, entity_dict=complete_dict)
+
+    return jsonify(entity_scope.value)
 
 """
 Update the properties of a given entity
@@ -1439,6 +1325,13 @@ def update_entity(id):
         if has_dataset_uuids_to_link or has_dataset_uuids_to_unlink:
             after_update(normalized_entity_type, user_token, merged_updated_dict)
     elif normalized_entity_type == 'Collection':
+        entity_visibility = _get_entity_visibility(  normalized_entity_type=normalized_entity_type
+                                                    ,entity_dict=entity_dict)
+        # Prohibit update of an existing Collection if it meets criteria of being visible to public e.g. has DOI.
+        if entity_visibility == DataVisibilityEnum.PUBLIC:
+            logger.info(f"Attempt to update {normalized_entity_type} with id={id} which has visibility {entity_visibility}.")
+            abort_bad_req(f"Cannot update {normalized_entity_type} due '{entity_visibility.value}' visibility.")
+
         # Generate 'before_update_trigger' data and update the entity details in Neo4j
         merged_updated_dict = update_object_details('ENTITIES', request, normalized_entity_type, user_token, json_data_dict,
                                                     entity_dict)
@@ -1498,16 +1391,10 @@ def update_entity(id):
 
     # How to handle reindex collection?
     # Also reindex the updated entity node in elasticsearch via search-api
-    if entity_dict['entity_type'] in ['Collection']:
-        logger.log(logging.DEBUG
-                   ,f"Skipping re-indexing {entity_dict['entity_type']}"
-                    f" with UUID {entity_dict['uuid']}"
-                    f" until supported by search-api.")
-    else:
-        logger.log(logging.INFO
-                   ,f"Re-indexing for creation of {entity_dict['entity_type']}"
-                    f" with UUID {entity_dict['uuid']}")
-        reindex_entity(entity_dict['uuid'], user_token)
+    logger.log(logging.INFO
+               ,"Re-indexing for modification of {entity_dict['entity_type']}"
+                f" with UUID {entity_dict['uuid']}")
+    reindex_entity(entity_dict['uuid'], user_token)
 
     return jsonify(normalized_complete_dict)
 
@@ -2557,12 +2444,12 @@ list
 @app.route('/entities/<id>/multi-revisions', methods=['GET'])
 @app.route('/datasets/<id>/multi-revisions', methods=['GET'])
 def get_multi_revisions_list(id):
-    # By default, do not return dataset. Only return dataset if return_dataset is true
-    show_dataset = False
+    # By default, do not return dataset. Only return dataset if include_dataset is true
+    property_key = 'uuid'
     if bool(request.args):
         include_dataset = request.args.get('include_dataset')
         if (include_dataset is not None) and (include_dataset.lower() == 'true'):
-            show_dataset = True
+            property_key = None
     # Token is not required, but if an invalid token provided,
     # we need to tell the client with a 401 error
     validate_token_if_auth_header_exists(request)
@@ -2588,7 +2475,8 @@ def get_multi_revisions_list(id):
     # the user token has the correct access level
     # Get the all the sorted (DESC based on creation timestamp) revisions
     sorted_revisions_list = app_neo4j_queries.get_sorted_multi_revisions(neo4j_driver_instance, entity_dict['uuid'],
-                                                                         fetch_all=user_in_globus_read_group(request))
+                                                                         fetch_all=user_in_globus_read_group(request),
+                                                                         property_key=property_key)
 
     # Skip some of the properties that are time-consuming to generate via triggers
     properties_to_skip = [
@@ -2601,10 +2489,13 @@ def get_multi_revisions_list(id):
     normalized_revisions_list = []
     sorted_revisions_list_merged = sorted_revisions_list[0] + sorted_revisions_list[1][::-1]
 
-    for revision in sorted_revisions_list_merged:
-        complete_revision_list = schema_manager.get_complete_entities_list(token, revision, properties_to_skip)
-        normal = schema_manager.normalize_entities_list_for_response(complete_revision_list)
-        normalized_revisions_list.append(normal)
+    if property_key is None:
+        for revision in sorted_revisions_list_merged:
+            complete_revision_list = schema_manager.get_complete_entities_list(token, revision, properties_to_skip)
+            normal = schema_manager.normalize_entities_list_for_response(complete_revision_list)
+            normalized_revisions_list.append(normal)
+    else:
+        normalized_revisions_list = sorted_revisions_list_merged
 
     # Now all we need to do is to compose the result list
     results = []
@@ -2612,7 +2503,7 @@ def get_multi_revisions_list(id):
     for revision in normalized_revisions_list:
         result = {
             'revision_number': revision_number,
-            'uuids': revision if show_dataset is True else schema_manager.get_filtered_entities_list(revision, ['uuid'], flat_array=True)
+            'uuids': revision
         }
         results.append(result)
         revision_number -= 1
@@ -3635,44 +3526,6 @@ str
 def get_internal_token():
     return auth_helper_instance.getProcessSecret()
 
-
-"""
-Return the complete collection dict for a given raw collection dict
-
-Parameters
-----------
-collection_dict : dict
-    The raw collection dict returned by Neo4j
-
-Returns
--------
-dict
-    A dictionary of complete collection detail with all the generated 'on_read_trigger' data
-    The generated Collection.datasts contains only public datasets 
-    if user/token doesn't have the right access permission
-"""
-def get_complete_public_collection_dict(collection_dict):
-    # Use internal token to query entity since
-    # no user token is required to access a public collection
-    token = get_internal_token()
-
-    # Collection.datasets is transient property and generated by the trigger method
-    # We'll need to return all the properties including those
-    # generated by `on_read_trigger` to have a complete result
-    complete_dict = schema_manager.get_complete_entity_result(token, collection_dict)
-
-    # Loop through Collection.datasets and only return the published/public datasets
-    public_datasets = []
-    for dataset in complete_dict['datasets']:
-        if dataset['status'].lower() == DATASET_STATUS_PUBLISHED:
-            public_datasets.append(dataset)
-
-    # Modify the result and only show the public datasets in this collection
-    complete_dict['datasets'] = public_datasets
-
-    return complete_dict
-
-
 """
 Generate 'before_create_triiger' data and create the entity details in Neo4j
 
@@ -3934,7 +3787,7 @@ def create_multiple_samples_details(request, normalized_entity_type, user_token,
     # and properties with None value
     # Meaning the returned target property key is different from the original key
     # in the trigger method, e.g., Source.image_files_to_add
-    filtered_merged_dict = schema_manager.remove_transient_and_none_values(merged_dict, normalized_entity_type)
+    filtered_merged_dict = schema_manager.remove_transient_and_none_values('ENTITIES', merged_dict, normalized_entity_type)
 
     samples_dict_list = []
     for new_ids_dict in new_ids_dict_list:
@@ -3960,6 +3813,268 @@ def create_multiple_samples_details(request, normalized_entity_type, user_token,
 
     # Return the generated ids for UI
     return new_ids_dict_list
+
+
+"""
+Create multiple component datasets from a single Multi-Assay ancestor
+
+Input
+-----
+json
+    A json object with the fields: 
+        creation_action
+         - type: str
+         - description: the action event that will describe the activity node. Allowed valuese are: "Multi-Assay Split"
+        group_uuid
+         - type: str
+         - description: the group uuid for the new component datasets
+        direct_ancestor_uuid
+         - type: str
+         - description: the uuid for the parent multi assay dataset
+        datasets
+         - type: dict
+         - description: the datasets to be created. Only difference between these and normal datasets are the field "dataset_link_abs_dir"
+
+Returns
+--------
+json array
+    List of the newly created datasets represented as dictionaries. 
+"""
+@app.route('/datasets/components', methods=['POST'])
+def multiple_components():
+    if READ_ONLY_MODE:
+        abort_forbidden("Access not granted when entity-api in READ-ONLY mode")
+    # If an invalid token provided, we need to tell the client with a 401 error, rather
+    # than a 500 error later if the token is not good.
+    validate_token_if_auth_header_exists(request)
+    # Get user token from Authorization header
+    user_token = get_user_token(request)
+    try:
+        schema_validators.validate_application_header_before_entity_create("Dataset", request)
+    except Exception as e:
+        abort_bad_req(str(e))
+    require_json(request)
+
+    ######### validate top level properties ########
+
+    # Verify that each required field is in the json_data_dict, and that there are no other fields
+    json_data_dict = request.get_json()
+    required_fields = ['creation_action', 'group_uuid', 'direct_ancestor_uuids', 'datasets']
+    for field in required_fields:
+        if field not in json_data_dict:
+            raise abort_bad_req(f"Missing required field {field}")
+    for field in json_data_dict:
+        if field not in required_fields:
+            raise abort_bad_req(f"Request body contained unexpected field {field}")
+
+    # validate creation_action
+    allowable_creation_actions = ['Multi-Assay Split']
+    if json_data_dict.get('creation_action') not in allowable_creation_actions:
+        abort_bad_req(f"creation_action {json_data_dict.get('creation_action')} not recognized. Allowed values are: {COMMA_SEPARATOR.join(allowable_creation_actions)}")
+
+    # While we accept a list of direct_ancestor_uuids, we currently only allow a single direct ancestor so verify that there is only 1
+    direct_ancestor_uuids = json_data_dict.get('direct_ancestor_uuids')
+    if direct_ancestor_uuids is None or not isinstance(direct_ancestor_uuids, list) or len(direct_ancestor_uuids) !=1:
+        abort_bad_req(f"Required field 'direct_ancestor_uuids' must be a list. This list may only contain 1 item: a string representing the uuid of the direct ancestor")
+
+    # validate existence of direct ancestors.
+    for direct_ancestor_uuid in direct_ancestor_uuids:
+        direct_ancestor_dict = query_target_entity(direct_ancestor_uuid, user_token)
+        if direct_ancestor_dict.get('entity_type').lower() != "dataset":
+            abort_bad_req(f"Direct ancestor is of type: {direct_ancestor_dict.get('entity_type')}. Must be of type 'dataset'.")
+
+    # validate that there are 2 and only 2 datasets in the dataset list
+    if len(json_data_dict.get('datasets')) != 2:
+        abort_bad_req(f"'datasets' field must contain 2 component datasets.")
+
+    # Validate all datasets using existing schema with triggers and validators
+    for dataset in json_data_dict.get('datasets'):
+        # dataset_link_abs_dir is not part of the entity creation, will not be stored in neo4j and does not require
+        # validation. Remove it here and add it back after validation. We do the same for creating the entities. Doing
+        # this makes it easier to keep the dataset_link_abs_dir with the associated dataset instead of adding additional lists and keeping track of which value is tied to which dataset
+        dataset_link_abs_dir = dataset.pop('dataset_link_abs_dir', None)
+        if not dataset_link_abs_dir:
+            abort_bad_req(f"Missing required field in datasets: dataset_link_abs_dir")
+        dataset['group_uuid'] = json_data_dict.get('group_uuid')
+        dataset['direct_ancestor_uuids'] = direct_ancestor_uuids
+        try:
+            schema_manager.validate_json_data_against_schema('ENTITIES', dataset, 'Dataset')
+        except schema_errors.SchemaValidationException as e:
+            # No need to log validation errors
+            abort_bad_req(str(e))
+        # Execute property level validators defined in the schema yaml before entity property creation
+        # Use empty dict {} to indicate there's no existing_data_dict
+        try:
+            schema_manager.execute_property_level_validators('ENTITIES', 'before_property_create_validators', "Dataset", request, {}, dataset)
+        # Currently only ValueError
+        except ValueError as e:
+            abort_bad_req(e)
+
+        # Add back in dataset_link_abs_dir
+        dataset['dataset_link_abs_dir'] = dataset_link_abs_dir
+
+    dataset_list = create_multiple_component_details(request, "Dataset", user_token, json_data_dict.get('datasets'), json_data_dict.get('creation_action'))
+
+    # We wait until after the new datasets are linked to their ancestor before performing the remaining post-creation
+    # linkeages. This way, in the event of unforseen errors, we don't have orphaned nodes.
+    for dataset in dataset_list:
+        schema_triggers.set_status_history('status', 'Dataset', user_token, dataset, {})
+
+    properties_to_skip = [
+        'direct_ancestors',
+        'collections',
+        'upload',
+        'title',
+        'previous_revision_uuids',
+        'next_revision_uuids',
+        'previous_revision_uuid',
+        'next_revision_uuid'
+    ]
+
+    if bool(request.args):
+        # The parsed query string value is a string 'true'
+        return_all_properties = request.args.get('return_all_properties')
+
+        if (return_all_properties is not None) and (return_all_properties.lower() == 'true'):
+            properties_to_skip = []
+
+    normalized_complete_entity_list = []
+    for dataset in dataset_list:
+        # Remove dataset_link_abs_dir once more before entity creation
+        dataset_link_abs_dir = dataset.pop('dataset_link_abs_dir', None)
+        # Generate the filtered or complete entity dict to send back
+        complete_dict = schema_manager.get_complete_entity_result(user_token, dataset, properties_to_skip)
+
+        # Will also filter the result based on schema
+        normalized_complete_dict = schema_manager.normalize_object_result_for_response(provenance_type='ENTITIES', entity_dict=complete_dict)
+
+
+        # Also index the new entity node in elasticsearch via search-api
+        logger.log(logging.INFO
+                   ,f"Re-indexing for creation of {complete_dict['entity_type']}"
+                    f" with UUID {complete_dict['uuid']}")
+        reindex_entity(complete_dict['uuid'], user_token)
+        # Add back in dataset_link_abs_dir one last time
+        normalized_complete_dict['dataset_link_abs_dir'] = dataset_link_abs_dir
+        normalized_complete_entity_list.append(normalized_complete_dict)
+
+    return jsonify(normalized_complete_entity_list)
+
+
+
+"""
+Create multiple dataset nodes and relationships with the source entity node
+
+Parameters
+----------
+request : flask.Request object
+    The incoming request
+normalized_entity_type : str
+    One of the normalized entity types: Dataset, Collection, Sample, Donor
+user_token: str
+    The user's globus groups token
+json_data_dict_list: list
+    List of datasets objects as dictionaries
+creation_action : str
+    The creation action for the new activity node.
+
+Returns
+-------
+list
+    A list of all the newly created datasets with generated fields represented as dictionaries
+"""
+def create_multiple_component_details(request, normalized_entity_type, user_token, json_data_dict_list, creation_action):
+    # Get user info based on request
+    user_info_dict = schema_manager.get_user_info(request)
+    direct_ancestor = json_data_dict_list[0].get('direct_ancestor_uuids')[0]
+    # Create new ids for the new entity
+    try:
+        # we only need the json data from one of the datasets. The info will be the same for both, so we just grab the first in the list
+        new_ids_dict_list = schema_manager.create_sennet_ids(normalized_entity_type, json_data_dict_list[0], user_token, user_info_dict, len(json_data_dict_list))
+    # When group_uuid is provided by user, it can be invalid
+    except KeyError as e:
+        # Log the full stack trace, prepend a line with our message
+        logger.exception(e)
+        abort_bad_req(e)
+    except requests.exceptions.RequestException as e:
+        msg = f"Failed to create new SenNet ids via the uuid-api service"
+        logger.exception(msg)
+
+        # Due to the use of response.raise_for_status() in schema_manager.create_sennet_ids()
+        # we can access the status codes from the exception
+        status_code = e.response.status_code
+
+        if status_code == 400:
+            abort_bad_req(e.response.text)
+        if status_code == 404:
+            abort_not_found(e.response.text)
+        else:
+            abort_internal_err(e.response.text)
+    datasets_dict_list = []
+    for i in range(len(json_data_dict_list)):
+        # Remove dataset_link_abs_dir once more before entity creation
+        dataset_link_abs_dir = json_data_dict_list[i].pop('dataset_link_abs_dir', None)
+        # Combine each id dict into each dataset in json_data_dict_list
+        new_data_dict = {**json_data_dict_list[i], **user_info_dict, **new_ids_dict_list[i]}
+        try:
+            # Use {} since no existing dict
+            generated_before_create_trigger_data_dict = schema_manager.generate_triggered_data('before_create_trigger', normalized_entity_type, user_token, {}, new_data_dict)
+            # If one of the before_create_trigger methods fails, we can't create the entity
+        except schema_errors.BeforeCreateTriggerException:
+            # Log the full stack trace, prepend a line with our message
+            msg = "Failed to execute one of the 'before_create_trigger' methods, can't create the entity"
+            logger.exception(msg)
+            abort_internal_err(msg)
+        except schema_errors.NoDataProviderGroupException:
+            # Log the full stack trace, prepend a line with our message
+            if 'group_uuid' in json_data_dict_list[i]:
+                msg = "Invalid 'group_uuid' value, can't create the entity"
+            else:
+                msg = "The user does not have the correct Globus group associated with, can't create the entity"
+
+            logger.exception(msg)
+            abort_bad_req(msg)
+        except schema_errors.UnmatchedDataProviderGroupException:
+            # Log the full stack trace, prepend a line with our message
+            msg = "The user does not belong to the given Globus group, can't create the entity"
+            logger.exception(msg)
+            abort_forbidden(msg)
+        except schema_errors.MultipleDataProviderGroupException:
+            # Log the full stack trace, prepend a line with our message
+            msg = "The user has mutiple Globus groups associated with, please specify one using 'group_uuid'"
+            logger.exception(msg)
+            abort_bad_req(msg)
+        except KeyError as e:
+            # Log the full stack trace, prepend a line with our message
+            logger.exception(e)
+            abort_bad_req(e)
+        except Exception as e:
+            logger.exception(e)
+            abort_internal_err(e)
+        merged_dict = {**json_data_dict_list[i], **generated_before_create_trigger_data_dict}
+
+        # Filter out the merged_dict by getting rid of the transitent properties (not to be stored)
+        # and properties with None value
+        # Meaning the returned target property key is different from the original key
+        # in the trigger method, e.g., Donor.image_files_to_add
+        filtered_merged_dict = schema_manager.remove_transient_and_none_values('ENTITIES', merged_dict, normalized_entity_type)
+        dataset_dict = {**filtered_merged_dict, **new_ids_dict_list[i]}
+        dataset_dict['dataset_link_abs_dir'] = dataset_link_abs_dir
+        datasets_dict_list.append(dataset_dict)
+
+    activity_data_dict = schema_manager.generate_activity_data(normalized_entity_type, user_token, user_info_dict, creation_action)
+    # activity_data_dict['creation_action'] = creation_action
+    try:
+        created_datasets = app_neo4j_queries.create_multiple_datasets(neo4j_driver_instance, datasets_dict_list, activity_data_dict, direct_ancestor)
+    except TransactionError:
+        msg = "Failed to create multiple samples"
+        # Log the full stack trace, prepend a line with our message
+        logger.exception(msg)
+        # Terminate and let the users know
+        abort_internal_err(msg)
+
+
+    return created_datasets
 
 
 """
@@ -4410,7 +4525,7 @@ def validate_constraints_by_entities(ancestor, descendant, descendant_entity_typ
 
     result = get_constraints_by_ancestor(constraint, True)
     if result.get('code') is not StatusCodes.OK:
-        abort_bad_req(f"Invalid entity constraints. Valid descendants include: {result.get('description')}")
+        abort_bad_req(f"Invalid entity constraints for ancestor of type {ancestor.get('entity_type')}. Valid descendants include: {result.get('description')}")
     return result
 
 """
@@ -4621,9 +4736,13 @@ def delete_cache(id):
 
 if __name__ == "__main__":
     try:
-        app.run(host='0.0.0.0', port="5002", debug=True)
+        app.run(host='0.0.0.0', port="5002")
+        print(f"Flask app.run() done")
     except Exception as e:
         print("Error during starting debug server.")
         print(str(e))
         logger.error(e, exc_info=True)
         print("Error during startup check the log file for further information")
+    except SystemExit as se:
+        logger.exception(se,stack_info=True)
+        print(f"SystemExit exception with code {se.code}.")

@@ -1,5 +1,3 @@
-import os
-import ast
 import json
 import urllib
 
@@ -14,9 +12,10 @@ import re
 
 # Use the current_app proxy, which points to the application handling the current activity
 from flask import current_app as app
-from lib.ontology import Ontology
 
 # Local modules
+from lib import github
+from lib.ontology import Ontology
 from schema import schema_manager
 from schema import schema_errors
 from schema import schema_neo4j_queries
@@ -56,7 +55,6 @@ def set_timestamp(property_key, normalized_type, user_token, existing_data_dict,
     # Will be proessed in app_neo4j_queries._build_properties_map()
     # and schema_neo4j_queries._build_properties_map()
     return property_key, 'TIMESTAMP()'
-
 
 """
 Trigger event method of setting the entity type of a given entity
@@ -2229,6 +2227,9 @@ str: The creation_action string
 
 
 def set_activity_creation_action(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    if new_data_dict and new_data_dict.get('creation_action'):
+        return property_key, new_data_dict['creation_action'].title()
+
     if 'normalized_entity_type' not in new_data_dict:
         raise KeyError(
             "Missing 'normalized_entity_type' key in 'existing_data_dict' during calling 'set_activity_creation_action()' trigger method.")
@@ -2260,6 +2261,8 @@ str: The protocol_url string
 
 
 def set_activity_protocol_url(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    if normalized_type in ['Activity'] and 'protocol_url' not in new_data_dict:
+        return property_key, None
     if 'entity_type' in new_data_dict and new_data_dict['entity_type'] in ['Dataset', 'Upload', 'Publication']:
         return property_key, None
     else:
@@ -2294,21 +2297,71 @@ str: The processing_information list
 
 
 def set_processing_information(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
-    if 'entity_type' in new_data_dict and not equals(new_data_dict['entity_type'], 'Dataset'):
-        return property_key, None
-    else:
-        if 'metadata' not in new_data_dict or (
-                'metadata' in new_data_dict and 'dag_provenance_list' not in new_data_dict['metadata']):
-            return property_key, None
+    # Need to hard set `processing_information` as this gets called
+    # when `metadata` is passed in the payload
+    if ('entity_type' in new_data_dict
+            and not equals(new_data_dict['entity_type'], 'Dataset')):
+        return 'processing_information', None
 
-    try:
-        metadata_to_return = {}
-        metadata = schema_manager.convert_str_to_data(new_data_dict['metadata'])
-        metadata_to_return['dag_provenance_list'] = metadata['dag_provenance_list']
-        # Need to hard set `processing_information` as this gets called when `metadata` is passed in the payload
-        return 'processing_information', metadata_to_return
-    except requests.exceptions.RequestException as e:
-        raise requests.exceptions.RequestException(e)
+    metadata = None
+    for key in ['metadata', 'ingest_metadata']:
+        if key in new_data_dict:
+            metadata = schema_manager.convert_str_to_data(new_data_dict[key])
+            break
+    if metadata is None or 'dag_provenance_list' not in metadata:
+        return 'processing_information', None
+
+    dag_provs = metadata['dag_provenance_list']
+
+    if len(dag_provs) < 1:
+        # dag_provenance_list is empty
+        return 'processing_information', None
+
+    if any([d.get('hash') is None or d.get('origin') is None for d in dag_provs]):
+        # dag_provenance_list contains invalid entries
+        # entries must have both hash and origin
+        return 'processing_information', None
+
+    proc_info = {
+        'description': '',
+        'pipelines': []
+    }
+    for idx, dag_prov in enumerate(dag_provs):
+        parts = github.parse_repo_name(dag_prov['origin'])
+        if parts is None:
+            continue
+        owner, repo = parts
+
+        if idx == 0 and repo != SchemaConstants.INGEST_PIPELINE_APP:
+            # first entry must be the SenNet ingest pipeline
+            return 'processing_information', None
+
+        if idx > 0 and repo == SchemaConstants.INGEST_PIPELINE_APP:
+            # Ignore duplicate ingest pipeline entries
+            continue
+
+        # Set description to first non ingest pipeline repo
+        if (proc_info.get('description') == ""
+                and repo != SchemaConstants.INGEST_PIPELINE_APP):
+            proc_info['description'] = github.get_repo_description(owner, repo)
+
+        hash = dag_prov['hash']
+        tag = github.get_tag(owner, repo, hash)
+        if tag:
+            url = github.create_tag_url(owner, repo, tag)
+        else:
+            url = github.create_commit_url(owner, repo, hash)
+            if url is None:
+                continue
+        info = {'github': url}
+
+        if 'name' in dag_prov:
+            cwl_url = github.create_commonwl_url(owner, repo, hash, dag_prov['name'])
+            info['commonwl'] = cwl_url
+
+        proc_info['pipelines'].append({repo: info})
+
+    return 'processing_information', proc_info
 
 
 ####################################################################################################
@@ -2620,3 +2673,37 @@ def _get_organ_description(organ_code):
     for key in ORGAN_TYPES:
         if ORGAN_TYPES[key]['rui_code'] == organ_code:
             return ORGAN_TYPES[key]['term'].lower()
+
+
+
+####################################################################################################
+## Trigger methods shared by Dataset, Upload, and Publication - DO NOT RENAME
+####################################################################################################
+
+def set_status_history(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    new_status_history = []
+    status_entry = {}
+
+    if 'status_history' in existing_data_dict:
+        status_history_string = existing_data_dict['status_history'].replace("'", "\"")
+        new_status_history += json.loads(status_history_string)
+
+    if 'status' not in existing_data_dict:
+        raise KeyError("Missing 'status' key in 'existing_data_dict' during calling 'set_status_history()' trigger method")
+    if 'last_modified_timestamp' not in existing_data_dict:
+        raise KeyError("Missing 'last_modified_timestamp' key in 'existing_dat_dict' during calling 'set_status_history()' trigger method.")
+    if 'last_modified_user_email' not in existing_data_dict:
+        raise KeyError("Missing 'last_modified_user_email' key in 'existing_data_dict' during calling 'set_status_hisotry()' trigger method.")
+
+    status = existing_data_dict['status']
+    last_modified_user_email = existing_data_dict['last_modified_user_email']
+    last_modified_timestamp = existing_data_dict['last_modified_timestamp']
+    uuid = existing_data_dict['uuid']
+
+    status_entry['status'] = status
+    status_entry['changed_by_email'] = last_modified_user_email
+    status_entry['change_timestamp'] = last_modified_timestamp
+    new_status_history.append(status_entry)
+    entity_data_dict = {"status_history": new_status_history}
+
+    schema_neo4j_queries.update_entity(schema_manager.get_neo4j_driver_instance(), normalized_type, entity_data_dict, uuid)

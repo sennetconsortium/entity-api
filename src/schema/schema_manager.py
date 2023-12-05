@@ -23,6 +23,12 @@ from atlas_consortia_commons.rest import *
 
 logger = logging.getLogger(__name__)
 
+try:
+    logger.info("logger initialized")
+except Exception as e:
+    print("Error opening log file during startup")
+    print(str(e))
+
 # Suppress InsecureRequestWarning warning when requesting status on https with ssl cert verify disabled
 requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
 
@@ -79,7 +85,10 @@ def initialize(valid_yaml_file,
     global _memcached_client
     global _memcached_prefix
 
+    logger.info(f"Initialize schema_manager using valid_yaml_file={valid_yaml_file}.")
     _schema = load_provenance_schema(valid_yaml_file)
+    if _schema is None:
+        logger.error(f"Failed to load _schema using {valid_yaml_file}.")
     _uuid_api_url = uuid_api_url
     _ingest_api_url = ingest_api_url
     _search_api_url = search_api_url
@@ -703,34 +712,6 @@ def get_complete_entities_list(token, entities_list, properties_to_skip=[]):
 
     return complete_entities_list
 
-
-"""
-Pluck out select entity properties
-
-Parameters
-----------
-entities_list : list
-    A list of entity dictionaries 
-properties_to_include : list
-    Any properties to include
-
-Returns
--------
-list
-    A filtered list
-"""
-def get_filtered_entities_list(entities_list, properties_to_include=[], flat_array = False):
-    complete_entities_list = []
-    for entity_dict in entities_list:
-        result = {}
-        for prop in properties_to_include:
-            if flat_array:
-                complete_entities_list.append(entity_dict[prop])
-            else:
-                result[prop] = entity_dict[prop]
-                complete_entities_list.append(result)
-
-    return complete_entities_list
 
 
 """
@@ -1809,7 +1790,7 @@ dict: A dict of gnerated Activity data
 """
 
 
-def generate_activity_data(normalized_entity_type, user_token, user_info_dict):
+def generate_activity_data(normalized_entity_type, user_token, user_info_dict, creation_action=None):
     # Activity is not an Entity
     normalized_activity_type = 'Activity'
 
@@ -1823,6 +1804,8 @@ def generate_activity_data(normalized_entity_type, user_token, user_info_dict):
                                           user_info_dict=None)
     data_dict_for_activity = {**user_info_dict, **normalized_entity_type_dict, **new_ids_dict_list[0]}
 
+    if creation_action:
+        data_dict_for_activity['creation_action'] = creation_action
     # Generate property values for Activity node
     generated_activity_data_dict = generate_triggered_data('before_create_trigger', normalized_activity_type,
                                                            user_token, {}, data_dict_for_activity)

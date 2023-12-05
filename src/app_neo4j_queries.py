@@ -193,9 +193,9 @@ def get_entity(neo4j_driver, uuid):
             # Convert the neo4j node into Python dict
             result = _node_to_dict(record[record_field_name])
 
-    protocol_url = get_activity_protocol(neo4j_driver, result['uuid'])
-    if protocol_url != {}:
-        result['protocol_url'] = protocol_url
+            protocol_url = get_activity_protocol(neo4j_driver, result['uuid'])
+            if protocol_url != {}:
+                result['protocol_url'] = protocol_url
 
     return result
 
@@ -254,57 +254,6 @@ def get_entities_by_type(neo4j_driver, entity_type, property_key=None):
                 result['protocol_url'] = protocol_url
 
     return results
-
-
-"""
-Get all the public collection nodes
-
-Parameters
-----------
-neo4j_driver : neo4j.Driver object
-    The neo4j database connection pool
-property_key : str
-    A target property key for result filtering
-
-Returns
--------
-list
-    A list of public collections returned from the Cypher query
-"""
-
-
-def get_public_collections(neo4j_driver, property_key=None):
-    results = []
-
-    if property_key:
-        query = (f"MATCH (e:Collection) "
-                 f"WHERE e.registered_doi IS NOT NULL AND e.doi_url IS NOT NULL "
-                 # COLLECT() returns a list
-                 # apoc.coll.toSet() reruns a set containing unique nodes
-                 f"RETURN apoc.coll.toSet(COLLECT(e.{property_key})) AS {record_field_name}")
-    else:
-        query = (f"MATCH (e:Collection) "
-                 f"WHERE e.registered_doi IS NOT NULL AND e.doi_url IS NOT NULL "
-                 # COLLECT() returns a list
-                 # apoc.coll.toSet() reruns a set containing unique nodes
-                 f"RETURN apoc.coll.toSet(COLLECT(e)) AS {record_field_name}")
-
-    logger.info("======get_public_collections() query======")
-    logger.info(query)
-
-    with neo4j_driver.session() as session:
-        record = session.read_transaction(_execute_readonly_tx, query)
-
-        if record and record[record_field_name]:
-            if property_key:
-                # Just return the list of property values from each entity node
-                results = record[record_field_name]
-            else:
-                # Convert the list of nodes to a list of dicts
-                results = _nodes_to_dicts(record[record_field_name])
-
-    return results
-
 
 """
 Retrieve the ancestor organ(s) of a given entity
@@ -795,6 +744,10 @@ neo4j_driver : neo4j.Driver object
     The neo4j database connection pool
 uuid : str
     The uuid of target entity 
+fetch_all : bool
+    Whether to fetch all Datasets or only include Published
+property_key : str
+    Return only a particular property from the cypher query, None for return all    
 
 Returns
 -------
@@ -803,9 +756,10 @@ dict
 """
 
 
-def get_sorted_multi_revisions(neo4j_driver, uuid, fetch_all=True):
+def get_sorted_multi_revisions(neo4j_driver, uuid, fetch_all=True, property_key=False):
     results = []
     match_case = '' if fetch_all is True else 'AND prev.status = "Published" AND next.status = "Published" '
+    collect_prop = f".{property_key}" if property_key else ''
 
     query = (
         "MATCH (e:Dataset), (next:Dataset), (prev:Dataset),"
@@ -814,7 +768,7 @@ def get_sorted_multi_revisions(neo4j_driver, uuid, fetch_all=True):
         f"WHERE e.uuid='{uuid}' {match_case}"
         "WITH length(p) AS p_len, prev, length(n) AS n_len, next "
         "ORDER BY prev.created_timestamp, next.created_timestamp DESC "
-        "WITH p_len, collect(distinct prev) AS prev_revisions, n_len, collect(distinct next) AS next_revisions "
+        f"WITH p_len, collect(distinct prev{collect_prop}) AS prev_revisions, n_len, collect(distinct next{collect_prop}) AS next_revisions "
         f"RETURN [collect(distinct next_revisions), collect(distinct prev_revisions)] AS {record_field_name}"
     )
 
@@ -826,14 +780,17 @@ def get_sorted_multi_revisions(neo4j_driver, uuid, fetch_all=True):
 
         if record and record[record_field_name] and len(record[record_field_name]) > 0:
             record[record_field_name][0].pop()  # the target will appear twice, pop it from the next list
-            for collection in record[record_field_name]:  # two collections: next, prev
-                revs = []
-                for rev in collection:  # each collection list contains revision lists, so 2 dimensional array
-                    # Convert the list of nodes to a list of dicts
-                    nodes_to_dicts = _nodes_to_dicts(rev)
-                    revs.append(nodes_to_dicts)
+            if property_key:
+                return record[record_field_name]
+            else:
+                for collection in record[record_field_name]:  # two collections: next, prev
+                    revs = []
+                    for rev in collection:  # each collection list contains revision lists, so 2 dimensional array
+                        # Convert the list of nodes to a list of dicts
+                        nodes_to_dicts = _nodes_to_dicts(rev)
+                        revs.append(nodes_to_dicts)
 
-                results.append(revs)
+                    results.append(revs)
 
     return results
 
@@ -1313,6 +1270,7 @@ def get_prov_info(neo4j_driver, param_dict, published_only):
         published_only_query_string = f" AND toUpper(ds.status) = 'PUBLISHED'"
     query = (f"MATCH (ds:Dataset)-[:WAS_GENERATED_BY]->(a)-[:USED]->(firstSample:Sample)-[*]->(source:Source)"
              f"WHERE not (ds)<-[:REVISION_OF]-(:Dataset)"
+             f" AND NOT toLower(a.creation_action) ENDS WITH 'process'"
              f"{group_uuid_query_string}"
              f"{dataset_status_query_string}"
              f"{published_only_query_string}"
@@ -1328,7 +1286,8 @@ def get_prov_info(neo4j_driver, param_dict, published_only):
              f" {organ_query_string} (source)<-[:USED]-(oa)<-[:WAS_GENERATED_BY]-(organ:Sample {{sample_category:'{Ontology.ops().specimen_categories().ORGAN}'}})<-[*]-(ds)"
              f" {organ_where_clause}"
              f" WITH ds, FIRSTSAMPLE, SOURCE, REVISIONS, METASAMPLE, RUISAMPLE, COLLECT(DISTINCT organ) AS ORGAN "
-             f" OPTIONAL MATCH (ds)-[:USED]->(a3)-[:WAS_GENERATED_BY]->(processed_dataset:Dataset)"
+             f" OPTIONAL MATCH (ds)<-[:USED]-(a3)<-[:WAS_GENERATED_BY]-(processed_dataset:Dataset)"
+             f" WHERE toLower(a3.creation_action) ENDS WITH 'process'"
              f" WITH ds, FIRSTSAMPLE, SOURCE, REVISIONS, METASAMPLE, RUISAMPLE, ORGAN, COLLECT(distinct processed_dataset) AS PROCESSED_DATASET"
              f" RETURN ds.uuid, FIRSTSAMPLE, SOURCE, RUISAMPLE, ORGAN, ds.sennet_id, ds.status, ds.group_name,"
              f" ds.group_uuid, ds.created_timestamp, ds.created_by_user_email, ds.last_modified_timestamp, "
@@ -1427,6 +1386,7 @@ def get_individual_prov_info(neo4j_driver, dataset_uuid):
         f" OPTIONAL match (source)<-[:USED]-(oa)<-[:WAS_GENERATED_BY]-(organ:Sample {{sample_category:'{Ontology.ops().specimen_categories().ORGAN}'}})<-[*]-(ds)"
         f" WITH ds, FIRSTSAMPLE, SOURCE, METASAMPLE, RUISAMPLE, COLLECT(distinct organ) AS ORGAN "
         f" OPTIONAL MATCH (ds)<-[:USED]-(a3)<-[:WAS_GENERATED_BY]-(processed_dataset:Dataset)"
+        f" WHERE toLower(a3.creation_action) ENDS WITH 'process'"
         f" WITH ds, FIRSTSAMPLE, SOURCE, METASAMPLE, RUISAMPLE, ORGAN, COLLECT(distinct processed_dataset) AS PROCESSED_DATASET"
         f" RETURN ds.uuid, FIRSTSAMPLE, SOURCE, RUISAMPLE, ORGAN, ds.sennet_id, ds.status, ds.group_name,"
         f" ds.group_uuid, ds.created_timestamp, ds.created_by_user_email, ds.last_modified_timestamp, "
@@ -1559,7 +1519,7 @@ def get_sample_prov_info(neo4j_driver, param_dict):
         f" WITH s, d"
         f" OPTIONAL MATCH (s)-[*]->(organ:Sample{{sample_category: '{Ontology.ops().specimen_categories().ORGAN}'}})"
         f" WITH s, organ, d"
-        f" MATCH (s)-[]->()-[]->(da)"
+        f" MATCH (s)-[:WAS_GENERATED_BY]->(:Activity)-[:USED]->(da)"
         f" RETURN s.uuid, s.lab_tissue_sample_id, s.group_name, s.created_by_user_email, s.metadata, s.rui_location,"
         f" d.uuid, d.metadata, organ.uuid, organ.sample_category, organ.metadata, da.uuid, da.entity_type, "
         f"s.sample_category, organ.organ, s.organ, s.sennet_id, organ.sennet_id, "
@@ -1803,3 +1763,72 @@ def _create_activity_tx(tx, activity_data_dict):
     node = record[record_field_name]
 
     return node
+
+
+"""
+Create multiple dataset nodes in neo4j
+Parameters
+----------
+neo4j_driver : neo4j.Driver object
+    The neo4j database connection pool
+datasets_dict_list : list
+    A list of dicts containing the generated data of each sample to be created
+activity_dict : dict
+    The dict containing generated activity data
+direct_ancestor_uuid : str
+    The uuid of the direct ancestor to be linked to
+"""
+def create_multiple_datasets(neo4j_driver, datasets_dict_list, activity_data_dict, direct_ancestor_uuid):
+    try:
+        with neo4j_driver.session() as session:
+            entity_dict = {}
+
+            tx = session.begin_transaction()
+
+            activity_uuid = activity_data_dict['uuid']
+
+            # Step 1: create the Activity node
+            _create_activity_tx(tx, activity_data_dict)
+
+            # Step 2: create relationship from source entity node to this Activity node
+            _create_relationship_tx(tx, direct_ancestor_uuid, activity_uuid, 'USED', '<-')
+
+            # Step 3: create each new sample node and link to the Activity node at the same time
+            output_dicts_list = []
+            for dataset_dict in datasets_dict_list:
+                # Remove dataset_link_abs_dir once more before entity creation
+                dataset_link_abs_dir = dataset_dict.pop('dataset_link_abs_dir', None)
+                node_properties_map = _build_properties_map(dataset_dict)
+
+                query = (f"MATCH (a:Activity) "
+                         f"WHERE a.uuid = '{activity_uuid}' "
+                         # Always define the Entity label in addition to the target `entity_type` label
+                         f"CREATE (e:Entity:Dataset {node_properties_map} ) "
+                         f"CREATE (a)<-[:WAS_GENERATED_BY]-(e)"
+                         f"RETURN e AS {record_field_name}")
+
+                logger.info("======create_multiple_samples() individual query======")
+                logger.info(query)
+
+                result = tx.run(query)
+                record = result.single()
+                entity_node = record[record_field_name]
+                entity_dict = _node_to_dict(entity_node)
+                entity_dict['dataset_link_abs_dir'] = dataset_link_abs_dir
+                output_dicts_list.append(entity_dict)
+            # Then
+            tx.commit()
+            return output_dicts_list
+    except TransactionError as te:
+        msg = f"TransactionError from calling create_multiple_samples(): {te.value}"
+        # Log the full stack trace, prepend a line with our message
+        logger.exception(msg)
+
+        if tx.closed() == False:
+            logger.info("Failed to commit create_multiple_samples() transaction, rollback")
+
+            tx.rollback()
+
+        raise TransactionError(msg)
+
+
