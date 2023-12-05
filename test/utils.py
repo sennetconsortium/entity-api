@@ -30,6 +30,29 @@ class SourceTypes:
 
 
 @dataclass
+class OrganTypes:
+    AD: str = 'AD'
+    BD: str = 'BD'
+    BM: str = 'BM'
+    BR: str = 'BR'
+    BS: str = 'BS'
+    LI: str = 'LI'
+    LK: str = 'LK'
+    LL: str = 'LL'
+    LN: str = 'LN'
+    LO: str = 'LO'
+    LV: str = 'LV'
+    MU: str = 'MU'
+    OT: str = 'OT'
+    PA: str = 'PA'
+    PL: str = 'PL'
+    RK: str = 'RK'
+    RL: str = 'RL'
+    RO: str = 'RO'
+    SK: str = 'SK'
+
+
+@dataclass
 class AssayTypes:
     BULKRNA: str = "bulk-RNA" 
     CITESEQ: str = "CITE-Seq"
@@ -100,3 +123,13 @@ class MockOntology(Ontology):
         if Ontology.Ops.as_data_dict:
             return {e.name: e.default for e in fields(AssayTypes)}
         return AssayTypes
+
+    @staticmethod
+    def organ_types():
+        if Ontology.Ops.as_arr and MockOntology.Ops.cb == enum_val_lower:
+            return [e.default.lower() for e in fields(OrganTypes)]
+        if MockOntology.Ops.as_arr and MockOntology.Ops.cb == str:
+            return [e.default for e in fields(OrganTypes)]
+        if MockOntology.Ops.as_data_dict:
+            return {e.name: e.default for e in fields(OrganTypes)}
+        return OrganTypes
