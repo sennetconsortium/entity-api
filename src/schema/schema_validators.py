@@ -1,6 +1,4 @@
-import yaml
 import logging
-import requests
 from datetime import datetime
 
 # Local modules
@@ -328,13 +326,13 @@ def validate_if_retraction_permitted(property_key, normalized_entity_type, reque
     if existing_data_dict['status'].lower() != SchemaConstants.DATASET_STATUS_PUBLISHED:
         raise ValueError("This dataset is not published, retraction is not allowed")
 
-    # Only token in HuBMAP-Data-Admin group can retract a published dataset
+    # Only token in HuBMAP-Data-Admin group can retract a published dataset. Handled by API Gateway.
     # TODO: need to update HuBMAP-READ to sennet and update hmgroupids
     try:
         # The property 'hmgroupids' is ALWASYS in the output with using schema_manager.get_user_info()
         # when the token in request is a nexus_token
         user_info = schema_manager.get_user_info(request)
-        hubmap_read_group_uuid = schema_manager.get_auth_helper_instance().groupNameToId('HuBMAP-READ')['uuid']
+        hubmap_read_group_uuid = schema_manager.get_auth_helper_instance().groupNameToId('SenNet - Read')['uuid']
     except Exception as e:
         # Log the full stack trace, prepend a line with our message
         logger.exception(e)
@@ -497,6 +495,8 @@ existing_data_dict : dict
 new_data_dict : dict
     The json data in request body, already after the regular validations
 """
+
+
 def validate_creation_action(property_key, normalized_entity_type, request, existing_data_dict, new_data_dict):
     accepted_creation_action_values = SchemaConstants.ALLOWED_SINGLE_CREATION_ACTIONS
     creation_action = new_data_dict.get(property_key)
@@ -504,6 +504,70 @@ def validate_creation_action(property_key, normalized_entity_type, request, exis
         raise ValueError("Invalid {} value. Accepted values are: {}".format(property_key, ", ".join(accepted_creation_action_values)))
     if creation_action == '':
         raise ValueError(f"The property {property_key} cannot be empty, when specified.")
+
+
+"""
+Validate that the user is in  Hubmap-Data-Admin before creating or updating field 'assigned_to_group_name'
+Parameters
+----------
+property_key : str
+    The target property key
+normalized_type : str
+    Submission
+request: Flask request object
+    The instance of Flask request passed in from application request
+existing_data_dict : dict
+    A dictionary that contains all existing entity properties
+new_data_dict : dict
+    The json data in request body, already after the regular validations
+"""
+
+
+def validate_in_admin_group(property_key, normalized_entity_type, request, existing_data_dict, new_data_dict):
+    try:
+        # The property 'hmgroupids' is ALWAYS in the output with using schema_manager.get_user_info()
+        # when the token in request is a nexus_token
+        user_info = schema_manager.get_user_info(request)
+        admin_group_uuid = schema_manager.get_auth_helper_instance().groupNameToId('SenNet-Data-Admin')['uuid']
+    except Exception as e:
+        # Log the full stack trace, prepend a line with our message
+        logger.exception(e)
+
+        # If the token is not a groups token, no group information available
+        # The commons.hm_auth.AuthCache would return a Response with 500 error message
+        # We treat such cases as the user not in the SenNet-Data-Admin group
+        raise ValueError("Failed to parse the permission based on token, retraction is not allowed")
+
+    if admin_group_uuid not in user_info['hmgroupids']:
+        raise ValueError(f"Permission denied, not permitted to set property {property_key}")
+
+
+"""
+Validate that the provided group_name is one of the group name 'shortname' values where data_provider == true available
+from hubmap-commons in the xxx-globus-groups.json file on entity creation
+Parameters
+----------
+property_key : str
+    The target property key
+normalized_type : str
+    Submission
+request: Flask request object
+    The instance of Flask request passed in from application request
+existing_data_dict : dict
+    A dictionary that contains all existing entity properties
+new_data_dict : dict
+    The json data in request body, already after the regular validations
+"""
+
+
+def validate_group_name(property_key, normalized_entity_type, request, existing_data_dict, new_data_dict):
+    assigned_to_group_name = new_data_dict['assigned_to_group_name']
+    globus_groups = schema_manager.get_auth_helper_instance().getHuBMAPGroupInfo()
+    globus_group = next((v for v in globus_groups.values() if v.get("displayname") == assigned_to_group_name), None)
+    if globus_group is None:
+        raise ValueError("Invalid value for 'assigned_to_group_name'")
+    if not globus_group.get("data_provider", False):
+        raise ValueError("Invalid group in 'assigned_to_group_name'. Must be a data provider")
 
 
 ####################################################################################################

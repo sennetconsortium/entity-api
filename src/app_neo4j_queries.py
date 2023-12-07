@@ -193,9 +193,9 @@ def get_entity(neo4j_driver, uuid):
             # Convert the neo4j node into Python dict
             result = _node_to_dict(record[record_field_name])
 
-    protocol_url = get_activity_protocol(neo4j_driver, result['uuid'])
-    if protocol_url != {}:
-        result['protocol_url'] = protocol_url
+            protocol_url = get_activity_protocol(neo4j_driver, result['uuid'])
+            if protocol_url != {}:
+                result['protocol_url'] = protocol_url
 
     return result
 
@@ -254,57 +254,6 @@ def get_entities_by_type(neo4j_driver, entity_type, property_key=None):
                 result['protocol_url'] = protocol_url
 
     return results
-
-
-"""
-Get all the public collection nodes
-
-Parameters
-----------
-neo4j_driver : neo4j.Driver object
-    The neo4j database connection pool
-property_key : str
-    A target property key for result filtering
-
-Returns
--------
-list
-    A list of public collections returned from the Cypher query
-"""
-
-
-def get_public_collections(neo4j_driver, property_key=None):
-    results = []
-
-    if property_key:
-        query = (f"MATCH (e:Collection) "
-                 f"WHERE e.registered_doi IS NOT NULL AND e.doi_url IS NOT NULL "
-                 # COLLECT() returns a list
-                 # apoc.coll.toSet() reruns a set containing unique nodes
-                 f"RETURN apoc.coll.toSet(COLLECT(e.{property_key})) AS {record_field_name}")
-    else:
-        query = (f"MATCH (e:Collection) "
-                 f"WHERE e.registered_doi IS NOT NULL AND e.doi_url IS NOT NULL "
-                 # COLLECT() returns a list
-                 # apoc.coll.toSet() reruns a set containing unique nodes
-                 f"RETURN apoc.coll.toSet(COLLECT(e)) AS {record_field_name}")
-
-    logger.info("======get_public_collections() query======")
-    logger.info(query)
-
-    with neo4j_driver.session() as session:
-        record = session.read_transaction(_execute_readonly_tx, query)
-
-        if record and record[record_field_name]:
-            if property_key:
-                # Just return the list of property values from each entity node
-                results = record[record_field_name]
-            else:
-                # Convert the list of nodes to a list of dicts
-                results = _nodes_to_dicts(record[record_field_name])
-
-    return results
-
 
 """
 Retrieve the ancestor organ(s) of a given entity
