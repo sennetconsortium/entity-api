@@ -381,8 +381,7 @@ ENTITIES:
       dataset_type:
         type: string
         description: "The data or assay type contained in this dataset."
-#        TODO: required_on_create: true
-
+        required_on_create: true
 #      TODO: data_types and data_types_other are deprecated and will be removed
       data_types:
         before_property_create_validators:
@@ -390,7 +389,6 @@ ENTITIES:
         before_property_update_validators:
           - validate_no_duplicates_in_list
         type: list
-        required_on_create: true # Only required for create via POST, not update via PUT
         description: "The data or assay types contained in this dataset as a json array of strings.  Each is an assay code from [assay types](https://github.com/sennetconsortium/search-api/blob/master/src/search-schema/data/definitions/enums/assay_types.yaml)."
       data_types_other:
         type: string
