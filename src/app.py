@@ -2612,7 +2612,7 @@ def get_prov_info():
     HEADER_DATASET_DATE_TIME_MODIFIED = 'dataset_date_time_modified'
     HEADER_DATASET_MODIFIED_BY_EMAIL = 'dataset_modified_by_email'
     HEADER_DATASET_LAB_ID = 'lab_id_or_name'
-    HEADER_DATASET_DATA_TYPES = 'dataset_data_types'
+    HEADER_DATASET_DATASET_TYPE = 'dataset_dataset_type'
     HEADER_DATASET_PORTAL_URL = 'dataset_portal_url'
     HEADER_FIRST_SAMPLE_SENNET_ID = 'first_sample_sennet_id'
     HEADER_FIRST_SAMPLE_UUID = 'first_sample_uuid'
@@ -2632,7 +2632,6 @@ def get_prov_info():
     HEADER_PROCESSED_DATASET_SENNET_ID = 'processed_dataset_sennet_id'
     HEADER_PROCESSED_DATASET_STATUS = 'processed_dataset_status'
     HEADER_PROCESSED_DATASET_PORTAL_URL = 'processed_dataset_portal_url'
-    ASSAY_TYPES = Ontology.ops(as_data_dict=True, prop_callback=None, data_as_val=True).assay_types()
     ORGAN_TYPES = Ontology.ops(as_data_dict=True, data_as_val=True, val_key='rui_code').organ_types()
     HEADER_PREVIOUS_VERSION_SENNET_IDS = 'previous_version_sennet_ids'
 
@@ -2640,7 +2639,7 @@ def get_prov_info():
         HEADER_DATASET_UUID, HEADER_DATASET_SENNET_ID, HEADER_DATASET_STATUS, HEADER_DATASET_GROUP_NAME,
         HEADER_DATASET_GROUP_UUID, HEADER_DATASET_DATE_TIME_CREATED, HEADER_DATASET_CREATED_BY_EMAIL,
         HEADER_DATASET_DATE_TIME_MODIFIED, HEADER_DATASET_MODIFIED_BY_EMAIL, HEADER_DATASET_LAB_ID,
-        HEADER_DATASET_DATA_TYPES, HEADER_DATASET_PORTAL_URL, HEADER_FIRST_SAMPLE_SENNET_ID,
+        HEADER_DATASET_DATASET_TYPE, HEADER_DATASET_PORTAL_URL, HEADER_FIRST_SAMPLE_SENNET_ID,
         HEADER_FIRST_SAMPLE_UUID, HEADER_FIRST_SAMPLE_CATEGORY,
         HEADER_FIRST_SAMPLE_PORTAL_URL, HEADER_ORGAN_SENNET_ID, HEADER_ORGAN_UUID,
         HEADER_ORGAN_TYPE, HEADER_SOURCE_SENNET_ID, HEADER_SOURCE_UUID,
@@ -2722,21 +2721,7 @@ def get_prov_info():
         internal_dict[HEADER_DATASET_DATE_TIME_MODIFIED] = datetime.fromtimestamp(int(dataset['last_modified_timestamp']/1000.0))
         internal_dict[HEADER_DATASET_MODIFIED_BY_EMAIL] = dataset['last_modified_user_email']
         internal_dict[HEADER_DATASET_LAB_ID] = dataset['lab_dataset_id']
-
-        # Data type codes are replaced with data type descriptions
-        assay_description_list = []
-        for item in dataset['data_types']:
-            try:
-                assay_description_list.append(ASSAY_TYPES[item].value['description'])
-            except Exception:
-                assay_description_list.append(item)
-
-        dataset['data_types'] = assay_description_list
-        internal_dict[HEADER_DATASET_DATA_TYPES] = dataset['data_types']
-
-        # If return_format was not equal to json, json arrays must be converted into comma separated lists for the tsv
-        if return_json is False:
-            internal_dict[HEADER_DATASET_DATA_TYPES] = ",".join(dataset['data_types'])
+        internal_dict[HEADER_DATASET_DATASET_TYPE] = dataset['dataset_type']
 
         internal_dict[HEADER_DATASET_PORTAL_URL] = app.config['DOI_REDIRECT_URL'].replace('<entity_type>', 'dataset').replace('<identifier>', dataset['uuid'])
 
@@ -2944,7 +2929,7 @@ def get_prov_info_for_dataset(id):
     HEADER_DATASET_DATE_TIME_MODIFIED = 'dataset_date_time_modified'
     HEADER_DATASET_MODIFIED_BY_EMAIL = 'dataset_modified_by_email'
     HEADER_DATASET_LAB_ID = 'lab_id_or_name'
-    HEADER_DATASET_DATA_TYPES = 'dataset_data_types'
+    HEADER_DATASET_DATASET_TYPE = 'dataset_dataset_type'
     HEADER_DATASET_PORTAL_URL = 'dataset_portal_url'
     HEADER_FIRST_SAMPLE_SENNET_ID = 'first_sample_sennet_id'
     HEADER_FIRST_SAMPLE_UUID = 'first_sample_uuid'
@@ -2965,14 +2950,13 @@ def get_prov_info_for_dataset(id):
     HEADER_PROCESSED_DATASET_STATUS = 'processed_dataset_status'
     HEADER_PROCESSED_DATASET_PORTAL_URL = 'processed_dataset_portal_url'
     HEADER_DATASET_SAMPLES = "dataset_samples"
-    ASSAY_TYPES = Ontology.ops(as_data_dict=True, prop_callback=None, data_as_val=True).assay_types()
     ORGAN_TYPES = Ontology.ops(as_data_dict=True, data_as_val=True, val_key='rui_code').organ_types()
 
     headers = [
         HEADER_DATASET_UUID, HEADER_DATASET_SENNET_ID, HEADER_DATASET_STATUS, HEADER_DATASET_GROUP_NAME,
         HEADER_DATASET_GROUP_UUID, HEADER_DATASET_DATE_TIME_CREATED, HEADER_DATASET_CREATED_BY_EMAIL,
         HEADER_DATASET_DATE_TIME_MODIFIED, HEADER_DATASET_MODIFIED_BY_EMAIL, HEADER_DATASET_LAB_ID,
-        HEADER_DATASET_DATA_TYPES, HEADER_DATASET_PORTAL_URL, HEADER_FIRST_SAMPLE_SENNET_ID,
+        HEADER_DATASET_DATASET_TYPE, HEADER_DATASET_PORTAL_URL, HEADER_FIRST_SAMPLE_SENNET_ID,
         HEADER_FIRST_SAMPLE_UUID, HEADER_FIRST_SAMPLE_CATEGORY,
         HEADER_FIRST_SAMPLE_PORTAL_URL, HEADER_ORGAN_SENNET_ID, HEADER_ORGAN_UUID,
         HEADER_ORGAN_TYPE, HEADER_SOURCE_SENNET_ID, HEADER_SOURCE_UUID,
@@ -3001,19 +2985,8 @@ def get_prov_info_for_dataset(id):
         int(dataset['last_modified_timestamp'] / 1000.0))
     internal_dict[HEADER_DATASET_MODIFIED_BY_EMAIL] = dataset['last_modified_user_email']
     internal_dict[HEADER_DATASET_LAB_ID] = dataset['lab_dataset_id']
+    internal_dict[HEADER_DATASET_DATASET_TYPE] = dataset['dataset_type']
 
-    # Data type codes are replaced with data type descriptions
-    assay_description_list = []
-    for item in dataset['data_types']:
-        try:
-            assay_description_list.append(ASSAY_TYPES[item].value['description'])
-        except Exception:
-            assay_description_list.append(item)
-
-    dataset['data_types'] = assay_description_list
-    internal_dict[HEADER_DATASET_DATA_TYPES] = dataset['data_types']
-    if return_json is False:
-        internal_dict[HEADER_DATASET_DATA_TYPES] = ",".join(dataset['data_types'])
     internal_dict[HEADER_DATASET_PORTAL_URL] = app.config['DOI_REDIRECT_URL'].replace('<entity_type>', 'dataset').replace(
         '<identifier>', dataset['uuid'])
     if dataset['first_sample'] is not None:
@@ -3171,9 +3144,8 @@ def sankey_data():
     # String constants
     HEADER_DATASET_GROUP_NAME = 'dataset_group_name'
     HEADER_ORGAN_TYPE = 'organ_type'
-    HEADER_DATASET_DATA_TYPES = 'dataset_data_types'
+    HEADER_DATASET_DATASET_TYPE = 'dataset_dataset_type'
     HEADER_DATASET_STATUS = 'dataset_status'
-    ASSAY_TYPES = Ontology.ops(as_data_dict=True, prop_callback=None, data_as_val=True).assay_types()
     ORGAN_TYPES = Ontology.ops(as_data_dict=True, data_as_val=True, val_key='rui_code').organ_types()
     with open('sankey_mapping.json') as f:
         mapping_dict = json.load(f)
@@ -3192,21 +3164,12 @@ def sankey_data():
                 internal_dict[HEADER_ORGAN_TYPE] = ORGAN_TYPES[organ_type]['term']
                 break
 
-        assay_description = ""
-
-        try:
-            assay_description = ASSAY_TYPES[dataset[HEADER_DATASET_DATA_TYPES]].value['description']
-        except Exception:
-            assay_description = dataset[HEADER_DATASET_DATA_TYPES]
-
-        internal_dict[HEADER_DATASET_DATA_TYPES] = assay_description
+        internal_dict[HEADER_DATASET_DATASET_TYPE] = dataset[HEADER_DATASET_DATASET_TYPE]
 
         # Replace applicable Group Name and Data type with the value needed for the sankey via the mapping_dict
         internal_dict[HEADER_DATASET_STATUS] = dataset['dataset_status']
         if internal_dict[HEADER_DATASET_GROUP_NAME] in mapping_dict.keys():
             internal_dict[HEADER_DATASET_GROUP_NAME] = mapping_dict[internal_dict[HEADER_DATASET_GROUP_NAME]]
-        if internal_dict[HEADER_DATASET_DATA_TYPES] in mapping_dict.keys():
-            internal_dict[HEADER_DATASET_DATA_TYPES] = mapping_dict[internal_dict[HEADER_DATASET_DATA_TYPES]]
 
         # Each dataset's dictionary is added to the list to be returned
         dataset_sankey_list.append(internal_dict)
@@ -4502,7 +4465,7 @@ def validate_constraints_by_entities(ancestor, descendant, descendant_entity_typ
     def get_sub_type(obj):
         sub_type = obj.get('sample_category') if obj.get('sample_category') is not None else obj.get('source_type')
         try:
-            sub_type = obj.get('data_types') if sub_type is None else [sub_type]
+            sub_type = obj.get('dataset_type') if sub_type is None else [sub_type]
             if type(sub_type) is not list:
                 sub_type = ast.literal_eval(sub_type)
         except Exception as ec:
@@ -4551,7 +4514,7 @@ def verify_ubkg_properties(json_data_dict):
     SOURCE_TYPES = Ontology.ops(as_data_dict=True).source_types()
     SAMPLE_CATEGORIES = Ontology.ops(as_data_dict=True).specimen_categories()
     ORGAN_TYPES = Ontology.ops(as_data_dict=True, key='rui_code').organ_types()
-    DATA_TYPES = Ontology.ops(as_data_dict=True).assay_types()
+    DATASET_TYPE = Ontology.ops(as_data_dict=True).assay_types()
 
     if 'source_type' in json_data_dict:
         compare_property_against_ubkg(SOURCE_TYPES, json_data_dict, 'source_type')
@@ -4562,8 +4525,13 @@ def verify_ubkg_properties(json_data_dict):
     if 'organ' in json_data_dict:
         compare_property_against_ubkg(ORGAN_TYPES, json_data_dict, 'organ')
 
-    if 'data_types' in json_data_dict:
-        compare_property_list_against_ubkg(DATA_TYPES, json_data_dict, 'data_types')
+    # If the proposed Dataset dataset_type ends with something in square brackets, anything inside
+    # those square brackets are acceptable at the end of the string.  Simply validate the start.
+    if 'dataset_type' in json_data_dict:
+        dataset_type_dict = {'dataset_type': re.sub(pattern='(\S)\s\[.*\]$', repl=r'\1',
+                                                    string=json_data_dict['dataset_type'])}
+        compare_property_against_ubkg(DATASET_TYPE, dataset_type_dict, 'organ')
+
 
 def compare_property_list_against_ubkg(ubkg_dict, json_data_dict, field):
     good_fields = []
