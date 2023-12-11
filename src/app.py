@@ -4550,6 +4550,7 @@ def validate_organ_code(organ_code):
 def verify_ubkg_properties(json_data_dict):
     SOURCE_TYPES = Ontology.ops(as_data_dict=True).source_types()
     SAMPLE_CATEGORIES = Ontology.ops(as_data_dict=True).specimen_categories()
+    ORGAN_TYPES = Ontology.ops(as_data_dict=True, key='rui_code').organ_types()
     DATA_TYPES = Ontology.ops(as_data_dict=True).assay_types()
 
     if 'source_type' in json_data_dict:
@@ -4557,6 +4558,9 @@ def verify_ubkg_properties(json_data_dict):
 
     if 'sample_category' in json_data_dict:
         compare_property_against_ubkg(SAMPLE_CATEGORIES, json_data_dict, 'sample_category')
+
+    if 'organ' in json_data_dict:
+        compare_property_against_ubkg(ORGAN_TYPES, json_data_dict, 'organ')
 
     if 'data_types' in json_data_dict:
         compare_property_list_against_ubkg(DATA_TYPES, json_data_dict, 'data_types')
