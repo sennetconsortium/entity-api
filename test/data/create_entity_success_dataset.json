@@ -15,7 +15,7 @@
     "created_by_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
     "created_timestamp": 1683747186845,
     "data_access_level": "consortium",
-    "data_types": ["Mint-ChIP"],
+    "dataset_type": "RNAseq",
     "dataset_info": "lab notes",
     "description": "Unit test lab notes",
     "entity_type": "Dataset",
@@ -125,7 +125,7 @@
     "last_modified_user_email": "TESTUSER@example.com",
     "last_modified_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
     "contains_human_genetic_sequences": false,
-    "data_types": ["Mint-ChIP"],
+    "dataset_type": "RNAseq",
     "status": "New"
   }
 }
