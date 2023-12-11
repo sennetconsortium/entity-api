@@ -193,9 +193,9 @@ def get_entity(neo4j_driver, uuid):
             # Convert the neo4j node into Python dict
             result = _node_to_dict(record[record_field_name])
 
-    protocol_url = get_activity_protocol(neo4j_driver, result['uuid'])
-    if protocol_url != {}:
-        result['protocol_url'] = protocol_url
+            protocol_url = get_activity_protocol(neo4j_driver, result['uuid'])
+            if protocol_url != {}:
+                result['protocol_url'] = protocol_url
 
     return result
 
@@ -254,57 +254,6 @@ def get_entities_by_type(neo4j_driver, entity_type, property_key=None):
                 result['protocol_url'] = protocol_url
 
     return results
-
-
-"""
-Get all the public collection nodes
-
-Parameters
-----------
-neo4j_driver : neo4j.Driver object
-    The neo4j database connection pool
-property_key : str
-    A target property key for result filtering
-
-Returns
--------
-list
-    A list of public collections returned from the Cypher query
-"""
-
-
-def get_public_collections(neo4j_driver, property_key=None):
-    results = []
-
-    if property_key:
-        query = (f"MATCH (e:Collection) "
-                 f"WHERE e.registered_doi IS NOT NULL AND e.doi_url IS NOT NULL "
-                 # COLLECT() returns a list
-                 # apoc.coll.toSet() reruns a set containing unique nodes
-                 f"RETURN apoc.coll.toSet(COLLECT(e.{property_key})) AS {record_field_name}")
-    else:
-        query = (f"MATCH (e:Collection) "
-                 f"WHERE e.registered_doi IS NOT NULL AND e.doi_url IS NOT NULL "
-                 # COLLECT() returns a list
-                 # apoc.coll.toSet() reruns a set containing unique nodes
-                 f"RETURN apoc.coll.toSet(COLLECT(e)) AS {record_field_name}")
-
-    logger.info("======get_public_collections() query======")
-    logger.info(query)
-
-    with neo4j_driver.session() as session:
-        record = session.read_transaction(_execute_readonly_tx, query)
-
-        if record and record[record_field_name]:
-            if property_key:
-                # Just return the list of property values from each entity node
-                results = record[record_field_name]
-            else:
-                # Convert the list of nodes to a list of dicts
-                results = _nodes_to_dicts(record[record_field_name])
-
-    return results
-
 
 """
 Retrieve the ancestor organ(s) of a given entity
@@ -1342,8 +1291,7 @@ def get_prov_info(neo4j_driver, param_dict, published_only):
              f" WITH ds, FIRSTSAMPLE, SOURCE, REVISIONS, METASAMPLE, RUISAMPLE, ORGAN, COLLECT(distinct processed_dataset) AS PROCESSED_DATASET"
              f" RETURN ds.uuid, FIRSTSAMPLE, SOURCE, RUISAMPLE, ORGAN, ds.sennet_id, ds.status, ds.group_name,"
              f" ds.group_uuid, ds.created_timestamp, ds.created_by_user_email, ds.last_modified_timestamp, "
-             # TODO: remove ds.data_types
-             f" ds.last_modified_user_email, ds.lab_dataset_id, ds.data_types, ds.dataset_type, METASAMPLE, PROCESSED_DATASET, REVISIONS")
+             f" ds.last_modified_user_email, ds.lab_dataset_id, ds.dataset_type, METASAMPLE, PROCESSED_DATASET, REVISIONS")
 
     logger.info("======get_prov_info() query======")
     logger.info(query)
@@ -1389,13 +1337,7 @@ def get_prov_info(neo4j_driver, param_dict, published_only):
             record_dict['last_modified_timestamp'] = record_contents[11]
             record_dict['last_modified_user_email'] = record_contents[12]
             record_dict['lab_dataset_id'] = record_contents[13]
-            # TODO: remove data_types
-            data_types = record_contents[14]
-            data_types = data_types.replace("'", '"')
-            data_types = json.loads(data_types)
-            record_dict['data_types'] = data_types
-            # TODO: Change this to be 14
-            record_dict['dataset_type'] = record_contents[15]
+            record_dict['dataset_type'] = record_contents[14]
             content_fifteen = []
             for entry in record_contents[15]:
                 node_dict = _node_to_dict(entry)
@@ -1445,7 +1387,7 @@ def get_individual_prov_info(neo4j_driver, dataset_uuid):
         f" WITH ds, FIRSTSAMPLE, SOURCE, METASAMPLE, RUISAMPLE, ORGAN, COLLECT(distinct processed_dataset) AS PROCESSED_DATASET"
         f" RETURN ds.uuid, FIRSTSAMPLE, SOURCE, RUISAMPLE, ORGAN, ds.sennet_id, ds.status, ds.group_name,"
         f" ds.group_uuid, ds.created_timestamp, ds.created_by_user_email, ds.last_modified_timestamp, "
-        f" ds.last_modified_user_email, ds.lab_dataset_id, ds.data_types, ds.dataset_type, METASAMPLE, PROCESSED_DATASET")
+        f" ds.last_modified_user_email, ds.lab_dataset_id, ds.dataset_type, METASAMPLE, PROCESSED_DATASET")
 
     logger.info("======get_prov_info() query======")
     logger.info(query)
@@ -1489,13 +1431,7 @@ def get_individual_prov_info(neo4j_driver, dataset_uuid):
             record_dict['last_modified_timestamp'] = record_contents[11]
             record_dict['last_modified_user_email'] = record_contents[12]
             record_dict['lab_dataset_id'] = record_contents[13]
-            # TODO: Remove data_types
-            data_types = record_contents[14]
-            data_types = data_types.replace("'", '"')
-            data_types = json.loads(data_types)
-            record_dict['data_types'] = data_types
-            # TODO: Change this to 14
-            record_dict['dataset_type'] = record_contents[15]
+            record_dict['dataset_type'] = record_contents[14]
             content_fifteen = []
             for entry in record_contents[15]:
                 node_dict = _node_to_dict(entry)
@@ -1523,7 +1459,7 @@ neo4j_driver : neo4j.Driver object
 def get_sankey_info(neo4j_driver):
     query = (f"MATCH (ds:Dataset)-[]->(a)-[]->(:Sample)"
              f"MATCH (source)<-[:USED]-(oa)<-[:WAS_GENERATED_BY]-(organ:Sample {{sample_category:'{Ontology.ops().specimen_categories().ORGAN}'}})<-[*]-(ds)"
-             f"RETURN distinct ds.group_name, organ.organ, ds.data_types, ds.dataset_type, ds.status, ds. uuid order by ds.group_name")
+             f"RETURN distinct ds.group_name, organ.organ, ds.dataset_type, ds.status, ds. uuid order by ds.group_name")
     logger.info("======get_sankey_info() query======")
     logger.info(query)
     with neo4j_driver.session() as session:
@@ -1539,19 +1475,8 @@ def get_sankey_info(neo4j_driver):
                 record_contents.append(item)
             record_dict['dataset_group_name'] = record_contents[0]
             record_dict['organ_type'] = record_contents[1]
-            # TODO: Remove data_types
-            data_types_list = record_contents[2]
-            data_types_list = data_types_list.replace("'", '"')
-            data_types_list = json.loads(data_types_list)
-            data_types = data_types_list[0]
-            if (len(data_types_list)) > 1:
-                if (data_types_list[0] == "scRNAseq-10xGenomics-v3" and data_types_list[1] == "snATACseq") or (
-                        data_types_list[1] == "scRNAseq-10xGenomics-v3" and data_types_list[0] == "snATACseq"):
-                    data_types = "scRNA-seq (10x Genomics v3),snATAC-seq"
-            record_dict['dataset_data_types'] = data_types
-            # TODO: Change this to be record_contents[2] and [3]
-            record_dict['dataset_type'] = record_contents[3]
-            record_dict['dataset_status'] = record_contents[4]
+            record_dict['dataset_type'] = record_contents[2]
+            record_dict['dataset_status'] = record_contents[3]
             list_of_dictionaries.append(record_dict)
         return list_of_dictionaries
 
