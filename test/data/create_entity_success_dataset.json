@@ -5,7 +5,7 @@
     "group_uuid": "57192604-18e0-11ed-b79b-972795fc9504",
     "description": "Unit test for dataset",
     "dataset_info": "lab notes",
-    "data_types": ["Mint-ChIP"],
+    "dataset_type": "RNAseq",
     "contains_human_genetic_sequences": false
   },
   "response": {
