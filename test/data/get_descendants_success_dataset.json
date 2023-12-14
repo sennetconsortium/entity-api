@@ -21,7 +21,8 @@
       "local_directory_rel_path": "consortium/CODCC Testing Group/373d1294b6aeb77aea31852b257133bb/",
       "sennet_id": "SNT956.SLDZ.526",
       "status": "New",
-      "uuid": "373d1294b6aeb77aea31852b257133bb"
+      "uuid": "373d1294b6aeb77aea31852b257133bb",
+      "creation_action": "Central Process"
     }
   ],
   "headers": {
@@ -47,7 +48,7 @@
     "hmroleids": [],
     "hmscopes": ["test_scope"]
   },
-  "has_read_privs":  true,
+  "has_read_privs": true,
   "get_sennet_ids": {
     "ancestor_id": "5fa78f4fa272db58a7fcc7590376f5e7",
     "ancestor_ids": ["5fa78f4fa272db58a7fcc7590376f5e7"],
@@ -102,5 +103,6 @@
       "status": "New",
       "uuid": "373d1294b6aeb77aea31852b257133bb"
     }
-  ]
+  ],
+  "get_entity_creation_action_activity": ["Central Process"]
 }
