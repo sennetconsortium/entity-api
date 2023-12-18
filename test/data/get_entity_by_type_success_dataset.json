@@ -21,7 +21,8 @@
       "local_directory_rel_path": "protected/University of Pittsburgh TMC/6a7be8e95c62c74545a29666111899d9/",
       "sennet_id": "SNT554.XLGX.327",
       "status": "New",
-      "uuid": "6a7be8e95c62c74545a29666111899d9"
+      "uuid": "6a7be8e95c62c74545a29666111899d9",
+      "creation_action": "Create Dataset Activity"
     },
     {
       "contains_human_genetic_sequences": true,
@@ -44,7 +45,8 @@
       "local_directory_rel_path": "protected/University of Pittsburgh TMC/3c2c1ddae16945d48e5940622b615e20/",
       "sennet_id": "SNT554.XLGX.327",
       "status": "New",
-      "uuid": "3c2c1ddae16945d48e5940622b615e20"
+      "uuid": "3c2c1ddae16945d48e5940622b615e20",
+      "creation_action": "Multi-Assay Split"
     }
   ],
   "get_entities_by_type": [
@@ -94,5 +96,9 @@
       "status": "New",
       "uuid": "3c2c1ddae16945d48e5940622b615e20"
     }
+  ],
+  "get_entity_creation_action_activity": [
+    "Create Dataset Activity",
+    "Multi-Assay Split"
   ]
 }
