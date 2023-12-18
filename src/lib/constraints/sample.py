@@ -35,7 +35,7 @@ def build_sample_block_constraints(entity, constraints=None):
     descendant = build_constraint_unit(Entities.SAMPLE, [SpecimenCategories.BLOCK])
     descendant2 = build_constraint_unit(Entities.SAMPLE, [SpecimenCategories.SECTION])
     descendant3 = build_constraint_unit(Entities.SAMPLE, [SpecimenCategories.SUSPENSION])
-    descendant4 = build_constraint_unit(Entities.DATASET, [Ontology.ops().dataset_type().LIGHT_SHEET])
+    descendant4 = build_constraint_unit(Entities.DATASET, [Ontology.ops().dataset_types().LIGHT_SHEET])
     constraints.append(build_constraint(ancestor, [descendant, descendant2, descendant3, descendant4]))
 
     return constraints
