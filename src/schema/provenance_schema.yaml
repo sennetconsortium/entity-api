@@ -378,13 +378,17 @@ ENTITIES:
       lab_dataset_id:
         type: string
         description: "A name or identifier used by the lab who is uploading the data to cross reference the data locally"
+      dataset_type:
+        type: string
+        description: "The data or assay type contained in this dataset."
+        required_on_create: true
+#      TODO: data_types and data_types_other are deprecated and will be removed
       data_types:
         before_property_create_validators:
           - validate_no_duplicates_in_list
         before_property_update_validators:
           - validate_no_duplicates_in_list
         type: list
-        required_on_create: true # Only required for create via POST, not update via PUT
         description: "The data or assay types contained in this dataset as a json array of strings.  Each is an assay code from [assay types](https://github.com/sennetconsortium/search-api/blob/master/src/search-schema/data/definitions/enums/assay_types.yaml)."
       data_types_other:
         type: string
@@ -519,7 +523,8 @@ ENTITIES:
         type: string
         transient: true
         immutable: true
-        description: "An optional value that is stored in the activity's creation_action field, if specified."
+        on_read_trigger: get_creation_action_activity
+        description: "The activity that was performed."
         before_property_create_validators:
           - validate_creation_action
       assigned_to_group_name:
@@ -599,13 +604,18 @@ ENTITIES:
       lab_dataset_id:
         type: string
         description: "A name or identifier used by the lab who is uploading the data to cross reference the data locally"
+      dataset_type:
+        type: string
+        description: "The data or assay type contained in this dataset."
+        required_on_create: true # Only required for create via POST, not update via PUT
+      #TODO: Remove data_types
+#      TODO: How do we want to handle publications with the new `dataset_type` property?
       data_types:
         before_property_create_validators:
           - validate_no_duplicates_in_list
         before_property_update_validators:
           - validate_no_duplicates_in_list
         type: list
-        required_on_create: true # Only required for create via POST, not update via PUT
         description: "The data or assay types contained in this dataset as a json array of strings.  Each is an assay code from [assay types](https://github.com/hubmapconsortium/search-api/blob/main/src/search-schema/data/definitions/enums/assay_types.yaml)."
       collections:
         type: list

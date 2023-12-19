@@ -1291,7 +1291,7 @@ def get_prov_info(neo4j_driver, param_dict, published_only):
              f" WITH ds, FIRSTSAMPLE, SOURCE, REVISIONS, METASAMPLE, RUISAMPLE, ORGAN, COLLECT(distinct processed_dataset) AS PROCESSED_DATASET"
              f" RETURN ds.uuid, FIRSTSAMPLE, SOURCE, RUISAMPLE, ORGAN, ds.sennet_id, ds.status, ds.group_name,"
              f" ds.group_uuid, ds.created_timestamp, ds.created_by_user_email, ds.last_modified_timestamp, "
-             f" ds.last_modified_user_email, ds.lab_dataset_id, ds.data_types, METASAMPLE, PROCESSED_DATASET, REVISIONS")
+             f" ds.last_modified_user_email, ds.lab_dataset_id, ds.dataset_type, METASAMPLE, PROCESSED_DATASET, REVISIONS")
 
     logger.info("======get_prov_info() query======")
     logger.info(query)
@@ -1337,10 +1337,7 @@ def get_prov_info(neo4j_driver, param_dict, published_only):
             record_dict['last_modified_timestamp'] = record_contents[11]
             record_dict['last_modified_user_email'] = record_contents[12]
             record_dict['lab_dataset_id'] = record_contents[13]
-            data_types = record_contents[14]
-            data_types = data_types.replace("'", '"')
-            data_types = json.loads(data_types)
-            record_dict['data_types'] = data_types
+            record_dict['dataset_type'] = record_contents[14]
             content_fifteen = []
             for entry in record_contents[15]:
                 node_dict = _node_to_dict(entry)
@@ -1390,7 +1387,7 @@ def get_individual_prov_info(neo4j_driver, dataset_uuid):
         f" WITH ds, FIRSTSAMPLE, SOURCE, METASAMPLE, RUISAMPLE, ORGAN, COLLECT(distinct processed_dataset) AS PROCESSED_DATASET"
         f" RETURN ds.uuid, FIRSTSAMPLE, SOURCE, RUISAMPLE, ORGAN, ds.sennet_id, ds.status, ds.group_name,"
         f" ds.group_uuid, ds.created_timestamp, ds.created_by_user_email, ds.last_modified_timestamp, "
-        f" ds.last_modified_user_email, ds.lab_dataset_id, ds.data_types, METASAMPLE, PROCESSED_DATASET")
+        f" ds.last_modified_user_email, ds.lab_dataset_id, ds.dataset_type, METASAMPLE, PROCESSED_DATASET")
 
     logger.info("======get_prov_info() query======")
     logger.info(query)
@@ -1434,10 +1431,7 @@ def get_individual_prov_info(neo4j_driver, dataset_uuid):
             record_dict['last_modified_timestamp'] = record_contents[11]
             record_dict['last_modified_user_email'] = record_contents[12]
             record_dict['lab_dataset_id'] = record_contents[13]
-            data_types = record_contents[14]
-            data_types = data_types.replace("'", '"')
-            data_types = json.loads(data_types)
-            record_dict['data_types'] = data_types
+            record_dict['dataset_type'] = record_contents[14]
             content_fifteen = []
             for entry in record_contents[15]:
                 node_dict = _node_to_dict(entry)
@@ -1452,7 +1446,7 @@ def get_individual_prov_info(neo4j_driver, dataset_uuid):
 
 
 """
-Returns group_name, data_types, and status for every primary dataset. Also returns the organ type for the closest 
+Returns group_name, dataset_type, and status for every primary dataset. Also returns the organ type for the closest 
 sample above the dataset in the provenance where {sample_category: '{Ontology.ops().specimen_categories().ORGAN}'}.  
 
 Parameters
@@ -1465,7 +1459,7 @@ neo4j_driver : neo4j.Driver object
 def get_sankey_info(neo4j_driver):
     query = (f"MATCH (ds:Dataset)-[]->(a)-[]->(:Sample)"
              f"MATCH (source)<-[:USED]-(oa)<-[:WAS_GENERATED_BY]-(organ:Sample {{sample_category:'{Ontology.ops().specimen_categories().ORGAN}'}})<-[*]-(ds)"
-             f"RETURN distinct ds.group_name, organ.organ, ds.data_types, ds.status, ds. uuid order by ds.group_name")
+             f"RETURN distinct ds.group_name, organ.organ, ds.dataset_type, ds.status, ds. uuid order by ds.group_name")
     logger.info("======get_sankey_info() query======")
     logger.info(query)
     with neo4j_driver.session() as session:
@@ -1481,15 +1475,7 @@ def get_sankey_info(neo4j_driver):
                 record_contents.append(item)
             record_dict['dataset_group_name'] = record_contents[0]
             record_dict['organ_type'] = record_contents[1]
-            data_types_list = record_contents[2]
-            data_types_list = data_types_list.replace("'", '"')
-            data_types_list = json.loads(data_types_list)
-            data_types = data_types_list[0]
-            if (len(data_types_list)) > 1:
-                if (data_types_list[0] == "scRNAseq-10xGenomics-v3" and data_types_list[1] == "snATACseq") or (
-                        data_types_list[1] == "scRNAseq-10xGenomics-v3" and data_types_list[0] == "snATACseq"):
-                    data_types = "scRNA-seq (10x Genomics v3),snATAC-seq"
-            record_dict['dataset_data_types'] = data_types
+            record_dict['dataset_type'] = record_contents[2]
             record_dict['dataset_status'] = record_contents[3]
             list_of_dictionaries.append(record_dict)
         return list_of_dictionaries
