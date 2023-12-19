@@ -1217,18 +1217,7 @@ def get_dataset_title(property_key, normalized_type, user_token, existing_data_d
     race = None
     sex = None
 
-    # Parse assay_type from the Dataset
-    try:
-        # Note: The existing_data_dict['data_types'] is stored in Neo4j as a string representation of the Python list
-        # It's not stored in Neo4j as a json string! And we can't store it as a json string
-        # due to the way that Cypher handles single/double quotes.
-        data_types_list = schema_manager.convert_str_to_data(existing_data_dict['data_types'])
-        assay_type_desc = _get_assay_type_description(data_types_list)
-    except requests.exceptions.RequestException as e:
-        raise requests.exceptions.RequestException(e)
-
-    assay_type_desc = schema_manager.convert_str_to_data(existing_data_dict['data_types'])[0]
-
+    dataset_type = existing_data_dict['dataset_type']
     # Get the sample organ name and source metadata information of this dataset
     organ_name, source_metadata, source_type = schema_neo4j_queries.get_dataset_organ_and_source_info(
         schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'])
@@ -1256,7 +1245,7 @@ def get_dataset_title(property_key, normalized_type, user_token, existing_data_d
             sex = 'female' if equals(ancestor_metadata_dict['sex'], 'F') else 'male'
             is_embryo = ancestor_metadata_dict['is_embryo']
             embryo = ' embryo' if is_embryo is True or equals(is_embryo, 'True') else ''
-            generated_title = f"{assay_type_desc} data from the {organ_desc} of a {ancestor_metadata_dict['strain']} {sex} mouse{embryo}"
+            generated_title = f"{dataset_type} data from the {organ_desc} of a {ancestor_metadata_dict['strain']} {sex} mouse{embryo}"
             return property_key, generated_title
 
         data_list = []
@@ -1284,7 +1273,7 @@ def get_dataset_title(property_key, normalized_type, user_token, existing_data_d
 
     if equals(source_type, Ontology.ops().source_types().MOUSE) or \
             equals(source_type, Ontology.ops().source_types().MOUSE_ORGANOID):
-        generated_title = f"{assay_type_desc} data from the {organ_desc} of a source of unknown strain, sex, and age"
+        generated_title = f"{dataset_type} data from the {organ_desc} of a source of unknown strain, sex, and age"
         return property_key, generated_title
 
     age_race_sex_info = None
@@ -1306,7 +1295,7 @@ def get_dataset_title(property_key, normalized_type, user_token, existing_data_d
     else:
         age_race_sex_info = f"{age}-year-old {race} {sex}"
 
-    generated_title = f"{assay_type_desc} data from the {organ_desc} of a {age_race_sex_info}"
+    generated_title = f"{dataset_type} data from the {organ_desc} of a {age_race_sex_info}"
 
     return property_key, generated_title
 
@@ -2237,6 +2226,8 @@ def set_activity_creation_action(property_key, normalized_type, user_token, exis
     return property_key, f"Create {new_data_dict['normalized_entity_type']} Activity"
 
 
+
+
 """
 Trigger event method of passing the protocol_url from the entity to the activity
 
@@ -2272,6 +2263,19 @@ def set_activity_protocol_url(property_key, normalized_type, user_token, existin
 
         return property_key, new_data_dict['protocol_url']
 
+
+def get_creation_action_activity(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    if 'uuid' not in existing_data_dict:
+        raise KeyError("Missing 'uuid' key in 'existing_data_dict' during calling 'get_creation_action_activity()' trigger method.")
+
+    uuid: str = existing_data_dict['uuid']
+    logger.info(f"Executing 'get_creation_action_activity()' trigger method on uuid: {uuid}")
+
+    neo4j_driver_instance = schema_manager.get_neo4j_driver_instance()
+    creation_action_activity =\
+        schema_neo4j_queries.get_entity_creation_action_activity(neo4j_driver_instance, uuid)
+
+    return property_key, creation_action_activity
 
 """
 Trigger event method of passing the processing_information from the entity to the activity

@@ -428,6 +428,39 @@ components:
         title:
           type: string
           description: The dataset title.
+        dataset_type:
+          type: string
+          enum:
+            - Visium
+            - seqFISH
+            - RNAseq
+            - ATACseq
+            - 10X Multiome
+            - SNARE-seq2
+            - CODEX
+            - PhenoCycler
+            - CyCIF
+            - MERFISH
+            - Cell Dive
+            - Histology
+            - MALDI
+            - SIMS
+            - DESI
+            - MIBI
+            - 2D Imaging Mass Cytometry
+            - LC-MS
+            - nanoSPLITS
+            - Auto-fluorescence
+            - Light Sheet
+            - Confocal
+            - Thick section Multiphoton MxIF
+            - Second Harmonic Generation (SHG)
+            - Enhanced Stimulated Raman Spectroscopy (SRS)
+            - Molecular Cartography
+            - DARTfish
+            - WGS
+            - 3D Imaging Mass Cytometry
+          description: The data or assay type contained in this dataset.
         data_types:
           type: array
           items:
