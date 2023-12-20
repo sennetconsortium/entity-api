@@ -1155,10 +1155,13 @@ def get_source_mapped_metadata(property_key, normalized_type, user_token, existi
         return property_key, None
     if 'metadata' not in existing_data_dict:
         return property_key, None
-    if 'organ_donor_data' not in existing_data_dict['metadata'] and 'living_donor_data' not in existing_data_dict[
-        'metadata']:
+
+    if ('organ_donor_data' not in existing_data_dict['metadata']
+            and 'living_donor_data' not in existing_data_dict['metadata']):
         raise schema_errors.InvalidPropertyRequirementsException(
-            "Missing 'organ_donor_data' or 'living_donor_data' key in 'existing_data_dict[metadata]' during calling 'get_source_mapped_metadata()' trigger method.")
+            "Missing 'organ_donor_data' or 'living_donor_data' key in 'existing_data_dict[metadata]' " +
+            f"during calling 'get_source_mapped_metadata()' trigger method. UUID: {existing_data_dict['uuid']}"
+        )
 
     metadata = json.loads(existing_data_dict['metadata'].replace("'", '"'))
     donor_metadata = metadata.get('organ_donor_data') or metadata.get('living_donor_data') or {}
