@@ -5,7 +5,7 @@
     "group_uuid": "57192604-18e0-11ed-b79b-972795fc9504",
     "description": "Unit test for dataset",
     "dataset_info": "lab notes",
-    "data_types": ["Mint-ChIP"],
+    "dataset_type": "RNAseq",
     "contains_human_genetic_sequences": false
   },
   "response": {
@@ -14,8 +14,9 @@
     "created_by_user_email": "TESTUSER@example.com",
     "created_by_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
     "created_timestamp": 1683747186845,
+    "creation_action": "Create Dataset Activity",
     "data_access_level": "consortium",
-    "data_types": ["Mint-ChIP"],
+    "dataset_type": "RNAseq",
     "dataset_info": "lab notes",
     "description": "Unit test lab notes",
     "entity_type": "Dataset",
@@ -95,6 +96,7 @@
     "created_by_user_displayname": "Test User",
     "created_by_user_email": "TESTUSER@example.com",
     "created_by_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
+    "creation_action": "Create Dataset Activity",
     "uuid": "54c713f6ae44506d01a198f11dc37014",
     "sennet_id": "SNT288.QFDT.678",
     "last_modified_timestamp": 1683747186845,
@@ -111,6 +113,7 @@
     "group_name": "CODCC Testing Group",
     "last_modified_timestamp": 1683747186845,
     "created_by_user_displayname": "TESTUSER@example.com",
+    "creation_action": "Create Dataset Activity",
     "description": "Unit test lab notes",
     "dataset_info": "lab notes",
     "created_timestamp": 1683747186845,
@@ -125,7 +128,7 @@
     "last_modified_user_email": "TESTUSER@example.com",
     "last_modified_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
     "contains_human_genetic_sequences": false,
-    "data_types": ["Mint-ChIP"],
+    "dataset_type": "RNAseq",
     "status": "New"
   }
 }
