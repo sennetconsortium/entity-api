@@ -10,9 +10,6 @@ from neo4j.exceptions import TransactionError
 from collections import defaultdict
 import re
 
-# Use the current_app proxy, which points to the application handling the current activity
-from flask import current_app as app
-
 # Local modules
 from lib import github
 from lib.exceptions import create_trigger_error_msg
