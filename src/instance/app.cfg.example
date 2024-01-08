@@ -64,3 +64,5 @@ REDIRECTION_INFO_URL = 'https://raw.githubusercontent.com/hubmapconsortium/ccf-r
 UBKG_SERVER =
 UBKG_ENDPOINT_VALUESET =
 UBKG_CODES =
+
+MULTIPLE_ALLOWED_ORGANS = ['LY', 'SK', 'BD', 'BM', 'AD', 'BX', 'MU']
