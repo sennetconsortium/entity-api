@@ -715,11 +715,11 @@ def get_source_organ_count(neo4j_driver, uuid: str, organ: str, case_uuid: str =
     """
     match_case = ''
     if case_uuid is not None:
-        match_case = f"AND sm.uuid <> '{case_uuid}' "
+        match_case = f"AND s.uuid <> '{case_uuid}' "
 
-    query = f"MATCH p=(a:Activity)-[r:USED]->(s:Source) WHERE s.uuid = '{uuid}' " \
-        f"WITH s, COLLECT(a.uuid) as acts MATCH z=(sm:Sample)-[w:WAS_GENERATED_BY]->(a:Activity) " \
-        f"WHERE sm.organ='{organ}' {match_case}AND a.uuid in acts RETURN length(z) AS {record_field_name}"
+    query = f"MATCH (s:Sample)-[:WAS_GENERATED_BY]->(a)-[:USED]->(sr:Source) where sr.uuid='{uuid}' " \
+            f"and s.organ='{organ}' {match_case}return count(s) AS {record_field_name}"
+
 
     logger.info("======get_source_organ_count() query======")
     logger.info(query)
