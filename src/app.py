@@ -4570,7 +4570,17 @@ def compare_property_against_ubkg(ubkg_dict, json_data_dict, field):
         abort_unacceptable(ubkg_validation_message)
 
 
-def check_multiple_organs_constraint(current_entity, ancestor_entity, case_uuid=None):
+def check_multiple_organs_constraint(current_entity: dict, ancestor_entity: dict, case_uuid: str = None):
+    """
+    Validates that the Organ of the Sample (to be POST or PUT) does not violate allowable multiple organs constraints.
+
+    Parameters
+    ----------
+    current_entity: the Sample entity to validate
+    ancestor_entity: the ancestor Source
+    case_uuid: an uuid to exclude from the count on check of ancestor given the organ
+    :return:
+    """
     if equals(ancestor_entity['entity_type'], Ontology.ops().entities().SOURCE):
         if equals(current_entity['sample_category'], Ontology.ops().specimen_categories().ORGAN):
             organ_code = current_entity['organ']

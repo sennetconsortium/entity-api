@@ -692,26 +692,27 @@ def get_children(neo4j_driver, uuid, property_key=None):
 
     return results
 
-"""
-Count the amount of a certain organ is attached to a particular Source.
 
-Parameters
-----------
-neo4j_driver : neo4j.Driver object
-    The neo4j database connection pool
-uuid : str
-    The uuid of target entity 
-organ : str
-    The organ to match against
-case_uuid : str
-    An additional uuid to exclude from the count. Useful during updates.
+def get_source_organ_count(neo4j_driver, uuid: str, organ: str, case_uuid: str = None):
+    """
+    Count the amount of a certain organ is attached to a particular Source.
 
-Returns
--------
-int
-    The result count
-"""
-def get_source_organ_count(neo4j_driver, uuid, organ, case_uuid=None):
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    uuid : str
+        The uuid of target entity
+    organ : str
+        The organ to match against
+    case_uuid : str
+        An additional uuid to exclude from the count. Useful during updates.
+
+    Returns
+    -------
+    int
+        The result count
+    """
     match_case = ''
     if case_uuid is not None:
         match_case = f"AND sm.uuid <> '{case_uuid}' "
