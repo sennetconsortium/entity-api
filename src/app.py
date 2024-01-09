@@ -4580,8 +4580,8 @@ def check_multiple_organs_constraint(current_entity, ancestor_entity, case_uuid=
                 if count >= 1:
                     organ_codes = Ontology.ops(as_data_dict=True, val_key='term', key='rui_code').organ_types()
                     organ = organ_codes[organ_code]
-                    abort_bad_req(f"Cannot add another organ of type {organ}({organ_code}) to Source {ancestor_entity['sennet_id']}. "
-                                  f"A {organ} exists already on this Source.")
+                    abort_bad_req(f"Cannot add another organ of type {organ} ({organ_code}) to Source {ancestor_entity['sennet_id']}. "
+                                  f"A {organ} Sample exists already on this Source.")
 
 
 def check_for_metadata(entity_type, user_token):
