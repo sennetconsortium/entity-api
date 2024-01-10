@@ -4527,10 +4527,10 @@ def verify_ubkg_properties(json_data_dict):
 
     # If the proposed Dataset dataset_type ends with something in square brackets, anything inside
     # those square brackets are acceptable at the end of the string.  Simply validate the start.
-    if 'dataset_type' in json_data_dict:
-        dataset_type_dict = {'dataset_type': re.sub(pattern='(\S)\s\[.*\]$', repl=r'\1',
-                                                    string=json_data_dict['dataset_type'])}
-        compare_property_against_ubkg(DATASET_TYPE, dataset_type_dict, 'dataset_type')
+    # if 'dataset_type' in json_data_dict:
+    #     dataset_type_dict = {'dataset_type': re.sub(pattern='(\S)\s\[.*\]$', repl=r'\1',
+    #                                                 string=json_data_dict['dataset_type'])}
+    #     compare_property_against_ubkg(DATASET_TYPE, dataset_type_dict, 'dataset_type')
 
 
 def compare_property_list_against_ubkg(ubkg_dict, json_data_dict, field):
