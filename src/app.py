@@ -915,6 +915,8 @@ def create_entity(entity_type):
         validate_constraints_by_entities(direct_ancestor_dict, json_data_dict, normalized_entity_type)
         json_data_dict['direct_ancestor_uuid'] = direct_ancestor_dict['uuid']
 
+        check_multiple_organs_constraint(json_data_dict, direct_ancestor_dict)
+
         # Generate 'before_create_triiger' data and create the entity details in Neo4j
         merged_dict = create_entity_details(request, normalized_entity_type, user_token, json_data_dict)
     elif schema_manager.entity_type_instanceof(normalized_entity_type, 'Dataset'):
@@ -1268,6 +1270,8 @@ def update_entity(id):
             # Also make sure it's either another Sample or a Source
             if direct_ancestor_uuid_dict['entity_type'] not in ['Source', 'Sample']:
                 abort_bad_req(f"The uuid: {direct_ancestor_uuid} is not a Source neither a Sample, cannot be used as the direct ancestor of this Sample")
+
+            check_multiple_organs_constraint(json_data_dict, direct_ancestor_uuid_dict, entity_dict['uuid'])
 
         # Generate 'before_update_triiger' data and update the entity details in Neo4j
         merged_updated_dict = update_object_details('ENTITIES', request, normalized_entity_type, user_token, json_data_dict, entity_dict)
@@ -4527,10 +4531,10 @@ def verify_ubkg_properties(json_data_dict):
 
     # If the proposed Dataset dataset_type ends with something in square brackets, anything inside
     # those square brackets are acceptable at the end of the string.  Simply validate the start.
-    if 'dataset_type' in json_data_dict:
-        dataset_type_dict = {'dataset_type': re.sub(pattern='(\S)\s\[.*\]$', repl=r'\1',
-                                                    string=json_data_dict['dataset_type'])}
-        compare_property_against_ubkg(DATASET_TYPE, dataset_type_dict, 'dataset_type')
+    # if 'dataset_type' in json_data_dict:
+    #     dataset_type_dict = {'dataset_type': re.sub(pattern='(\S)\s\[.*\]$', repl=r'\1',
+    #                                                 string=json_data_dict['dataset_type'])}
+    #     compare_property_against_ubkg(DATASET_TYPE, dataset_type_dict, 'dataset_type')
 
 
 def compare_property_list_against_ubkg(ubkg_dict, json_data_dict, field):
@@ -4564,6 +4568,30 @@ def compare_property_against_ubkg(ubkg_dict, json_data_dict, field):
         ubkg_validation_message = f"Value listed in '{field}' does not match any allowable property. " \
                                   "Please check proper spelling."
         abort_unacceptable(ubkg_validation_message)
+
+
+def check_multiple_organs_constraint(current_entity: dict, ancestor_entity: dict, case_uuid: str = None):
+    """
+    Validates that the Organ of the Sample (to be POST or PUT) does not violate allowable multiple organs constraints.
+
+    Parameters
+    ----------
+    current_entity: the Sample entity to validate
+    ancestor_entity: the ancestor Source
+    case_uuid: an uuid to exclude from the count on check of ancestor given the organ
+    :return:
+    """
+    if equals(ancestor_entity['entity_type'], Ontology.ops().entities().SOURCE):
+        if equals(current_entity['sample_category'], Ontology.ops().specimen_categories().ORGAN):
+            organ_code = current_entity['organ']
+            if organ_code not in app.config['MULTIPLE_ALLOWED_ORGANS']:
+                count = app_neo4j_queries.get_source_organ_count(neo4j_driver_instance, ancestor_entity['uuid'],
+                                                                 organ_code, case_uuid=case_uuid)
+                if count >= 1:
+                    organ_codes = Ontology.ops(as_data_dict=True, val_key='term', key='rui_code').organ_types()
+                    organ = organ_codes[organ_code]
+                    abort_bad_req(f"Cannot add another organ of type {organ} ({organ_code}) to Source {ancestor_entity['sennet_id']}. "
+                                  f"A {organ} Sample exists already on this Source.")
 
 
 def check_for_metadata(entity_type, user_token):
