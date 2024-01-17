@@ -183,15 +183,16 @@ def test_create_entity_success(app, entity_type):
           patch('app.app_neo4j_queries.create_entity', return_value=test_data['create_entity']) as mock_create_entity,
           patch('app.schema_manager.get_sennet_ids', return_value=test_data['get_sennet_ids']),
           patch('app.app_neo4j_queries.get_entity', return_value=test_data['get_entity']),
+          patch('app.app_neo4j_queries.get_source_organ_count', return_value=0),
           patch('requests.put', return_value=Response(status=202))):
-        
+
         res = client.post(f'/entities/{entity_type}',
                           json=test_data['request'],
                           headers=test_data['headers'])
 
         assert res.status_code == 200
         assert res.json == test_data['response']
-    
+
 @pytest.mark.parametrize('entity_type', [
     'source',
     'sample', 
@@ -241,6 +242,7 @@ def test_update_entity_success(app, entity_type):
           patch('app.schema_manager.get_complete_entity_result', side_effect=test_data['get_complete_entity_result']),
           patch('app.app_neo4j_queries.get_activity_was_generated_by', return_value=test_data['get_activity_was_generated_by']),
           patch('app.app_neo4j_queries.get_activity', return_value=test_data['get_activity']),
+          patch('app.app_neo4j_queries.get_source_organ_count', return_value=0),
           patch('requests.put', return_value=Response(status=202))):
 
         res = client.put(f'/entities/{entity_id}',
