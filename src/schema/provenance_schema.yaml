@@ -450,6 +450,9 @@ ENTITIES:
       pipeline_message:
         # Generated from the Ingest Pipeline during processing of a derived dataset
         type: string
+      ingest_metadata:
+        type: json_string # dict
+        description: "The metadata returned from the processing at data submission time."
       local_directory_rel_path:
         # Example: protected/<TMC>/<uuid>
         type: string
