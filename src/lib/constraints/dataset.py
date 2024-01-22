@@ -5,7 +5,7 @@ from lib.ontology import Ontology
 # can be the descendant of / --->
 def build_all_dataset_constraints(entity):
 
-    # Dataset ---> Dataset
+    # Dataset, Publication ---> Dataset
     ancestor = build_constraint_unit(entity)
     descendant = build_constraint_unit(entity)
     descendant2 = build_constraint_unit(Ontology.ops().entities().PUBLICATION)
