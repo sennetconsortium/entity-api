@@ -239,13 +239,13 @@ def link_collection_to_datasets(neo4j_driver, collection_uuid, dataset_uuid_list
 
             tx.commit()
     except TransactionError as te:
-        msg = "TransactionError from calling link_collection_to_datasets(): "
+        msg = "TransactionError from calling link_collection_to_entities(): "
         # Log the full stack trace, prepend a line with our message
         logger.exception(msg)
 
         if tx.closed() == False:
             # Log the full stack trace, prepend a line with our message
-            logger.info("Failed to commit link_collection_to_datasets() transaction, rollback")
+            logger.info("Failed to commit link_collection_to_entities() transaction, rollback")
             tx.rollback()
 
         raise TransactionError(msg)
@@ -693,14 +693,14 @@ list
 """
 
 
-def get_collection_datasets(neo4j_driver, uuid):
+def get_collection_entities(neo4j_driver, uuid):
     results = []
 
     query = (f"MATCH (e:Entity)-[:IN_COLLECTION]->(c:Collection) "
              f"WHERE c.uuid = '{uuid}' "
              f"RETURN apoc.coll.toSet(COLLECT(e)) AS {record_field_name}")
 
-    logger.info("======get_collection_datasets() query======")
+    logger.info("======get_collection_entities() query======")
     logger.info(query)
 
     with neo4j_driver.session() as session:

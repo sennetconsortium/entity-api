@@ -306,27 +306,27 @@ ENTITIES:
         description: "Free text description of the collection"
         required_on_create: true
       ###### Transient properties ######
-      dataset_uuids:
+      entity_uuids:
         type: list
         before_property_create_validators:
           - validate_no_duplicates_in_list
-          - collection_entities_are_existing_datasets
+          - collection_entities_are_existing_entities
         before_property_update_validators:
           - validate_no_duplicates_in_list
-          - collection_entities_are_existing_datasets
+          - collection_entities_are_existing_entities
         transient: true
         exposed: false
-        description: "The uuids of Datasets in this Collection.  Used to pass source entity ids in on a POST call to create the linkages."
+        description: "The uuids of entities in this Collection.  Used to pass source entity ids in on a POST call to create the linkages."
         # Note: link_collection_to_direct_datasets() will always delete all the old linkages first
-        after_create_trigger: link_collection_to_datasets
-        after_update_trigger: link_collection_to_datasets
-      datasets:
+        after_create_trigger: link_collection_to_entities
+        after_update_trigger: link_collection_to_entities
+      entities:
         type: list
         transient: true
         generated: true
-        description: "The datasets that are contained in the collection."
+        description: "The entities that are contained in the collection."
         # A few time-consuming properties (with read triggers) of each dataset are excluded
-        on_read_trigger: get_collection_datasets
+        on_read_trigger: get_collection_entities
 
   ############################################# Dataset #############################################
   Dataset:

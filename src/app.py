@@ -995,7 +995,8 @@ def create_entity(entity_type):
         ]
     elif normalized_entity_type in ['Upload', 'Collection']:
         properties_to_skip = [
-            'datasets'
+            'datasets',
+            'entities'
         ]
 
     # Result filtering based on query string
@@ -1367,7 +1368,8 @@ def update_entity(id):
         ]
     elif normalized_entity_type in ['Upload', 'Collection']:
         properties_to_skip = [
-            'datasets'
+            'datasets',
+            'entities'
         ]
 
     # Result filtering based on query string
