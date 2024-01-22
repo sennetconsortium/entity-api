@@ -555,10 +555,6 @@ ENTITIES:
       source: true
       target: true
     properties:
-      <<: *shared_properties
-      <<: *shared_entity_properties
-      <<: *doi_properties
-      # The Dataset.data_access_level is based on Dataset.status and Dataset.contains_human_genetic_sequences
       creation_action:
         type: string
         transient: true
