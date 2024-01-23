@@ -110,6 +110,7 @@ try:
     app.ubkg = initialize_ubkg(app.config)
     with app.app_context():
         init_ontology()
+        Ontology.modify_entities_cache()
 
     logger.info("Initialized ubkg module successfully :)")
 # Use a broad catch-all here
