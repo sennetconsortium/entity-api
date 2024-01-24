@@ -4601,10 +4601,9 @@ def check_for_metadata(entity_type, user_token):
     # Parse incoming json string into json data(python dict object)
     json_data_dict = request.get_json()
 
-    # Convert `ingest_metadata` from pipeline to `metadata`
+    # ingest_metadata only exists on Datasets and we do not currently validate that
     if 'ingest_metadata' in json_data_dict:
-        json_data_dict['metadata'] = json_data_dict['ingest_metadata']
-        del json_data_dict['ingest_metadata']
+        return json_data_dict
 
     if 'metadata' in json_data_dict:
         # If metadata is empty then just proceed. The portal is more than likely trying to reset this intentionally
@@ -4613,10 +4612,6 @@ def check_for_metadata(entity_type, user_token):
 
         if isinstance(json_data_dict['metadata'], list):
             json_data_dict['metadata'] = json_data_dict['metadata'][0]
-
-        # TODO: add a validation check (validate_metadata). For now we want this to accept pipeline Dataset metadata
-        if entity_type == 'Dataset':
-            return json_data_dict
 
         if json_data_dict['metadata']:
             file_row = json_data_dict['metadata'].get('file_row')
