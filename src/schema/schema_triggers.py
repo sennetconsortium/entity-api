@@ -929,55 +929,6 @@ def get_dataset_upload(property_key, normalized_type, user_token, existing_data_
     return property_key, return_dict
 
 
-"""
-Trigger event method for creating or recreating linkages between this new Collection and the Datasets it contains
-
-Parameters
-----------
-property_key : str
-    The target property key
-normalized_type : str
-    One of the types defined in the schema yaml: Dataset
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-
-Returns
--------
-str: The target property key
-str: The uuid string of source entity
-"""
-
-
-def link_collection_to_datasets(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
-    if 'uuid' not in existing_data_dict:
-        msg = create_trigger_error_msg(
-            "Missing 'uuid' key in 'existing_data_dict' during calling 'link_collection_to_entities()' trigger method.",
-            existing_data_dict, new_data_dict
-        )
-        raise KeyError(msg)
-
-    if 'dataset_uuids' not in existing_data_dict:
-        msg = create_trigger_error_msg(
-            "Missing 'dataset_uuids' key in 'existing_data_dict' during calling 'link_collection_to_entities()' trigger method.",
-            existing_data_dict, new_data_dict
-        )
-        raise KeyError(msg)
-
-    dataset_uuids = existing_data_dict['dataset_uuids']
-
-    try:
-        # Create a linkage (without an Activity node) between the Collection node and each Dataset it contains.
-        schema_neo4j_queries.link_collection_to_datasets(neo4j_driver=schema_manager.get_neo4j_driver_instance()
-                                                         , collection_uuid=existing_data_dict['uuid']
-                                                         , dataset_uuid_list=dataset_uuids)
-    except TransactionError as te:
-        # No need to log
-        raise
-
 
 """
 Trigger event method for creating or recreating linkages between this new Collection and the Datasets it contains
@@ -1020,10 +971,10 @@ def link_collection_to_entities(property_key, normalized_type, user_token, exist
     entity_uuids = existing_data_dict['entity_uuids']
 
     try:
-        # Create a linkage (without an Activity node) between the Collection node and each Dataset it contains.
-        schema_neo4j_queries.link_collection_to_datasets(neo4j_driver=schema_manager.get_neo4j_driver_instance()
+        # Create a linkage (without an Activity node) between the Collection node and each Entity it contains.
+        schema_neo4j_queries.link_collection_to_entities(neo4j_driver=schema_manager.get_neo4j_driver_instance()
                                                          , collection_uuid=existing_data_dict['uuid']
-                                                         , dataset_uuid_list=entity_uuids)
+                                                         , entities_uuid_list=entity_uuids)
     except TransactionError as te:
         # No need to log
         raise

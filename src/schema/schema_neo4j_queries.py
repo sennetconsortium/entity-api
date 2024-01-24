@@ -220,19 +220,19 @@ dataset_uuid_list : list of str
 """
 
 
-def link_collection_to_datasets(neo4j_driver, collection_uuid, dataset_uuid_list):
+def link_collection_to_entities(neo4j_driver, collection_uuid, entities_uuid_list):
     try:
         with neo4j_driver.session() as session:
             tx = session.begin_transaction()
 
-            # First delete all the old linkages between this Collection and its member Datasets
+            # First delete all the old linkages between this Collection and its member Entities
             _delete_collection_linkages_tx(tx=tx
                                            , uuid=collection_uuid)
 
-            # Create relationship from each member Dataset node to this Collection node
-            for dataset_uuid in dataset_uuid_list:
+            # Create relationship from each member Entity node to this Collection node
+            for entity_uuid in entities_uuid_list:
                 _create_relationship_tx(tx=tx
-                                        , source_node_uuid=dataset_uuid
+                                        , source_node_uuid=entity_uuid
                                         , direction='->'
                                         , target_node_uuid=collection_uuid
                                         , relationship='IN_COLLECTION')
