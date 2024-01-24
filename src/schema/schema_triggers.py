@@ -637,15 +637,15 @@ list: A list of associated dataset dicts with all the normalized information
 """
 
 
-def get_collection_datasets(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+def get_collection_entities(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     if 'uuid' not in existing_data_dict:
         msg = create_trigger_error_msg(
-            "Missing 'uuid' key in 'existing_data_dict' during calling 'get_collection_datasets()' trigger method.",
+            "Missing 'uuid' key in 'existing_data_dict' during calling 'get_collection_entities()' trigger method.",
             existing_data_dict, new_data_dict
         )
         raise KeyError(msg)
 
-    datasets_list = schema_neo4j_queries.get_collection_datasets(schema_manager.get_neo4j_driver_instance(),
+    entities_list = schema_neo4j_queries.get_collection_entities(schema_manager.get_neo4j_driver_instance(),
                                                                  existing_data_dict['uuid'])
 
     # Additional properties of the datasets to exclude
@@ -659,7 +659,7 @@ def get_collection_datasets(property_key, normalized_type, user_token, existing_
         'next_revision_uuid'
     ]
 
-    complete_entities_list = schema_manager.get_complete_entities_list(user_token, datasets_list, properties_to_skip)
+    complete_entities_list = schema_manager.get_complete_entities_list(user_token, entities_list, properties_to_skip)
 
     return property_key, schema_manager.normalize_entities_list_for_response(complete_entities_list)
 
@@ -929,55 +929,6 @@ def get_dataset_upload(property_key, normalized_type, user_token, existing_data_
     return property_key, return_dict
 
 
-"""
-Trigger event method for creating or recreating linkages between this new Collection and the Datasets it contains
-
-Parameters
-----------
-property_key : str
-    The target property key
-normalized_type : str
-    One of the types defined in the schema yaml: Dataset
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-
-Returns
--------
-str: The target property key
-str: The uuid string of source entity
-"""
-
-
-def link_collection_to_datasets(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
-    if 'uuid' not in existing_data_dict:
-        msg = create_trigger_error_msg(
-            "Missing 'uuid' key in 'existing_data_dict' during calling 'link_collection_to_datasets()' trigger method.",
-            existing_data_dict, new_data_dict
-        )
-        raise KeyError(msg)
-
-    if 'dataset_uuids' not in existing_data_dict:
-        msg = create_trigger_error_msg(
-            "Missing 'dataset_uuids' key in 'existing_data_dict' during calling 'link_collection_to_datasets()' trigger method.",
-            existing_data_dict, new_data_dict
-        )
-        raise KeyError(msg)
-
-    dataset_uuids = existing_data_dict['dataset_uuids']
-
-    try:
-        # Create a linkage (without an Activity node) between the Collection node and each Dataset it contains.
-        schema_neo4j_queries.link_collection_to_datasets(neo4j_driver=schema_manager.get_neo4j_driver_instance()
-                                                         , collection_uuid=existing_data_dict['uuid']
-                                                         , dataset_uuid_list=dataset_uuids)
-    except TransactionError as te:
-        # No need to log
-        raise
-
 
 """
 Trigger event method for creating or recreating linkages between this new Collection and the Datasets it contains
@@ -1002,28 +953,28 @@ str: The uuid string of source entity
 """
 
 
-def link_collection_to_datasets(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+def link_collection_to_entities(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     if 'uuid' not in existing_data_dict:
         msg = create_trigger_error_msg(
-            "Missing 'uuid' key in 'existing_data_dict' during calling 'link_collection_to_datasets()' trigger method.",
+            "Missing 'uuid' key in 'existing_data_dict' during calling 'link_collection_to_entities()' trigger method.",
             existing_data_dict, new_data_dict
         )
         raise KeyError(msg)
 
-    if 'dataset_uuids' not in existing_data_dict:
+    if 'entity_uuids' not in existing_data_dict:
         msg = create_trigger_error_msg(
-            "Missing 'dataset_uuids' key in 'existing_data_dict' during calling 'link_collection_to_datasets()' trigger method.",
+            "Missing 'entity_uuids' key in 'existing_data_dict' during calling 'link_collection_to_entities()' trigger method.",
             existing_data_dict, new_data_dict
         )
         raise KeyError(msg)
 
-    dataset_uuids = existing_data_dict['dataset_uuids']
+    entity_uuids = existing_data_dict['entity_uuids']
 
     try:
-        # Create a linkage (without an Activity node) between the Collection node and each Dataset it contains.
-        schema_neo4j_queries.link_collection_to_datasets(neo4j_driver=schema_manager.get_neo4j_driver_instance()
+        # Create a linkage (without an Activity node) between the Collection node and each Entity it contains.
+        schema_neo4j_queries.link_collection_to_entities(neo4j_driver=schema_manager.get_neo4j_driver_instance()
                                                          , collection_uuid=existing_data_dict['uuid']
-                                                         , dataset_uuid_list=dataset_uuids)
+                                                         , entities_uuid_list=entity_uuids)
     except TransactionError as te:
         # No need to log
         raise
