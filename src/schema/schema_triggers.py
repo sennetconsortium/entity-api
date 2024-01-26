@@ -2802,67 +2802,6 @@ def _delete_files(target_property_key, property_key, normalized_type, user_token
 
 
 """
-Compose the assay type description
-
-Parameters
-----------
-data_types : list
-    A list of dataset data types
-
-Returns
--------
-str: The formatted assay type description
-"""
-
-
-def _get_assay_type_description(data_types):
-    assay_types = []
-    assay_type_desc = ''
-
-    for data_type in data_types:
-        # The assaytype endpoint in search-api is public accessible, no token needed
-        search_api_target_url = schema_manager.get_search_api_url() + f"/assaytype/{urllib.parse.quote(data_type)}"
-
-        # Function cache to improve performance
-        response = schema_manager.make_request_get(search_api_target_url)
-
-        if response.status_code == 200:
-            assay_type_info = response.json()
-            # Add to the list
-            assay_types.append(assay_type_info['description'])
-        else:
-            msg = f"Unable to query the assay type details of: {data_type} via search-api"
-
-            # Log the full stack trace, prepend a line with our message
-            logger.exception(msg)
-
-            logger.debug("======status code from search-api======")
-            logger.debug(response.status_code)
-
-            logger.debug("======response text from search-api======")
-            logger.debug(response.text)
-
-            raise requests.exceptions.RequestException(response.text)
-
-    # Formatting based on the number of items in the list
-    if assay_types:
-        if len(assay_types) == 1:
-            assay_type_desc = assay_types[0]
-        elif len(assay_types) == 2:
-            # <assay_type1> and <assay_type2>
-            assay_type_desc = ' and '.join(assay_types)
-        else:
-            # <assay_type1>, <assay_type2>, and <assay_type3>
-            assay_type_desc = f"{', '.join(assay_types[:-1])}, and {assay_types[-1]}"
-    else:
-        msg = "Empty list of assay_types"
-        logger.error(msg)
-        raise ValueError(msg)
-
-    return assay_type_desc
-
-
-"""
 Get the organ description based on the given organ code
 
 Parameters
