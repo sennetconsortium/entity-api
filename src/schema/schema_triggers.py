@@ -1,5 +1,4 @@
 import json
-import urllib
 
 import yaml
 import logging
