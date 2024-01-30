@@ -8,8 +8,7 @@ def build_all_dataset_constraints(entity):
     # Dataset, Publication ---> Dataset
     ancestor = build_constraint_unit(entity)
     descendant = build_constraint_unit(entity)
-    # TODO: Need to set this to just be PUBLICATION eventually but UBKG has this as publication_entity now
-    descendant2 = build_constraint_unit(Ontology.ops().entities().PUBLICATION_ENTITY)
+    descendant2 = build_constraint_unit(Ontology.ops().entities().PUBLICATION)
     return [
         build_constraint(ancestor, [descendant, descendant2])
     ]
