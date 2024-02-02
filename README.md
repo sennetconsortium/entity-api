@@ -1,6 +1,6 @@
 # SenNet Entity API
 
-A set of standard RESTful web service that provides CRUD operations into our entity metadata store. A description of the API calls is found here: [Entities API](https://smart-api.info/ui/0065e419668f3336a40d1f5ab89c6ba3).
+A set of standard RESTful web service that provides CRUD operations into our entity metadata store. A description of the API calls is found here: [Entities API](https://smart-api.info/ui/7d838c9dee0caa2f8fe57173282c5812).
 
 ## Entities schema yaml
 
