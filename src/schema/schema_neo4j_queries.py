@@ -220,32 +220,32 @@ dataset_uuid_list : list of str
 """
 
 
-def link_collection_to_datasets(neo4j_driver, collection_uuid, dataset_uuid_list):
+def link_collection_to_entities(neo4j_driver, collection_uuid, entities_uuid_list):
     try:
         with neo4j_driver.session() as session:
             tx = session.begin_transaction()
 
-            # First delete all the old linkages between this Collection and its member Datasets
+            # First delete all the old linkages between this Collection and its member Entities
             _delete_collection_linkages_tx(tx=tx
                                            , uuid=collection_uuid)
 
-            # Create relationship from each member Dataset node to this Collection node
-            for dataset_uuid in dataset_uuid_list:
+            # Create relationship from each member Entity node to this Collection node
+            for entity_uuid in entities_uuid_list:
                 _create_relationship_tx(tx=tx
-                                        , source_node_uuid=dataset_uuid
+                                        , source_node_uuid=entity_uuid
                                         , direction='->'
                                         , target_node_uuid=collection_uuid
                                         , relationship='IN_COLLECTION')
 
             tx.commit()
     except TransactionError as te:
-        msg = "TransactionError from calling link_collection_to_datasets(): "
+        msg = "TransactionError from calling link_collection_to_entities(): "
         # Log the full stack trace, prepend a line with our message
         logger.exception(msg)
 
         if tx.closed() == False:
             # Log the full stack trace, prepend a line with our message
-            logger.info("Failed to commit link_collection_to_datasets() transaction, rollback")
+            logger.info("Failed to commit link_collection_to_entities() transaction, rollback")
             tx.rollback()
 
         raise TransactionError(msg)
@@ -693,14 +693,14 @@ list
 """
 
 
-def get_collection_datasets(neo4j_driver, uuid):
+def get_collection_entities(neo4j_driver, uuid):
     results = []
 
     query = (f"MATCH (e:Entity)-[:IN_COLLECTION]->(c:Collection) "
              f"WHERE c.uuid = '{uuid}' "
              f"RETURN apoc.coll.toSet(COLLECT(e)) AS {record_field_name}")
 
-    logger.info("======get_collection_datasets() query======")
+    logger.info("======get_collection_entities() query======")
     logger.info(query)
 
     with neo4j_driver.session() as session:
