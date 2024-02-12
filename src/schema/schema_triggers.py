@@ -789,55 +789,6 @@ def set_dataset_status_new(property_key, normalized_type, user_token, existing_d
 
 
 """
-Trigger event method of updating the dataset's data_access_level and 
-its ancestors' data_access_level on status change of this dataset
-
-Parameters
-----------
-property_key : str
-    The target property key
-normalized_type : str
-    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-"""
-
-
-def update_dataset_and_ancestors_data_access_level(property_key, normalized_type, user_token, existing_data_dict,
-                                                   new_data_dict):
-    if 'uuid' not in existing_data_dict:
-        msg = create_trigger_error_msg(
-            "Missing 'uuid' key in 'existing_data_dict' during calling 'update_dataset_and_ancestors_data_access_level()' trigger method.",
-            existing_data_dict, new_data_dict
-        )
-        raise KeyError(msg)
-
-    if 'status' not in existing_data_dict:
-        msg = create_trigger_error_msg(
-            "Missing 'status' key in 'existing_data_dict' during calling 'update_dataset_and_ancestors_data_access_level()' trigger method.",
-            existing_data_dict, new_data_dict
-        )
-        raise KeyError(msg)
-
-    # Caculate the new data_access_level of this dataset's ancestors (except another dataset is the ancestor)
-    # public if any dataset below the Source/Sample in the provenance hierarchy is published
-    ACCESS_LEVEL_PUBLIC = 'public'
-    DATASET_STATUS_PUBLISHED = 'published'
-
-    if existing_data_dict['status'].lower() == DATASET_STATUS_PUBLISHED:
-        try:
-            schema_neo4j_queries.update_dataset_and_ancestors_data_access_level(
-                schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'], ACCESS_LEVEL_PUBLIC)
-        except TransactionError:
-            # No need to log
-            raise
-
-
-"""
 Trigger event method of getting a list of collections for this new Dataset
 
 Parameters
@@ -2773,11 +2724,9 @@ def _get_organ_description(organ_code):
             return ORGAN_TYPES[key]['term'].lower()
 
 
-
 ####################################################################################################
 ## Trigger methods shared by Dataset, Upload, and Publication - DO NOT RENAME
 ####################################################################################################
-
 def set_status_history(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     new_status_history = []
     status_entry = {}
@@ -2816,4 +2765,5 @@ def set_status_history(property_key, normalized_type, user_token, existing_data_
     new_status_history.append(status_entry)
     entity_data_dict = {"status_history": new_status_history}
 
-    schema_neo4j_queries.update_entity(schema_manager.get_neo4j_driver_instance(), normalized_type, entity_data_dict, uuid)
+    schema_neo4j_queries.update_entity(schema_manager.get_neo4j_driver_instance(), normalized_type, entity_data_dict,
+                                       uuid)
