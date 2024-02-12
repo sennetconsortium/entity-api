@@ -1897,3 +1897,35 @@ paths:
           description: The target dataset could not be found
         '500':
           description: Internal error
+
+  /datasets/{id}/sources:
+    get:
+      tags:
+        - datasets
+      summary: Retrieve a list of all of the sources that are associated with the dataset id
+      parameters:
+        - name: id
+          in: path
+          description: The unique identifier of entity.  This identifier can be either an SenNet ID (e.g. SNT123.ABCD.456) or UUID
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A list of entity_type == Source that are associated with the dataset id
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Source'
+        '400':
+          description: Invalid or misformatted entity identifier, or the given entity is not a Dataset
+        '401':
+          description: The user's token has expired or the user did not supply a valid token
+        '403':
+          description: The user is not authorized to query the revision number of the given dataset.
+        '404':
+          description: The target dataset could not be found
+        '500':
+          description: Internal error
