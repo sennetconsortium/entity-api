@@ -1834,7 +1834,7 @@ def get_siblings(id):
         include_revisions = request.args.get('include-old-revisions')
         if status is not None:
             status = status.lower()
-            if status not in ['new', 'processing', 'published', 'qa', 'error', 'hold', 'invalid', 'submitted']:
+            if status not in SchemaConstants.ALLOWED_DATASET_STATUSES:
                 abort_bad_req("Invalid Dataset Status. Must be 'new', 'qa', or 'published' Case-Insensitive")
         if property_key is not None:
             property_key = property_key.lower()
@@ -1948,7 +1948,7 @@ def get_tuplets(id):
         status = request.args.get('status')
         if status is not None:
             status = status.lower()
-            if status not in ['new', 'processing', 'published', 'qa', 'error', 'hold', 'invalid', 'submitted']:
+            if status not in SchemaConstants.ALLOWED_DATASET_STATUSES:
                 abort_bad_req("Invalid Dataset Status. Must be 'new', 'qa', or 'published' Case-Insensitive")
         if property_key is not None:
             property_key = property_key.lower()
