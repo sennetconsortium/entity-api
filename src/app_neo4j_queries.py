@@ -1265,6 +1265,72 @@ def get_associated_organs_from_dataset(neo4j_driver, dataset_uuid):
     return results
 
 
+""" Retrieve the list of samples associated with a given dataset
+
+Args:
+    neo4j_driver (neo4j.Driver):
+        The neo4j database connection pool
+    dataset_uuid (str):
+        The uuid of the target entity: Dataset
+
+Returns:
+    list: A list of dictionaries containing the sample information
+"""
+
+
+def get_associated_samples_from_dataset(neo4j_driver, dataset_uuid):
+    results = []
+
+    # specimen_type -> sample_category 12/15/2022
+    query = (f"MATCH (ds:Dataset)-[*]->(sample:Sample) "
+             f"WHERE ds.uuid='{dataset_uuid}' AND NOT sample.sample_category = 'organ' "
+             f"RETURN apoc.coll.toSet(COLLECT(sample)) AS {record_field_name}")
+
+    logger.info("======get_associated_samples_from_dataset() query======")
+    logger.info(query)
+
+    with neo4j_driver.session() as session:
+        record = session.read_transaction(schema_neo4j_queries.execute_readonly_tx, query)
+
+        if record and record[record_field_name]:
+            results = schema_neo4j_queries.nodes_to_dicts(record[record_field_name])
+
+    return results
+
+
+""" Retrieve the list of sources associated with a given dataset
+
+Args:
+    neo4j_driver (neo4j.Driver):
+        The neo4j database connection pool
+    dataset_uuid (str):
+        The uuid of the target entity: Dataset
+
+Returns:
+    list: A list of dictionaries containing the source information
+"""
+
+
+def get_associated_sources_from_dataset(neo4j_driver, dataset_uuid):
+    results = []
+
+    # specimen_type -> sample_category 12/15/2022
+    query = (f"MATCH (ds:Dataset)-[*]->(source:Source) "
+             f"WHERE ds.uuid='{dataset_uuid}'"
+             f"RETURN apoc.coll.toSet(COLLECT(source)) AS {record_field_name}")
+
+    logger.info("======get_associated_sources_from_dataset() query======")
+    logger.info(query)
+
+    with neo4j_driver.session() as session:
+        record = session.read_transaction(schema_neo4j_queries.execute_readonly_tx, query)
+
+        if record and record[record_field_name]:
+            results = schema_neo4j_queries.nodes_to_dicts(record[record_field_name])
+
+    return results
+
+
 """
 Retrieve all the provenance information about each dataset. Each dataset's prov-info is given by a dictionary. 
 Certain fields such as first sample where there can be multiple nearest datasets in the provenance above a given
