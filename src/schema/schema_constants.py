@@ -22,6 +22,9 @@ class SchemaConstants(object):
     ALLOWED_SINGLE_CREATION_ACTIONS = ['central process', 'lab process']
     ALLOWED_MULTI_CREATION_ACTIONS = ['multi-assay split']
 
+    ALLOWED_DATASET_STATUSES = ['new', 'processing', 'published', 'qa', 'error', 'hold', 'invalid', 'submitted', 'incomplete']
+    ALLOWED_UPLOAD_STATUSES = ['new', 'valid', 'invalid', 'error', 'reorganized', 'processing', 'submitted', 'incomplete']
+
 # Define an enumeration to classify an entity's visibility, which can be combined with
 # authorization info when verify operations on a request.
 class DataVisibilityEnum(Enum):
