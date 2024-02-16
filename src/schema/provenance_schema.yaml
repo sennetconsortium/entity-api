@@ -368,7 +368,13 @@ ENTITIES:
         generated: true
         description: "One of: New|Processing|QA|Published|Error|Hold|Invalid|Incomplete"
         before_create_trigger: set_dataset_status_new
-        after_update_trigger: update_dataset_and_ancestors_data_access_level
+        after_create_trigger: set_status_history
+        after_update_trigger: set_status_history
+      status_history:
+        type: list
+        description: "A list of all status change events. Each entry in the list is a dictionary containing the change_timestamp, changed_by_email, previous_status, new_status"
+        generated: true
+        immutable: true
       title:
         type: string
         generated: true # Disallow entry from users via POST
@@ -998,6 +1004,13 @@ ENTITIES:
         description: "One of: New|Valid|Invalid|Error|Reorganized|Processing|Incomplete"
         # Trigger method will set the status to "New" on create
         before_create_trigger: set_upload_status_new
+        after_create_trigger: set_status_history
+        after_update_trigger: set_status_history
+      status_history:
+        type: list
+        description: "A list of all status change events. Each entry in the list is a dictionary containing the change_timestamp, changed_by_email, previous_status, new_status"
+        generated: true
+        immutable: true
       validation_message:
         type: string
         description: A message from the validation tools describing what is invalid with the upload.
