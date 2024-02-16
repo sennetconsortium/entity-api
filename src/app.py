@@ -42,6 +42,7 @@ from hubmap_commons.exceptions import HTTPException
 # Atlas Consortia commons
 from atlas_consortia_commons.ubkg import initialize_ubkg
 from atlas_consortia_commons.rest import *
+from atlas_consortia_commons.rest import abort_bad_req, abort_not_found
 from atlas_consortia_commons.string import equals
 from atlas_consortia_commons.ubkg.ubkg_sdk import init_ontology
 from lib.ontology import Ontology
@@ -2571,6 +2572,115 @@ def get_associated_organs_from_dataset(id):
     final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list)
 
     return jsonify(final_result)
+
+
+"""
+Get all samples associated with a given dataset
+
+The gateway treats this endpoint as public accessible
+
+Parameters
+----------
+id : str
+    The SenNet ID (e.g. SNT123.ABCD.456) or UUID of given entity
+
+Returns
+-------
+json
+    a list of all the samples associated with the target dataset
+"""
+@app.route('/datasets/<id>/samples', methods=['GET'])
+def get_associated_samples_from_dataset(id):
+    # Token is not required, but if an invalid token provided,
+    # we need to tell the client with a 401 error
+    validate_token_if_auth_header_exists(request)
+
+    # Use the internal token to query the target entity
+    # since public entities don't require user token
+    token = get_internal_token()
+
+    # Query target entity against uuid-api and neo4j and return as a dict if exists
+    entity_dict = query_target_entity(id, token)
+    normalized_entity_type = entity_dict['entity_type']
+
+    # Only for Dataset
+    if not schema_manager.entity_type_instanceof(normalized_entity_type, 'Dataset'):
+        abort_bad_req("The entity of given id is not a Dataset")
+
+    # published/public datasets don't require token
+    if entity_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
+        # Token is required and the user must belong to SenNet-READ group
+        token = get_user_token(request, non_public_access_required=True)
+
+    # By now, either the entity is public accessible or the user token has the correct access level
+    associated_samples = app_neo4j_queries.get_associated_samples_from_dataset(neo4j_driver_instance, entity_dict['uuid'])
+
+    # If there are zero items in the list associated_samples, then there are no associated
+    # samples and a 404 will be returned.
+    if len(associated_samples) < 1:
+        abort_not_found("the dataset does not have any associated samples")
+
+    complete_entities_list = schema_manager.get_complete_entities_list(token, associated_samples)
+
+    # Final result after normalization
+    final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list)
+
+    return jsonify(final_result)
+
+
+"""
+Get all sources associated with a given dataset
+
+The gateway treats this endpoint as public accessible
+
+Parameters
+----------
+id : str
+    The SenNet ID (e.g. SNT123.ABCD.456) or UUID of given entity
+
+Returns
+-------
+json
+    a list of all the sources associated with the target dataset
+"""
+@app.route('/datasets/<id>/sources', methods=['GET'])
+def get_associated_sources_from_dataset(id):
+    # Token is not required, but if an invalid token provided,
+    # we need to tell the client with a 401 error
+    validate_token_if_auth_header_exists(request)
+
+    # Use the internal token to query the target entity
+    # since public entities don't require user token
+    token = get_internal_token()
+
+    # Query target entity against uuid-api and neo4j and return as a dict if exists
+    entity_dict = query_target_entity(id, token)
+    normalized_entity_type = entity_dict['entity_type']
+
+    # Only for Dataset
+    if not schema_manager.entity_type_instanceof(normalized_entity_type, 'Dataset'):
+        abort_bad_req("The entity of given id is not a Dataset")
+
+    # published/public datasets don't require token
+    if entity_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
+        # Token is required and the user must belong to SenNet-READ group
+        token = get_user_token(request, non_public_access_required=True)
+
+    # By now, either the entity is public accessible or the user token has the correct access level
+    associated_sources = app_neo4j_queries.get_associated_sources_from_dataset(neo4j_driver_instance, entity_dict['uuid'])
+
+    # If there are zero items in the list associated_sources, then there are no associated
+    # sources and a 404 will be returned.
+    if len(associated_sources) < 1:
+        abort_not_found("the dataset does not have any associated sources")
+
+    complete_entities_list = schema_manager.get_complete_entities_list(token, associated_sources)
+
+    # Final result after normalization
+    final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list)
+
+    return jsonify(final_result)
+
 
 """
 Get the complete provenance info for all datasets
