@@ -123,8 +123,8 @@ ACTIVITIES:
         description: "The information describing how this dataset was processed (e.g. the DAG provenance list describing the various tools used during an ingest-pipeline run to generate a derived dataset)"
         before_create_trigger: set_processing_information
         before_update_trigger: set_processing_information
-      # Allows us to set processing_information when metadata is passed in the payload
-      metadata:
+      # Allows us to set processing_information when ingest_metadata is passed in the payload
+      ingest_metadata:
         type: json_string # dict
         description: "The metadata returned from the processing at data submission time."
         transient: true
