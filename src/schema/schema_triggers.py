@@ -1132,30 +1132,27 @@ def link_to_previous_revision(property_key, normalized_type, user_token, existin
         raise
 
 
-"""
-Trigger event method of auto generating mapped metadata from 'living_donor_data' or 'organ_donor_data'
-
-Parameters
-----------
-property_key : str
-    The target property key
-normalized_type : str
-    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-
-Returns
--------
-str: The target property key
-dict: The auto generated mapped metadata
-"""
-
-
 def get_source_mapped_metadata(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method of auto generating mapped metadata from 'living_donor_data' or 'organ_donor_data'.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key
+    normalized_type : str
+        One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    str: The target property key
+    dict: The auto generated mapped metadata
+    """
     if not equals(Ontology.ops().source_types().HUMAN, existing_data_dict['source_type']):
         return property_key, None
     if 'metadata' not in existing_data_dict:
@@ -1171,24 +1168,31 @@ def get_source_mapped_metadata(property_key, normalized_type, user_token, existi
 
     metadata = json.loads(existing_data_dict['metadata'].replace("'", '"'))
     donor_metadata = metadata.get('organ_donor_data') or metadata.get('living_donor_data') or {}
-    mapped_metadata = defaultdict(list)
 
+    mapped_metadata = {}
     for kv in donor_metadata:
         term = kv['grouping_concept_preferred_term']
         key = re.sub(r'\W+', '_', term).lower()
         value = (
             float(kv['data_value'])
-            if 'data_type' in kv and kv['data_type'] == 'Numeric'
+            if kv.get('data_type') == 'Numeric'
             else kv['preferred_term']
         )
 
-        if 'units' not in kv or not len(kv['units']):
-            mapped_metadata[key].append(value)
-            continue
-        mapped_metadata[f'{key}_value'].append(value)
-        mapped_metadata[f'{key}_unit'].append(kv['units'])
+        if key not in mapped_metadata:
+            mapped_metadata_item = {
+                'value': [value],
+                'unit': kv.get('units', ''),
+                'key_display': term,
+                'value_display': source_metadata_display_value(kv),
+                'group_display': source_metadata_group(key)
+            }
+            mapped_metadata[key] = mapped_metadata_item
+        else:
+            mapped_metadata[key]['value'].append(value)
+            mapped_metadata[key]['value_display'] += f', {value}'
 
-    return property_key, dict(mapped_metadata)
+    return property_key, mapped_metadata
 
 
 """
@@ -2461,6 +2465,10 @@ def set_processing_information(property_key, normalized_type, user_token, existi
 
         proc_info['pipelines'].append({repo: info})
 
+    # Prevents invalid json if description is None
+    if proc_info['description'] is None:
+        proc_info['description'] = ''
+
     return 'processing_information', proc_info
 
 
@@ -2722,6 +2730,72 @@ def _get_organ_description(organ_code):
     for key in ORGAN_TYPES:
         if ORGAN_TYPES[key]['rui_code'] == organ_code:
             return ORGAN_TYPES[key]['term'].lower()
+
+
+def source_metadata_group(key: str) -> str:
+    """Get the source mapped metadata group for the given key.
+
+    Parameters
+    ----------
+    key : str
+        The metadata key
+
+    Returns
+    -------
+    str: The group display name
+    """
+    groups_map = {
+        'abo_blood_group_system': 'Demographics',
+        'age': 'Demographics',
+        'amylase': 'Lab Values',
+        'body_mass_index': 'Vitals',
+        'cause_of_death': 'Donation Information',
+        'ethnicity': 'Demographics',
+        'hba1c': 'Lab Values',
+        'height': 'Vitals',
+        'lipase': 'Lab Values',
+        'mechanism_of_injury': 'Donation Information',
+        'medical_history': 'History',
+        'race': 'Demographics',
+        'sex': 'Demographics',
+        'social_history': 'History',
+        'weight': 'Vitals'
+    }
+    return groups_map.get(key, 'Other Information')
+
+
+def source_metadata_display_value(metadata_item: dict) -> str:
+    """Get the display value for the given source metadata item.
+
+    Parameters
+    ----------
+    metadata_item : dict
+        The source metadata item
+
+    Returns
+    -------
+    str: The display value
+    """
+    if metadata_item.get('data_type') != 'Numeric':
+        return metadata_item['preferred_term']
+
+    value = float(metadata_item.get('data_value'))
+    units = metadata_item.get('units', '')
+    if units.startswith('year'):
+        value = int(value)
+        return f'{value} years' if value != 1 else f'{value} year'
+    if units == '%':
+        return f'{value}%'
+
+    units_map = {
+        'cm': (0.393701, 'in',),
+        'kg': (2.20462, 'lb',),
+    }
+    display_value = f'{value} {units}'
+    if units in units_map:
+        display_value += f' ({round(value * units_map[units][0], 1)} {units_map[units][1]})'
+
+    return display_value
 
 
 ####################################################################################################
