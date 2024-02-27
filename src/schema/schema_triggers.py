@@ -2465,6 +2465,10 @@ def set_processing_information(property_key, normalized_type, user_token, existi
 
         proc_info['pipelines'].append({repo: info})
 
+    # Prevents invalid json if description is None
+    if proc_info['description'] is None:
+        proc_info['description'] = ''
+
     return 'processing_information', proc_info
 
 
