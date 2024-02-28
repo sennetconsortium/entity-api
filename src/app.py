@@ -1391,7 +1391,7 @@ def update_entity(id):
     normalized_complete_dict = schema_manager.normalize_object_result_for_response('ENTITIES', complete_dict)
 
     if 'protocol_url' in json_data_dict or (
-            'metadata' in json_data_dict and 'dag_provenance_list' in json_data_dict['metadata']):
+            'ingest_metadata' in json_data_dict and 'dag_provenance_list' in json_data_dict['ingest_metadata']):
         # protocol_url = json_data_dict['protocol_url']
         activity_dict = query_activity_was_generated_by(id, user_token)
         # request.json = {'protocol_url': protocol_url}
