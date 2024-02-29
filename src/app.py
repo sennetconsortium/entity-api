@@ -1391,7 +1391,7 @@ def update_entity(id):
     normalized_complete_dict = schema_manager.normalize_object_result_for_response('ENTITIES', complete_dict)
 
     if 'protocol_url' in json_data_dict or (
-            'metadata' in json_data_dict and 'dag_provenance_list' in json_data_dict['metadata']):
+            'ingest_metadata' in json_data_dict and 'dag_provenance_list' in json_data_dict['ingest_metadata']):
         # protocol_url = json_data_dict['protocol_url']
         activity_dict = query_activity_was_generated_by(id, user_token)
         # request.json = {'protocol_url': protocol_url}
@@ -4189,8 +4189,8 @@ def multiple_components():
         if direct_ancestor_dict.get('entity_type').lower() != "dataset":
             abort_bad_req(f"Direct ancestor is of type: {direct_ancestor_dict.get('entity_type')}. Must be of type 'dataset'.")
 
-    # validate that there are 2 and only 2 datasets in the dataset list
-    if len(json_data_dict.get('datasets')) != 2:
+    # validate that there is at least one component dataset
+    if len(json_data_dict.get('datasets')) < 1:
         abort_bad_req(f"'datasets' field must contain 2 component datasets.")
 
     # Validate all datasets using existing schema with triggers and validators

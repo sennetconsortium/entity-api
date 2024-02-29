@@ -123,8 +123,8 @@ ACTIVITIES:
         description: "The information describing how this dataset was processed (e.g. the DAG provenance list describing the various tools used during an ingest-pipeline run to generate a derived dataset)"
         before_create_trigger: set_processing_information
         before_update_trigger: set_processing_information
-      # Allows us to set processing_information when metadata is passed in the payload
-      metadata:
+      # Allows us to set processing_information when ingest_metadata is passed in the payload
+      ingest_metadata:
         type: json_string # dict
         description: "The metadata returned from the processing at data submission time."
         transient: true
@@ -368,7 +368,13 @@ ENTITIES:
         generated: true
         description: "One of: New|Processing|QA|Published|Error|Hold|Invalid|Incomplete"
         before_create_trigger: set_dataset_status_new
-        after_update_trigger: update_dataset_and_ancestors_data_access_level
+        after_create_trigger: set_status_history
+        after_update_trigger: set_status_history
+      status_history:
+        type: list
+        description: "A list of all status change events. Each entry in the list is a dictionary containing the change_timestamp, changed_by_email, previous_status, new_status"
+        generated: true
+        immutable: true
       title:
         type: string
         generated: true # Disallow entry from users via POST
@@ -558,13 +564,6 @@ ENTITIES:
       source: true
       target: true
     properties:
-      creation_action:
-        type: string
-        transient: true
-        immutable: true
-        description: "The activity that was performed."
-        before_property_create_validators:
-          - validate_creation_action
       error_message:
         type: string
         description: "An open text field that holds the last error message that arose from pipeline validation or analysis."
@@ -998,6 +997,13 @@ ENTITIES:
         description: "One of: New|Valid|Invalid|Error|Reorganized|Processing|Incomplete"
         # Trigger method will set the status to "New" on create
         before_create_trigger: set_upload_status_new
+        after_create_trigger: set_status_history
+        after_update_trigger: set_status_history
+      status_history:
+        type: list
+        description: "A list of all status change events. Each entry in the list is a dictionary containing the change_timestamp, changed_by_email, previous_status, new_status"
+        generated: true
+        immutable: true
       validation_message:
         type: string
         description: A message from the validation tools describing what is invalid with the upload.
