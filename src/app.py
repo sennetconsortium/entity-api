@@ -862,6 +862,12 @@ def create_entity(entity_type):
     # Get user token from Authorization header
     user_token = get_user_token(request)
 
+    # Always expect a json body
+    require_json(request)
+
+    # Parse incoming json string into json data(python dict object)
+    json_data_dict = request.get_json()
+
     # Normalize user provided entity_type
     normalized_entity_type = schema_manager.normalize_entity_type(entity_type)
 
@@ -880,7 +886,6 @@ def create_entity(entity_type):
     except schema_errors.InvalidApplicationHeaderException as e:
         abort_bad_req(e)
 
-    json_data_dict = check_for_metadata(normalized_entity_type, user_token)
     verify_ubkg_properties(json_data_dict)
 
     # Validate request json against the yaml schema
@@ -1235,7 +1240,7 @@ def update_entity(id):
     # Normalize user provided entity_type
     normalized_entity_type = schema_manager.normalize_entity_type(entity_dict['entity_type'])
 
-    json_data_dict = check_for_metadata(normalized_entity_type, user_token)
+
     verify_ubkg_properties(json_data_dict)
 
     # Note, we don't support entity level validators on entity update via PUT
@@ -4932,50 +4937,6 @@ def check_multiple_organs_constraint(current_entity: dict, ancestor_entity: dict
                     abort_bad_req(f"Cannot add another organ of type {organ} ({organ_code}) to Source {ancestor_entity['sennet_id']}. "
                                   f"A {organ} Sample exists already on this Source.")
 
-
-def check_for_metadata(entity_type, user_token):
-    # Always expect a json body
-    require_json(request)
-
-    # Parse incoming json string into json data(python dict object)
-    json_data_dict = request.get_json()
-
-    # ingest_metadata only exists on Datasets and we do not currently validate that
-    if 'ingest_metadata' in json_data_dict:
-        return json_data_dict
-
-    if 'metadata' in json_data_dict:
-        # If metadata is empty then just proceed. The portal is more than likely trying to reset this intentionally
-        if json_data_dict['metadata'] == {}:
-            return json_data_dict
-
-        if isinstance(json_data_dict['metadata'], list):
-            json_data_dict['metadata'] = json_data_dict['metadata'][0]
-
-        if json_data_dict['metadata']:
-            file_row = json_data_dict['metadata'].get('file_row')
-            if 'pathname' in json_data_dict['metadata']:
-                data = {
-                    'pathname': json_data_dict['metadata']['pathname'],
-                    'entity_type': entity_type,
-                    'sub_type': json_data_dict.get('sample_category'),
-                    'tsv_row': file_row
-                }
-                valid_metadata = validate_metadata(data, user_token)
-                if not valid_metadata:
-                    abort_bad_req("Metadata did not pass validation.")
-                if valid_metadata is True:
-                    # The source/sample_id are being removed as for 1. they are irrelevant within the context of the full json entity
-                    # 2. a user could include an invalid id in the tsv during single registration
-                    # which would then get stored in neo4j. We don't want this.
-                    cols_to_del = ['sample_id', 'source_id']
-                    for col in cols_to_del:
-                        if json_data_dict['metadata'].get(col) is not None:
-                            del json_data_dict['metadata'][col]
-            else:
-                abort_bad_req("Missing `pathname` in metadata. (Metadata must be added via the Data Sharing Portal.)")
-
-    return json_data_dict
 
 """
 Validates the given metadata via the pathname returned by the Ingest API
