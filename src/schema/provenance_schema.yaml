@@ -234,6 +234,10 @@ shared_entity_properties: &shared_entity_properties
     before_create_trigger: set_entity_type
   metadata:
     type: json_string # dict
+    before_property_create_validators:
+      - validate_application_header_before_property_update
+    before_property_update_validators:
+      - validate_application_header_before_property_update
     description: "The metadata returned from the processing at data submission time."
   was_attributed_to:
     type: list
@@ -458,6 +462,10 @@ ENTITIES:
         type: string
       ingest_metadata:
         type: json_string # dict
+        before_property_create_validators:
+          - validate_application_header_before_property_update
+        before_property_update_validators:
+          - validate_application_header_before_property_update
         description: "The metadata returned from the processing at data submission time."
       local_directory_rel_path:
         # Example: protected/<TMC>/<uuid>
@@ -552,6 +560,12 @@ ENTITIES:
           - validate_in_admin_group
         before_property_update_validators:
           - validate_in_admin_group
+      dbgap_sra_experiment_url:
+        type: string
+        description: 'A URL linking the dataset to the associated uploaded data at dbGaP.'
+      dbgap_study_url:
+        type: string
+        description: 'A URL linking the dataset to the particular study on dbGap it belongs to.'
 
   ############################################# Publication #############################################
   Publication:
