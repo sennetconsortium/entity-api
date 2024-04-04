@@ -621,7 +621,7 @@ Returns
 json
     Select properties of the requested entities
 """
-@app.route('/entities/dash-board/<entity_type>', methods = ['PUT'])
+@app.route('/entities/dashboard/<entity_type>', methods = ['PUT'])
 def get_entities_by_ids_for_dashboard(entity_type):
     # Get user token from Authorization header
     token = get_user_token(request, non_public_access_required=True)

@@ -2042,7 +2042,7 @@ paths:
           description: The target dataset could not be found
         '500':
           description: Internal error
-  /entities/dash-board/{entity_type}:
+  /entities/dashboard/{entity_type}:
     put:
       tags:
         - entities
