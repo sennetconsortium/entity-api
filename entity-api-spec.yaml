@@ -2042,3 +2042,44 @@ paths:
           description: The target dataset could not be found
         '500':
           description: Internal error
+  /entities/dash-board/{entity_type}:
+    get:
+      tags:
+        - entities
+      summary: Retrieve specific fields for either Sources or Samples given a list of either SenNet IDs or UUIDs for the dashboard in the Data Sharing Portal
+      parameters:
+        - name: entity_type
+          in: path
+          description: One of the normalized entity types either Sample or Source
+          required: true
+          schema:
+            type: string
+      requestBody:
+        description: A json body with a single, required entity_ids parameter containing a list of either SenNet IDs or UUIDs
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                entity_ids:
+                  type: string
+                  description: List of either SenNet IDs or UUIDs
+      responses:
+        '200':
+          description: A list of objects containing only specific fields required for the dashboard in the Data Sharing Portal
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+        '400':
+          description: Invalid or misformatted entity identifier was provided.
+        '401':
+          description: The user's bearer token has expired or the user did not supply a valid token.
+        '403':
+          description: The user is not authorized to retrieve the referenced entity.
+        '404':
+          description: The target entity could not be found.
+        '500':
+          description: An unexpected error occurred.
