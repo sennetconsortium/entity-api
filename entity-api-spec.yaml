@@ -2043,7 +2043,7 @@ paths:
         '500':
           description: Internal error
   /entities/dash-board/{entity_type}:
-    get:
+    put:
       tags:
         - entities
       summary: Retrieve specific fields for either Sources or Samples given a list of either SenNet IDs or UUIDs for the dashboard in the Data Sharing Portal
