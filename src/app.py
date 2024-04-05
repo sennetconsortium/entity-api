@@ -1,6 +1,8 @@
 import ast
 import collections
 from datetime import datetime
+from typing import List
+
 from flask import Flask, g, jsonify, request
 from neo4j.exceptions import TransactionError
 import os
@@ -1236,6 +1238,9 @@ def update_entity(id):
 
     # Get target entity and return as a dict if exists
     entity_dict = query_target_entity(id, user_token)
+
+    # Check that the user has the correct access to modify this entity
+    validate_user_update_privilege(entity_dict, user_token)
 
     # Normalize user provided entity_type
     normalized_entity_type = schema_manager.normalize_entity_type(entity_dict['entity_type'])
@@ -4770,6 +4775,35 @@ def access_level_prefix_dir(dir_name):
         return ''
 
     return hm_file_helper.ensureTrailingSlashURL(hm_file_helper.ensureBeginningSlashURL(dir_name))
+
+
+"""
+Check if a user has valid access to update a given entity
+
+Parameters
+----------
+entity : str
+    The entity that is attempting to be updated
+user_token : str 
+    The token passed in via the request header that will be used to authenticate
+
+"""
+
+
+def validate_user_update_privilege(entity, user_token):
+    # A user has update privileges if they are a data admin or are in the same group that registered the entity
+    is_admin = auth_helper_instance.has_data_admin_privs(user_token)
+    if isinstance(is_admin, Response):
+        is_admin = False
+
+    user_write_groups: List[dict] = auth_helper_instance.get_user_write_groups(user_token)
+    if isinstance(user_write_groups, Response):
+        abort_forbidden(f"Entity with ID: {entity['sennet_id']} is not editable without presenting a token.")
+
+    user_group_uuids = [d['uuid'] for d in user_write_groups]
+    if entity['group_uuid'] not in user_group_uuids and is_admin is False:
+        abort_forbidden(f"User does not have write privileges for entity with ID: {entity['sennet_id']}. "
+                        f"Reach out to the help desk to request access to this group.")
 
 
 """
