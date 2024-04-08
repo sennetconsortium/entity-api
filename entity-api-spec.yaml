@@ -2055,7 +2055,7 @@ paths:
           schema:
             type: string
       requestBody:
-        description: A json body with a single, required entity_ids parameter containing a list of either SenNet IDs or UUIDs
+        description: A json body with a single, required entity_uuids parameter containing a list of entity UUIDs
         content:
           application/json:
             schema:
@@ -2063,7 +2063,7 @@ paths:
               properties:
                 entity_ids:
                   type: string
-                  description: List of either SenNet IDs or UUIDs
+                  description: List of entity UUIDs
       responses:
         '200':
           description: A list of objects containing only specific fields required for the dashboard in the Data Sharing Portal
