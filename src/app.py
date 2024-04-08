@@ -4798,7 +4798,7 @@ def validate_user_update_privilege(entity, user_token):
 
     user_write_groups: List[dict] = auth_helper_instance.get_user_write_groups(user_token)
     if isinstance(user_write_groups, Response):
-        return user_write_groups
+        abort(user_write_groups)
 
     user_group_uuids = [d['uuid'] for d in user_write_groups]
     if entity['group_uuid'] not in user_group_uuids and is_admin is False:
