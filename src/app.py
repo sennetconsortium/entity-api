@@ -4798,12 +4798,12 @@ def validate_user_update_privilege(entity, user_token):
 
     user_write_groups: List[dict] = auth_helper_instance.get_user_write_groups(user_token)
     if isinstance(user_write_groups, Response):
-        abort_forbidden(f"Entity with ID: {entity['sennet_id']} is not editable without presenting a token.")
+        return user_write_groups
 
     user_group_uuids = [d['uuid'] for d in user_write_groups]
     if entity['group_uuid'] not in user_group_uuids and is_admin is False:
-        abort_forbidden(f"User does not have write privileges for entity with ID: {entity['sennet_id']}. "
-                        f"Reach out to the help desk to request access to this group.")
+        abort_forbidden(f"User does not have write privileges for this entity. "
+                        f"Reach out to the help desk to request access to group: {entity['group_uuid']}.")
 
 
 """
