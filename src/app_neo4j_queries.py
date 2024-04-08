@@ -283,9 +283,10 @@ def get_entities_for_dashboard(neo4j_driver, entity_uuids, entity_type):
     if entity_type.upper() == Ontology.ops().entities().SAMPLE.upper():
         query = (f"Match (e:Sample) "
                  f"WHERE e.uuid in {entity_uuids} "
+                 f"OPTIONAL MATCH (e:Sample)-[*]->(o:Sample {{sample_category: 'Organ'}}) "
                  f"return apoc.coll.toSet(COLLECT({{sennet_id: e.sennet_id, uuid: e.uuid, "
                  f"lab_tissue_sample_id: e.lab_tissue_sample_id, sample_category: e.sample_category,"
-                 f"organ_type: e.organ, group_name: e.group_name}})) as {record_field_name}")
+                 f"organ_type: COALESCE(o.organ, e.organ), group_name: e.group_name}})) as {record_field_name}")
 
     if entity_type.upper() == Ontology.ops().entities().SOURCE.upper():
         query = (f"Match (e:Source) "
@@ -300,21 +301,6 @@ def get_entities_for_dashboard(neo4j_driver, entity_uuids, entity_type):
         record = session.read_transaction(_execute_readonly_tx, query)
         if record and record[record_field_name]:
             results = record[record_field_name]
-
-            # If the entity type is Sample then check that organ is present and retrieve it if not
-            if entity_type.upper() == Ontology.ops().entities().SAMPLE.upper():
-                for result in results:
-                    if result['organ_type'] is None:
-                        organ_query = (f" MATCH (e:Sample {{uuid: '{result['uuid']}'}})-[*]->(o:Sample "
-                                       f"{{sample_category: 'Organ'}}) "
-                                       f"RETURN DISTINCT o.organ AS organ")
-
-                        logger.info("======get_entities_for_dashboard() organ query======")
-                        logger.info(organ_query)
-
-                        organ_record = session.read_transaction(_execute_readonly_tx, organ_query)
-                        if organ_record:
-                            result['organ_type'] = organ_record['organ']
 
     return results
 

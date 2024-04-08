@@ -607,8 +607,7 @@ def get_entity_by_id(id):
 """
 Retrieve handful of information to be display in the Data Sharing Portal job dashboard.
 
-Takes as input a json body with required field "entity_ids", which is an array of either SenNet IDs
-or UUIDs.
+Takes as input a json body with required field "entity_uuids", which is an array of entity UUIDs
 
 The gateway treats this endpoint as public accessible
 
@@ -632,8 +631,8 @@ def get_entities_by_ids_for_dashboard(entity_type):
     # Parse incoming json string into json data(python dict object)
     json_data_dict = request.get_json()
 
-    if 'entity_ids' not in json_data_dict:
-        abort_bad_req("Missing required field: entity_ids")
+    if 'entity_uuids' not in json_data_dict:
+        abort_bad_req("Missing required field: entity_uuids")
 
     # Check that only Source or Sample is passed
     supported_entity_types = ['Source', 'Sample']
@@ -641,12 +640,7 @@ def get_entities_by_ids_for_dashboard(entity_type):
         abort_bad_req(f"Unable to get properties for this entity type: {entity_type}, supported entity types: {', '.join(supported_entity_types)}")
 
     try:
-        entity_uuids = []
-        # Get cached ids if exist otherwise retrieve from UUID-API
-        for id in json_data_dict['entity_ids']:
-            sennet_ids = schema_manager.get_sennet_ids(id)
-
-            entity_uuids.append(sennet_ids['uuid'])
+        entity_uuids = json_data_dict['entity_uuids']
 
         neo4j_result = app_neo4j_queries.get_entities_for_dashboard(neo4j_driver_instance, entity_uuids, entity_type)
         return jsonify(neo4j_result)
