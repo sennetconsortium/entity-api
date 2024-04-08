@@ -285,13 +285,13 @@ def get_entities_for_dashboard(neo4j_driver, entity_uuids, entity_type):
                  f"WHERE e.uuid in {entity_uuids} "
                  f"return apoc.coll.toSet(COLLECT({{sennet_id: e.sennet_id, uuid: e.uuid, "
                  f"lab_tissue_sample_id: e.lab_tissue_sample_id, sample_category: e.sample_category,"
-                 f"organ_type: e.organ}})) as {record_field_name}")
+                 f"organ_type: e.organ, group_name: e.group_name}})) as {record_field_name}")
 
     if entity_type.upper() == Ontology.ops().entities().SOURCE.upper():
         query = (f"Match (e:Source) "
                  f"WHERE e.uuid in {entity_uuids} "
                  f"return apoc.coll.toSet(COLLECT({{sennet_id: e.sennet_id, uuid: e.uuid, "
-                 f"source_type: e.source_type}})) as {record_field_name}")
+                 f"lab_source_id: e.lab_source_id, source_type: e.source_type, group_name: e.group_name}})) as {record_field_name}")
 
     logger.info("======get_entities_for_dashboard() query======")
     logger.info(query)
