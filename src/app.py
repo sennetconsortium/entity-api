@@ -3,7 +3,7 @@ import collections
 from datetime import datetime
 from typing import List
 
-from flask import Flask, g, jsonify, request
+from flask import Flask, g
 from neo4j.exceptions import TransactionError
 import os
 import re
@@ -44,7 +44,6 @@ from hubmap_commons.exceptions import HTTPException
 # Atlas Consortia commons
 from atlas_consortia_commons.ubkg import initialize_ubkg
 from atlas_consortia_commons.rest import *
-from atlas_consortia_commons.rest import abort_bad_req, abort_not_found
 from atlas_consortia_commons.string import equals
 from atlas_consortia_commons.ubkg.ubkg_sdk import init_ontology
 from lib.ontology import Ontology
@@ -4794,7 +4793,7 @@ def validate_user_update_privilege(entity, user_token):
     # A user has update privileges if they are a data admin or are in the same group that registered the entity
     is_admin = auth_helper_instance.has_data_admin_privs(user_token)
     if isinstance(is_admin, Response):
-        is_admin = False
+        abort(is_admin)
 
     user_write_groups: List[dict] = auth_helper_instance.get_user_write_groups(user_token)
     if isinstance(user_write_groups, Response):
