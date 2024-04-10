@@ -1,7 +1,9 @@
 import ast
 import collections
 from datetime import datetime
-from flask import Flask, g, jsonify, request
+from typing import List
+
+from flask import Flask, g
 from neo4j.exceptions import TransactionError
 import os
 import re
@@ -42,7 +44,6 @@ from hubmap_commons.exceptions import HTTPException
 # Atlas Consortia commons
 from atlas_consortia_commons.ubkg import initialize_ubkg
 from atlas_consortia_commons.rest import *
-from atlas_consortia_commons.rest import abort_bad_req, abort_not_found
 from atlas_consortia_commons.string import equals
 from atlas_consortia_commons.ubkg.ubkg_sdk import init_ontology
 from lib.ontology import Ontology
@@ -604,6 +605,58 @@ def get_entity_by_id(id):
         # Response with the dict
         return jsonify(final_result)
 
+"""
+Retrieve handful of information to be display in the Data Sharing Portal job dashboard.
+
+Takes as input a json body with required field "entity_uuids", which is an array of entity UUIDs
+
+The gateway treats this endpoint as public accessible
+
+Parameters
+----------
+entity_type : str
+    One of the normalized entity types: Sample or Source
+Returns
+-------
+json
+    Select properties of the requested entities
+"""
+@app.route('/entities/dashboard/<entity_type>', methods = ['PUT'])
+def get_entities_by_ids_for_dashboard(entity_type):
+    # Get user token from Authorization header
+    token = get_user_token(request, non_public_access_required=True)
+
+    # Always expect a json body
+    require_json(request)
+
+    # Parse incoming json string into json data(python dict object)
+    json_data_dict = request.get_json()
+
+    if 'entity_uuids' not in json_data_dict:
+        abort_bad_req("Missing required field: entity_uuids")
+
+    # Check that only Source or Sample is passed
+    supported_entity_types = ['Source', 'Sample']
+    if entity_type not in supported_entity_types:
+        abort_bad_req(f"Unable to get properties for this entity type: {entity_type}, supported entity types: {', '.join(supported_entity_types)}")
+
+    try:
+        entity_uuids = json_data_dict['entity_uuids']
+
+        neo4j_result = app_neo4j_queries.get_entities_for_dashboard(neo4j_driver_instance, entity_uuids, entity_type)
+        return jsonify(neo4j_result)
+    except requests.exceptions.RequestException as e:
+        # Due to the use of response.raise_for_status() in schema_manager.get_sennet_ids()
+        # we can access the status codes from the exception
+        status_code = e.response.status_code
+
+        if status_code == 400:
+            abort_bad_req(e.response.text)
+        if status_code == 404:
+            abort_not_found(e.response.text)
+        else:
+            abort_internal_err(e.response.text)
+
 
 """
 Retrive the full tree above the referenced entity and build the provenance document
@@ -620,6 +673,8 @@ Returns
 json
     All the provenance details associated with this entity
 """
+
+
 @app.route('/entities/<id>/provenance', methods = ['GET'])
 def get_entity_provenance(id):
     # Token is not required, but if an invalid token provided,
@@ -1236,6 +1291,9 @@ def update_entity(id):
 
     # Get target entity and return as a dict if exists
     entity_dict = query_target_entity(id, user_token)
+
+    # Check that the user has the correct access to modify this entity
+    validate_user_update_privilege(entity_dict, user_token)
 
     # Normalize user provided entity_type
     normalized_entity_type = schema_manager.normalize_entity_type(entity_dict['entity_type'])
@@ -2470,12 +2528,12 @@ def get_dataset_revision_number(id):
 """
 Retract a published dataset with a retraction reason and sub status
 
-Takes as input a json body with required fields "retracted_reason" and "sub_status".
+Takes as input a json body with required fields "retraction_reason" and "sub_status".
 Authorization handled by gateway. Only token of SenNet-Data-Admin group can use this call. 
 
 Technically, the same can be achieved by making a PUT call to the generic entity update endpoint
 with using a SenNet-Data-Admin group token. But doing this is strongly discouraged because we'll
-need to add more validators to ensure when "retracted_reason" is provided, there must be a 
+need to add more validators to ensure when "retraction_reason" is provided, there must be a 
 "sub_status" filed and vise versa. So consider this call a special use case of entity update.
 
 Parameters
@@ -4770,6 +4828,35 @@ def access_level_prefix_dir(dir_name):
         return ''
 
     return hm_file_helper.ensureTrailingSlashURL(hm_file_helper.ensureBeginningSlashURL(dir_name))
+
+
+"""
+Check if a user has valid access to update a given entity
+
+Parameters
+----------
+entity : str
+    The entity that is attempting to be updated
+user_token : str 
+    The token passed in via the request header that will be used to authenticate
+
+"""
+
+
+def validate_user_update_privilege(entity, user_token):
+    # A user has update privileges if they are a data admin or are in the same group that registered the entity
+    is_admin = auth_helper_instance.has_data_admin_privs(user_token)
+    if isinstance(is_admin, Response):
+        abort(is_admin)
+
+    user_write_groups: List[dict] = auth_helper_instance.get_user_write_groups(user_token)
+    if isinstance(user_write_groups, Response):
+        abort(user_write_groups)
+
+    user_group_uuids = [d['uuid'] for d in user_write_groups]
+    if entity['group_uuid'] not in user_group_uuids and is_admin is False:
+        abort_forbidden(f"User does not have write privileges for this entity. "
+                        f"Reach out to the help desk to request access to group: {entity['group_uuid']}.")
 
 
 """

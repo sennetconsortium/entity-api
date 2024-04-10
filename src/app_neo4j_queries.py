@@ -256,6 +256,55 @@ def get_entities_by_type(neo4j_driver, entity_type, property_key=None):
 
     return results
 
+
+"""
+Get specific fields for Data Sharing Portal job dashboard for provided entities
+
+Parameters
+----------
+neo4j_driver : neo4j.Driver object
+    The neo4j database connection pool
+entity_uuids : list
+    A list of entity UUIDs
+entity_type : str
+    One of the normalized entity types: Sample or Source
+Returns
+-------
+list
+    A dictionary of UUID to list of the following properties: sennet_id, uuid, lab_tissue_sample_id, source_type, 
+    sample_category, organ
+"""
+
+
+def get_entities_for_dashboard(neo4j_driver, entity_uuids, entity_type):
+    results = []
+    query = ''
+
+    if entity_type.upper() == Ontology.ops().entities().SAMPLE.upper():
+        query = (f"Match (e:Sample) "
+                 f"WHERE e.uuid in {entity_uuids} "
+                 f"OPTIONAL MATCH (e:Sample)-[*]->(o:Sample {{sample_category: 'Organ'}}) "
+                 f"return apoc.coll.toSet(COLLECT({{sennet_id: e.sennet_id, uuid: e.uuid, "
+                 f"lab_tissue_sample_id: e.lab_tissue_sample_id, sample_category: e.sample_category,"
+                 f"organ_type: COALESCE(o.organ, e.organ), group_name: e.group_name}})) as {record_field_name}")
+
+    if entity_type.upper() == Ontology.ops().entities().SOURCE.upper():
+        query = (f"Match (e:Source) "
+                 f"WHERE e.uuid in {entity_uuids} "
+                 f"return apoc.coll.toSet(COLLECT({{sennet_id: e.sennet_id, uuid: e.uuid, "
+                 f"lab_source_id: e.lab_source_id, source_type: e.source_type, group_name: e.group_name}})) as {record_field_name}")
+
+    logger.info("======get_entities_for_dashboard() query======")
+    logger.info(query)
+
+    with neo4j_driver.session() as session:
+        record = session.read_transaction(_execute_readonly_tx, query)
+        if record and record[record_field_name]:
+            results = record[record_field_name]
+
+    return results
+
+
 """
 Retrieve the ancestor organ(s) of a given entity
 
