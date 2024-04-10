@@ -2843,32 +2843,6 @@ def set_status_history(property_key, normalized_type, user_token, existing_data_
                                        uuid)
 
 
-def validate_status_changed(property_key, normalized_entity_type, request, existing_data_dict, new_data_dict):
-    """
-    Validate that status, if included in new_data_dict, is different from the existing status value
-
-    Parameters
-    ----------
-    property_key : str
-        The target property key
-    normalized_type : str
-        Submission
-    request: Flask request object
-        The instance of Flask request passed in from application request
-    existing_data_dict : dict
-        A dictionary that contains all existing entity properties
-    new_data_dict : dict
-        The json data in request body, already after the regular validations
-    """
-
-    if 'status' not in existing_data_dict:
-        raise KeyError("Missing 'status' key in 'existing_data_dict' during calling 'validate_status_changed()' validator method.")
-
-    # Only allow 'status' in new_data_dict if its different than the existing status value
-    if existing_data_dict['status'].lower() == new_data_dict['status'].lower():
-        raise ValueError(f"Status value is already {existing_data_dict['status']}, cannot change to {existing_data_dict['status']}. If no change, do not include status field in update")
-
-
 def update_status(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     """
     Trigger event method that calls related functions involved with updating the status value
