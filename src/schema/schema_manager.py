@@ -2,8 +2,10 @@ import ast
 import yaml
 import logging
 import requests
-from flask import Response
 from datetime import datetime
+
+from flask import Response
+from hubmap_commons.file_helper import ensureTrailingSlashURL
 
 # Don't confuse urllib (Python native library) with urllib3 (3rd-party library, requests also uses urllib3)
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
@@ -14,9 +16,6 @@ from schema import schema_triggers
 from schema import schema_validators
 from schema.schema_constants import SchemaConstants
 from schema import schema_neo4j_queries
-
-# HuBMAP commons
-from hubmap_commons.hm_auth import AuthHelper
 
 # Atlas Consortia commons
 from atlas_consortia_commons.rest import *
@@ -36,6 +35,7 @@ requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
 # A single leading underscore means you're not supposed to access it "from the outside"
 _schema = None
 _uuid_api_url = None
+_entity_api_url = None
 _ingest_api_url = None
 _search_api_url = None
 _auth_helper = None
@@ -66,6 +66,7 @@ neo4j_session_context : neo4j.Session object
 
 def initialize(valid_yaml_file,
                uuid_api_url,
+               entity_api_url,
                ingest_api_url,
                search_api_url,
                auth_helper_instance,
@@ -77,6 +78,7 @@ def initialize(valid_yaml_file,
     # Specify as module-scope variables
     global _schema
     global _uuid_api_url
+    global _entity_api_url
     global _ingest_api_url
     global _search_api_url
     global _auth_helper
@@ -92,6 +94,13 @@ def initialize(valid_yaml_file,
     _uuid_api_url = uuid_api_url
     _ingest_api_url = ingest_api_url
     _search_api_url = search_api_url
+
+    if entity_api_url is not None:
+        _entity_api_url = entity_api_url
+    else:
+        msg = f"Unable to initialize schema manager with entity_api_url={entity_api_url}."
+        logger.critical(msg=msg)
+        raise Exception(msg)
 
     # Get the helper instances
     _auth_helper = auth_helper_instance
@@ -2033,3 +2042,15 @@ def delete_memcached_cache(uuids_list):
         _memcached_client.delete_many(cache_keys)
 
         logger.info(f"Deleted cache by key: {', '.join(cache_keys)}")
+
+
+def get_entity_api_url():
+    """ Get the entity-api URL to be used by trigger methods.
+
+    Returns
+    -------
+    str
+        The entity-api URL ending with a trailing slash
+    """
+    global _entity_api_url
+    return ensureTrailingSlashURL(_entity_api_url)

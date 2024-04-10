@@ -212,15 +212,18 @@ def close_neo4j_driver(error):
 try:
     # The schema_manager is a singleton module
     # Pass in auth_helper_instance, neo4j_driver instance, and file_upload_helper instance
-    schema_manager.initialize(app.config['SCHEMA_YAML_FILE'],
-                              app.config['UUID_API_URL'],
-                              app.config['INGEST_API_URL'],
-                              app.config['SEARCH_API_URL'],
-                              auth_helper_instance,
-                              neo4j_driver_instance,
-                              app.ubkg,
-                              memcached_client_instance,
-                              app.config['MEMCACHED_PREFIX'])
+    schema_manager.initialize(
+        valid_yaml_file=app.config['SCHEMA_YAML_FILE'],
+        uuid_api_url=app.config['UUID_API_URL'],
+        entity_api_url=app.config['ENTITY_API_URL'],
+        ingest_api_url=app.config['INGEST_API_URL'],
+        search_api_url=app.config['SEARCH_API_URL'],
+        auth_helper_instance=auth_helper_instance,
+        neo4j_driver_instance=neo4j_driver_instance,
+        ubkg_instance=app.ubkg,
+        memcached_client_instance=memcached_client_instance,
+        memcached_prefix=app.config['MEMCACHED_PREFIX']
+    )
 
     logger.info("Initialized schema_manager module successfully :)")
 # Use a broad catch-all here
