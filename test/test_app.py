@@ -4,7 +4,7 @@ test.cwd_to_src()
 import json
 import os
 import random
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from flask import Response
 import pytest
@@ -26,6 +26,23 @@ def app():
 def ontology_mock():
     """Automatically add ontology mock functions to all tests"""
     with (patch('atlas_consortia_commons.ubkg.ubkg_sdk.UbkgSDK', new=test_utils.MockOntology)):
+        yield
+
+@pytest.fixture(scope="session", autouse=True)
+def auth_helper_mock():
+    auth_mock = MagicMock()
+    auth_mock.getAuthorizationTokens.return_value = "test_token"
+    auth_mock.has_data_admin_privs.return_value = False
+    auth_mock.get_user_write_groups.return_value = [{
+        "uuid": "3108cb5a-3b0c-4c6d-a944-ce7271ebe325"
+    }]
+
+    # auth_helper_instance gets created (from 'import app') before fixture is called
+    app_module.auth_helper_instance = auth_mock
+    with (
+        patch("hubmap_commons.hm_auth.AuthHelper.create", return_value=auth_mock),
+        patch("hubmap_commons.hm_auth.AuthHelper.instance", return_value=auth_mock),
+    ):
         yield
 
 ### Index
