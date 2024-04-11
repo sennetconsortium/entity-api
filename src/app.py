@@ -213,15 +213,18 @@ def close_neo4j_driver(error):
 try:
     # The schema_manager is a singleton module
     # Pass in auth_helper_instance, neo4j_driver instance, and file_upload_helper instance
-    schema_manager.initialize(app.config['SCHEMA_YAML_FILE'],
-                              app.config['UUID_API_URL'],
-                              app.config['INGEST_API_URL'],
-                              app.config['SEARCH_API_URL'],
-                              auth_helper_instance,
-                              neo4j_driver_instance,
-                              app.ubkg,
-                              memcached_client_instance,
-                              app.config['MEMCACHED_PREFIX'])
+    schema_manager.initialize(
+        valid_yaml_file=app.config['SCHEMA_YAML_FILE'],
+        uuid_api_url=app.config['UUID_API_URL'],
+        entity_api_url=app.config['ENTITY_API_URL'],
+        ingest_api_url=app.config['INGEST_API_URL'],
+        search_api_url=app.config['SEARCH_API_URL'],
+        auth_helper_instance=auth_helper_instance,
+        neo4j_driver_instance=neo4j_driver_instance,
+        ubkg_instance=app.ubkg,
+        memcached_client_instance=memcached_client_instance,
+        memcached_prefix=app.config['MEMCACHED_PREFIX']
+    )
 
     logger.info("Initialized schema_manager module successfully :)")
 # Use a broad catch-all here
@@ -1284,6 +1287,10 @@ def update_entity(id):
         normalized_status = schema_manager.normalize_status(json_data_dict["status"])
         json_data_dict["status"] = normalized_status
 
+    has_updated_status = False
+    if 'status' in json_data_dict and json_data_dict['status']:
+        has_updated_status = True
+
     # Normalize user provided status
     if "sub_status" in json_data_dict:
         normalized_status = schema_manager.normalize_status(json_data_dict["sub_status"])
@@ -1298,7 +1305,6 @@ def update_entity(id):
     # Normalize user provided entity_type
     normalized_entity_type = schema_manager.normalize_entity_type(entity_dict['entity_type'])
 
-
     verify_ubkg_properties(json_data_dict)
 
     # Note, we don't support entity level validators on entity update via PUT
@@ -1307,7 +1313,7 @@ def update_entity(id):
     # Validate request json against the yaml schema
     # Pass in the entity_dict for missing required key check, this is different from creating new entity
     try:
-        schema_manager.validate_json_data_against_schema('ENTITIES', json_data_dict, normalized_entity_type, existing_entity_dict = entity_dict)
+        schema_manager.validate_json_data_against_schema('ENTITIES', json_data_dict, normalized_entity_type, existing_entity_dict=entity_dict)
     except schema_errors.SchemaValidationException as e:
         # No need to log the validation errors
         abort_bad_req(str(e))
@@ -1342,7 +1348,7 @@ def update_entity(id):
         # Generate 'before_update_triiger' data and update the entity details in Neo4j
         merged_updated_dict = update_object_details('ENTITIES', request, normalized_entity_type, user_token, json_data_dict, entity_dict)
 
-        # Handle linkages update via `after_update_trigger` methods 
+        # Handle linkages update via `after_update_trigger` methods
         if has_direct_ancestor_uuid:
             after_update(normalized_entity_type, user_token, merged_updated_dict)
     elif normalized_entity_type in ['Dataset', 'Publication']:
@@ -1360,7 +1366,7 @@ def update_entity(id):
         merged_updated_dict = update_object_details('ENTITIES', request, normalized_entity_type, user_token, json_data_dict, entity_dict)
 
         # Handle linkages update via `after_update_trigger` methods
-        if has_direct_ancestor_uuids:
+        if has_direct_ancestor_uuids or has_updated_status:
             after_update(normalized_entity_type, user_token, merged_updated_dict)
     elif normalized_entity_type == 'Upload':
         has_dataset_uuids_to_link = False
@@ -1392,11 +1398,11 @@ def update_entity(id):
         merged_updated_dict = update_object_details('ENTITIES', request, normalized_entity_type, user_token, json_data_dict, entity_dict)
 
         # Handle linkages update via `after_update_trigger` methods
-        if has_dataset_uuids_to_link or has_dataset_uuids_to_unlink:
+        if has_dataset_uuids_to_link or has_updated_status:
             after_update(normalized_entity_type, user_token, merged_updated_dict)
     elif normalized_entity_type == 'Collection':
-        entity_visibility = _get_entity_visibility(  normalized_entity_type=normalized_entity_type
-                                                    ,entity_dict=entity_dict)
+        entity_visibility = _get_entity_visibility(normalized_entity_type=normalized_entity_type, entity_dict=entity_dict)
+
         # Prohibit update of an existing Collection if it meets criteria of being visible to public e.g. has DOI.
         if entity_visibility == DataVisibilityEnum.PUBLIC:
             logger.info(f"Attempt to update {normalized_entity_type} with id={id} which has visibility {entity_visibility}.")
