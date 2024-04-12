@@ -1,4 +1,6 @@
 from enum import Enum
+
+
 class SchemaConstants(object):
     # Expire the request cache after the time-to-live (seconds), default 4 hours
     REQUEST_CACHE_TTL = 14400
@@ -6,10 +8,12 @@ class SchemaConstants(object):
 
     # Constants used by validators
     INGEST_API_APP = 'ingest-api'
+    COMPONENT_DATASET = 'component-dataset'
     INGEST_PIPELINE_APP = 'ingest-pipeline'
     INGEST_PORTAL_APP = 'portal-ui'
     # HTTP header names are case-insensitive
     SENNET_APP_HEADER = 'X-SenNet-Application'
+    INTERNAL_TRIGGER = 'X-Internal-Trigger'
     DATASET_STATUS_PUBLISHED = 'published'
 
     # Used by triggers, all lowercase for easy comparision
@@ -24,6 +28,7 @@ class SchemaConstants(object):
 
     ALLOWED_DATASET_STATUSES = ['new', 'processing', 'published', 'qa', 'error', 'hold', 'invalid', 'submitted', 'incomplete']
     ALLOWED_UPLOAD_STATUSES = ['new', 'valid', 'invalid', 'error', 'reorganized', 'processing', 'submitted', 'incomplete']
+
 
 # Define an enumeration to classify an entity's visibility, which can be combined with
 # authorization info when verify operations on a request.
