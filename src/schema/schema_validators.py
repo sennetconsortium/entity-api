@@ -562,8 +562,6 @@ def validate_group_name(property_key, normalized_entity_type, request, existing_
     assigned_to_group_name = new_data_dict['assigned_to_group_name']
     globus_groups = schema_manager.get_auth_helper_instance().getHuBMAPGroupInfo()
     globus_group = next((v for v in globus_groups.values() if v.get("displayname") == assigned_to_group_name), None)
-    if globus_group is None:
-        raise ValueError("Invalid value for 'assigned_to_group_name'")
     if not globus_group.get("data_provider", False):
         raise ValueError("Invalid group in 'assigned_to_group_name'. Must be a data provider")
 
