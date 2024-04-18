@@ -369,7 +369,6 @@ ENTITIES:
         before_property_update_validators:
           - validate_application_header_before_property_update
           - validate_dataset_status_value
-          - validate_status_changed
           - validate_dataset_not_component
         generated: true
         description: "One of: New|Processing|QA|Published|Error|Hold|Invalid|Incomplete"
