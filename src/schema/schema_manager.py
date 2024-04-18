@@ -135,7 +135,9 @@ def load_provenance_schema(valid_yaml_file):
         schema_dict = yaml.safe_load(file)
 
         logger.info("Schema yaml file loaded successfully")
-
+        # For entities with properties set to None/Null, remove them as these represent private values not inherited by subclass
+        for entity in schema_dict['ENTITIES']:
+            schema_dict['ENTITIES'][entity]['properties'] = remove_none_values(schema_dict['ENTITIES'][entity]['properties'])
         return schema_dict
 
 
