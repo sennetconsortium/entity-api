@@ -590,8 +590,8 @@ def validate_dataset_not_component(property_key, normalized_entity_type, request
         uuid = existing_data_dict['uuid']
         creation_action = schema_neo4j_queries.get_entity_creation_action_activity(neo4j_driver_instance, uuid)
         if creation_action == 'Multi-Assay Split':
-            raise ValueError(f"Unable to modify existing {existing_data_dict['entity_type']}"
-                             f" {existing_data_dict['uuid']}. Can not change status on component datasets directly. Status"
+            raise ValueError(f"Unable to modify existing {existing_data_dict['entity_type']} "
+                             f"{existing_data_dict['uuid']}. Can not change status on component datasets directly. Status "
                              f"change must occur on parent multi-assay split dataset")
 
 
