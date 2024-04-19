@@ -31,7 +31,8 @@ def validate_application_header_before_entity_create(normalized_entity_type, req
     # Currently only ingest-api and ingest-pipeline are allowed
     # to create or update Dataset and Upload
     # Use lowercase for comparison
-    applications_allowed = [SchemaConstants.INGEST_API_APP, SchemaConstants.INGEST_PIPELINE_APP]
+    applications_allowed = [SchemaConstants.INGEST_API_APP, SchemaConstants.INGEST_PIPELINE_APP,
+                            SchemaConstants.INGEST_PORTAL_APP]
 
     _validate_application_header(applications_allowed, request.headers)
 
