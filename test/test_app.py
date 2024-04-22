@@ -260,6 +260,7 @@ def test_update_entity_success(app, entity_type):
           patch('app.app_neo4j_queries.get_activity_was_generated_by', return_value=test_data['get_activity_was_generated_by']),
           patch('app.app_neo4j_queries.get_activity', return_value=test_data['get_activity']),
           patch('app.app_neo4j_queries.get_source_organ_count', return_value=0),
+          patch('app.schema_neo4j_queries.get_entity_creation_action_activity', return_value='lab process'),
           patch('requests.put', return_value=Response(status=202))):
 
         res = client.put(f'/entities/{entity_id}',
