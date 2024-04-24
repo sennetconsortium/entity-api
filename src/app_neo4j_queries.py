@@ -305,6 +305,33 @@ def get_entities_for_dashboard(neo4j_driver, entity_uuids, entity_type):
     return results
 
 
+def dataset_has_component_children(neo4j_driver, dataset_uuid):
+    """
+    Determine if given dataset has componet children
+
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    dataset_uuid : str
+        The uuid of the given dataset
+
+    Returns
+    -------
+    boolean
+    """
+    query = ("MATCH (ds1:Dataset)-[:WAS_GENERATED_BY]->(a:Activity)-[:USED]->(ds2:Dataset) "
+             "WHERE ds2.uuid = $dataset_uuid "
+             f"RETURN a.creation_action as {record_field_name}")
+    with neo4j_driver.session() as session:
+        components_list = session.run(query, dataset_uuid=dataset_uuid).data()
+    for component in components_list:
+        creation_action = component.get('result')
+        if creation_action == 'Multi-Assay Split':
+            return True
+    return False
+
+
 """
 Retrieve the ancestor organ(s) of a given entity
 

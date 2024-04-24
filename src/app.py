@@ -16,7 +16,6 @@ from urllib3.exceptions import InsecureRequestWarning
 from pathlib import Path
 import logging
 import json
-import time
 from lib.constraints import get_constraints_by_ancestor, get_constraints_by_descendant, build_constraint, \
     build_constraint_unit
 
@@ -44,6 +43,7 @@ from hubmap_commons.exceptions import HTTPException
 # Atlas Consortia commons
 from atlas_consortia_commons.ubkg import initialize_ubkg
 from atlas_consortia_commons.rest import *
+from atlas_consortia_commons.rest import abort_bad_req
 from atlas_consortia_commons.string import equals
 from atlas_consortia_commons.ubkg.ubkg_sdk import init_ontology
 from lib.ontology import Ontology
@@ -4175,7 +4175,7 @@ Create multiple component datasets from a single Multi-Assay ancestor
 Input
 -----
 json
-    A json object with the fields: 
+    A json object with the fields:
         creation_action
          - type: str
          - description: the action event that will describe the activity node. Allowed valuese are: "Multi-Assay Split"
@@ -4192,12 +4192,13 @@ json
 Returns
 --------
 json array
-    List of the newly created datasets represented as dictionaries. 
+    List of the newly created datasets represented as dictionaries.
 """
 @app.route('/datasets/components', methods=['POST'])
 def multiple_components():
     if READ_ONLY_MODE:
         abort_forbidden("Access not granted when entity-api in READ-ONLY mode")
+
     # If an invalid token provided, we need to tell the client with a 401 error, rather
     # than a 500 error later if the token is not good.
     validate_token_if_auth_header_exists(request)
@@ -4236,6 +4237,10 @@ def multiple_components():
         direct_ancestor_dict = query_target_entity(direct_ancestor_uuid, user_token)
         if direct_ancestor_dict.get('entity_type').lower() != "dataset":
             abort_bad_req(f"Direct ancestor is of type: {direct_ancestor_dict.get('entity_type')}. Must be of type 'dataset'.")
+
+    dataset_has_component_children = app_neo4j_queries.dataset_has_component_children(neo4j_driver_instance, direct_ancestor_uuid)
+    if dataset_has_component_children:
+        abort_bad_req("One or more direct ancestors already has component dataset children. Can not add more.")
 
     # validate that there is at least one component dataset
     if len(json_data_dict.get('datasets')) < 1:
