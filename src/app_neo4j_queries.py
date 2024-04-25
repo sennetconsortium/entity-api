@@ -307,7 +307,7 @@ def get_entities_for_dashboard(neo4j_driver, entity_uuids, entity_type):
 
 def dataset_has_component_children(neo4j_driver, dataset_uuid):
     """
-    Determine if given dataset has componet children
+    Determine if given dataset has component children
 
     Parameters
     ----------
@@ -318,18 +318,14 @@ def dataset_has_component_children(neo4j_driver, dataset_uuid):
 
     Returns
     -------
-    boolean
+    bool
     """
-    query = ("MATCH (ds1:Dataset)-[:WAS_GENERATED_BY]->(a:Activity)-[:USED]->(ds2:Dataset) "
-             "WHERE ds2.uuid = $dataset_uuid "
-             f"RETURN a.creation_action as {record_field_name}")
+    query = ("MATCH p=(ds1:Dataset)-[:WAS_GENERATED_BY]->(a:Activity)-[:USED]->(ds2:Dataset) "
+             "WHERE ds2.uuid = $dataset_uuid AND a.creation_action = 'Multi-Assay Split' "
+             "RETURN (COUNT(p) > 0)")
     with neo4j_driver.session() as session:
-        components_list = session.run(query, dataset_uuid=dataset_uuid).data()
-    for component in components_list:
-        creation_action = component.get('result')
-        if creation_action == 'Multi-Assay Split':
-            return True
-    return False
+        value = session.run(query, dataset_uuid=dataset_uuid).value()
+    return value[0]
 
 
 """
