@@ -4240,7 +4240,7 @@ def multiple_components():
 
     dataset_has_component_children = app_neo4j_queries.dataset_has_component_children(neo4j_driver_instance, direct_ancestor_uuid)
     if dataset_has_component_children:
-        abort_bad_req("One or more direct ancestors already has component dataset children. Can not add more.")
+        abort_bad_req(f"The dataset with uuid {direct_ancestor_uuid} already has component children dataset(s)")
 
     # validate that there is at least one component dataset
     if len(json_data_dict.get('datasets')) < 1:
