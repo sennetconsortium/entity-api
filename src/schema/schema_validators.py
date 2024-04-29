@@ -672,7 +672,7 @@ def _validate_application_header(applications_allowed, request_headers):
     app_header = request_headers.get(SchemaConstants.SENNET_APP_HEADER)
 
     if not app_header:
-        msg = f"Unbale to proceed due to missing {SchemaConstants.SENNET_APP_HEADER} header from request"
+        msg = f"Unable to proceed due to missing {SchemaConstants.SENNET_APP_HEADER} header from request"
         raise schema_errors.MissingApplicationHeaderException(msg)
 
     # Use lowercase for comparing the application header value against the yaml
