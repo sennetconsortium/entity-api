@@ -1005,9 +1005,10 @@ def create_entity(entity_type):
         if 'previous_revision_uuid' in json_data_dict:
             check_previous_revision(json_data_dict['previous_revision_uuid'])
 
-        if 'previous_revision_uuids' in json_data_dict:
-            for previous_revision_uuid in json_data_dict['previous_revision_uuids']:
-                check_previous_revision(previous_revision_uuid)
+        # Disable for now until further notice #346
+        # if 'previous_revision_uuids' in json_data_dict:
+        #     for previous_revision_uuid in json_data_dict['previous_revision_uuids']:
+        #         check_previous_revision(previous_revision_uuid)
 
         # Generate 'before_create_triiger' data and create the entity details in Neo4j
         merged_dict = create_entity_details(request, normalized_entity_type, user_token, json_data_dict)
