@@ -2724,74 +2724,74 @@ Returns
 list
     The list of revision datasets
 """
-@app.route('/entities/<id>/multi-revisions', methods=['GET'])
-@app.route('/datasets/<id>/multi-revisions', methods=['GET'])
-def get_multi_revisions_list(id):
-    # By default, do not return dataset. Only return dataset if include_dataset is true
-    property_key = 'uuid'
-    if bool(request.args):
-        include_dataset = request.args.get('include_dataset')
-        if (include_dataset is not None) and (include_dataset.lower() == 'true'):
-            property_key = None
-    # Token is not required, but if an invalid token provided,
-    # we need to tell the client with a 401 error
-    validate_token_if_auth_header_exists(request)
-
-    # Use the internal token to query the target entity
-    # since public entities don't require user token
-    token = get_internal_token()
-
-    # Query target entity against uuid-api and neo4j and return as a dict if exists
-    entity_dict = query_target_entity(id, token)
-    normalized_entity_type = entity_dict['entity_type']
-
-    # Only for Dataset
-    if not schema_manager.entity_type_instanceof(normalized_entity_type, 'Dataset'):
-        abort_bad_req("The entity is not a Dataset. Found entity type:" + normalized_entity_type)
-
-    # Only published/public datasets don't require token
-    if entity_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
-        # Token is required and the user must belong to SenNet-READ group
-        token = get_user_token(request, non_public_access_required=True)
-
-    # By now, either the entity is public accessible or
-    # the user token has the correct access level
-    # Get the all the sorted (DESC based on creation timestamp) revisions
-    sorted_revisions_list = app_neo4j_queries.get_sorted_multi_revisions(neo4j_driver_instance, entity_dict['uuid'],
-                                                                         fetch_all=user_in_globus_read_group(request),
-                                                                         property_key=property_key)
-
-    # Skip some of the properties that are time-consuming to generate via triggers
-    properties_to_skip = [
-        'direct_ancestors',
-        'collections',
-        'upload',
-        'title'
-    ]
-
-    normalized_revisions_list = []
-    sorted_revisions_list_merged = sorted_revisions_list[0] + sorted_revisions_list[1][::-1]
-
-    if property_key is None:
-        for revision in sorted_revisions_list_merged:
-            complete_revision_list = schema_manager.get_complete_entities_list(token, revision, properties_to_skip)
-            normal = schema_manager.normalize_entities_list_for_response(complete_revision_list)
-            normalized_revisions_list.append(normal)
-    else:
-        normalized_revisions_list = sorted_revisions_list_merged
-
-    # Now all we need to do is to compose the result list
-    results = []
-    revision_number = len(normalized_revisions_list)
-    for revision in normalized_revisions_list:
-        result = {
-            'revision_number': revision_number,
-            'uuids': revision
-        }
-        results.append(result)
-        revision_number -= 1
-
-    return jsonify(results)
+# @app.route('/entities/<id>/multi-revisions', methods=['GET'])
+# @app.route('/datasets/<id>/multi-revisions', methods=['GET'])
+# def get_multi_revisions_list(id):
+#     # By default, do not return dataset. Only return dataset if include_dataset is true
+#     property_key = 'uuid'
+#     if bool(request.args):
+#         include_dataset = request.args.get('include_dataset')
+#         if (include_dataset is not None) and (include_dataset.lower() == 'true'):
+#             property_key = None
+#     # Token is not required, but if an invalid token provided,
+#     # we need to tell the client with a 401 error
+#     validate_token_if_auth_header_exists(request)
+#
+#     # Use the internal token to query the target entity
+#     # since public entities don't require user token
+#     token = get_internal_token()
+#
+#     # Query target entity against uuid-api and neo4j and return as a dict if exists
+#     entity_dict = query_target_entity(id, token)
+#     normalized_entity_type = entity_dict['entity_type']
+#
+#     # Only for Dataset
+#     if not schema_manager.entity_type_instanceof(normalized_entity_type, 'Dataset'):
+#         abort_bad_req("The entity is not a Dataset. Found entity type:" + normalized_entity_type)
+#
+#     # Only published/public datasets don't require token
+#     if entity_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
+#         # Token is required and the user must belong to SenNet-READ group
+#         token = get_user_token(request, non_public_access_required=True)
+#
+#     # By now, either the entity is public accessible or
+#     # the user token has the correct access level
+#     # Get the all the sorted (DESC based on creation timestamp) revisions
+#     sorted_revisions_list = app_neo4j_queries.get_sorted_multi_revisions(neo4j_driver_instance, entity_dict['uuid'],
+#                                                                          fetch_all=user_in_globus_read_group(request),
+#                                                                          property_key=property_key)
+#
+#     # Skip some of the properties that are time-consuming to generate via triggers
+#     properties_to_skip = [
+#         'direct_ancestors',
+#         'collections',
+#         'upload',
+#         'title'
+#     ]
+#
+#     normalized_revisions_list = []
+#     sorted_revisions_list_merged = sorted_revisions_list[0] + sorted_revisions_list[1][::-1]
+#
+#     if property_key is None:
+#         for revision in sorted_revisions_list_merged:
+#             complete_revision_list = schema_manager.get_complete_entities_list(token, revision, properties_to_skip)
+#             normal = schema_manager.normalize_entities_list_for_response(complete_revision_list)
+#             normalized_revisions_list.append(normal)
+#     else:
+#         normalized_revisions_list = sorted_revisions_list_merged
+#
+#     # Now all we need to do is to compose the result list
+#     results = []
+#     revision_number = len(normalized_revisions_list)
+#     for revision in normalized_revisions_list:
+#         result = {
+#             'revision_number': revision_number,
+#             'uuids': revision
+#         }
+#         results.append(result)
+#         revision_number -= 1
+#
+#     return jsonify(results)
 
 
 """
