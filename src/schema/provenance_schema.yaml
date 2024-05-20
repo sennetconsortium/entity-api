@@ -331,6 +331,20 @@ ENTITIES:
         description: "The entities that are contained in the collection."
         # A few time-consuming properties (with read triggers) of each dataset are excluded
         on_read_trigger: get_collection_entities
+      group_uuid:
+        type: string
+        immutable: true
+        description: "The uuid of globus group which the user who created this entity is a member of.  This is required on Create/POST if the user creating the Source is a member of more than one write group.  This property cannot be set via PUT (only on Create/POST)."
+        before_create_trigger: set_group_uuid #method that, if group_uuid is not already set looks for membership in a single "data provider" group and sets to that. Otherwise if not set and no single "provider group" membership throws error.  This field is also used to link (Neo4j relationship) to the correct Lab node on creation.
+        # Note: link_source_to_lab() will always delete all the old linkages first
+        after_create_trigger: set_was_attributed_to
+      # Must set in neo4j
+      group_name:
+        type: string
+        generated: true
+        immutable: true
+        description: "The displayname of globus group which the user who created this entity is a member of"
+        before_create_trigger: set_group_name
 
   ############################################# Dataset #############################################
   Dataset:
@@ -495,20 +509,20 @@ ENTITIES:
         immutable: true
         description: "The displayname of globus group which the user who created this entity is a member of"
         before_create_trigger: set_group_name #same as group_uuid, except set group_name
-      previous_revision_uuids:
-        type: list
-        transient: true
-        immutable: true
-        description: "The list of uuids of previous revision datasets"
-        after_create_trigger: link_to_previous_revisions
-        on_read_trigger: get_previous_revision_uuids
-      next_revision_uuids:
-        type: list
-        generated: true
-        transient: true
-        immutable: true
-        description: "The list of uuids of next revision datasets"
-        on_read_trigger: get_next_revision_uuids
+#      previous_revision_uuids:
+#        type: list
+#        transient: true
+#        immutable: true
+#        description: "The list of uuids of previous revision datasets"
+#        after_create_trigger: link_to_previous_revisions
+#        on_read_trigger: get_previous_revision_uuids
+#      next_revision_uuids:
+#        type: list
+#        generated: true
+#        transient: true
+#        immutable: true
+#        description: "The list of uuids of next revision datasets"
+#        on_read_trigger: get_next_revision_uuids
       previous_revision_uuid:
         type: string
         transient: true
