@@ -20,8 +20,4 @@ PyYAML==5.4.1
 hubmap-commons==2.1.14
 atlas-consortia-commons==1.0.8
 
-# For unit test
-nose2==0.10.0
-pytest==7.3.1
-
 deepdiff==6.2.3
