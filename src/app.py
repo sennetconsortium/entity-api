@@ -46,6 +46,7 @@ from atlas_consortia_commons.rest import *
 from atlas_consortia_commons.rest import abort_bad_req
 from atlas_consortia_commons.string import equals
 from atlas_consortia_commons.ubkg.ubkg_sdk import init_ontology
+from atlas_consortia_commons.decorator import require_data_admin, require_valid_token
 from lib.ontology import Ontology
 
 # Root logger configuration
@@ -299,7 +300,8 @@ Returns
 str
     A confirmation message
 """
-@app.route('/flush-all-cache', methods = ['DELETE'])
+@app.route('/flush-all-cache', methods=['DELETE'])
+@require_data_admin()
 def flush_all_cache():
     msg = ''
 
@@ -325,7 +327,8 @@ Returns
 str
     A confirmation message
 """
-@app.route('/flush-cache/<id>', methods = ['DELETE'])
+@app.route('/flush-cache/<id>', methods=['DELETE'])
+@require_data_admin()
 def flush_cache(id):
     msg = ''
 
@@ -384,9 +387,9 @@ Returns
 json
     A json list of globus groups this user belongs to
 """
-@app.route('/usergroups', methods = ['GET'])
-def get_user_groups():
-    token = get_user_token(request)
+@app.route('/usergroups', methods=['GET'])
+@require_valid_token()
+def get_user_groups(token: str):
     groups_list = auth_helper_instance.get_user_groups_deprecated(token)
     return jsonify(groups_list)
 
