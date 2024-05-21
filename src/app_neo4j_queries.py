@@ -336,7 +336,7 @@ Parameters
 neo4j_driver : neo4j.Driver object
     The neo4j database connection pool
 entity_uuid : str
-    The HuBMAP ID (e.g. HBM123.ABCD.456) or UUID of target entity 
+    The SenNet ID (e.g. SNT123.ABCD.456) or UUID of target entity
 
 Returns
 -------
@@ -1404,7 +1404,7 @@ def get_associated_sources_from_dataset(neo4j_driver, dataset_uuid):
 
 
 """
-Retrieve all the provenance information about each dataset. Each dataset's prov-info is given by a dictionary. 
+Retrieve all the provenance information about each dataset. Each dataset's prov-info is given by a dictionary.
 Certain fields such as first sample where there can be multiple nearest datasets in the provenance above a given
 dataset, that field is a list inside of its given dictionary. Results can be filtered with certain parameters:
 has_rui_info (true or false), organ (organ type), group_uuid, and dataset_status. These are passed in as a dictionary if
@@ -1417,7 +1417,7 @@ neo4j_driver : neo4j.Driver object
 param_dict : dictionary
     Dictionary containing any parameters desired to filter for certain results
 published_only : boolean
-    If a user does not have a token with HuBMAP-Read Group access, published_only is set to true. This will cause only 
+    If a user does not have a token with SenNet-Read Group access, published_only is set to true. This will cause only
     datasets with status = 'Published' to be included in the result.
 """
 
@@ -1444,7 +1444,7 @@ def get_prov_info(neo4j_driver, param_dict, published_only):
     if 'dataset_status' in param_dict:
         dataset_status_query_string = f" AND toUpper(ds.status) = '{param_dict['dataset_status'].upper()}'"
     if published_only:
-        published_only_query_string = f" AND toUpper(ds.status) = 'PUBLISHED'"
+        published_only_query_string = " AND toUpper(ds.status) = 'PUBLISHED'"
     query = (f"MATCH (ds:Dataset)-[:WAS_GENERATED_BY]->(a)-[:USED]->(firstSample:Sample)-[*]->(source:Source)"
              f"WHERE not (ds)<-[:REVISION_OF]-(:Dataset)"
              f" AND NOT toLower(a.creation_action) ENDS WITH 'process'"

@@ -326,7 +326,7 @@ Delete the cached data from Memcached for a given entity, Data Admin access is r
 Parameters
 ----------
 id : str
-    The HuBMAP ID (e.g. HBM123.ABCD.456) or UUID of target entity (Donor/Dataset/Sample/Upload/Collection/Publication)
+    The SenNet ID (e.g. SNT123.ABCD.456) or UUID of target entity (Source/Dataset/Sample/Upload/Collection/Publication)
 
 Returns
 -------
@@ -565,7 +565,7 @@ def get_entity_by_id(id):
         if isinstance(user_token, Response):
             abort_forbidden(f"{normalized_entity_type} for {id} is not accessible without presenting a token.")
         else:
-            # When the groups token is valid, but the user doesn't belong to HuBMAP-READ group
+            # When the groups token is valid, but the user doesn't belong to SenNet-READ group
             # Or the token is valid but doesn't contain group information (auth token or transfer token)
             user_authorized = user_in_globus_read_group(request)
 
@@ -1220,7 +1220,7 @@ a Collection can be in a public index while encapsulating the logic to determine
 Parameters
 ----------
 id : str
-    The HuBMAP ID (e.g. HBM123.ABCD.456) or UUID of target collection
+    The SenNet ID (e.g. SNT123.ABCD.456) or UUID of target collection
 Returns
 -------
 json
@@ -1880,14 +1880,14 @@ def get_siblings(id):
     if schema_manager.entity_type_instanceof(normalized_entity_type, 'Dataset'):
         # Only published/public datasets don't require token
         if entity_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
-            # Token is required and the user must belong to HuBMAP-READ group
+            # Token is required and the user must belong to SenNet-READ group
             token = get_user_token(request, non_public_access_required=True)
     elif normalized_entity_type == 'Sample':
         # The `data_access_level` of Sample can only be either 'public' or 'consortium'
         if entity_dict['data_access_level'] == ACCESS_LEVEL_CONSORTIUM:
             token = get_user_token(request, non_public_access_required=True)
     else:
-        # Donor and Upload will always get back an empty list
+        # Source and Upload will always get back an empty list
         # becuase their direct ancestor is Lab, which is being skipped by Neo4j query
         # So no need to execute the code below
         return jsonify(final_result)
@@ -1996,14 +1996,14 @@ def get_tuplets(id):
     if schema_manager.entity_type_instanceof(normalized_entity_type, 'Dataset'):
         # Only published/public datasets don't require token
         if entity_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
-            # Token is required and the user must belong to HuBMAP-READ group
+            # Token is required and the user must belong to SenNet-READ group
             token = get_user_token(request, non_public_access_required=True)
     elif normalized_entity_type == 'Sample':
         # The `data_access_level` of Sample can only be either 'public' or 'consortium'
         if entity_dict['data_access_level'] == ACCESS_LEVEL_CONSORTIUM:
             token = get_user_token(request, non_public_access_required=True)
     else:
-        # Donor and Upload will always get back an empty list
+        # Source and Upload will always get back an empty list
         # becuase their direct ancestor is Lab, which is being skipped by Neo4j query
         # So no need to execute the code below
         return jsonify(final_result)
@@ -2982,7 +2982,7 @@ Get the complete provenance info for all datasets
 
 Authentication
 -------
-No token is required, however if a token is given it must be valid or an error will be raised. If no token with HuBMAP
+No token is required, however if a token is given it must be valid or an error will be raised. If no token with SenNet
 Read Group access is given, only datasets designated as "published" will be returned
 
 Query Parameters
@@ -3106,8 +3106,8 @@ def get_prov_info():
             if dataset_status.lower() not in ['new', 'qa', 'published']:
                 abort_bad_req("Invalid Dataset Status. Must be 'new', 'qa', or 'published' Case-Insensitive")
             if published_only and dataset_status.lower() != 'published':
-                abort_bad_req("Invalid Dataset Status. No auth token given or token is not a member of HuBMAP-Read "
-                              "Group. If no token with HuBMAP-Read Group access is given, only datasets marked "
+                abort_bad_req("Invalid Dataset Status. No auth token given or token is not a member of SenNet-Read "
+                              "Group. If no token with SenNet-Read Group access is given, only datasets marked "
                               "'Published' are available. Try again with a proper token, or change/remove "
                               "dataset_status")
             if not published_only:
@@ -3274,7 +3274,7 @@ Get the complete provenance info for a given dataset
 
 Authentication
 -------
-No token is required, however if a token is given it must be valid or an error will be raised. If no token with HuBMAP
+No token is required, however if a token is given it must be valid or an error will be raised. If no token with SenNet
 Read Group access is given, only datasets designated as "published" will be returned
 
 Query Parameters
@@ -3286,7 +3286,7 @@ format : string
 Path Parameters
 -------
 id : string
-    A HuBMAP_ID or UUID for a dataset. If an invalid dataset id is given, an error will be raised
+    A SenNet_ID or UUID for a dataset. If an invalid dataset id is given, an error will be raised
 
 Returns
 -------
@@ -3315,7 +3315,7 @@ def get_prov_info_for_dataset(id):
 
     # published/public datasets don't require token
     if entity_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
-        # Token is required and the user must belong to HuBMAP-READ group
+        # Token is required and the user must belong to SenNet-READ group
         token = get_user_token(request, non_public_access_required=True)
 
     return_json = False
@@ -3590,7 +3590,7 @@ Get the complete provenance info for all samples
 
 Authentication
 -------
-Token that is part of the HuBMAP Read-Group is required.
+Token that is part of the SenNet Read-Group is required.
 
 Query Parameters
 -------
@@ -4347,7 +4347,7 @@ Parameters
 request : flask.Request object
     The incoming request
 normalized_entity_type : str
-    One of the normalized entity types: Dataset, Collection, Sample, Donor
+    One of the normalized entity types: Dataset, Collection, Sample, Source
 user_token: str
     The user's globus groups token
 json_data_dict_list: list
@@ -4433,7 +4433,7 @@ def create_multiple_component_details(request, normalized_entity_type, user_toke
         # Filter out the merged_dict by getting rid of the transitent properties (not to be stored)
         # and properties with None value
         # Meaning the returned target property key is different from the original key
-        # in the trigger method, e.g., Donor.image_files_to_add
+        # in the trigger method, e.g., Source.image_files_to_add
         filtered_merged_dict = schema_manager.remove_transient_and_none_values('ENTITIES', merged_dict, normalized_entity_type)
         dataset_dict = {**filtered_merged_dict, **new_ids_dict_list[i]}
         dataset_dict['dataset_link_abs_dir'] = dataset_link_abs_dir
@@ -5085,7 +5085,7 @@ Delete the cached data of all possible keys used for the given entity id
 Parameters
 ----------
 id : str
-    The HuBMAP ID (e.g. HBM123.ABCD.456) or UUID of target entity (Donor/Dataset/Sample/Upload/Collection/Publication)
+    The SenNet ID (e.g. SNT123.ABCD.456) or UUID of target entity (Source/Dataset/Sample/Upload/Collection/Publication)
 """
 def delete_cache(id):
     if MEMCACHED_MODE:
