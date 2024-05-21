@@ -3,7 +3,7 @@ import collections
 from datetime import datetime
 from typing import List
 
-from flask import Flask, g
+from flask import Flask, Response, abort, g, jsonify, make_response, request
 from neo4j.exceptions import TransactionError
 import os
 import re
@@ -42,8 +42,11 @@ from hubmap_commons.exceptions import HTTPException
 
 # Atlas Consortia commons
 from atlas_consortia_commons.ubkg import initialize_ubkg
-from atlas_consortia_commons.rest import *
-from atlas_consortia_commons.rest import abort_bad_req
+from atlas_consortia_commons.rest import (
+    StatusCodes, abort_bad_req, abort_err_handler, abort_forbidden,
+    abort_internal_err, abort_not_found, abort_unauthorized, abort_unacceptable,
+    full_response, get_http_exceptions_classes, rest_bad_req, rest_ok
+)
 from atlas_consortia_commons.string import equals
 from atlas_consortia_commons.ubkg.ubkg_sdk import init_ontology
 from atlas_consortia_commons.decorator import require_data_admin, require_valid_token
@@ -84,7 +87,7 @@ else:
     MEMCACHED_PREFIX = 'NONE'
 
 # Suppress InsecureRequestWarning warning when requesting status on https with ssl cert verify disabled
-requests.packages.urllib3.disable_warnings(category = InsecureRequestWarning)
+requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
 
 ####################################################################################################
 ## UBKG Ontology and REST initialization
@@ -112,7 +115,7 @@ except Exception:
 
 # Initialize AuthHelper class and ensure singleton
 try:
-    if AuthHelper.isInitialized() == False:
+    if AuthHelper.isInitialized() is False:
         auth_helper_instance = AuthHelper.create(app.config['APP_CLIENT_ID'], app.config['APP_CLIENT_SECRET'])
 
         logger.info("Initialized AuthHelper class successfully :)")
@@ -159,12 +162,12 @@ if MEMCACHED_MODE:
         # Set the no_delay flag to sent TCP_NODELAY (disable Nagle's algorithm to improve TCP/IP networks and decrease the number of packets)
         # If you intend to use anything but str as a value, it is a good idea to use a serializer
         memcached_client_instance = PooledClient(app.config['MEMCACHED_SERVER'],
-                                                 max_pool_size = 256,
-                                                 connect_timeout = 1,
-                                                 timeout = 30,
-                                                 ignore_exc = True,
-                                                 no_delay = True,
-                                                 serde = serde.pickle_serde)
+                                                 max_pool_size=256,
+                                                 connect_timeout=1,
+                                                 timeout=30,
+                                                 ignore_exc=True,
+                                                 no_delay=True,
+                                                 serde=serde.pickle_serde)
 
         # memcached_client_instance can be instantiated without connecting to the Memcached server
         # A version() call will throw error (e.g., timeout) when failed to connect to server
@@ -177,6 +180,8 @@ if MEMCACHED_MODE:
 
         # Turn off the caching
         MEMCACHED_MODE = False
+
+
 """
 Close the current neo4j connection at the end of every request
 """
@@ -187,7 +192,6 @@ def close_neo4j_driver(error):
         neo4j_driver.close()
         # Also remove neo4j_driver_instance from Flask's application context
         g.neo4j_driver_instance = None
-
 
 
 ####################################################################################################
@@ -221,9 +225,9 @@ except Exception as e:
 ## REFERENCE DOI Redirection
 ####################################################################################################
 
-## Read tsv file with the REFERENCE entity redirects
-## sets the reference_redirects dict which is used
-## by the /redirect method below
+# Read tsv file with the REFERENCE entity redirects
+# sets the reference_redirects dict which is used
+# by the /redirect method below
 # try:
 #     # TODO: Need to get updated redirection info for sennet
 #     reference_redirects = {}
@@ -275,6 +279,7 @@ COMMA_SEPARATOR = ','
 ## API Endpoints
 ####################################################################################################
 
+
 """
 The default route
 
@@ -283,7 +288,7 @@ Returns
 str
     A welcome message
 """
-@app.route('/', methods = ['GET'])
+@app.route('/', methods=['GET'])
 def index():
     return "Hello! This is SenNet Entity API service :)"
 
@@ -294,6 +299,7 @@ Delete ALL the following cached data from Memcached, Data Admin access is requir
     - cached IDs dict from uuid-api
     - cached yaml content from github raw URLs
     - cached TSV file content for reference DOIs redirect
+
 
 Returns
 -------
@@ -340,6 +346,7 @@ def flush_cache(id):
 
     return msg
 
+
 """
 Show status of neo4j connection with the current VERSION and BUILD
 
@@ -348,7 +355,7 @@ Returns
 json
     A json containing the status details
 """
-@app.route('/status', methods = ['GET'])
+@app.route('/status', methods=['GET'])
 def get_status():
 
     try:
@@ -378,7 +385,7 @@ def get_status():
 
 
 """
-Currently for debugging purpose 
+Currently for debugging purpose
 Essentially does the same as ingest-api's `/metadata/usergroups` using the deprecated commons method
 Globus groups token is required by AWS API Gateway lambda authorizer
 
@@ -414,7 +421,7 @@ json
     - If requesting the ancestor organ of a Sample of type Organ or Source/Collection/Upload
       a 400 response is returned.
 """
-@app.route('/entities/<id>/ancestor-organs', methods = ['GET'])
+@app.route('/entities/<id>/ancestor-organs', methods=['GET'])
 def get_ancestor_organs(id):
     # Token is not required, but if an invalid token provided,
     # we need to tell the client with a 401 error
@@ -441,11 +448,11 @@ def get_ancestor_organs(id):
         # Only published/public datasets don't require token
         if entity_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
             # Token is required and the user must belong to SenNet-READ group
-            token = get_user_token(request, non_public_access_required = True)
+            token = get_user_token(request, non_public_access_required=True)
     else:
         # The `data_access_level` of Sample can only be either 'public' or 'consortium'
         if entity_dict['data_access_level'] == ACCESS_LEVEL_CONSORTIUM:
-            token = get_user_token(request, non_public_access_required = True)
+            token = get_user_token(request, non_public_access_required=True)
 
     # By now, either the entity is public accessible or the user token has the correct access level
     organs = app_neo4j_queries.get_ancestor_organs(neo4j_driver_instance, entity_dict['uuid'])
@@ -459,43 +466,50 @@ def get_ancestor_organs(id):
 
     return jsonify(final_result)
 
+
 def _get_entity_visibility(normalized_entity_type, entity_dict):
     if normalized_entity_type not in schema_manager.get_all_entity_types():
-        logger.log( logging.ERROR
-                    ,f"normalized_entity_type={normalized_entity_type}"
-                     f" not recognized by schema_manager.get_all_entity_types().")
+        logger.log(logging.ERROR,
+                   f"normalized_entity_type={normalized_entity_type} "
+                   "not recognized by schema_manager.get_all_entity_types().")
         abort_bad_req(f"'{normalized_entity_type}' is not a recognized entity type.")
 
     # Use the characteristics of the entity's data to classify the entity's visibility, so
     # it can be used along with the user's authorization to determine access.
-    entity_visibility=DataVisibilityEnum.NONPUBLIC
-    if normalized_entity_type == 'Dataset' and \
-       entity_dict['status'].lower() == DATASET_STATUS_PUBLISHED:
-        entity_visibility=DataVisibilityEnum.PUBLIC
-    elif normalized_entity_type == 'Collection' and \
-        'registered_doi' in entity_dict and \
-        'doi_url' in entity_dict and \
-        'contacts' in entity_dict and \
-        'creators' in entity_dict and \
-        len(entity_dict['contacts']) > 0 and \
-        len(entity_dict['creators']) > 0:
-            # Get the data_access_level for each Dataset in the Collection from Neo4j
-            collection_dataset_statuses = schema_neo4j_queries.get_collection_datasets_statuses(neo4j_driver_instance
-                                                                                                ,entity_dict['uuid'])
+    entity_visibility = DataVisibilityEnum.NONPUBLIC
 
-            # If the list of distinct statuses for Datasets in the Collection only has one entry, and
-            # it is 'published', the Collection is public
-            if len(collection_dataset_statuses) == 1 and \
+    if normalized_entity_type == 'Dataset' and \
+            entity_dict['status'].lower() == DATASET_STATUS_PUBLISHED:
+        entity_visibility = DataVisibilityEnum.PUBLIC
+
+    elif normalized_entity_type == 'Collection' and \
+            'registered_doi' in entity_dict and \
+            'doi_url' in entity_dict and \
+            'contacts' in entity_dict and \
+            'creators' in entity_dict and \
+            len(entity_dict['contacts']) > 0 and \
+            len(entity_dict['creators']) > 0:
+
+        # Get the data_access_level for each Dataset in the Collection from Neo4j
+        collection_dataset_statuses = schema_neo4j_queries.get_collection_datasets_statuses(neo4j_driver_instance,
+                                                                                            entity_dict['uuid'])
+        # If the list of distinct statuses for Datasets in the Collection only has one entry, and
+        # it is 'published', the Collection is public
+        if len(collection_dataset_statuses) == 1 and \
                 collection_dataset_statuses[0].lower() == SchemaConstants.DATASET_STATUS_PUBLISHED:
-                entity_visibility=DataVisibilityEnum.PUBLIC
+            entity_visibility = DataVisibilityEnum.PUBLIC
+
     elif normalized_entity_type == 'Upload':
         # Upload entities require authorization to access, so keep the
         # entity_visibility as non-public, as initialized outside block.
         pass
-    elif normalized_entity_type in ['Source','Sample'] and \
-         entity_dict['data_access_level'] == ACCESS_LEVEL_PUBLIC:
+
+    elif normalized_entity_type in ['Source', 'Sample'] and \
+            entity_dict['data_access_level'] == ACCESS_LEVEL_PUBLIC:
         entity_visibility = DataVisibilityEnum.PUBLIC
+
     return entity_visibility
+
 
 """
 Retrieve the metadata information of a given entity by id
@@ -508,14 +522,14 @@ For example: /entities/<id>?property=data_access_level
 Parameters
 ----------
 id : str
-    The SenNet ID (e.g. SNT123.ABCD.456) or UUID of target entity 
+    The SenNet ID (e.g. SNT123.ABCD.456) or UUID of target entity
 
 Returns
 -------
 json
     All the properties or filtered property of the target entity
 """
-@app.route('/entities/<id>', methods = ['GET'])
+@app.route('/entities/<id>', methods=['GET'])
 def get_entity_by_id(id):
     # Token is not required, but if an invalid token provided,
     # we need to tell the client with a 401 error
@@ -534,8 +548,8 @@ def get_entity_by_id(id):
     complete_dict = schema_manager.get_complete_entity_result(token, entity_dict)
 
     # Determine if the entity is publicly visible base on its data, only.
-    entity_scope = _get_entity_visibility(  normalized_entity_type=normalized_entity_type
-                                            ,entity_dict=complete_dict)
+    entity_scope = _get_entity_visibility(normalized_entity_type=normalized_entity_type,
+                                          entity_dict=complete_dict)
 
     # Initialize the user as authorized if the data is public.  Otherwise, the
     # user is not authorized and credentials must be checked.
@@ -563,9 +577,9 @@ def get_entity_by_id(id):
                         f"  A Globus token with access permission is required.")
 
     # Also normalize the result based on schema
-    final_result = schema_manager.normalize_object_result_for_response( provenance_type='ENTITIES'
-                                                                        ,entity_dict=complete_dict
-                                                                        ,properties_to_include=['protocol_url'])
+    final_result = schema_manager.normalize_object_result_for_response(provenance_type='ENTITIES',
+                                                                       entity_dict=complete_dict,
+                                                                       properties_to_include=['protocol_url'])
 
     # Result filtering based on query string
     # The `data_access_level` property is available in all entities Source/Sample/Dataset
@@ -583,7 +597,7 @@ def get_entity_by_id(id):
 
             if property_key == 'status' and \
                     not schema_manager.entity_type_instanceof(normalized_entity_type, 'Dataset'):
-                abort_bad_req(f"Only Dataset supports 'status' property key in the query string")
+                abort_bad_req("Only Dataset supports 'status' property key in the query string")
 
             # Response with the property value directly
             # Don't use jsonify() on string value
@@ -593,6 +607,7 @@ def get_entity_by_id(id):
     else:
         # Response with the dict
         return jsonify(final_result)
+
 
 """
 Retrieve handful of information to be display in the Data Sharing Portal job dashboard.
@@ -610,7 +625,7 @@ Returns
 json
     Select properties of the requested entities
 """
-@app.route('/entities/dashboard/<entity_type>', methods = ['PUT'])
+@app.route('/entities/dashboard/<entity_type>', methods=['PUT'])
 def get_entities_by_ids_for_dashboard(entity_type):
     # Get user token from Authorization header
     token = get_user_token(request, non_public_access_required=True)
@@ -655,16 +670,14 @@ The gateway treats this endpoint as public accessible
 Parameters
 ----------
 id : str
-    The SenNet ID (e.g. SNT123.ABCD.456) or UUID of target entity 
+    The SenNet ID (e.g. SNT123.ABCD.456) or UUID of target entity
 
 Returns
 -------
 json
     All the provenance details associated with this entity
 """
-
-
-@app.route('/entities/<id>/provenance', methods = ['GET'])
+@app.route('/entities/<id>/provenance', methods=['GET'])
 def get_entity_provenance(id):
     # Token is not required, but if an invalid token provided,
     # we need to tell the client with a 401 error
@@ -683,17 +696,18 @@ def get_entity_provenance(id):
     supported_entity_types = ['Source', 'Sample']
     if normalized_entity_type not in supported_entity_types and \
             not schema_manager.entity_type_instanceof(normalized_entity_type, 'Dataset'):
-        abort_bad_req(f"Unable to get the provenance for this {normalized_entity_type}, supported entity types: {COMMA_SEPARATOR.join(supported_entity_types)}, Dataset, Publication")
+        abort_bad_req(f"Unable to get the provenance for this {normalized_entity_type}, "
+                      f"supported entity types: {COMMA_SEPARATOR.join(supported_entity_types)}, Dataset, Publication")
 
     if schema_manager.entity_type_instanceof(normalized_entity_type, 'Dataset'):
         # Only published/public datasets don't require token
         if entity_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
             # Token is required and the user must belong to SenNet-READ group
-            token = get_user_token(request, non_public_access_required = True)
+            token = get_user_token(request, non_public_access_required=True)
     else:
         # The `data_access_level` of Source/Sample can only be either 'public' or 'consortium'
         if entity_dict['data_access_level'] == ACCESS_LEVEL_CONSORTIUM:
-            token = get_user_token(request, non_public_access_required = True)
+            token = get_user_token(request, non_public_access_required=True)
 
     # By now, either the entity is public accessible or the user token has the correct access level
     # Will just proceed to get the provenance information
@@ -740,7 +754,7 @@ def get_entity_provenance(id):
         provenance_json = json.dumps(provenance_json)
 
     # Response with the provenance details
-    return Response(response = provenance_json, mimetype = "application/json")
+    return Response(response=provenance_json, mimetype="application/json")
 
 
 def build_nodes(raw_provenance_dict, normalized_provenance_dict, token):
@@ -790,13 +804,14 @@ Returns
 json
     A list of all the available entity types defined in the schema yaml
 """
-@app.route('/entity-types', methods = ['GET'])
+@app.route('/entity-types', methods=['GET'])
 def get_entity_types():
     # Token is not required, but if an invalid token provided,
     # we need to tell the client with a 401 error
     validate_token_if_auth_header_exists(request)
 
     return jsonify(schema_manager.get_all_entity_types())
+
 
 """
 Retrive all the entity nodes for a given entity type
@@ -816,7 +831,7 @@ Returns
 json
     All the entity nodes in a list of the target entity type
 """
-@app.route('/<entity_type>/entities', methods = ['GET'])
+@app.route('/<entity_type>/entities', methods=['GET'])
 def get_entities_by_type(entity_type):
     final_result = []
 
@@ -826,7 +841,7 @@ def get_entities_by_type(entity_type):
     # Validate the normalized_entity_type to ensure it's one of the accepted types
     try:
         schema_manager.validate_normalized_entity_type(normalized_entity_type)
-    except schema_errors.InvalidNormalizedEntityTypeException as e:
+    except schema_errors.InvalidNormalizedEntityTypeException:
         abort_bad_req("Invalid entity type provided: " + entity_type)
 
     # Result filtering based on query string
@@ -878,11 +893,12 @@ def get_entities_by_type(entity_type):
         complete_entities_list = schema_manager.get_complete_entities_list(token, entities_list, properties_to_skip)
 
         # Final result after normalization
-        final_result = schema_manager.normalize_entities_list_for_response( complete_entities_list
-                                                                            ,properties_to_include=['protocol_url'])
+        final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list,
+                                                                           properties_to_include=['protocol_url'])
 
     # Response with the final result
     return jsonify(final_result)
+
 
 """
 Create an entity of the target type in neo4j
@@ -901,7 +917,7 @@ Returns
 json
     All the properties of the newly created entity
 """
-@app.route('/entities/<entity_type>', methods = ['POST'])
+@app.route('/entities/<entity_type>', methods=['POST'])
 def create_entity(entity_type):
     # Get user token from Authorization header
     user_token = get_user_token(request)
@@ -918,7 +934,7 @@ def create_entity(entity_type):
     # Validate the normalized_entity_type to make sure it's one of the accepted types
     try:
         schema_manager.validate_normalized_entity_type(normalized_entity_type)
-    except schema_errors.InvalidNormalizedEntityTypeException as e:
+    except schema_errors.InvalidNormalizedEntityTypeException:
         abort_bad_req(f"Invalid entity type provided: {entity_type}")
 
     # Execute entity level validator defined in schema yaml before entity creation
@@ -987,7 +1003,7 @@ def create_entity(entity_type):
 
             # Make sure the previous version entity is either a Dataset or Sample
             if previous_version_dict['entity_type'] not in ['Dataset', 'Sample']:
-                abort_bad_req(f"The previous_revision_uuid specified for this dataset must be either a Dataset or Sample")
+                abort_bad_req("The previous_revision_uuid specified for this dataset must be either a Dataset or Sample")
 
             # Also need to validate if the given 'previous_revision_uuid' has already had
             # an exisiting next revision
@@ -996,13 +1012,12 @@ def create_entity(entity_type):
 
             # As long as the list is not empty, tell the users to use a different 'previous_revision_uuid'
             if next_revisions_list:
-                abort_bad_req(f"The previous_revision_uuid specified for this dataset has already had a next revision")
+                abort_bad_req("The previous_revision_uuid specified for this dataset has already had a next revision")
 
             # Only published datasets can have revisions made of them. Verify that that status of the Dataset specified
             # by previous_revision_uuid is published. Else, bad request error.
             if 'status' not in previous_version_dict or previous_version_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
-                abort_bad_req(f"The previous_revision_uuid specified for this dataset must be 'Published' in order to create a new revision from it")
-
+                abort_bad_req("The previous_revision_uuid specified for this dataset must be 'Published' in order to create a new revision from it")
 
         # Also check existence of the previous revision dataset if specified
         if 'previous_revision_uuid' in json_data_dict:
@@ -1068,12 +1083,13 @@ def create_entity(entity_type):
     normalized_complete_dict = schema_manager.normalize_object_result_for_response('ENTITIES', complete_dict)
 
     # Also index the new entity node in elasticsearch via search-api
-    logger.log(logging.INFO
-               ,f"Re-indexing for creation of {complete_dict['entity_type']}"
-                f" with UUID {complete_dict['uuid']}")
+    logger.log(logging.INFO,
+               f"Re-indexing for creation of {complete_dict['entity_type']}"
+               f" with UUID {complete_dict['uuid']}")
     reindex_entity(complete_dict['uuid'], user_token)
 
     return jsonify(normalized_complete_dict)
+
 
 """
 Create multiple samples from the same source entity
@@ -1088,7 +1104,7 @@ Returns
 json
     All the properties of the newly created entity
 """
-@app.route('/entities/multiple-samples/<count>', methods = ['POST'])
+@app.route('/entities/multiple-samples/<count>', methods=['POST'])
 def create_multiple_samples(count):
     # Get user token from Authorization header
     user_token = get_user_token(request)
@@ -1113,7 +1129,6 @@ def create_multiple_samples(count):
     # Check existence of the direct ancestor (either another Sample or Source) and get the first 'direct_ancestor_uuid'
     direct_ancestor_uuid_dict = query_target_entity(json_data_dict['direct_ancestor_uuid'][0], user_token)
 
-
     # Generate 'before_create_triiger' data and create the entity details in Neo4j
     generated_ids_dict_list = create_multiple_samples_details(request, normalized_entity_type, user_token, json_data_dict, count)
 
@@ -1130,15 +1145,13 @@ Update the properties of a given activity, primarily the protocol_url and proces
 Parameters
 ----------
 id : str
-    The SenNet ID (e.g. SNT123.ABCD.456) or UUID of target activity 
+    The SenNet ID (e.g. SNT123.ABCD.456) or UUID of target activity
 
 Returns
 -------
 json
     All the updated properties of the target activity
 """
-
-
 @app.route('/activity/<id>', methods=['PUT'])
 def update_activity(id):
     # Get user token from Authorization header
@@ -1155,7 +1168,6 @@ def update_activity(id):
 
     normalized_dict = schema_manager.normalize_object_result_for_response('ACTIVITIES', json_data_dict)
 
-
     # Validate request json against the yaml schema
     # Pass in the entity_dict for missing required key check, this is different from creating new entity
     try:
@@ -1167,7 +1179,7 @@ def update_activity(id):
 
     # Execute property level validators defined in schema yaml before entity property update
     try:
-        schema_manager.execute_property_level_validators('ACTIVITIES','before_property_update_validators', "Activity",
+        schema_manager.execute_property_level_validators('ACTIVITIES', 'before_property_update_validators', "Activity",
                                                          request, activity_dict, normalized_dict)
     except (schema_errors.MissingApplicationHeaderException,
             schema_errors.InvalidApplicationHeaderException,
@@ -1196,9 +1208,10 @@ def update_activity(id):
 def get_entities_type_instanceof(type_a, type_b):
     try:
         instanceof: bool = schema_manager.entity_type_instanceof(type_a, type_b)
-    except:
+    except Exception:
         abort_bad_req('Unable to process request')
     return make_response(jsonify({'instanceof': instanceof}), 200)
+
 
 """
 Endpoint which sends the "visibility" of an entity using values from DataVisibilityEnum.
@@ -1207,13 +1220,13 @@ a Collection can be in a public index while encapsulating the logic to determine
 Parameters
 ----------
 id : str
-    The HuBMAP ID (e.g. HBM123.ABCD.456) or UUID of target collection 
+    The HuBMAP ID (e.g. HBM123.ABCD.456) or UUID of target collection
 Returns
 -------
 json
     A value from DataVisibilityEnum
 """
-@app.route('/visibility/<id>', methods = ['GET'])
+@app.route('/visibility/<id>', methods=['GET'])
 def get_entity_visibility(id):
     # Token is not required, but if an invalid token provided,
     # we need to tell the client with a 401 error
@@ -1239,6 +1252,7 @@ def get_entity_visibility(id):
 
     return jsonify(entity_scope.value)
 
+
 """
 Update the properties of a given entity
 
@@ -1251,14 +1265,14 @@ Parameters
 entity_type : str
     One of the normalized entity types: Dataset, Collection, Sample, Source
 id : str
-    The SenNet ID (e.g. SNT123.ABCD.456) or UUID of target entity 
+    The SenNet ID (e.g. SNT123.ABCD.456) or UUID of target entity
 
 Returns
 -------
 json
     All the updated properties of the target entity
 """
-@app.route('/entities/<id>', methods = ['PUT'])
+@app.route('/entities/<id>', methods=['PUT'])
 def update_entity(id):
     # Get user token from Authorization header
     user_token = get_user_token(request)
@@ -1455,12 +1469,13 @@ def update_entity(id):
 
     # How to handle reindex collection?
     # Also reindex the updated entity node in elasticsearch via search-api
-    logger.log(logging.INFO
-               ,"Re-indexing for modification of {entity_dict['entity_type']}"
-                f" with UUID {entity_dict['uuid']}")
+    logger.log(logging.INFO,
+               "Re-indexing for modification of {entity_dict['entity_type']}"
+               f" with UUID {entity_dict['uuid']}")
     reindex_entity(entity_dict['uuid'], user_token)
 
     return jsonify(normalized_complete_dict)
+
 
 """
 Get all ancestors of the given entity
@@ -1473,14 +1488,14 @@ For example: /ancestors/<id>?property=uuid
 Parameters
 ----------
 id : str
-    The SenNet ID (e.g. SNT123.ABCD.456) or UUID of given entity 
+    The SenNet ID (e.g. SNT123.ABCD.456) or UUID of given entity
 
 Returns
 -------
 json
     A list of all the ancestors of the target entity
 """
-@app.route('/ancestors/<id>', methods = ['GET'])
+@app.route('/ancestors/<id>', methods=['GET'])
 def get_ancestors(id):
     final_result = []
 
@@ -1506,11 +1521,11 @@ def get_ancestors(id):
         # Only published/public datasets don't require token
         if entity_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
             # Token is required and the user must belong to SenNet-READ group
-            token = get_user_token(request, non_public_access_required = True)
+            token = get_user_token(request, non_public_access_required=True)
     elif normalized_entity_type == 'Sample':
         # The `data_access_level` of Sample can only be either 'public' or 'consortium'
         if entity_dict['data_access_level'] == ACCESS_LEVEL_CONSORTIUM:
-            token = get_user_token(request, non_public_access_required = True)
+            token = get_user_token(request, non_public_access_required=True)
     else:
         # Source and Upload will always get back an empty list
         # becuase their direct ancestor is Lab, which is being skipped by Neo4j query
@@ -1581,7 +1596,7 @@ Returns
 json
     A list of all the descendants of the target entity
 """
-@app.route('/descendants/<id>', methods = ['GET'])
+@app.route('/descendants/<id>', methods=['GET'])
 def get_descendants(id):
     final_result = []
 
@@ -1641,6 +1656,7 @@ def get_descendants(id):
 
     return jsonify(final_result)
 
+
 """
 Get all parents of the given entity
 
@@ -1659,7 +1675,7 @@ Returns
 json
     A list of all the parents of the target entity
 """
-@app.route('/parents/<id>', methods = ['GET'])
+@app.route('/parents/<id>', methods=['GET'])
 def get_parents(id):
     final_result = []
 
@@ -1685,11 +1701,11 @@ def get_parents(id):
         # Only published/public datasets don't require token
         if entity_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
             # Token is required and the user must belong to SenNet-READ group
-            token = get_user_token(request, non_public_access_required = True)
+            token = get_user_token(request, non_public_access_required=True)
     elif normalized_entity_type == 'Sample':
         # The `data_access_level` of Sample can only be either 'public' or 'consortium'
         if entity_dict['data_access_level'] == ACCESS_LEVEL_CONSORTIUM:
-            token = get_user_token(request, non_public_access_required = True)
+            token = get_user_token(request, non_public_access_required=True)
     else:
         # Source and Upload will always get back an empty list
         # becuase their direct ancestor is Lab, which is being skipped by Neo4j query
@@ -1744,6 +1760,7 @@ def get_parents(id):
 
     return jsonify(final_result)
 
+
 """
 Get all chilren of the given entity
 Result filtering based on query string
@@ -1759,7 +1776,7 @@ Returns
 json
     A list of all the children of the target entity
 """
-@app.route('/children/<id>', methods = ['GET'])
+@app.route('/children/<id>', methods=['GET'])
 def get_children(id):
     final_result = []
 
@@ -1838,7 +1855,7 @@ Returns
 json
     A list of all the siblings of the target entity
 """
-@app.route('/entities/<id>/siblings', methods = ['GET'])
+@app.route('/entities/<id>/siblings', methods=['GET'])
 def get_siblings(id):
     final_result = []
 
@@ -1954,7 +1971,7 @@ Returns
 json
     A list of all the tuplets of the target entity
 """
-@app.route('/entities/<id>/tuplets', methods = ['GET'])
+@app.route('/entities/<id>/tuplets', methods=['GET'])
 def get_tuplets(id):
     final_result = []
 
@@ -2057,7 +2074,7 @@ Returns
 json
     A list of entities that are the previous revisions of the target entity
 """
-@app.route('/previous_revisions/<id>', methods = ['GET'])
+@app.route('/previous_revisions/<id>', methods=['GET'])
 def get_previous_revisions(id):
     # Get user token from Authorization header
     user_token = get_user_token(request)
@@ -2127,7 +2144,7 @@ Returns
 json
     A list of entities that are the next revisions of the target entity
 """
-@app.route('/next_revisions/<id>', methods = ['GET'])
+@app.route('/next_revisions/<id>', methods=['GET'])
 def get_next_revisions(id):
     # Get user token from Authorization header
     user_token = get_user_token(request)
@@ -2172,7 +2189,6 @@ def get_next_revisions(id):
             'direct_ancestors'
         ]
 
-
         final_results = []
         for multi_list in descendants_multi_list:
             complete_entities_list = schema_manager.get_complete_entities_list(user_token, multi_list, properties_to_skip)
@@ -2193,9 +2209,9 @@ id : str
     The SenNet ID (e.g. SNT123.ABCD.456) or UUID of the target entity
 """
 # To continue supporting the already published collection DOIs
-@app.route('/collection/redirect/<id>', methods = ['GET'])
+@app.route('/collection/redirect/<id>', methods=['GET'])
 # New route
-@app.route('/doi/redirect/<id>', methods = ['GET'])
+@app.route('/doi/redirect/<id>', methods=['GET'])
 def doi_redirect(id):
     # Use the internal token to query the target entity
     # since public entities don't require user token
@@ -2243,7 +2259,7 @@ Parameters
 snid : str
     The SenNet ID (e.g. SNT123.ABCD.456)
 """
-# @app.route('/redirect/<snid>', methods = ['GET'])
+# @app.route('/redirect/<snid>', methods=['GET'])
 # def redirect(snid):
 #     cid = snid.upper().strip()
 #     if cid in reference_redirects:
@@ -2262,9 +2278,9 @@ The gateway treats this endpoint as public accessible
 It will provide a Globus URL to the dataset/upload directory in of three Globus endpoints based on the access
 level of the user (public, consortium or protected), public only, of course, if no token is provided.
 If a dataset/upload isn't found a 404 will be returned. There is a chance that a 500 can be returned, but not
-likely under normal circumstances, only for a misconfigured or failing in some way endpoint. 
+likely under normal circumstances, only for a misconfigured or failing in some way endpoint.
 
-If the Auth token is provided but is expired or invalid a 401 is returned. If access to the dataset/upload 
+If the Auth token is provided but is expired or invalid a 401 is returned. If access to the dataset/upload
 is not allowed for the user (or lack of user) a 403 is returned.
 
 Parameters
@@ -2282,10 +2298,10 @@ Response
     500 Unexpected server or other error
 """
 # Thd old routes for backward compatibility - will be deprecated eventually
-@app.route('/entities/dataset/globus-url/<id>', methods = ['GET'])
-@app.route('/dataset/globus-url/<id>', methods = ['GET'])
+@app.route('/entities/dataset/globus-url/<id>', methods=['GET'])
+@app.route('/dataset/globus-url/<id>', methods=['GET'])
 # New route
-@app.route('/entities/<id>/globus-url', methods = ['GET'])
+@app.route('/entities/<id>/globus-url', methods=['GET'])
 def get_globus_url(id):
     # Token is not required, but if an invalid token provided,
     # we need to tell the client with a 401 error
@@ -2308,7 +2324,7 @@ def get_globus_url(id):
 
     # Upload doesn't have this 'data_access_level' property, we treat it as 'protected'
     # For Dataset, if no access level is present, default to protected too
-    if not 'data_access_level' in entity_dict or string_helper.isBlank(entity_dict['data_access_level']):
+    if 'data_access_level' not in entity_dict or string_helper.isBlank(entity_dict['data_access_level']):
         entity_data_access_level = ACCESS_LEVEL_PROTECTED
     else:
         entity_data_access_level = entity_dict['data_access_level']
@@ -2317,7 +2333,7 @@ def get_globus_url(id):
     globus_groups_info = auth_helper_instance.get_globus_groups_info()
     groups_by_id_dict = globus_groups_info['by_id']
 
-    if not 'group_uuid' in entity_dict or string_helper.isBlank(entity_dict['group_uuid']):
+    if 'group_uuid' not in entity_dict or string_helper.isBlank(entity_dict['group_uuid']):
         msg = f"The 'group_uuid' property is not set for {normalized_entity_type} with uuid: {uuid}"
         logger.exception(msg)
         abort_internal_err(msg)
@@ -2349,18 +2365,18 @@ def get_globus_url(id):
     if ('hmgroupids' in user_info) and (group_uuid in user_info['hmgroupids']):
         user_data_access_level = ACCESS_LEVEL_PROTECTED
     else:
-        if not 'data_access_level' in user_info:
+        if 'data_access_level' not in user_info:
             msg = f"Unexpected error, data access level could not be found for user trying to access {normalized_entity_type} id: {id}"
             logger.exception(msg)
             return abort_internal_err(msg)
 
         user_data_access_level = user_info['data_access_level'].lower()
 
-    #construct the Globus URL based on the highest level of access that the user has
-    #and the level of access allowed for the dataset
-    #the first "if" checks to see if the user is a member of the Consortium group
-    #that allows all access to this dataset, if so send them to the "protected"
-    #endpoint even if the user doesn't have full access to all protected data
+    # construct the Globus URL based on the highest level of access that the user has
+    # and the level of access allowed for the dataset
+    # the first "if" checks to see if the user is a member of the Consortium group
+    # that allows all access to this dataset, if so send them to the "protected"
+    # endpoint even if the user doesn't have full access to all protected data
     globus_server_uuid = None
     dir_path = ''
 
@@ -2369,7 +2385,7 @@ def get_globus_url(id):
     if entity_data_access_level == ACCESS_LEVEL_PUBLIC:
         globus_server_uuid = app.config['GLOBUS_PUBLIC_ENDPOINT_UUID']
         access_dir = access_level_prefix_dir(app.config['PUBLIC_DATA_SUBDIR'])
-        dir_path = dir_path +  access_dir + "/"
+        dir_path = dir_path + access_dir + "/"
     # consortium access
     elif (entity_data_access_level == ACCESS_LEVEL_CONSORTIUM) and (not user_data_access_level == ACCESS_LEVEL_PUBLIC):
         globus_server_uuid = app.config['GLOBUS_CONSORTIUM_ENDPOINT_UUID']
@@ -2387,7 +2403,7 @@ def get_globus_url(id):
     dir_path = dir_path + uuid + "/"
     dir_path = urllib.parse.quote(dir_path, safe='')
 
-    #https://app.globus.org/file-manager?origin_id=28bbb03c-a87d-4dd7-a661-7ea2fb6ea631&origin_path=%2FIEC%20Testing%20Group%2F03584b3d0f8b46de1b629f04be156879%2F
+    # https://app.globus.org/file-manager?origin_id=28bbb03c-a87d-4dd7-a661-7ea2fb6ea631&origin_path=%2FIEC%20Testing%20Group%2F03584b3d0f8b46de1b629f04be156879%2F
     url = hm_file_helper.ensureTrailingSlashURL(app.config['GLOBUS_APP_BASE_URL']) + "file-manager?origin_id=" + globus_server_uuid + "&origin_path=" + dir_path
 
     return Response(url, 200)
@@ -2396,13 +2412,13 @@ def get_globus_url(id):
 """
 Retrive the latest (newest) revision of a Dataset
 
-Public/Consortium access rules apply - if no token/consortium access then 
+Public/Consortium access rules apply - if no token/consortium access then
 must be for a public dataset and the returned Dataset must be the latest public version.
 
 Parameters
 ----------
 id : str
-    The SenNet ID (e.g. SNT123.ABCD.456) or UUID of target entity 
+    The SenNet ID (e.g. SNT123.ABCD.456) or UUID of target entity
 
 Returns
 -------
@@ -2410,7 +2426,7 @@ json
     The detail of the latest revision dataset if exists
     Otherwise an empty JSON object {}
 """
-@app.route('/datasets/<id>/latest-revision', methods = ['GET'])
+@app.route('/datasets/<id>/latest-revision', methods=['GET'])
 def get_dataset_latest_revision(id):
     # Token is not required, but if an invalid token provided,
     # we need to tell the client with a 401 error
@@ -2434,13 +2450,13 @@ def get_dataset_latest_revision(id):
     # Only published/public datasets don't require token
     if entity_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
         # Token is required and the user must belong to SenNet-READ group
-        token = get_user_token(request, non_public_access_required = True)
+        token = get_user_token(request, non_public_access_required=True)
 
         latest_revision_dict = app_neo4j_queries.get_dataset_latest_revision(neo4j_driver_instance, uuid)
     else:
         # Default to the latest "public" revision dataset
         # when no token or not a valid SenNet-Read token
-        latest_revision_dict = app_neo4j_queries.get_dataset_latest_revision(neo4j_driver_instance, uuid, public = True)
+        latest_revision_dict = app_neo4j_queries.get_dataset_latest_revision(neo4j_driver_instance, uuid, public=True)
 
         # Send back the real latest revision dataset if a valid SenNet-Read token presents
         if user_in_globus_read_group(request):
@@ -2469,25 +2485,25 @@ def get_dataset_latest_revision(id):
 """
 Retrive the calculated revision number of a Dataset
 
-The calculated revision is number is based on the [:REVISION_OF] relationships 
-to the oldest dataset in a revision chain. 
+The calculated revision is number is based on the [:REVISION_OF] relationships
+to the oldest dataset in a revision chain.
 Where the oldest dataset = 1 and each newer version is incremented by one (1, 2, 3 ...)
 
-Public/Consortium access rules apply, if is for a non-public dataset 
-and no token or a token without membership in SenNet-Read group is sent with the request 
+Public/Consortium access rules apply, if is for a non-public dataset
+and no token or a token without membership in SenNet-Read group is sent with the request
 then a 403 response should be returned.
 
 Parameters
 ----------
 id : str
-    The SenNet ID (e.g. SNT123.ABCD.456) or UUID of target entity 
+    The SenNet ID (e.g. SNT123.ABCD.456) or UUID of target entity
 
 Returns
 -------
 int
     The calculated revision number
 """
-@app.route('/datasets/<id>/revision', methods = ['GET'])
+@app.route('/datasets/<id>/revision', methods=['GET'])
 def get_dataset_revision_number(id):
     # Token is not required, but if an invalid token provided,
     # we need to tell the client with a 401 error
@@ -2508,7 +2524,7 @@ def get_dataset_revision_number(id):
     # Only published/public datasets don't require token
     if entity_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
         # Token is required and the user must belong to SenNet-READ group
-        token = get_user_token(request, non_public_access_required = True)
+        token = get_user_token(request, non_public_access_required=True)
 
     # By now, either the entity is public accessible or
     # the user token has the correct access level
@@ -2522,17 +2538,17 @@ def get_dataset_revision_number(id):
 Retract a published dataset with a retraction reason and sub status
 
 Takes as input a json body with required fields "retraction_reason" and "sub_status".
-Authorization handled by gateway. Only token of SenNet-Data-Admin group can use this call. 
+Authorization handled by gateway. Only token of SenNet-Data-Admin group can use this call.
 
 Technically, the same can be achieved by making a PUT call to the generic entity update endpoint
 with using a SenNet-Data-Admin group token. But doing this is strongly discouraged because we'll
-need to add more validators to ensure when "retraction_reason" is provided, there must be a 
+need to add more validators to ensure when "retraction_reason" is provided, there must be a
 "sub_status" filed and vise versa. So consider this call a special use case of entity update.
 
 Parameters
 ----------
 id : str
-    The SenNet ID (e.g. SNT123.ABCD.456) or UUID of target dataset 
+    The SenNet ID (e.g. SNT123.ABCD.456) or UUID of target dataset
 
 Returns
 -------
@@ -2581,7 +2597,7 @@ def retract_dataset(id):
     # Validate request json against the yaml schema
     # The given value of `sub_status` is being validated at this step
     try:
-        schema_manager.validate_json_data_against_schema('ENTITIES', json_data_dict, normalized_entity_type, existing_entity_dict = entity_dict)
+        schema_manager.validate_json_data_against_schema('ENTITIES', json_data_dict, normalized_entity_type, existing_entity_dict=entity_dict)
     except schema_errors.SchemaValidationException as e:
         # No need to log the validation errors
         abort_bad_req(str(e))
@@ -2608,23 +2624,24 @@ def retract_dataset(id):
 
     return jsonify(normalized_complete_dict)
 
+
 """
-Retrieve a list of all revisions of a dataset from the id of any dataset in the chain. 
+Retrieve a list of all revisions of a dataset from the id of any dataset in the chain.
 E.g: If there are 5 revisions, and the id for revision 4 is given, a list of revisions
-1-5 will be returned in reverse order (newest first). Non-public access is only required to 
+1-5 will be returned in reverse order (newest first). Non-public access is only required to
 retrieve information on non-published datasets. Output will be a list of dictionaries. Each dictionary
 contains the dataset revision number and its uuid. Optionally, the full dataset can be included for each.
 
-By default, only the revision number and uuid is included. To include the full dataset, the query 
-parameter "include_dataset" can be given with the value of "true". If this parameter is not included or 
+By default, only the revision number and uuid is included. To include the full dataset, the query
+parameter "include_dataset" can be given with the value of "true". If this parameter is not included or
 is set to false, the dataset will not be included. For example, to include the full datasets for each revision,
 use '/datasets/<id>/revisions?include_dataset=true'. To omit the datasets, either set include_dataset=false, or
-simply do not include this parameter. 
+simply do not include this parameter.
 
 Parameters
 ----------
 id : str
-    The SenNet ID (e.g. SNT123.ABCD.456) or UUID of target dataset 
+    The SenNet ID (e.g. SNT123.ABCD.456) or UUID of target dataset
 
 Returns
 -------
@@ -2705,22 +2722,22 @@ def get_revisions_list(id):
 
 
 """
-Retrieve a list of all multi revisions of a dataset from the id of any dataset in the chain. 
+Retrieve a list of all multi revisions of a dataset from the id of any dataset in the chain.
 E.g: If there are 5 revisions, and the id for revision 4 is given, a list of revisions
-1-5 will be returned in reverse order (newest first). Non-public access is only required to 
+1-5 will be returned in reverse order (newest first). Non-public access is only required to
 retrieve information on non-published datasets. Output will be a list of dictionaries. Each dictionary
 contains the dataset revision number and its list of uuids. Optionally, the full dataset can be included for each.
 
-By default, only the revision number and uuids are included. To include the full dataset, the query 
-parameter "include_dataset" can be given with the value of "true". If this parameter is not included or 
+By default, only the revision number and uuids are included. To include the full dataset, the query
+parameter "include_dataset" can be given with the value of "true". If this parameter is not included or
 is set to false, the dataset will not be included. For example, to include the full datasets for each revision,
 use '/datasets/<id>/multi-revisions?include_dataset=true'. To omit the datasets, either set include_dataset=false, or
-simply do not include this parameter. 
+simply do not include this parameter.
 
 Parameters
 ----------
 id : str
-    The SenNet ID (e.g. SNT123.ABCD.456) or UUID of target dataset 
+    The SenNet ID (e.g. SNT123.ABCD.456) or UUID of target dataset
 
 Returns
 -------
@@ -2971,21 +2988,21 @@ Read Group access is given, only datasets designated as "published" will be retu
 Query Parameters
 -------
     format : string
-        Designates the output format of the returned data. Accepted values are "json" and "tsv". If none provided, by 
+        Designates the output format of the returned data. Accepted values are "json" and "tsv". If none provided, by
         default will return a tsv.
     group_uuid : string
-        Filters returned datasets by a given group uuid. 
+        Filters returned datasets by a given group uuid.
     organ : string
         Filters returned datasets related to a samples of the given organ. Accepts 2 character organ codes. These codes
         must match the organ types yaml at https://raw.githubusercontent.com/sennetconsortium/search-api/master/src/search-schema/data/definitions/enums/organ_types.yaml
         or an error will be raised
     has_rui_info : string
-        Accepts strings "true" or "false. Any other value will result in an error. If true, only datasets connected to 
+        Accepts strings "true" or "false. Any other value will result in an error. If true, only datasets connected to
         an sample that contain rui info will be returned. If false, only datasets that are NOT connected to samples
-        containing rui info will be returned. By default, no filtering is performed. 
+        containing rui info will be returned. By default, no filtering is performed.
     dataset_status : string
         Filters results by dataset status. Accepted values are "Published", "QA", and "NEW". If a user only has access
-        to published datasets and enters QA or New, an error will be raised. By default, no filtering is performed 
+        to published datasets and enters QA or New, an error will be raised. By default, no filtering is performed
 
 Returns
 -------
@@ -3071,10 +3088,9 @@ def get_prov_info():
         if group_uuid is not None:
             groups_by_id_dict = auth_helper_instance.get_globus_groups_info()['by_id']
             if group_uuid not in groups_by_id_dict:
-                abort_bad_req(
-                    f"Invalid Group UUID.")
+                abort_bad_req("Invalid Group UUID.")
             if not groups_by_id_dict[group_uuid]['data_provider']:
-                abort_bad_req(f"Invalid Group UUID. Group must be a data provider")
+                abort_bad_req("Invalid Group UUID. Group must be a data provider")
             param_dict['group_uuid'] = group_uuid
         organ = request.args.get('organ')
         if organ is not None:
@@ -3090,10 +3106,10 @@ def get_prov_info():
             if dataset_status.lower() not in ['new', 'qa', 'published']:
                 abort_bad_req("Invalid Dataset Status. Must be 'new', 'qa', or 'published' Case-Insensitive")
             if published_only and dataset_status.lower() != 'published':
-                abort_bad_req(f"Invalid Dataset Status. No auth token given or token is not a member of HuBMAP-Read"
-                                  " Group. If no token with HuBMAP-Read Group access is given, only datasets marked "
-                                  "'Published' are available. Try again with a proper token, or change/remove "
-                                  "dataset_status")
+                abort_bad_req("Invalid Dataset Status. No auth token given or token is not a member of HuBMAP-Read "
+                              "Group. If no token with HuBMAP-Read Group access is given, only datasets marked "
+                              "'Published' are available. Try again with a proper token, or change/remove "
+                              "dataset_status")
             if not published_only:
                 param_dict['dataset_status'] = dataset_status
 
@@ -3226,7 +3242,6 @@ def get_prov_info():
                 internal_dict[HEADER_PROCESSED_DATASET_UUID] = ",".join(processed_dataset_status_list)
                 internal_dict[HEADER_PROCESSED_DATASET_UUID] = ",".join(processed_dataset_portal_url_list)
 
-
         if dataset['previous_version_sennet_ids'] is not None:
             previous_version_sennet_ids_list = []
             for item in dataset['previous_version_sennet_ids']:
@@ -3265,13 +3280,13 @@ Read Group access is given, only datasets designated as "published" will be retu
 Query Parameters
 -------
 format : string
-        Designates the output format of the returned data. Accepted values are "json" and "tsv". If none provided, by 
+        Designates the output format of the returned data. Accepted values are "json" and "tsv". If none provided, by
         default will return a tsv.
 
 Path Parameters
 -------
 id : string
-    A HuBMAP_ID or UUID for a dataset. If an invalid dataset id is given, an error will be raised    
+    A HuBMAP_ID or UUID for a dataset. If an invalid dataset id is given, an error will be raised
 
 Returns
 -------
@@ -3498,7 +3513,6 @@ def get_prov_info_for_dataset(id):
 
     dataset_prov_list.append(internal_dict)
 
-
     if return_json:
         return jsonify(dataset_prov_list[0])
     else:
@@ -3530,8 +3544,8 @@ N/A
 Returns
 -------
 json
-    a json array. Each item in the array corresponds to a dataset. Each dataset has the values: dataset_group_name, 
-    organ_type, dataset_data_types, and dataset_status, each of which is a string. 
+    a json array. Each item in the array corresponds to a dataset. Each dataset has the values: dataset_group_name,
+    organ_type, dataset_data_types, and dataset_status, each of which is a string.
 
 """
 @app.route('/datasets/sankey_data', methods=['GET'])
@@ -3581,7 +3595,7 @@ Token that is part of the HuBMAP Read-Group is required.
 Query Parameters
 -------
     group_uuid : string
-        Filters returned samples by a given group uuid. 
+        Filters returned samples by a given group uuid.
 
 Returns
 -------
@@ -3620,9 +3634,9 @@ def get_sample_prov_info():
         if group_uuid is not None:
             groups_by_id_dict = auth_helper_instance.get_globus_groups_info()['by_id']
             if group_uuid not in groups_by_id_dict:
-                abort_bad_req(f"Invalid Group UUID.")
+                abort_bad_req("Invalid Group UUID.")
             if not groups_by_id_dict[group_uuid]['data_provider']:
-                abort_bad_req(f"Invalid Group UUID. Group must be a data provider")
+                abort_bad_req("Invalid Group UUID. Group must be a data provider")
             param_dict['group_uuid'] = group_uuid
 
     # Instantiation of the list sample_prov_list
@@ -3653,7 +3667,6 @@ def get_sample_prov_info():
                         organ_type = ORGAN_TYPES[organ_type]['term']
                         break
                 organ_sennet_id = sample['sample_sennet_id']
-
 
         sample_has_metadata = False
         if sample['sample_metadata'] is not None:
@@ -3718,7 +3731,7 @@ Example:
              }]
 Returns
 --------
-JSON                   
+JSON
 """
 @app.route('/constraints', methods=['POST'])
 def validate_constraints():
@@ -3758,12 +3771,13 @@ def validate_constraints():
 ## Internal Functions
 ####################################################################################################
 
+
 """
-Parase the token from Authorization header
+Parse the token from Authorization header
 
 Parameters
 ----------
-request : falsk.request
+request : flask.request
     The flask http request object
 non_public_access_required : bool
     If a non-public access token is required by the request, default to False
@@ -3802,6 +3816,7 @@ def get_user_token(request, non_public_access_required = False):
             abort_forbidden("Access not granted")
 
     return user_token
+
 
 """
 Check if the user with token is in the SenNet-READ group
@@ -3879,10 +3894,11 @@ Get the token for internal use only
 Returns
 -------
 str
-    The token string 
+    The token string
 """
 def get_internal_token():
     return auth_helper_instance.getProcessSecret()
+
 
 """
 Generate 'before_create_triiger' data and create the entity details in Neo4j
@@ -3933,7 +3949,7 @@ def create_entity_details(request, normalized_entity_type, user_token, json_data
         logger.exception(e)
         abort_bad_req(e)
     except requests.exceptions.RequestException as e:
-        msg = f"Failed to create new SenNet ids via the uuid-api service"
+        msg = "Failed to create new SenNet ids via the uuid-api service"
         logger.exception(msg)
 
         # Due to the use of response.raise_for_status() in schema_manager.create_sennet_ids()
@@ -4012,7 +4028,6 @@ def create_entity_details(request, normalized_entity_type, user_token, json_data
         # Terminate and let the users know
         abort_internal_err(msg)
 
-
     # Important: use `entity_dict` instead of `filtered_merged_dict` to keep consistent with the stored
     # string expression literals of Python list/dict being used with entity update, e.g., `image_files`
     # Important: the same property keys in entity_dict will overwrite the same key in json_data_dict
@@ -4080,7 +4095,7 @@ def create_multiple_samples_details(request, normalized_entity_type, user_token,
         logger.exception(e)
         abort_bad_req(e)
     except requests.exceptions.RequestException as e:
-        msg = f"Failed to create new SenNet ids via the uuid-api service"
+        msg = "Failed to create new SenNet ids via the uuid-api service"
         logger.exception(msg)
 
         # Due to the use of response.raise_for_status() in schema_manager.create_sennet_ids()
@@ -4233,8 +4248,8 @@ def multiple_components():
 
     # While we accept a list of direct_ancestor_uuids, we currently only allow a single direct ancestor so verify that there is only 1
     direct_ancestor_uuids = json_data_dict.get('direct_ancestor_uuids')
-    if direct_ancestor_uuids is None or not isinstance(direct_ancestor_uuids, list) or len(direct_ancestor_uuids) !=1:
-        abort_bad_req(f"Required field 'direct_ancestor_uuids' must be a list. This list may only contain 1 item: a string representing the uuid of the direct ancestor")
+    if direct_ancestor_uuids is None or not isinstance(direct_ancestor_uuids, list) or len(direct_ancestor_uuids) != 1:
+        abort_bad_req("Required field 'direct_ancestor_uuids' must be a list. This list may only contain 1 item: a string representing the uuid of the direct ancestor")
 
     # validate existence of direct ancestors.
     for direct_ancestor_uuid in direct_ancestor_uuids:
@@ -4248,16 +4263,17 @@ def multiple_components():
 
     # validate that there is at least one component dataset
     if len(json_data_dict.get('datasets')) < 1:
-        abort_bad_req(f"'datasets' field must contain 2 component datasets.")
+        abort_bad_req("'datasets' field must contain 2 component datasets.")
 
     # Validate all datasets using existing schema with triggers and validators
     for dataset in json_data_dict.get('datasets'):
         # dataset_link_abs_dir is not part of the entity creation, will not be stored in neo4j and does not require
         # validation. Remove it here and add it back after validation. We do the same for creating the entities. Doing
-        # this makes it easier to keep the dataset_link_abs_dir with the associated dataset instead of adding additional lists and keeping track of which value is tied to which dataset
+        # this makes it easier to keep the dataset_link_abs_dir with the associated dataset instead of adding additional lists and keeping
+        # track of which value is tied to which dataset
         dataset_link_abs_dir = dataset.pop('dataset_link_abs_dir', None)
         if not dataset_link_abs_dir:
-            abort_bad_req(f"Missing required field in datasets: dataset_link_abs_dir")
+            abort_bad_req("Missing required field in datasets: dataset_link_abs_dir")
         dataset['group_uuid'] = json_data_dict.get('group_uuid')
         dataset['direct_ancestor_uuids'] = direct_ancestor_uuids
         try:
@@ -4311,18 +4327,16 @@ def multiple_components():
         # Will also filter the result based on schema
         normalized_complete_dict = schema_manager.normalize_object_result_for_response(provenance_type='ENTITIES', entity_dict=complete_dict)
 
-
         # Also index the new entity node in elasticsearch via search-api
-        logger.log(logging.INFO
-                   ,f"Re-indexing for creation of {complete_dict['entity_type']}"
-                    f" with UUID {complete_dict['uuid']}")
+        logger.log(logging.INFO,
+                   f"Re-indexing for creation of {complete_dict['entity_type']}"
+                   f" with UUID {complete_dict['uuid']}")
         reindex_entity(complete_dict['uuid'], user_token)
         # Add back in dataset_link_abs_dir one last time
         normalized_complete_dict['dataset_link_abs_dir'] = dataset_link_abs_dir
         normalized_complete_entity_list.append(normalized_complete_dict)
 
     return jsonify(normalized_complete_entity_list)
-
 
 
 """
@@ -4360,7 +4374,7 @@ def create_multiple_component_details(request, normalized_entity_type, user_toke
         logger.exception(e)
         abort_bad_req(e)
     except requests.exceptions.RequestException as e:
-        msg = f"Failed to create new SenNet ids via the uuid-api service"
+        msg = "Failed to create new SenNet ids via the uuid-api service"
         logger.exception(msg)
 
         # Due to the use of response.raise_for_status() in schema_manager.create_sennet_ids()
@@ -4436,7 +4450,6 @@ def create_multiple_component_details(request, normalized_entity_type, user_toke
         # Terminate and let the users know
         abort_internal_err(msg)
 
-
     return created_datasets
 
 
@@ -4450,7 +4463,7 @@ normalized_entity_type : str
 user_token: str
     The user's globus groups token
 merged_data_dict: dict
-    The merged dict that contains the entity dict newly created and 
+    The merged dict that contains the entity dict newly created and
     information from user request json that are not stored in Neo4j
 """
 def after_create(normalized_entity_type, user_token, merged_data_dict):
@@ -4498,7 +4511,11 @@ def update_object_details(provenance_type, request, normalized_entity_type, user
     new_data_dict = {**user_info_dict, **json_data_dict}
 
     try:
-        generated_before_update_trigger_data_dict = schema_manager.generate_triggered_data('before_update_trigger', normalized_entity_type, user_token, existing_entity_dict, new_data_dict)
+        generated_before_update_trigger_data_dict = schema_manager.generate_triggered_data('before_update_trigger',
+                                                                                           normalized_entity_type,
+                                                                                           user_token,
+                                                                                           existing_entity_dict,
+                                                                                           new_data_dict)
     # If something wrong with file upload
     except schema_errors.FileUploadException as e:
         logger.exception(e)
@@ -4518,7 +4535,7 @@ def update_object_details(provenance_type, request, normalized_entity_type, user
 
     # Filter out the merged_dict by getting rid of the transitent properties (not to be stored)
     # and properties with None value
-    # Meaning the returned target property key is different from the original key 
+    # Meaning the returned target property key is different from the original key
     # in the trigger method, e.g., Source.image_files_to_add
     filtered_merged_dict = schema_manager.remove_transient_and_none_values(provenance_type, merged_dict, normalized_entity_type)
 
@@ -4549,6 +4566,7 @@ def update_object_details(provenance_type, request, normalized_entity_type, user
     # Use merged_final_dict instead of merged_dict because
     # merged_dict only contains properties to be updated, not all properties
     return merged_final_dict
+
 
 """
 Execute 'after_update_triiger' methods
@@ -4649,8 +4667,6 @@ Returns
 dict
     A dictionary of entity details returned from neo4j
 """
-
-
 def query_target_entity(id, user_token):
     entity_dict = None
     current_datetime = datetime.now()
@@ -4703,6 +4719,7 @@ def query_target_entity(id, user_token):
     # Final return
     return entity_dict
 
+
 """
 Get target entity dict
 
@@ -4743,6 +4760,7 @@ def query_activity_was_generated_by(id, user_token):
         else:
             abort_internal_err(e.response.text)
 
+
 """
 Always expect a json body from user request
 
@@ -4770,7 +4788,7 @@ def reindex_entity(uuid, user_token):
 
         headers = create_request_headers(user_token)
 
-        response = requests.put(app.config['SEARCH_API_URL'] + "/reindex/" + uuid, headers = headers)
+        response = requests.put(app.config['SEARCH_API_URL'] + "/reindex/" + uuid, headers=headers)
         # The reindex takes time, so 202 Accepted response status code indicates that
         # the request has been accepted for processing, but the processing has not been completed
         if response.status_code == 202:
@@ -4783,6 +4801,7 @@ def reindex_entity(uuid, user_token):
         logger.exception(msg)
         # Terminate and let the users know
         abort_internal_err(msg)
+
 
 """
 Create a dict of HTTP Authorization header with Bearer token for making calls to uuid-api
@@ -4808,6 +4827,7 @@ def create_request_headers(user_token):
 
     return headers_dict
 
+
 """
 Ensure the access level dir with leading and trailing slashes
 
@@ -4818,7 +4838,7 @@ dir_name : str
 
 Returns
 -------
-str 
+str
     One of the formatted dir path string: /public/, /protected/, /consortium/
 """
 def access_level_prefix_dir(dir_name):
@@ -4835,12 +4855,10 @@ Parameters
 ----------
 entity : str
     The entity that is attempting to be updated
-user_token : str 
+user_token : str
     The token passed in via the request header that will be used to authenticate
 
 """
-
-
 def validate_user_update_privilege(entity, user_token):
     # A user has update privileges if they are a data admin or are in the same group that registered the entity
     is_admin = auth_helper_instance.has_data_admin_privs(user_token)
@@ -4862,16 +4880,16 @@ Formats error into dict
 
 error : str
     the detail of the error
-    
+
 row : int
     the row number where the error occurred
-    
+
 column : str
     the column in the csv/tsv where the error occurred
 
 Returns
 -------
- dict 
+ dict
 """
 def _ln_err(error, row: int = None, column: str = None):
     return {
@@ -4879,6 +4897,7 @@ def _ln_err(error, row: int = None, column: str = None):
         'error': error,
         'row': row
     }
+
 
 """
 Ensures that two given entity dicts as ancestor and descendant pass constraint validation.
@@ -4920,15 +4939,14 @@ def validate_constraints_by_entities(ancestor, descendant, descendant_entity_typ
         abort_bad_req(f"Invalid entity constraints for ancestor of type {ancestor.get('entity_type')}. Valid descendants include: {result.get('description')}")
     return result
 
+
 """
 Ensures that a given organ code matches what is found on the organ_types yaml document
 
 organ_code : str
 
-Returns nothing. Raises abort_bad_req is organ code not found on organ_types.yaml 
+Returns nothing. Raises abort_bad_req is organ code not found on organ_types.yaml
 """
-
-
 def validate_organ_code(organ_code):
     ORGAN_TYPES = Ontology.ops(as_data_dict=True, data_as_val=True, val_key='rui_code').organ_types()
 
@@ -4936,7 +4954,7 @@ def validate_organ_code(organ_code):
         if equals(ORGAN_TYPES[organ_type]['rui_code'], organ_code):
             return
 
-    abort_bad_req(f"Invalid Organ. Organ must be 2 digit, case-insensitive code")
+    abort_bad_req("Invalid Organ. Organ must be 2 digit, case-insensitive code")
 
 
 def verify_ubkg_properties(json_data_dict):
@@ -4957,8 +4975,7 @@ def verify_ubkg_properties(json_data_dict):
     # If the proposed Dataset dataset_type ends with something in square brackets, anything inside
     # those square brackets are acceptable at the end of the string.  Simply validate the start.
     if 'dataset_type' in json_data_dict:
-        dataset_type_dict = {'dataset_type': re.sub(pattern='(\S)\s\[.*\]$', repl=r'\1',
-                                                    string=json_data_dict['dataset_type'])}
+        dataset_type_dict = {'dataset_type': re.sub(pattern='(\S)\s\[.*\]$', repl=r'\1', string=json_data_dict['dataset_type'])}
         compare_property_against_ubkg(DATASET_TYPE, dataset_type_dict, 'dataset_type')
 
 
@@ -5024,13 +5041,11 @@ Validates the given metadata via the pathname returned by the Ingest API
 
 pathname : str
 
-Returns Boolean whether validation was passed or not. 
+Returns Boolean whether validation was passed or not.
 """
-
-
 def validate_metadata(data, user_token):
     try:
-        logger.info(f"Making a call to ingest-api to validate metadata")
+        logger.info("Making a call to ingest-api to validate metadata")
 
         headers = create_request_headers(user_token)
 
@@ -5055,7 +5070,7 @@ def validate_metadata(data, user_token):
             logger.error(response.text)
 
     except Exception:
-        msg = f"Failed to send the validate metadata request to ingest-api"
+        msg = "Failed to send the validate metadata request to ingest-api"
         # Log the full stack trace, prepend a line with our message
         logger.exception(msg)
         # Terminate and let the users know
@@ -5106,19 +5121,21 @@ def delete_cache(id):
 
         schema_manager.delete_memcached_cache(uuids_list)
 
+
 ####################################################################################################
 ## For local development/testing
 ####################################################################################################
 
+
 if __name__ == "__main__":
     try:
         app.run(host='0.0.0.0', port="5002")
-        print(f"Flask app.run() done")
+        print("Flask app.run() done")
     except Exception as e:
         print("Error during starting debug server.")
         print(str(e))
         logger.error(e, exc_info=True)
         print("Error during startup check the log file for further information")
     except SystemExit as se:
-        logger.exception(se,stack_info=True)
+        logger.exception(se, stack_info=True)
         print(f"SystemExit exception with code {se.code}.")
