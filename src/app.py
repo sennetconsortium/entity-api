@@ -49,7 +49,7 @@ from atlas_consortia_commons.rest import (
 )
 from atlas_consortia_commons.string import equals
 from atlas_consortia_commons.ubkg.ubkg_sdk import init_ontology
-from atlas_consortia_commons.decorator import require_data_admin, require_valid_token
+from atlas_consortia_commons.decorator import require_data_admin, require_json, require_valid_token
 from lib.ontology import Ontology
 
 # Root logger configuration
@@ -357,7 +357,6 @@ json
 """
 @app.route('/status', methods=['GET'])
 def get_status():
-
     try:
         file_version_content = (Path(__file__).absolute().parent.parent / 'VERSION').read_text().strip()
     except Exception as e:
@@ -427,22 +426,23 @@ def get_ancestor_organs(id):
     # we need to tell the client with a 401 error
     validate_token_if_auth_header_exists(request)
 
-    # Use the internal token to query the target entity
-    # since public entities don't require user token
-    token = get_internal_token()
-
     # Query target entity against uuid-api and neo4j and return as a dict if exists
-    entity_dict = query_target_entity(id, token)
+    entity_dict = query_target_entity(id)
     normalized_entity_type = entity_dict['entity_type']
 
     # A bit validation
     supported_entity_types = ['Sample']
     if normalized_entity_type not in supported_entity_types and \
             not schema_manager.entity_type_instanceof(normalized_entity_type, 'Dataset'):
-        abort_bad_req(f"Unable to get the ancestor organs for this: {normalized_entity_type}, supported entity types: Sample, Dataset, Publication")
+        abort_bad_req(f"Unable to get the ancestor organs for this: {normalized_entity_type}, "
+                      "supported entity types: Sample, Dataset, Publication")
 
     if normalized_entity_type == 'Sample' and entity_dict['sample_category'].lower() == 'organ':
         abort_bad_req("Unable to get the ancestor organ of an organ.")
+
+    # Use the internal token to query the target entity
+    # since public entities don't require user token
+    token = get_internal_token()
 
     if schema_manager.entity_type_instanceof(normalized_entity_type, 'Dataset'):
         # Only published/public datasets don't require token
@@ -535,13 +535,14 @@ def get_entity_by_id(id):
     # we need to tell the client with a 401 error
     validate_token_if_auth_header_exists(request)
 
+    # Query target entity against uuid-api and neo4j and return as a dict if exists
+    entity_dict = query_target_entity(id)
+    normalized_entity_type = entity_dict['entity_type']
+
     # Use the internal token to query the target entity
     # since public entities don't require user token
     token = get_internal_token()
 
-    # Query target entity against uuid-api and neo4j and return as a dict if exists
-    entity_dict = query_target_entity(id, token)
-    normalized_entity_type = entity_dict['entity_type']
     # To verify if a Collection is public, it is necessary to have its Datasets, which
     # are populated as triggered data.  So pull back the complete entity for
     # _get_entity_visibility() to check.
@@ -573,8 +574,8 @@ def get_entity_by_id(id):
     # `on_read_trigger` to have a complete result e.g., the 'next_revision_uuid' and
     # 'previous_revision_uuid' being used below.
     if not user_authorized:
-        abort_forbidden(f"The requested {normalized_entity_type} has non-public data."
-                        f"  A Globus token with access permission is required.")
+        abort_forbidden(f"The requested {normalized_entity_type} has non-public data. "
+                        "A Globus token with access permission is required.")
 
     # Also normalize the result based on schema
     final_result = schema_manager.normalize_object_result_for_response(provenance_type='ENTITIES',
@@ -614,35 +615,30 @@ Retrieve handful of information to be display in the Data Sharing Portal job das
 
 Takes as input a json body with required field "entity_uuids", which is an array of entity UUIDs
 
-The gateway treats this endpoint as public accessible
-
 Parameters
 ----------
 entity_type : str
     One of the normalized entity types: Sample or Source
+
 Returns
 -------
 json
     Select properties of the requested entities
 """
 @app.route('/entities/dashboard/<entity_type>', methods=['PUT'])
-def get_entities_by_ids_for_dashboard(entity_type):
-    # Get user token from Authorization header
-    token = get_user_token(request, non_public_access_required=True)
-
-    # Always expect a json body
-    require_json(request)
-
-    # Parse incoming json string into json data(python dict object)
-    json_data_dict = request.get_json()
-
+@require_valid_token()
+@require_json(param='json_data_dict')
+def get_entities_by_ids_for_dashboard(entity_type: str, json_data_dict: dict):
     if 'entity_uuids' not in json_data_dict:
         abort_bad_req("Missing required field: entity_uuids")
+
+    entity_type = schema_manager.normalize_entity_type(entity_type)
 
     # Check that only Source or Sample is passed
     supported_entity_types = ['Source', 'Sample']
     if entity_type not in supported_entity_types:
-        abort_bad_req(f"Unable to get properties for this entity type: {entity_type}, supported entity types: {', '.join(supported_entity_types)}")
+        abort_bad_req(f"Unable to get properties for this entity type: {entity_type}, "
+                      f"supported entity types: {', '.join(supported_entity_types)}")
 
     try:
         entity_uuids = json_data_dict['entity_uuids']
@@ -663,7 +659,7 @@ def get_entities_by_ids_for_dashboard(entity_type):
 
 
 """
-Retrive the full tree above the referenced entity and build the provenance document
+Retrieve the full tree above the referenced entity and build the provenance document
 
 The gateway treats this endpoint as public accessible
 
@@ -683,12 +679,8 @@ def get_entity_provenance(id):
     # we need to tell the client with a 401 error
     validate_token_if_auth_header_exists(request)
 
-    # Use the internal token to query the target entity
-    # since public entities don't require user token
-    token = get_internal_token()
-
     # Query target entity against uuid-api and neo4j and return as a dict if exists
-    entity_dict = query_target_entity(id, token)
+    entity_dict = query_target_entity(id)
     uuid = entity_dict['uuid']
     normalized_entity_type = entity_dict['entity_type']
 
@@ -698,6 +690,10 @@ def get_entity_provenance(id):
             not schema_manager.entity_type_instanceof(normalized_entity_type, 'Dataset'):
         abort_bad_req(f"Unable to get the provenance for this {normalized_entity_type}, "
                       f"supported entity types: {COMMA_SEPARATOR.join(supported_entity_types)}, Dataset, Publication")
+
+    # Use the internal token to query the target entity
+    # since public entities don't require user token
+    token = get_internal_token()
 
     if schema_manager.entity_type_instanceof(normalized_entity_type, 'Dataset'):
         # Only published/public datasets don't require token
@@ -814,7 +810,7 @@ def get_entity_types():
 
 
 """
-Retrive all the entity nodes for a given entity type
+Retrieve all the entity nodes for a given entity type
 Result filtering is supported based on query string
 For example: /<entity_type>/entities?property=uuid
 
@@ -853,11 +849,13 @@ def get_entities_by_type(entity_type):
 
             # Validate the target property
             if property_key not in result_filtering_accepted_property_keys:
-                abort_bad_req(f"Only the following property keys are supported in the query string: {COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}")
+                abort_bad_req("Only the following property keys are supported in the query string: "
+                              f"{COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}")
 
             # Only return a list of the filtered property value of each entity
-            property_list = app_neo4j_queries.get_entities_by_type(neo4j_driver_instance, normalized_entity_type, property_key)
-
+            property_list = app_neo4j_queries.get_entities_by_type(neo4j_driver_instance,
+                                                                   normalized_entity_type,
+                                                                   property_key)
             # Final result
             final_result = property_list
         else:
@@ -887,6 +885,7 @@ def get_entities_by_type(entity_type):
         ]
         # Get user token from Authorization header.  Since this endpoint is not exposed through the AWS Gateway
         token = get_user_token(request)
+
         # Get back a list of entity dicts for the given entity type
         entities_list = app_neo4j_queries.get_entities_by_type(neo4j_driver_instance, normalized_entity_type)
 
@@ -918,16 +917,9 @@ json
     All the properties of the newly created entity
 """
 @app.route('/entities/<entity_type>', methods=['POST'])
-def create_entity(entity_type):
-    # Get user token from Authorization header
-    user_token = get_user_token(request)
-
-    # Always expect a json body
-    require_json(request)
-
-    # Parse incoming json string into json data(python dict object)
-    json_data_dict = request.get_json()
-
+@require_valid_token(param='user_token')
+@require_json(param='json_data_dict')
+def create_entity(entity_type: str, user_token: str, json_data_dict: dict):
     # Normalize user provided entity_type
     normalized_entity_type = schema_manager.normalize_entity_type(entity_type)
 
@@ -978,7 +970,7 @@ def create_entity(entity_type):
         # A bit more validation for new sample to be linked to existing source entity
         direct_ancestor_uuid = json_data_dict['direct_ancestor_uuid']
         # Check existence of the direct ancestor (either another Sample or Source)
-        direct_ancestor_dict = query_target_entity(direct_ancestor_uuid, user_token)
+        direct_ancestor_dict = query_target_entity(direct_ancestor_uuid)
         validate_constraints_by_entities(direct_ancestor_dict, json_data_dict, normalized_entity_type)
         json_data_dict['direct_ancestor_uuid'] = direct_ancestor_dict['uuid']
 
@@ -992,14 +984,14 @@ def create_entity(entity_type):
 
         direct_ancestor_uuids = []
         for direct_ancestor_uuid in json_data_dict['direct_ancestor_uuids']:
-            direct_ancestor_dict = query_target_entity(direct_ancestor_uuid, user_token)
+            direct_ancestor_dict = query_target_entity(direct_ancestor_uuid)
             validate_constraints_by_entities(direct_ancestor_dict, json_data_dict, normalized_entity_type)
             direct_ancestor_uuids.append(direct_ancestor_dict['uuid'])
 
         json_data_dict['direct_ancestor_uuids'] = direct_ancestor_uuids
 
         def check_previous_revision(previous_revision_uuid):
-            previous_version_dict = query_target_entity(previous_revision_uuid, user_token)
+            previous_version_dict = query_target_entity(previous_revision_uuid)
 
             # Make sure the previous version entity is either a Dataset or Sample
             if previous_version_dict['entity_type'] not in ['Dataset', 'Sample']:
@@ -1104,19 +1096,12 @@ Returns
 json
     All the properties of the newly created entity
 """
-@app.route('/entities/multiple-samples/<count>', methods=['POST'])
-def create_multiple_samples(count):
-    # Get user token from Authorization header
-    user_token = get_user_token(request)
-
+@app.route('/entities/multiple-samples/<int:count>', methods=['POST'])
+@require_valid_token(param='user_token')
+@require_json(param='json_data_dict')
+def create_multiple_samples(count: int, user_token: str, json_data_dict: dict):
     # Normalize user provided entity_type
     normalized_entity_type = 'Sample'
-
-    # Always expect a json body
-    require_json(request)
-
-    # Parse incoming json string into json data(python dict object)
-    json_data_dict = request.get_json()
 
     # Validate request json against the yaml schema
     try:
@@ -1127,7 +1112,7 @@ def create_multiple_samples(count):
 
     # `direct_ancestor_uuid` is required on create
     # Check existence of the direct ancestor (either another Sample or Source) and get the first 'direct_ancestor_uuid'
-    direct_ancestor_uuid_dict = query_target_entity(json_data_dict['direct_ancestor_uuid'][0], user_token)
+    direct_ancestor_uuid_dict = query_target_entity(json_data_dict['direct_ancestor_uuid'][0])
 
     # Generate 'before_create_triiger' data and create the entity details in Neo4j
     generated_ids_dict_list = create_multiple_samples_details(request, normalized_entity_type, user_token, json_data_dict, count)
@@ -1153,18 +1138,11 @@ json
     All the updated properties of the target activity
 """
 @app.route('/activity/<id>', methods=['PUT'])
-def update_activity(id):
-    # Get user token from Authorization header
-    user_token = get_user_token(request)
-
-    # Always expect a json body
-    require_json(request)
-
-    # Parse incoming json string into json data(python dict object)
-    json_data_dict = request.get_json()
-
+@require_valid_token(param='user_token')
+@require_json(param='json_data_dict')
+def update_activity(id: str, user_token: str, json_data_dict: dict):
     # Get target entity and return as a dict if exists
-    activity_dict = query_target_activity(id, user_token)
+    activity_dict = query_target_activity(id)
 
     normalized_dict = schema_manager.normalize_object_result_for_response('ACTIVITIES', json_data_dict)
 
@@ -1217,10 +1195,12 @@ def get_entities_type_instanceof(type_a, type_b):
 Endpoint which sends the "visibility" of an entity using values from DataVisibilityEnum.
 Not exposed through the gateway.  Used by services like search-api to, for example, determine if
 a Collection can be in a public index while encapsulating the logic to determine that in this service.
+
 Parameters
 ----------
 id : str
     The SenNet ID (e.g. SNT123.ABCD.456) or UUID of target collection
+
 Returns
 -------
 json
@@ -1238,7 +1218,7 @@ def get_entity_visibility(id):
 
     # Get the entity dict from cache if exists
     # Otherwise query against uuid-api and neo4j to get the entity dict if the id exists
-    entity_dict = query_target_entity(id, token)
+    entity_dict = query_target_entity(id)
     normalized_entity_type = entity_dict['entity_type']
 
     # Get the generated complete entity result from cache if exists
@@ -1273,16 +1253,9 @@ json
     All the updated properties of the target entity
 """
 @app.route('/entities/<id>', methods=['PUT'])
-def update_entity(id):
-    # Get user token from Authorization header
-    user_token = get_user_token(request)
-
-    # Always expect a json body
-    require_json(request)
-
-    # Parse incoming json string into json data(python dict object)
-    json_data_dict = request.get_json()
-
+@require_valid_token(param='user_token')
+@require_json(param='json_data_dict')
+def update_entity(id: str, user_token: str, json_data_dict: dict):
     # Normalize user provided status
     if "status" in json_data_dict:
         normalized_status = schema_manager.normalize_status(json_data_dict["status"])
@@ -1298,7 +1271,7 @@ def update_entity(id):
         json_data_dict["sub_status"] = normalized_status
 
     # Get target entity and return as a dict if exists
-    entity_dict = query_target_entity(id, user_token)
+    entity_dict = query_target_entity(id)
 
     # Check that the user has the correct access to modify this entity
     validate_user_update_privilege(entity_dict, user_token)
@@ -1338,7 +1311,7 @@ def update_entity(id):
 
             direct_ancestor_uuid = json_data_dict['direct_ancestor_uuid']
             # Check existence of the source entity
-            direct_ancestor_uuid_dict = query_target_entity(direct_ancestor_uuid, user_token)
+            direct_ancestor_uuid_dict = query_target_entity(direct_ancestor_uuid)
             validate_constraints_by_entities(direct_ancestor_uuid_dict, json_data_dict, normalized_entity_type)
             # Also make sure it's either another Sample or a Source
             if direct_ancestor_uuid_dict['entity_type'] not in ['Source', 'Sample']:
@@ -1352,6 +1325,7 @@ def update_entity(id):
         # Handle linkages update via `after_update_trigger` methods
         if has_direct_ancestor_uuid:
             after_update(normalized_entity_type, user_token, merged_updated_dict)
+
     elif normalized_entity_type in ['Dataset', 'Publication']:
         # A bit more validation if `direct_ancestor_uuids` provided
         has_direct_ancestor_uuids = False
@@ -1360,7 +1334,7 @@ def update_entity(id):
 
             # Check existence of those source entities
             for direct_ancestor_uuids in json_data_dict['direct_ancestor_uuids']:
-                direct_ancestor_uuids_dict = query_target_entity(direct_ancestor_uuids, user_token)
+                direct_ancestor_uuids_dict = query_target_entity(direct_ancestor_uuids)
                 validate_constraints_by_entities(direct_ancestor_uuids_dict, json_data_dict, normalized_entity_type)
 
         # Generate 'before_update_trigger' data and update the entity details in Neo4j
@@ -1369,6 +1343,7 @@ def update_entity(id):
         # Handle linkages update via `after_update_trigger` methods
         if has_direct_ancestor_uuids or has_updated_status:
             after_update(normalized_entity_type, user_token, merged_updated_dict)
+
     elif normalized_entity_type == 'Upload':
         has_dataset_uuids_to_link = False
         if ('dataset_uuids_to_link' in json_data_dict) and (json_data_dict['dataset_uuids_to_link']):
@@ -1378,7 +1353,7 @@ def update_entity(id):
             # If one of the datasets to be linked appears to be already linked,
             # neo4j query won't create the new linkage due to the use of `MERGE`
             for dataset_uuid in json_data_dict['dataset_uuids_to_link']:
-                dataset_dict = query_target_entity(dataset_uuid, user_token)
+                dataset_dict = query_target_entity(dataset_uuid)
                 # Also make sure it's a Dataset
                 if dataset_dict['entity_type'] not in ['Dataset', 'Publication']:
                     abort_bad_req(f"The uuid: {dataset_uuid} is not a Dataset or Publication, cannot be linked to this Upload")
@@ -1393,7 +1368,7 @@ def update_entity(id):
             # So no need to tell the end users that this dataset is not linked
             # Let alone checking the entity type to ensure it's a Dataset
             for dataset_uuid in json_data_dict['dataset_uuids_to_unlink']:
-                dataset_dict = query_target_entity(dataset_uuid, user_token)
+                dataset_dict = query_target_entity(dataset_uuid)
 
         # Generate 'before_update_trigger' data and update the entity details in Neo4j
         merged_updated_dict = update_object_details('ENTITIES', request, normalized_entity_type, user_token, json_data_dict, entity_dict)
@@ -1401,6 +1376,7 @@ def update_entity(id):
         # Handle linkages update via `after_update_trigger` methods
         if has_dataset_uuids_to_link or has_updated_status:
             after_update(normalized_entity_type, user_token, merged_updated_dict)
+
     elif normalized_entity_type == 'Collection':
         entity_visibility = _get_entity_visibility(normalized_entity_type=normalized_entity_type, entity_dict=entity_dict)
 
@@ -1415,6 +1391,7 @@ def update_entity(id):
 
         # Handle linkages update via `after_update_trigger` methods
         after_update(normalized_entity_type, user_token, merged_updated_dict)
+
     else:
         # Generate 'before_update_triiger' data and update the entity details in Neo4j
         merged_updated_dict = update_object_details('ENTITIES', request, normalized_entity_type, user_token, json_data_dict, entity_dict)
@@ -1463,7 +1440,7 @@ def update_entity(id):
     if 'protocol_url' in json_data_dict or (
             'ingest_metadata' in json_data_dict and 'dag_provenance_list' in json_data_dict['ingest_metadata']):
         # protocol_url = json_data_dict['protocol_url']
-        activity_dict = query_activity_was_generated_by(id, user_token)
+        activity_dict = query_activity_was_generated_by(id)
         # request.json = {'protocol_url': protocol_url}
         update_activity(activity_dict['uuid'])
 
@@ -1509,7 +1486,7 @@ def get_ancestors(id):
 
     # Make sure the id exists in uuid-api and
     # the corresponding entity also exists in neo4j
-    entity_dict = query_target_entity(id, token)
+    entity_dict = query_target_entity(id)
     normalized_entity_type = entity_dict['entity_type']
     uuid = entity_dict['uuid']
 
@@ -1605,7 +1582,7 @@ def get_descendants(id):
 
     # Make sure the id exists in uuid-api and
     # the corresponding entity also exists in neo4j
-    entity_dict = query_target_entity(id, user_token)
+    entity_dict = query_target_entity(id)
     uuid = entity_dict['uuid']
 
     # Collection and Upload don't have descendants via Activity nodes
@@ -1689,7 +1666,7 @@ def get_parents(id):
 
     # Make sure the id exists in uuid-api and
     # the corresponding entity also exists in neo4j
-    entity_dict = query_target_entity(id, token)
+    entity_dict = query_target_entity(id)
     normalized_entity_type = entity_dict['entity_type']
     uuid = entity_dict['uuid']
 
@@ -1785,7 +1762,7 @@ def get_children(id):
 
     # Make sure the id exists in uuid-api and
     # the corresponding entity also exists in neo4j
-    entity_dict = query_target_entity(id, user_token)
+    entity_dict = query_target_entity(id)
     uuid = entity_dict['uuid']
 
     # Collection and Upload don't have children via Activity nodes
@@ -1869,7 +1846,7 @@ def get_siblings(id):
 
     # Get the entity dict from cache if exists
     # Otherwise query against uuid-api and neo4j to get the entity dict if the id exists
-    entity_dict = query_target_entity(id, token)
+    entity_dict = query_target_entity(id)
     normalized_entity_type = entity_dict['entity_type']
     uuid = entity_dict['uuid']
 
@@ -1985,7 +1962,7 @@ def get_tuplets(id):
 
     # Get the entity dict from cache if exists
     # Otherwise query against uuid-api and neo4j to get the entity dict if the id exists
-    entity_dict = query_target_entity(id, token)
+    entity_dict = query_target_entity(id)
     normalized_entity_type = entity_dict['entity_type']
     uuid = entity_dict['uuid']
 
@@ -2081,7 +2058,7 @@ def get_previous_revisions(id):
 
     # Make sure the id exists in uuid-api and
     # the corresponding entity also exists in neo4j
-    entity_dict = query_target_entity(id, user_token)
+    entity_dict = query_target_entity(id)
     uuid = entity_dict['uuid']
 
     # Result filtering based on query string
@@ -2151,7 +2128,7 @@ def get_next_revisions(id):
 
     # Make sure the id exists in uuid-api and
     # the corresponding entity also exists in neo4j
-    entity_dict = query_target_entity(id, user_token)
+    entity_dict = query_target_entity(id)
     uuid = entity_dict['uuid']
 
     # Result filtering based on query string
@@ -2218,7 +2195,7 @@ def doi_redirect(id):
     token = get_internal_token()
 
     # Query target entity against uuid-api and neo4j and return as a dict if exists
-    entity_dict = query_target_entity(id, token)
+    entity_dict = query_target_entity(id)
 
     entity_type = entity_dict['entity_type']
 
@@ -2314,7 +2291,7 @@ def get_globus_url(id):
     # Query target entity against uuid-api and neo4j and return as a dict if exists
     # Then retrieve the allowable data access level (public, protected or consortium)
     # for the dataset and SenNet Component ID that the dataset belongs to
-    entity_dict = query_target_entity(id, token)
+    entity_dict = query_target_entity(id)
     uuid = entity_dict['uuid']
     normalized_entity_type = entity_dict['entity_type']
 
@@ -2437,7 +2414,7 @@ def get_dataset_latest_revision(id):
     token = get_internal_token()
 
     # Query target entity against uuid-api and neo4j and return as a dict if exists
-    entity_dict = query_target_entity(id, token)
+    entity_dict = query_target_entity(id)
     normalized_entity_type = entity_dict['entity_type']
     uuid = entity_dict['uuid']
 
@@ -2509,17 +2486,17 @@ def get_dataset_revision_number(id):
     # we need to tell the client with a 401 error
     validate_token_if_auth_header_exists(request)
 
-    # Use the internal token to query the target entity
-    # since public entities don't require user token
-    token = get_internal_token()
-
     # Query target entity against uuid-api and neo4j and return as a dict if exists
-    entity_dict = query_target_entity(id, token)
+    entity_dict = query_target_entity(id)
     normalized_entity_type = entity_dict['entity_type']
 
     # Only for Dataset
     if not schema_manager.entity_type_instanceof(normalized_entity_type, 'Dataset'):
         abort_bad_req("The entity of given id is not a Dataset or Publication")
+
+    # Use the internal token to query the target entity
+    # since public entities don't require user token
+    token = get_internal_token()
 
     # Only published/public datasets don't require token
     if entity_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
@@ -2556,13 +2533,9 @@ dict
     The updated dataset details
 """
 @app.route('/datasets/<id>/retract', methods=['PUT'])
-def retract_dataset(id):
-    # Always expect a json body
-    require_json(request)
-
-    # Parse incoming json string into json data(python dict object)
-    json_data_dict = request.get_json()
-
+@require_data_admin()
+@require_json(param='json_data_dict')
+def retract_dataset(id: str, token: str, json_data_dict: dict):
     # Normalize user provided status
     if "sub_status" in json_data_dict:
         normalized_status = schema_manager.normalize_status(json_data_dict["sub_status"])
@@ -2581,13 +2554,10 @@ def retract_dataset(id):
     if len(json_data_dict) > 2:
         abort_bad_req("Only retraction_reason and sub_status are allowed fields")
 
-    # Must be a SenNet-Data-Admin group token
-    token = get_user_token(request)
-
     # Retrieves the neo4j data for a given entity based on the id supplied.
     # The normalized entity-type from this entity is checked to be a dataset
     # If the entity is not a dataset and the dataset is not published, cannot retract
-    entity_dict = query_target_entity(id, token)
+    entity_dict = query_target_entity(id)
     normalized_entity_type = entity_dict['entity_type']
 
     # A bit more application-level validation
@@ -2651,27 +2621,28 @@ list
 @app.route('/entities/<id>/revisions', methods=['GET'])
 @app.route('/datasets/<id>/revisions', methods=['GET'])
 def get_revisions_list(id):
+    # Token is not required, but if an invalid token provided,
+    # we need to tell the client with a 401 error
+    validate_token_if_auth_header_exists(request)
+
     # By default, do not return dataset. Only return dataset if return_dataset is true
     show_dataset = False
     if bool(request.args):
         include_dataset = request.args.get('include_dataset')
         if (include_dataset is not None) and (include_dataset.lower() == 'true'):
             show_dataset = True
-    # Token is not required, but if an invalid token provided,
-    # we need to tell the client with a 401 error
-    validate_token_if_auth_header_exists(request)
-
-    # Use the internal token to query the target entity
-    # since public entities don't require user token
-    token = get_internal_token()
 
     # Query target entity against uuid-api and neo4j and return as a dict if exists
-    entity_dict = query_target_entity(id, token)
+    entity_dict = query_target_entity(id)
     normalized_entity_type = entity_dict['entity_type']
 
     # Only for Dataset
     if not schema_manager.entity_type_instanceof(normalized_entity_type, 'Dataset'):
         abort_bad_req("The entity is not a Dataset. Found entity type:" + normalized_entity_type)
+
+    # Use the internal token to query the target entity
+    # since public entities don't require user token
+    token = get_internal_token()
 
     # Only published/public datasets don't require token
     if entity_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
@@ -2762,7 +2733,7 @@ list
 #     token = get_internal_token()
 #
 #     # Query target entity against uuid-api and neo4j and return as a dict if exists
-#     entity_dict = query_target_entity(id, token)
+#     entity_dict = query_target_entity(id)
 #     normalized_entity_type = entity_dict['entity_type']
 #
 #     # Only for Dataset
@@ -2835,17 +2806,17 @@ def get_associated_organs_from_dataset(id):
     # we need to tell the client with a 401 error
     validate_token_if_auth_header_exists(request)
 
-    # Use the internal token to query the target entity
-    # since public entities don't require user token
-    token = get_internal_token()
-
     # Query target entity against uuid-api and neo4j and return as a dict if exists
-    entity_dict = query_target_entity(id, token)
+    entity_dict = query_target_entity(id)
     normalized_entity_type = entity_dict['entity_type']
 
     # Only for Dataset
     if not schema_manager.entity_type_instanceof(normalized_entity_type, 'Dataset'):
         abort_bad_req("The entity of given id is not a Dataset or Publication")
+
+    # Use the internal token to query the target entity
+    # since public entities don't require user token
+    token = get_internal_token()
 
     # published/public datasets don't require token
     if entity_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
@@ -2890,17 +2861,17 @@ def get_associated_samples_from_dataset(id):
     # we need to tell the client with a 401 error
     validate_token_if_auth_header_exists(request)
 
-    # Use the internal token to query the target entity
-    # since public entities don't require user token
-    token = get_internal_token()
-
     # Query target entity against uuid-api and neo4j and return as a dict if exists
-    entity_dict = query_target_entity(id, token)
+    entity_dict = query_target_entity(id)
     normalized_entity_type = entity_dict['entity_type']
 
     # Only for Dataset
     if not schema_manager.entity_type_instanceof(normalized_entity_type, 'Dataset'):
         abort_bad_req("The entity of given id is not a Dataset")
+
+    # Use the internal token to query the target entity
+    # since public entities don't require user token
+    token = get_internal_token()
 
     # published/public datasets don't require token
     if entity_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
@@ -2944,17 +2915,17 @@ def get_associated_sources_from_dataset(id):
     # we need to tell the client with a 401 error
     validate_token_if_auth_header_exists(request)
 
-    # Use the internal token to query the target entity
-    # since public entities don't require user token
-    token = get_internal_token()
-
     # Query target entity against uuid-api and neo4j and return as a dict if exists
-    entity_dict = query_target_entity(id, token)
+    entity_dict = query_target_entity(id)
     normalized_entity_type = entity_dict['entity_type']
 
     # Only for Dataset
     if not schema_manager.entity_type_instanceof(normalized_entity_type, 'Dataset'):
         abort_bad_req("The entity of given id is not a Dataset")
+
+    # Use the internal token to query the target entity
+    # since public entities don't require user token
+    token = get_internal_token()
 
     # published/public datasets don't require token
     if entity_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
@@ -3301,12 +3272,8 @@ def get_prov_info_for_dataset(id):
     # we need to tell the client with a 401 error
     validate_token_if_auth_header_exists(request)
 
-    # Use the internal token to query the target entity
-    # since public entities don't require user token
-    token = get_internal_token()
-
     # Query target entity against uuid-api and neo4j and return as a dict if exists
-    entity_dict = query_target_entity(id, token)
+    entity_dict = query_target_entity(id)
     normalized_entity_type = entity_dict['entity_type']
 
     # Only for Dataset
@@ -3316,7 +3283,7 @@ def get_prov_info_for_dataset(id):
     # published/public datasets don't require token
     if entity_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
         # Token is required and the user must belong to SenNet-READ group
-        token = get_user_token(request, non_public_access_required=True)
+        get_user_token(request, non_public_access_required=True)
 
     return_json = False
     dataset_prov_list = []
@@ -3502,6 +3469,7 @@ def get_prov_info_for_dataset(id):
         headers.append(HEADER_DATASET_SAMPLES)
         dataset_samples = app_neo4j_queries.get_all_dataset_samples(neo4j_driver_instance, uuid)
         logger.debug(f"dataset_samples={str(dataset_samples)}")
+
         if 'all' in include_samples:
             internal_dict[HEADER_DATASET_SAMPLES] = dataset_samples
         else:
@@ -3582,6 +3550,7 @@ def sankey_data():
 
         # Each dataset's dictionary is added to the list to be returned
         dataset_sankey_list.append(internal_dict)
+
     return jsonify(dataset_sankey_list)
 
 
@@ -3734,15 +3703,13 @@ Returns
 JSON
 """
 @app.route('/constraints', methods=['POST'])
-def validate_constraints():
-    # Always expect a json body
-    require_json(request)
+@require_json(param='entry_json')
+def validate_constraints(entry_json: list):
     is_match = request.values.get('match')
     order = request.values.get('order')
     use_case = request.values.get('filter')
     report_type = request.values.get('report_type')
 
-    entry_json = request.get_json()
     results = []
     final_result = rest_ok({}, True)
 
@@ -4214,25 +4181,20 @@ json array
     List of the newly created datasets represented as dictionaries.
 """
 @app.route('/datasets/components', methods=['POST'])
-def multiple_components():
+@require_valid_token(param='user_token')
+@require_json(param='json_data_dict')
+def multiple_components(user_token: str, json_data_dict: dict):
     if READ_ONLY_MODE:
         abort_forbidden("Access not granted when entity-api in READ-ONLY mode")
 
-    # If an invalid token provided, we need to tell the client with a 401 error, rather
-    # than a 500 error later if the token is not good.
-    validate_token_if_auth_header_exists(request)
-    # Get user token from Authorization header
-    user_token = get_user_token(request)
     try:
         schema_validators.validate_application_header_before_entity_create("Dataset", request)
     except Exception as e:
         abort_bad_req(str(e))
-    require_json(request)
 
     ######### validate top level properties ########
 
     # Verify that each required field is in the json_data_dict, and that there are no other fields
-    json_data_dict = request.get_json()
     required_fields = ['creation_action', 'group_uuid', 'direct_ancestor_uuids', 'datasets']
     for field in required_fields:
         if field not in json_data_dict:
@@ -4253,7 +4215,7 @@ def multiple_components():
 
     # validate existence of direct ancestors.
     for direct_ancestor_uuid in direct_ancestor_uuids:
-        direct_ancestor_dict = query_target_entity(direct_ancestor_uuid, user_token)
+        direct_ancestor_dict = query_target_entity(direct_ancestor_uuid)
         if direct_ancestor_dict.get('entity_type').lower() != "dataset":
             abort_bad_req(f"Direct ancestor is of type: {direct_ancestor_dict.get('entity_type')}. Must be of type 'dataset'.")
 
@@ -4603,15 +4565,13 @@ Parameters
 ----------
 id : str
     The uuid or sennet_id of target activity
-user_token: str
-    The user's globus groups token from the incoming request
 
 Returns
 -------
 dict
     A dictionary of activity details returned from neo4j
 """
-def query_target_activity(id, user_token):
+def query_target_activity(id):
     try:
         """
         The dict returned by uuid-api that contains all the associated ids, e.g.:
@@ -4659,15 +4619,13 @@ Parameters
 ----------
 id : str
     The uuid or sennet_id of target entity
-user_token: str
-    The user's globus nexus token from the incoming request
 
 Returns
 -------
 dict
     A dictionary of entity details returned from neo4j
 """
-def query_target_entity(id, user_token):
+def query_target_entity(id: str):
     entity_dict = None
     current_datetime = datetime.now()
 
@@ -4727,15 +4685,13 @@ Parameters
 ----------
 id : str
     The uuid or sennet_id of target entity
-user_token: str
-    The user's globus nexus token from the incoming request
 
 Returns
 -------
 dict
     A dictionary of activity details returned from neo4j
 """
-def query_activity_was_generated_by(id, user_token):
+def query_activity_was_generated_by(id: str):
     try:
         sennet_ids = schema_manager.get_sennet_ids(id)
 
@@ -4759,17 +4715,6 @@ def query_activity_was_generated_by(id, user_token):
             abort_not_found(e.response.text)
         else:
             abort_internal_err(e.response.text)
-
-
-"""
-Always expect a json body from user request
-
-request : Flask request object
-    The Flask request passed from the API endpoint
-"""
-def require_json(request):
-    if not request.is_json:
-        abort_bad_req("A json body and appropriate Content-Type header are required")
 
 
 """
@@ -5090,7 +5035,7 @@ id : str
 def delete_cache(id):
     if MEMCACHED_MODE:
         # First delete the target entity cache
-        entity_dict = query_target_entity(id, get_internal_token())
+        entity_dict = query_target_entity(id)
         entity_uuid = entity_dict['uuid']
 
         # If the target entity is Sample (`direct_ancestor`) or Dataset/Publication (`direct_ancestors`)

@@ -31,15 +31,17 @@ def ontology_mock():
 @pytest.fixture(scope="session", autouse=True)
 def auth_helper_mock():
     auth_mock = MagicMock()
-    auth_mock.getAuthorizationTokens.return_value = "test_token"
-    auth_mock.has_data_admin_privs.return_value = False
-    auth_mock.get_user_write_groups.return_value = [{
-        "uuid": "3108cb5a-3b0c-4c6d-a944-ce7271ebe325"
-    }]
+    auth_mock.getUserTokenFromRequest.return_value = "test_token"
+    auth_mock.getUserInfo.return_value = {
+        "sub": "8cb9cda5-1930-493a-8cb9-df6742e0fb42",
+        "email": "TESTUSER@example.com",
+        "hmgroupids": ["60b692ac-8f6d-485f-b965-36886ecc5a26"],
+    }
 
     # auth_helper_instance gets created (from 'import app') before fixture is called
     app_module.auth_helper_instance = auth_mock
     with (
+        patch("hubmap_commons.hm_auth.AuthHelper.configured_instance", return_value=auth_mock),
         patch("hubmap_commons.hm_auth.AuthHelper.create", return_value=auth_mock),
         patch("hubmap_commons.hm_auth.AuthHelper.instance", return_value=auth_mock),
     ):
