@@ -1,32 +1,36 @@
 import test
+
 test.cwd_to_src()
 
 import json
 import os
 import random
+import test.utils as test_utils
 from unittest.mock import MagicMock, patch
 
-from flask import Response
 import pytest
+from flask import Response
 
 import app as app_module
-import test.utils as test_utils
 
 test_data_dir = os.path.join(os.path.dirname(__file__), 'data')
+
 
 @pytest.fixture()
 def app():
     app = app_module.app
-    app.config.update({'TESTING': True,})
+    app.config.update({'TESTING': True})
     # other setup
     yield app
     # clean up
+
 
 @pytest.fixture(scope="session", autouse=True)
 def ontology_mock():
     """Automatically add ontology mock functions to all tests"""
     with (patch('atlas_consortia_commons.ubkg.ubkg_sdk.UbkgSDK', new=test_utils.MockOntology)):
         yield
+
 
 @pytest.fixture(scope="session", autouse=True)
 def auth_helper_mock():
@@ -47,7 +51,8 @@ def auth_helper_mock():
     ):
         yield
 
-### Index
+
+# Index
 
 def test_index(app):
     """Test that the index page is working"""
@@ -57,7 +62,8 @@ def test_index(app):
         assert res.status_code == 200
         assert res.text == 'Hello! This is SenNet Entity API service :)'
 
-### Get Entity by ID
+
+# Get Entity by ID
 
 @pytest.mark.parametrize('entity_type', [
     ('source'),
@@ -66,7 +72,7 @@ def test_index(app):
 ])
 def test_get_entity_by_id_success(app, entity_type):
     """Test that the get entity by id endpoint returns the correct entity"""
-    
+
     with open(os.path.join(test_data_dir, f'get_entity_by_id_success_{entity_type}.json'), 'r') as f:
         test_data = json.load(f)
     entity_id = test_data['uuid']
@@ -83,6 +89,7 @@ def test_get_entity_by_id_success(app, entity_type):
 
         assert res.status_code == 200
         assert res.json == test_data['response']
+
 
 @pytest.mark.parametrize('entity_type, query_key, query_value, status_code', [
     ('source', 'property', 'data_access_level', 200),
@@ -116,7 +123,8 @@ def test_get_entity_by_id_query(app, entity_type, query_key, query_value, status
         if status_code == 200:
             assert res.text == expected_response[query_value]
 
-### Get Entity by Type
+
+# Get Entity by Type
 
 @pytest.mark.parametrize('entity_type', [
     'source',
@@ -124,7 +132,7 @@ def test_get_entity_by_id_query(app, entity_type, query_key, query_value, status
     'dataset',
 ])
 def test_get_entities_by_type_success(app, entity_type):
-    """Test that the get entity by type endpoint calls neo4j and returns the 
+    """Test that the get entity by type endpoint calls neo4j and returns the
        correct entities"""
 
     with open(os.path.join(test_data_dir, f'get_entity_by_type_success_{entity_type}.json'), 'r') as f:
@@ -136,16 +144,15 @@ def test_get_entities_by_type_success(app, entity_type):
 
         res = client.get(f'/{entity_type}/entities')
 
-        content = res.json
-
         assert res.status_code == 200
         assert res.json == test_data['response']
+
 
 @pytest.mark.parametrize('entity_type', [
     ('invalid_type'),
 ])
 def test_get_entities_by_type_invalid_type(app, entity_type):
-    """Test that the get entity by type endpoint returns a 400 for an invalid 
+    """Test that the get entity by type endpoint returns a 400 for an invalid
        entity type"""
 
     with (app.test_client() as client):
@@ -153,6 +160,7 @@ def test_get_entities_by_type_invalid_type(app, entity_type):
         res = client.get(f'/{entity_type}/entities')
 
         assert res.status_code == 400
+
 
 @pytest.mark.parametrize('entity_type, query_key, query_value, status_code', [
     ('source', 'property', 'uuid', 200),
@@ -167,7 +175,7 @@ def test_get_entities_by_type_query(app, entity_type, query_key, query_value, st
     with open(os.path.join(test_data_dir, f'get_entity_by_type_success_{entity_type}.json'), 'r') as f:
         test_data = json.load(f)
 
-    expected_neo4j_query = test_data['get_entities_by_type'] 
+    expected_neo4j_query = test_data['get_entities_by_type']
     if status_code == 200:
         expected_neo4j_query = [entity[query_value] for entity in test_data['get_entities_by_type']]
         expected_response = [entity[query_value] for entity in test_data['response']]
@@ -181,11 +189,12 @@ def test_get_entities_by_type_query(app, entity_type, query_key, query_value, st
         if status_code == 200:
             assert res.json == expected_response
 
-### Create Entity
+
+# Create Entity
 
 @pytest.mark.parametrize('entity_type', [
     'source',
-    'sample', 
+    'sample',
     'dataset',
 ])
 def test_create_entity_success(app, entity_type):
@@ -196,10 +205,10 @@ def test_create_entity_success(app, entity_type):
         test_data = json.load(f)
 
     with (app.test_client() as client,
-          patch('app.schema_manager.create_sennet_ids', return_value=test_data['create_sennet_ids']) as mock_create_sennet_ids,
+          patch('app.schema_manager.create_sennet_ids', return_value=test_data['create_sennet_ids']),
           patch('app.schema_manager.get_user_info', return_value=test_data['get_user_info']),
           patch('app.schema_manager.generate_triggered_data', return_value=test_data['generate_triggered_data']),
-          patch('app.app_neo4j_queries.create_entity', return_value=test_data['create_entity']) as mock_create_entity,
+          patch('app.app_neo4j_queries.create_entity', return_value=test_data['create_entity']),
           patch('app.schema_manager.get_sennet_ids', return_value=test_data['get_sennet_ids']),
           patch('app.app_neo4j_queries.get_entity', return_value=test_data['get_entity']),
           patch('app.app_neo4j_queries.get_source_organ_count', return_value=0),
@@ -212,13 +221,14 @@ def test_create_entity_success(app, entity_type):
         assert res.status_code == 200
         assert res.json == test_data['response']
 
+
 @pytest.mark.parametrize('entity_type', [
     'source',
-    'sample', 
+    'sample',
     'dataset',
 ])
 def test_create_entity_invalid(app, entity_type):
-    """Test that the create entity endpoint returns a 400 for an invalid 
+    """Test that the create entity endpoint returns a 400 for an invalid
        request schema"""
 
     # purposedly load the wrong entity data to use in the request body
@@ -234,10 +244,11 @@ def test_create_entity_invalid(app, entity_type):
         res = client.post(f'/entities/{entity_type}',
                           json=wrong_data['request'],
                           headers=test_data['headers'])
-                    
+
         assert res.status_code == 400
 
-### Update Entity
+
+# Update Entity
 
 @pytest.mark.parametrize('entity_type', [
     'source',
@@ -272,13 +283,14 @@ def test_update_entity_success(app, entity_type):
         assert res.status_code == 200
         assert res.json == test_data['response']
 
+
 @pytest.mark.parametrize('entity_type', [
     'source',
     'sample',
     'dataset',
 ])
 def test_update_entity_invalid(app, entity_type):
-    """Test that the update entity endpoint returns a 400 for an invalid 
+    """Test that the update entity endpoint returns a 400 for an invalid
        request schema"""
 
     # purposedly load the wrong entity data to use in the request body
@@ -300,7 +312,8 @@ def test_update_entity_invalid(app, entity_type):
 
         assert res.status_code == 400
 
-### Get Ancestors
+
+# Get Ancestors
 
 @pytest.mark.parametrize('entity_type', [
     'source',
@@ -325,9 +338,10 @@ def test_get_ancestors_success(app, entity_type):
                          headers=test_data['headers'])
 
         assert res.status_code == 200
-        assert res.json == test_data['response'] 
+        assert res.json == test_data['response']
 
-### Get Descendants
+
+# Get Descendants
 
 @pytest.mark.parametrize('entity_type', [
     'source',
@@ -355,7 +369,8 @@ def test_get_descendants_success(app, entity_type):
         assert res.status_code == 200
         assert res.json == test_data['response']
 
-### Validate constraints
+
+# Validate constraints
 
 @pytest.mark.parametrize('test_name', [
     'source',
@@ -371,19 +386,19 @@ def test_validate_constraints_new(app, test_name):
 
     with open(os.path.join(test_data_dir, f'validate_constraints_{test_name}.json'), 'r') as f:
         test_data = json.load(f)
-        
+
     def mock_func(func_name):
         data = test_data[func_name]
         if data and data.get('code'):
-            # code being tested uses a StatusCode enum instead of an int 
+            # code being tested uses a StatusCode enum instead of an int
             data['code'] = app_module.StatusCodes(data['code'])
         return data
 
     with (app.test_client() as client,
           patch('app.get_constraints_by_ancestor', return_value=mock_func('get_constraints_by_ancestor')),
           patch('app.get_constraints_by_descendant', return_value=mock_func('get_constraints_by_descendant'))):
-        
-        res = client.post('/constraints' + test_data['query_string'], 
+
+        res = client.post('/constraints' + test_data['query_string'],
                           headers={'Authorization': 'Bearer test_token'},
                           json=test_data['request'])
 
