@@ -1111,8 +1111,19 @@ def create_multiple_samples(count: int, user_token: str, json_data_dict: dict):
         abort_bad_req(str(e))
 
     # `direct_ancestor_uuid` is required on create
-    # Check existence of the direct ancestor (either another Sample or Source) and get the first 'direct_ancestor_uuid'
-    direct_ancestor_uuid_dict = query_target_entity(json_data_dict['direct_ancestor_uuid'][0])
+    # Check existence of the direct ancestor (either another Sample or Source)
+    direct_ancestor_dict = query_target_entity(json_data_dict['direct_ancestor_uuid'])
+
+    # Creating the ids require organ code to be specified for the samples to be created when the
+    # sample's direct ancestor is a Source.
+    if direct_ancestor_dict['entity_type'] == 'Source':
+        # `sample_category` is required on create
+        if json_data_dict['sample_category'].lower() != 'organ':
+            abort_bad_req("The sample_category must be organ since the direct ancestor is a Source")
+
+        # Currently we don't validate the provided organ code though
+        if 'organ' not in json_data_dict or not json_data_dict['organ']:
+            abort_bad_req("A valid organ code is required since the direct ancestor is a Source")
 
     # Generate 'before_create_triiger' data and create the entity details in Neo4j
     generated_ids_dict_list = create_multiple_samples_details(request, normalized_entity_type, user_token, json_data_dict, count)
