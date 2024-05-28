@@ -1247,6 +1247,11 @@ def get_entity_visibility(id):
 """
 Update the properties of a given entity
 
+Defaults to return a simple message that the entity with ID was updated.
+
+Full dictionary response is support based on query string
+For example: /entities/<id>?return_dict=true
+
 Response result filtering is supported based on query string
 For example: /entities/<id>?return_all_properties=true
 Default to skip those time-consuming properties
@@ -1267,6 +1272,9 @@ json
 @require_valid_token(param='user_token')
 @require_json(param='json_data_dict')
 def update_entity(id: str, user_token: str, json_data_dict: dict):
+    # Establish what the default response will be
+    return_dict = False
+
     # Normalize user provided status
     if "status" in json_data_dict:
         normalized_status = schema_manager.normalize_status(json_data_dict["status"])
@@ -1434,13 +1442,22 @@ def update_entity(id: str, user_token: str, json_data_dict: dict):
 
     # Result filtering based on query string
     # Will return all properties by running all the read triggers
-    # If the reuqest specifies `/entities/<id>?return_all_properties=true`
+    # If the reuqest specifies `/entities/<id>?return_all_properties=true` or `?return_dict=true`
     if bool(request.args):
-        # The parased query string value is a string 'true'
-        return_all_properties = request.args.get('return_all_properties')
+        if 'return_all_properties' in request.args:
+            # The parased query string value is a string 'true'
+            return_all_properties = request.args.get('return_all_properties')
 
-        if (return_all_properties is not None) and (return_all_properties.lower() == 'true'):
-            properties_to_skip = []
+            if (return_all_properties is not None) and (return_all_properties.lower() == 'true'):
+                properties_to_skip = []
+                return_dict = True
+
+        if 'return_dict' in request.args:
+            return_dict_check = request.args.get('return_dict')
+
+            if (return_dict_check is not None) and (return_dict_check.lower() == 'true'):
+                return_dict = True
+
 
     # Generate the filtered or complete entity dict to send back
     complete_dict = schema_manager.get_complete_entity_result(user_token, merged_updated_dict, properties_to_skip)
@@ -1462,7 +1479,10 @@ def update_entity(id: str, user_token: str, json_data_dict: dict):
                f" with UUID {entity_dict['uuid']}")
     reindex_entity(entity_dict['uuid'], user_token)
 
-    return jsonify(normalized_complete_dict)
+    if return_dict:
+        return jsonify(normalized_complete_dict)
+    else:
+        return jsonify({'message': f"{normalized_entity_type} of {id} has been updated"})
 
 
 """
