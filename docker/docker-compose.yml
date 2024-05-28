@@ -33,6 +33,12 @@ services:
       - "./entity-api/nginx/conf.d:/etc/nginx/conf.d"
     networks:
       - sennet_docker_network
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: us-east-1
+        awslogs-group: entity-api-docker-logs
+        awslogs-stream: ${LOG_STREAM}
 
 networks:
   # This is the network created by gateway to enable communicaton between multiple docker-compose projects

@@ -56,7 +56,7 @@ Parameters
 neo4j_driver : neo4j.Driver object
     The neo4j database connection pool
 uuid : str
-    The uuid of the entity connected to the requested actitivty  
+    The uuid of the entity connected to the requested actitivty
 
 Returns
 -------
@@ -93,7 +93,7 @@ Parameters
 neo4j_driver : neo4j.Driver object
     The neo4j database connection pool
 uuid : str
-    The uuid of target activity 
+    The uuid of target activity
 
 Returns
 -------
@@ -168,7 +168,7 @@ Parameters
 neo4j_driver : neo4j.Driver object
     The neo4j database connection pool
 uuid : str
-    The uuid of target entity 
+    The uuid of target entity
 
 Returns
 -------
@@ -249,12 +249,85 @@ def get_entities_by_type(neo4j_driver, entity_type, property_key=None):
                 results = _nodes_to_dicts(record[record_field_name])
 
     if not property_key:
-        for index, result in enumerate(results):
+        for result in results:
             protocol_url = get_activity_protocol(neo4j_driver, result['uuid'])
             if protocol_url != {}:
                 result['protocol_url'] = protocol_url
 
     return results
+
+
+"""
+Get specific fields for Data Sharing Portal job dashboard for provided entities
+
+Parameters
+----------
+neo4j_driver : neo4j.Driver object
+    The neo4j database connection pool
+entity_uuids : list
+    A list of entity UUIDs
+entity_type : str
+    One of the normalized entity types: Sample or Source
+
+Returns
+-------
+list
+    A dictionary of UUID to list of the following properties: sennet_id, uuid, lab_tissue_sample_id, source_type,
+    sample_category, organ
+"""
+
+
+def get_entities_for_dashboard(neo4j_driver, entity_uuids, entity_type):
+    results = []
+    query = ''
+
+    if entity_type.upper() == Ontology.ops().entities().SAMPLE.upper():
+        query = (f"Match (e:Sample) "
+                 f"WHERE e.uuid in {entity_uuids} "
+                 f"OPTIONAL MATCH (e:Sample)-[*]->(o:Sample {{sample_category: 'Organ'}}) "
+                 f"return apoc.coll.toSet(COLLECT({{sennet_id: e.sennet_id, uuid: e.uuid, "
+                 f"lab_tissue_sample_id: e.lab_tissue_sample_id, sample_category: e.sample_category,"
+                 f"organ_type: COALESCE(o.organ, e.organ), group_name: e.group_name}})) as {record_field_name}")
+
+    if entity_type.upper() == Ontology.ops().entities().SOURCE.upper():
+        query = (f"Match (e:Source) "
+                 f"WHERE e.uuid in {entity_uuids} "
+                 f"return apoc.coll.toSet(COLLECT({{sennet_id: e.sennet_id, uuid: e.uuid, "
+                 f"lab_source_id: e.lab_source_id, source_type: e.source_type, group_name: e.group_name}})) as {record_field_name}")
+
+    logger.info("======get_entities_for_dashboard() query======")
+    logger.info(query)
+
+    with neo4j_driver.session() as session:
+        record = session.read_transaction(_execute_readonly_tx, query)
+        if record and record[record_field_name]:
+            results = record[record_field_name]
+
+    return results
+
+
+def dataset_has_component_children(neo4j_driver, dataset_uuid):
+    """
+    Determine if given dataset has component children
+
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    dataset_uuid : str
+        The uuid of the given dataset
+
+    Returns
+    -------
+    bool
+    """
+    query = ("MATCH p=(ds1:Dataset)-[:WAS_GENERATED_BY]->(a:Activity)-[:USED]->(ds2:Dataset) "
+             "WHERE ds2.uuid = $dataset_uuid AND a.creation_action = 'Multi-Assay Split' "
+             "RETURN (COUNT(p) > 0)")
+    with neo4j_driver.session() as session:
+        value = session.run(query, dataset_uuid=dataset_uuid).value()
+    return value[0]
+
 
 """
 Retrieve the ancestor organ(s) of a given entity
@@ -264,7 +337,7 @@ Parameters
 neo4j_driver : neo4j.Driver object
     The neo4j database connection pool
 entity_uuid : str
-    The HuBMAP ID (e.g. HBM123.ABCD.456) or UUID of target entity 
+    The SenNet ID (e.g. SNT123.ABCD.456) or UUID of target entity
 
 Returns
 -------
@@ -346,7 +419,7 @@ def create_entity(neo4j_driver, entity_type, entity_data_dict):
         # Log the full stack trace, prepend a line with our message
         logger.exception(msg)
 
-        if tx.closed() == False:
+        if tx.closed() is False:
             logger.info("Failed to commit create_entity() transaction, rollback")
 
             tx.rollback()
@@ -373,8 +446,6 @@ direct_ancestor_uuid : str
 def create_multiple_samples(neo4j_driver, samples_dict_list, activity_data_dict, direct_ancestor_uuid):
     try:
         with neo4j_driver.session() as session:
-            entity_dict = {}
-
             tx = session.begin_transaction()
 
             activity_uuid = activity_data_dict['uuid']
@@ -398,7 +469,7 @@ def create_multiple_samples(neo4j_driver, samples_dict_list, activity_data_dict,
                 logger.info("======create_multiple_samples() individual query======")
                 logger.info(query)
 
-                result = tx.run(query)
+                tx.run(query)
 
             # Then
             tx.commit()
@@ -407,7 +478,7 @@ def create_multiple_samples(neo4j_driver, samples_dict_list, activity_data_dict,
         # Log the full stack trace, prepend a line with our message
         logger.exception(msg)
 
-        if tx.closed() == False:
+        if tx.closed() is False:
             logger.info("Failed to commit create_multiple_samples() transaction, rollback")
 
             tx.rollback()
@@ -427,7 +498,7 @@ entity_type : str
 entity_data_dict : dict
     The target entity with properties to be updated
 uuid : str
-    The uuid of target entity 
+    The uuid of target entity
 
 Returns
 -------
@@ -470,7 +541,7 @@ def update_entity(neo4j_driver, entity_type, entity_data_dict, uuid):
         # Log the full stack trace, prepend a line with our message
         logger.exception(msg)
 
-        if tx.closed() == False:
+        if tx.closed() is False:
             logger.info("Failed to commit update_entity() transaction, rollback")
 
             tx.rollback()
@@ -486,7 +557,7 @@ Parameters
 neo4j_driver : neo4j.Driver object
     The neo4j database connection pool
 uuid : str
-    The uuid of target entity 
+    The uuid of target entity
 property_key : str
     A target property key for result filtering
 
@@ -540,7 +611,7 @@ Parameters
 neo4j_driver : neo4j.Driver object
     The neo4j database connection pool
 uuid : str
-    The uuid of target entity 
+    The uuid of target entity
 property_key : str
     A target property key for result filtering
 
@@ -594,7 +665,7 @@ Parameters
 neo4j_driver : neo4j.Driver object
     The neo4j database connection pool
 uuid : str
-    The uuid of target entity 
+    The uuid of target entity
 property_key : str
     A target property key for result filtering
 
@@ -648,7 +719,7 @@ Parameters
 neo4j_driver : neo4j.Driver object
     The neo4j database connection pool
 uuid : str
-    The uuid of target entity 
+    The uuid of target entity
 property_key : str
     A target property key for result filtering
 
@@ -721,7 +792,6 @@ def get_source_organ_count(neo4j_driver, uuid: str, organ: str, case_uuid: str =
     query = f"MATCH (s:Sample)-[:WAS_GENERATED_BY]->(a)-[:USED]->(sr:Source) where sr.uuid='{uuid}' " \
             f"and s.organ='{organ}' {match_case}return count(s) AS {record_field_name}"
 
-
     logger.info("======get_source_organ_count() query======")
     logger.info(query)
     with neo4j_driver.session() as session:
@@ -732,6 +802,7 @@ def get_source_organ_count(neo4j_driver, uuid: str, organ: str, case_uuid: str =
         else:
             return 0
 
+
 """
 Get all revisions for a given dataset uuid and sort them in descending order based on their creation time
 
@@ -740,7 +811,7 @@ Parameters
 neo4j_driver : neo4j.Driver object
     The neo4j database connection pool
 uuid : str
-    The uuid of target entity 
+    The uuid of target entity
 
 Returns
 -------
@@ -782,11 +853,11 @@ Parameters
 neo4j_driver : neo4j.Driver object
     The neo4j database connection pool
 uuid : str
-    The uuid of target entity 
+    The uuid of target entity
 fetch_all : bool
     Whether to fetch all Datasets or only include Published
 property_key : str
-    Return only a particular property from the cypher query, None for return all    
+    Return only a particular property from the cypher query, None for return all
 
 Returns
 -------
@@ -834,11 +905,10 @@ def get_sorted_multi_revisions(neo4j_driver, uuid, fetch_all=True, property_key=
     return results
 
 
-
 """
 Returns all of the Sample information associated with a Dataset, back to each Source. Returns a dictionary
 containing all of the provenance info for a given dataset. Each Sample is in its own dictionary, converted
-from its neo4j node and placed into a list. 
+from its neo4j node and placed into a list.
 
 Parameters
 ----------
@@ -875,7 +945,7 @@ Parameters
 neo4j_driver : neo4j.Driver object
     The neo4j database connection pool
 uuid : str
-    The uuid of target entity 
+    The uuid of target entity
 property_key : str
     A target property key for result filtering
 
@@ -910,7 +980,6 @@ def get_previous_multi_revisions(neo4j_driver, uuid, property_key=None):
                 for rev in record[record_field_name]:
                     results.append(_nodes_to_dicts(rev))
 
-
     return results
 
 
@@ -922,7 +991,7 @@ Parameters
 neo4j_driver : neo4j.Driver object
     The neo4j database connection pool
 uuid : str
-    The uuid of target entity 
+    The uuid of target entity
 property_key : str
     A target property key for result filtering
 
@@ -959,6 +1028,7 @@ def get_next_multi_revisions(neo4j_driver, uuid, property_key=None):
 
     return results
 
+
 """
 Get all previous revisions of the target entity by uuid
 
@@ -967,7 +1037,7 @@ Parameters
 neo4j_driver : neo4j.Driver object
     The neo4j database connection pool
 uuid : str
-    The uuid of target entity 
+    The uuid of target entity
 property_key : str
     A target property key for result filtering
 
@@ -1019,7 +1089,7 @@ Parameters
 neo4j_driver : neo4j.Driver object
     The neo4j database connection pool
 uuid : str
-    The uuid of target entity 
+    The uuid of target entity
 property_key : str
     A target property key for result filtering
 
@@ -1071,7 +1141,7 @@ Parameters
 neo4j_driver : neo4j.Driver object
     The neo4j database connection pool
 collection_uuid : str
-    The uuid of target collection 
+    The uuid of target collection
 entitiy_uuids_list : list
     A list of entity uuids to be linked to collection
 """
@@ -1106,7 +1176,7 @@ def add_entities_to_collection(neo4j_driver, collection_uuid, entitiy_uuids_list
         # Log the full stack trace, prepend a line with our message
         logger.exception(msg)
 
-        if tx.closed() == False:
+        if tx.closed() is False:
             logger.info("Failed to commit add_entities_to_collection() transaction, rollback")
 
             tx.rollback()
@@ -1122,7 +1192,7 @@ Parameters
 neo4j_driver : neo4j.Driver object
     The neo4j database connection pool
 uuid : str
-    The uuid of target entity: Source/Sample/Dataset, not Collection 
+    The uuid of target entity: Source/Sample/Dataset, not Collection
 depth : int
     The maximum number of hops in the traversal
 """
@@ -1137,7 +1207,6 @@ def get_provenance(neo4j_driver, uuid, depth, return_descendants=None):
     relationship_filter = 'USED>|WAS_GENERATED_BY>'
     if return_descendants:
         relationship_filter = '<USED|<WAS_GENERATED_BY'
-
 
     # More info on apoc.path.subgraphAll() procedure: https://neo4j.com/labs/apoc/4.0/graph-querying/expand-subgraph/
     query = (f"MATCH (n:Entity) "
@@ -1332,7 +1401,7 @@ def get_associated_sources_from_dataset(neo4j_driver, dataset_uuid):
 
 
 """
-Retrieve all the provenance information about each dataset. Each dataset's prov-info is given by a dictionary. 
+Retrieve all the provenance information about each dataset. Each dataset's prov-info is given by a dictionary.
 Certain fields such as first sample where there can be multiple nearest datasets in the provenance above a given
 dataset, that field is a list inside of its given dictionary. Results can be filtered with certain parameters:
 has_rui_info (true or false), organ (organ type), group_uuid, and dataset_status. These are passed in as a dictionary if
@@ -1345,7 +1414,7 @@ neo4j_driver : neo4j.Driver object
 param_dict : dictionary
     Dictionary containing any parameters desired to filter for certain results
 published_only : boolean
-    If a user does not have a token with HuBMAP-Read Group access, published_only is set to true. This will cause only 
+    If a user does not have a token with SenNet-Read Group access, published_only is set to true. This will cause only
     datasets with status = 'Published' to be included in the result.
 """
 
@@ -1372,7 +1441,7 @@ def get_prov_info(neo4j_driver, param_dict, published_only):
     if 'dataset_status' in param_dict:
         dataset_status_query_string = f" AND toUpper(ds.status) = '{param_dict['dataset_status'].upper()}'"
     if published_only:
-        published_only_query_string = f" AND toUpper(ds.status) = 'PUBLISHED'"
+        published_only_query_string = " AND toUpper(ds.status) = 'PUBLISHED'"
     query = (f"MATCH (ds:Dataset)-[:WAS_GENERATED_BY]->(a)-[:USED]->(firstSample:Sample)-[*]->(source:Source)"
              f"WHERE not (ds)<-[:REVISION_OF]-(:Dataset)"
              f" AND NOT toLower(a.creation_action) ENDS WITH 'process'"
@@ -1464,7 +1533,7 @@ def get_prov_info(neo4j_driver, param_dict, published_only):
 """
 Returns all of the same information as get_prov_info however only for a single dataset at a time. Returns a dictionary
 containing all of the provenance info for a given dataset. For fields such as first sample where there can be multiples,
-they are presented in their own dictionary converted from their nodes in neo4j and placed into a list. 
+they are presented in their own dictionary converted from their nodes in neo4j and placed into a list.
 
 Parameters
 ----------
@@ -1551,8 +1620,8 @@ def get_individual_prov_info(neo4j_driver, dataset_uuid):
 
 
 """
-Returns group_name, dataset_type, and status for every primary dataset. Also returns the organ type for the closest 
-sample above the dataset in the provenance where {sample_category: '{Ontology.ops().specimen_categories().ORGAN}'}.  
+Returns group_name, dataset_type, and status for every primary dataset. Also returns the organ type for the closest
+sample above the dataset in the provenance where {sample_category: '{Ontology.ops().specimen_categories().ORGAN}'}.
 
 Parameters
 ----------
@@ -1588,7 +1657,7 @@ def get_sankey_info(neo4j_driver):
 
 """
 Returns sample uuid, sample rui location, sample metadata, sample group name, sample created_by_email, sample ancestor
-uuid, sample ancestor entity type, organ uuid, organ type, lab tissue sample id, source uuid, source 
+uuid, sample ancestor entity type, organ uuid, organ type, lab tissue sample id, source uuid, source
 metadata, sample_sennet_id, organ_sennet_id, source_sennet_id, and sample_type all in a dictionary
 
 Parameters
@@ -1670,7 +1739,7 @@ entity_data_dict : dict
 Returns
 -------
 str
-    A string representation of the node properties map containing 
+    A string representation of the node properties map containing
     key-value pairs to be used in Cypher clause
 """
 
@@ -1762,7 +1831,7 @@ def _create_relationship_tx(tx, source_node_uuid, target_node_uuid, relationship
     if direction == "->":
         outgoing = direction
 
-    query = (f"MATCH (s), (t) " +
+    query = ("MATCH (s), (t) "
              f"WHERE s.uuid = '{source_node_uuid}' AND t.uuid = '{target_node_uuid}' "
              f"CREATE (s){incoming}[r:{relationship}]{outgoing}(t) "
              f"RETURN type(r) AS {record_field_name}")
@@ -1770,7 +1839,7 @@ def _create_relationship_tx(tx, source_node_uuid, target_node_uuid, relationship
     logger.info("======_create_relationship_tx() query======")
     logger.info(query)
 
-    result = tx.run(query)
+    tx.run(query)
 
 
 """
@@ -1910,12 +1979,13 @@ def create_multiple_datasets(neo4j_driver, datasets_dict_list, activity_data_dic
             # Then
             tx.commit()
             return output_dicts_list
+
     except TransactionError as te:
         msg = f"TransactionError from calling create_multiple_samples(): {te.value}"
         # Log the full stack trace, prepend a line with our message
         logger.exception(msg)
 
-        if tx.closed() == False:
+        if tx.closed() is False:
             logger.info("Failed to commit create_multiple_samples() transaction, rollback")
 
             tx.rollback()

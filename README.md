@@ -46,4 +46,6 @@ cd docker
 The documentation for the API calls is hosted on SmartAPI. Modifying the `entity-api-spec.yaml` file and committing the changes to github should update the API shown on SmartAPI. SmartAPI allows users to register API documents.  The documentation is associated with this github account: api-developers@sennetconsortium.org.
 
 ## Testing
+Install the development dependencies using `pip install -r src/requirements.dev.txt`.
+
 Execute `pytest` in the root directory to run all unit tests. `pytest -W ignore::DeprecationWarning` will execute all unit tests without deprecation warnings.

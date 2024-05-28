@@ -139,7 +139,15 @@ def get_constraints(entry, key1, key2, is_match=False, use_case=None) -> dict:
                     if entry_key2 is not None and v:
                         result = rest_ok(const_key2, True)
                     else:
-                        result = rest_response(StatusCodes.NOT_FOUND, f"Match not found. Valid `{key2}` in description.", const_key2, True)
+                        entity_type = entry_key1.get('entity_type')
+                        entity_type = entity_type.title() if entity_type is not None else entity_type
+                        sub_type = entry_key1.get('sub_type')
+                        sub_type = ', '.join(sub_type) if sub_type is not None else ''
+                        msg = (
+                            f"This `{entity_type}` `{sub_type}` cannot be associated with the provided `{key1}` due to entity constraints. "
+                            f"Click the link to view valid entity types that can be `{key2}`"
+                        )
+                        result = rest_response(StatusCodes.NOT_FOUND, msg, const_key2, True)
                 else:
                     result = rest_ok(const_key2, True)
                 break

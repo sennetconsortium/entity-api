@@ -31,7 +31,8 @@ def validate_application_header_before_entity_create(normalized_entity_type, req
     # Currently only ingest-api and ingest-pipeline are allowed
     # to create or update Dataset and Upload
     # Use lowercase for comparison
-    applications_allowed = [SchemaConstants.INGEST_API_APP, SchemaConstants.INGEST_PIPELINE_APP]
+    applications_allowed = [SchemaConstants.INGEST_API_APP, SchemaConstants.INGEST_PIPELINE_APP,
+                            SchemaConstants.INGEST_PORTAL_APP]
 
     _validate_application_header(applications_allowed, request.headers)
 
@@ -325,8 +326,8 @@ def validate_if_retraction_permitted(property_key, normalized_entity_type, reque
     if existing_data_dict['status'].lower() != SchemaConstants.DATASET_STATUS_PUBLISHED:
         raise ValueError("This dataset is not published, retraction is not allowed")
 
-    # Only token in HuBMAP-Data-Admin group can retract a published dataset. Handled by API Gateway.
-    # TODO: need to update HuBMAP-READ to sennet and update hmgroupids
+    # Only token in SenNet-Data-Admin group can retract a published dataset. Handled by API Gateway.
+    # TODO: need to update SenNet-READ to sennet and update hmgroupids
     try:
         # The property 'hmgroupids' is ALWASYS in the output with using schema_manager.get_user_info()
         # when the token in request is a nexus_token
@@ -338,7 +339,7 @@ def validate_if_retraction_permitted(property_key, normalized_entity_type, reque
 
         # If the token is not a nexus token, no group information available
         # The commons.hm_auth.AuthCache would return a Response with 500 error message
-        # We treat such cases as the user not in the HuBMAP-READ group
+        # We treat such cases as the user not in the SenNet-READ group
         raise ValueError("Failed to parse the permission based on token, retraction is not allowed")
 
     if hubmap_read_group_uuid not in user_info['hmgroupids']:
@@ -505,6 +506,29 @@ def validate_creation_action(property_key, normalized_entity_type, request, exis
 
 
 """
+Validate the provided value of the activity creation action before updating direct ancestors. Certain values prohibited
+Parameters
+----------
+property_key : str
+    The target property key
+normalized_type : str
+    Submission
+request: Flask request object
+    The instance of Flask request passed in from application request
+existing_data_dict : dict
+    A dictionary that contains all existing entity properties
+new_data_dict : dict
+    The json data in request body, already after the regular validations
+"""
+def validate_not_invalid_creation_action(property_key, normalized_entity_type, request, existing_data_dict, new_data_dict):
+    prohibited_creation_action_values = ["Central Process", "Multi-Assay Split"]
+    entity_uuid = existing_data_dict.get("uuid")
+    creation_action = schema_neo4j_queries.get_entity_creation_action_activity(schema_manager.get_neo4j_driver_instance(), entity_uuid)
+    if creation_action and creation_action in prohibited_creation_action_values:
+        raise ValueError(f"Cannot update {property_key} value if creation_action of parent activity is {', '.join(prohibited_creation_action_values)}")
+
+
+"""
 Validate that the user is in  Hubmap-Data-Admin before creating or updating field 'assigned_to_group_name'
 Parameters
 ----------
@@ -560,12 +584,70 @@ new_data_dict : dict
 
 def validate_group_name(property_key, normalized_entity_type, request, existing_data_dict, new_data_dict):
     assigned_to_group_name = new_data_dict['assigned_to_group_name']
+    if assigned_to_group_name == "":
+        # Allow for clearing the assigned_to_group_name
+        return
+
     globus_groups = schema_manager.get_auth_helper_instance().getHuBMAPGroupInfo()
     globus_group = next((v for v in globus_groups.values() if v.get("displayname") == assigned_to_group_name), None)
     if globus_group is None:
         raise ValueError("Invalid value for 'assigned_to_group_name'")
     if not globus_group.get("data_provider", False):
         raise ValueError("Invalid group in 'assigned_to_group_name'. Must be a data provider")
+
+
+def validate_status_changed(property_key, normalized_entity_type, request, existing_data_dict, new_data_dict):
+    """
+    Validate that status, if included in new_data_dict, is different from the existing status value
+    Parameters
+    ----------
+    property_key : str
+        The target property key
+    normalized_type : str
+        Submission
+    request: Flask request object
+        The instance of Flask request passed in from application request
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        The json data in request body, already after the regular validations
+    """
+
+    if 'status' not in existing_data_dict:
+        raise KeyError("Missing 'status' key in 'existing_data_dict' during calling 'validate_status_changed()' validator method.")
+
+    # Only allow 'status' in new_data_dict if its different than the existing status value
+    if existing_data_dict['status'].lower() == new_data_dict['status'].lower():
+        raise ValueError(f"Status value is already {existing_data_dict['status']}, cannot change to {existing_data_dict['status']}. If no change, do not include status field in update")
+
+
+def validate_dataset_not_component(property_key, normalized_entity_type, request, existing_data_dict, new_data_dict):
+    """
+    Validate that a given dataset is not a component of a multi-assay split parent dataset fore allowing status to be
+    updated. If a component dataset needs to be updated, update it via its parent multi-assay dataset
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key
+    normalized_type : str
+        Submission
+    request: Flask request object
+        The instance of Flask request passed in from application request
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        The json data in request body, already after the regular validations
+    """
+    headers = request.headers
+    if headers.get(SchemaConstants.INTERNAL_TRIGGER) != SchemaConstants.COMPONENT_DATASET:
+        neo4j_driver_instance = schema_manager.get_neo4j_driver_instance()
+        uuid = existing_data_dict['uuid']
+        creation_action = schema_neo4j_queries.get_entity_creation_action_activity(neo4j_driver_instance, uuid)
+        if creation_action == 'Multi-Assay Split':
+            raise ValueError(f"Unable to modify existing {existing_data_dict['entity_type']} "
+                             f"{existing_data_dict['uuid']}. Can not change status on component datasets directly. Status "
+                             f"change must occur on parent multi-assay split dataset")
 
 
 ####################################################################################################
@@ -590,7 +672,7 @@ def _validate_application_header(applications_allowed, request_headers):
     app_header = request_headers.get(SchemaConstants.SENNET_APP_HEADER)
 
     if not app_header:
-        msg = f"Unbale to proceed due to missing {SchemaConstants.SENNET_APP_HEADER} header from request"
+        msg = f"Unable to proceed due to missing {SchemaConstants.SENNET_APP_HEADER} header from request"
         raise schema_errors.MissingApplicationHeaderException(msg)
 
     # Use lowercase for comparing the application header value against the yaml

@@ -2,8 +2,10 @@ import ast
 import yaml
 import logging
 import requests
-from flask import Response
 from datetime import datetime
+
+from flask import Response
+from hubmap_commons.file_helper import ensureTrailingSlashURL
 
 # Don't confuse urllib (Python native library) with urllib3 (3rd-party library, requests also uses urllib3)
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
@@ -15,11 +17,8 @@ from schema import schema_validators
 from schema.schema_constants import SchemaConstants
 from schema import schema_neo4j_queries
 
-# HuBMAP commons
-from hubmap_commons.hm_auth import AuthHelper
-
 # Atlas Consortia commons
-from atlas_consortia_commons.rest import *
+from atlas_consortia_commons.rest import abort_bad_req
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +35,7 @@ requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
 # A single leading underscore means you're not supposed to access it "from the outside"
 _schema = None
 _uuid_api_url = None
+_entity_api_url = None
 _ingest_api_url = None
 _search_api_url = None
 _auth_helper = None
@@ -52,7 +52,7 @@ request_cache = {}
 ####################################################################################################
 
 """
-Initialize the schema_manager module with loading the schema yaml file 
+Initialize the schema_manager module with loading the schema yaml file
 and create an neo4j driver instance (some trigger methods query neo4j)
 
 Parameters
@@ -66,6 +66,7 @@ neo4j_session_context : neo4j.Session object
 
 def initialize(valid_yaml_file,
                uuid_api_url,
+               entity_api_url,
                ingest_api_url,
                search_api_url,
                auth_helper_instance,
@@ -77,6 +78,7 @@ def initialize(valid_yaml_file,
     # Specify as module-scope variables
     global _schema
     global _uuid_api_url
+    global _entity_api_url
     global _ingest_api_url
     global _search_api_url
     global _auth_helper
@@ -92,6 +94,13 @@ def initialize(valid_yaml_file,
     _uuid_api_url = uuid_api_url
     _ingest_api_url = ingest_api_url
     _search_api_url = search_api_url
+
+    if entity_api_url is not None:
+        _entity_api_url = entity_api_url
+    else:
+        msg = f"Unable to initialize schema manager with entity_api_url={entity_api_url}."
+        logger.critical(msg=msg)
+        raise Exception(msg)
 
     # Get the helper instances
     _auth_helper = auth_helper_instance
@@ -126,7 +135,9 @@ def load_provenance_schema(valid_yaml_file):
         schema_dict = yaml.safe_load(file)
 
         logger.info("Schema yaml file loaded successfully")
-
+        # For entities with properties set to None/Null, remove them as these represent private values not inherited by subclass
+        for entity in schema_dict['ENTITIES']:
+            schema_dict['ENTITIES'][entity]['properties'] = remove_none_values(schema_dict['ENTITIES'][entity]['properties'])
         return schema_dict
 
 
@@ -287,77 +298,6 @@ def get_all_entity_types():
 
 
 """
-Get the superclass (if defined) of the given entity class
-
-Parameters
-----------
-normalized_entity_class : str
-    The normalized target entity class
-
-Returns
--------
-string or None
-    One of the normalized entity classes if defined (currently only Publucation has Dataset as superclass). None otherwise
-"""
-
-
-def get_entity_superclass(normalized_entity_class):
-    normalized_superclass = None
-
-    all_entity_types = get_all_entity_types()
-
-    if normalized_entity_class in all_entity_types:
-        if 'superclass' in _schema['ENTITIES'][normalized_entity_class]:
-            normalized_superclass = normalize_entity_type(_schema['ENTITIES'][normalized_entity_class]['superclass'])
-
-            if normalized_superclass not in all_entity_types:
-                msg = f"Invalid 'superclass' value defined for {normalized_entity_class}: {normalized_superclass}"
-                logger.error(msg)
-                raise ValueError(msg)
-        else:
-            # Since the 'superclass' property is optional, we just log the warning message, no need to bubble up
-            msg = f"The 'superclass' property is not defined for entity class: {normalized_entity_class}"
-            logger.warning(msg)
-
-    return normalized_superclass
-
-
-def entity_type_instanceof(entity_type: str, entity_class: str) -> bool:
-    """
-    Determine if the Entity type with 'entity_type' is an instance of 'entity_class'.
-    Use this function if you already have the Entity type. Use entity_instanceof(uuid, class)
-    if you just have the Entity uuid.
-
-    :param entity_type: from Entity
-    :param entity_class: found in .yaml file
-    :return:  True or False
-    """
-    if entity_type is None:
-        return False
-
-    normalized_entry_class: str = normalize_entity_type(entity_class)
-    super_entity_type: str = normalize_entity_type(entity_type)
-    while super_entity_type is not None:
-        if normalized_entry_class == super_entity_type:
-            return True
-        super_entity_type = get_entity_superclass(super_entity_type)
-    return False
-
-
-def entity_instanceof(entity_uuid: str, entity_class: str) -> bool:
-    """
-    Determine if the Entity with 'entity_uuid' is an instance of 'entity_class'.
-
-    :param entity_uuid: from Entity
-    :param entity_class: found in .yaml file
-    :return: True or False
-    """
-    entity_type: str = \
-        schema_neo4j_queries.get_entity_type(get_neo4j_driver_instance(), entity_uuid)
-    return entity_type_instanceof(entity_type, entity_class)
-
-
-"""
 Generating triggered data based on the target events and methods
 
 Parameters
@@ -489,7 +429,7 @@ def generate_triggered_data(trigger_type, normalized_class, user_token, existing
                         # Log the full stack trace, prepend a line with our message
                         logger.exception(msg)
                         raise schema_errors.FileUploadException(e)
-                    except Exception as e:
+                    except Exception:
                         msg = f"Failed to call the {trigger_type} method: {trigger_method_name}"
                         # Log the full stack trace, prepend a line with our message
                         logger.exception(msg)
@@ -534,17 +474,17 @@ def generate_triggered_data(trigger_type, normalized_class, user_token, existing
                         # and this will overwrite the original key so it doesn't get stored in Neo4j
                         if key != target_key:
                             trigger_generated_data_dict[key] = None
-                except schema_errors.NoDataProviderGroupException as e:
+                except schema_errors.NoDataProviderGroupException:
                     msg = f"Failed to call the {trigger_type} method: {trigger_method_name}"
                     # Log the full stack trace, prepend a line with our message
                     logger.exception(msg)
                     raise schema_errors.NoDataProviderGroupException
-                except schema_errors.MultipleDataProviderGroupException as e:
+                except schema_errors.MultipleDataProviderGroupException:
                     msg = f"Failed to call the {trigger_type} method: {trigger_method_name}"
                     # Log the full stack trace, prepend a line with our message
                     logger.exception(msg)
                     raise schema_errors.MultipleDataProviderGroupException
-                except schema_errors.UnmatchedDataProviderGroupException as e:
+                except schema_errors.UnmatchedDataProviderGroupException:
                     msg = f"Failed to call the {trigger_type} method: {trigger_method_name}"
                     # Log the full stack trace, prepend a line with our message
                     logger.exception(msg)
@@ -556,11 +496,11 @@ def generate_triggered_data(trigger_type, normalized_class, user_token, existing
                     logger.exception(msg)
                     raise schema_errors.FileUploadException(e)
                 # Certain requirements were not met to create this triggered field
-                except schema_errors.InvalidPropertyRequirementsException as e:
+                except schema_errors.InvalidPropertyRequirementsException:
                     msg = f"Failed to call the {trigger_type} method: {trigger_method_name}"
                     # Log the full stack trace, prepend a line with our message
                     logger.exception(msg)
-                except Exception as e:
+                except Exception:
                     msg = f"Failed to call the {trigger_type} method: {trigger_method_name}"
                     # Log the full stack trace, prepend a line with our message
                     logger.exception(msg)
@@ -604,9 +544,9 @@ def remove_none_values(merged_dict):
 
 
 """
-Filter out the merged_dict by getting rid of the transitent properties (not to be stored) 
+Filter out the merged_dict by getting rid of the transitent properties (not to be stored)
 and properties with None value
-Meaning the returned target property key is different from the original key 
+Meaning the returned target property key is different from the original key
 in the trigger method, e.g., Source.image_files_to_add
 
 Parameters
@@ -692,7 +632,7 @@ Parameters
 token: str
     Either the user's globus nexus token or the internal token
 entities_list : list
-    A list of entity dictionaries 
+    A list of entity dictionaries
 properties_to_skip : list
     Any properties to skip running triggers
 
@@ -711,7 +651,6 @@ def get_complete_entities_list(token, entities_list, properties_to_skip=[]):
         complete_entities_list.append(complete_entity_dict)
 
     return complete_entities_list
-
 
 
 """
@@ -984,7 +923,7 @@ def validate_json_data_against_schema(provenance_type, json_data_dict, normalize
 
 
 """
-Execute the entity level validator of the given type defined in the schema yaml 
+Execute the entity level validator of the given type defined in the schema yaml
 before entity creation via POST or entity update via PUT
 Only one validator defined per given validator type, no need to support multiple validators
 
@@ -1033,7 +972,7 @@ def execute_entity_level_validator(validator_type, normalized_entity_type, reque
 
 
 """
-Execute the property level validators defined in the schema yaml 
+Execute the property level validators defined in the schema yaml
 before property update via PUT
 
 Parameters
@@ -1054,8 +993,6 @@ new_data_dict : dict
 def execute_property_level_validators(provenance_type, validator_type, normalized_entity_type, request,
                                       existing_data_dict, new_data_dict):
     global _schema
-
-    schema_section = None
 
     # A bit validation
     validate_property_level_validator_type(validator_type)
@@ -1145,7 +1082,7 @@ Parameters
 normalized_entity_type : str
     One of the normalized entity types: Dataset, Collection, Sample, Source, Upload, Publication
 id : str
-    The uuid of target entity 
+    The uuid of target entity
 
 Returns
 -------
@@ -1342,7 +1279,7 @@ The result will be used by the trigger methods
 Parameters
 ----------
 request : Flask request object
-    The Flask request passed from the API endpoint 
+    The Flask request passed from the API endpoint
 
 Returns
 -------
@@ -1494,7 +1431,7 @@ user_info_dict: dict
         "snscopes": ["urn:globus:auth:scope:nexus.api.globus.org:groups"],
     }
 count : int
-    The optional number of ids to generate. If omitted, defaults to 1 
+    The optional number of ids to generate. If omitted, defaults to 1
 
 Returns
 -------
@@ -1512,16 +1449,16 @@ def create_sennet_ids(normalized_class, json_data_dict, user_token, user_info_di
     parent_ids - required for entity types of SAMPLE, SOURCE and DATASET
                an array of UUIDs for the ancestors of the new entity
                For SAMPLEs and SOURCEs a single uuid is required (one entry in the array)
-               and multiple ids are not allowed (SAMPLEs and SOURCEs are required to 
+               and multiple ids are not allowed (SAMPLEs and SOURCEs are required to
                have a single ancestor, not multiple).  For DATASETs at least one ancestor
                UUID is required, but multiple can be specified. (A DATASET can be derived
-               from multiple SAMPLEs or DATASETs.) 
+               from multiple SAMPLEs or DATASETs.)
     organ_code - required only in the case where an id is being generated for a SAMPLE that
                has a SOURCE as a direct ancestor.  Must be one of the codes from:
                https://github.com/hubmapconsortium/search-api/blob/test-release/src/search-schema/data/definitions/enums/organ_types.yaml
 
     Query string (in url) arguments:
-        entity_count - optional, the number of ids to generate. If omitted, defaults to 1 
+        entity_count - optional, the number of ids to generate. If omitted, defaults to 1
     """
     json_to_post = {
         'entity_type': normalized_class
@@ -1532,8 +1469,8 @@ def create_sennet_ids(normalized_class, json_data_dict, user_token, user_info_di
         # The direct ancestor of Source and Upload must be Lab
         # The group_uuid is the Lab id in this case
         if normalized_class in ['Source', 'Upload']:
-            # If `group_uuid` is not already set, looks for membership in a single "data provider" group and sets to that. 
-            # Otherwise if not set and no single "provider group" membership throws error.  
+            # If `group_uuid` is not already set, looks for membership in a single "data provider" group and sets to that.
+            # Otherwise if not set and no single "provider group" membership throws error.
             # This field is also used to link (Neo4j relationship) to the correct Lab node on creation.
             if 'hmgroupids' not in user_info_dict:
                 raise KeyError(
@@ -1558,8 +1495,8 @@ def create_sennet_ids(normalized_class, json_data_dict, user_token, user_info_di
                 parent_id = group_uuid
             # Otherwise, parse user token to get the group_uuid
             else:
-                # If `group_uuid` is not already set, looks for membership in a single "data provider" group and sets to that. 
-                # Otherwise if not set and no single "provider group" membership throws error.  
+                # If `group_uuid` is not already set, looks for membership in a single "data provider" group and sets to that.
+                # Otherwise if not set and no single "provider group" membership throws error.
                 # This field is also used to link (Neo4j relationship) to the correct Lab node on creation.
                 if 'hmgroupids' not in user_info_dict:
                     raise KeyError(
@@ -1607,7 +1544,7 @@ def create_sennet_ids(normalized_class, json_data_dict, user_token, user_info_di
     response.raise_for_status()
 
     if response.status_code == 200:
-        # For Collection/Dataset/Activity/Upload, no submission_id gets 
+        # For Collection/Dataset/Activity/Upload, no submission_id gets
         # generated, the uuid-api response looks like:
         """
         [{
@@ -1691,7 +1628,7 @@ def get_entity_group_info(user_groupids_list, default_group=None):
         raise schema_errors.NoDataProviderGroupException(msg)
 
     if len(user_data_provider_uuids) > 1:
-        if not default_group is None and default_group in user_groupids_list:
+        if default_group is not None and default_group in user_groupids_list:
             uuid = default_group
         else:
             msg = "More than one data_provider groups found for this user and no group_uuid specified. Can't continue."
@@ -1900,7 +1837,7 @@ Parameters
 ----------
 data_str: str
     The string representation of the Python list/dict stored in Neo4j.
-    It's not stored in Neo4j as a json string! And we can't store it as a json string 
+    It's not stored in Neo4j as a json string! And we can't store it as a json string
     due to the way that Cypher handles single/double quotes.
 
 Returns
@@ -1914,13 +1851,13 @@ def convert_str_to_data(data_str):
     if isinstance(data_str, str):
         # ast uses compile to compile the source string (which must be an expression) into an AST
         # If the source string is not a valid expression (like an empty string), a SyntaxError will be raised by compile
-        # If, on the other hand, the source string would be a valid expression (e.g. a variable name like foo), 
+        # If, on the other hand, the source string would be a valid expression (e.g. a variable name like foo),
         # compile will succeed but then literal_eval() might fail with a ValueError
         # Also this fails with a TypeError: literal_eval("{{}: 'value'}")
         try:
             data = ast.literal_eval(data_str)
             return data
-        except (SyntaxError, ValueError, TypeError) as e:
+        except (SyntaxError, ValueError, TypeError):
             msg = f"Invalid expression (string value): {data_str} to be evaluated by ast.literal_eval()"
             logger.exception(msg)
     else:
@@ -1974,7 +1911,7 @@ flask.Response
 """
 
 
-def make_request_get(target_url, internal_token_used = False):
+def make_request_get(target_url, internal_token_used=False):
     global _memcached_client
     global _memcached_prefix
 
@@ -1996,19 +1933,20 @@ def make_request_get(target_url, internal_token_used = False):
             request_headers = _create_request_headers(auth_helper_instance.getProcessSecret())
 
             # Disable ssl certificate verification
-            response = requests.get(url = target_url, headers = request_headers, verify = False)
+            response = requests.get(url=target_url, headers=request_headers, verify=False)
         else:
-            response = requests.get(url = target_url, verify = False)
+            response = requests.get(url=target_url, verify=False)
 
         if _memcached_client and _memcached_prefix:
             logger.info(f'Creating HTTP response cache of GET {target_url} at time {datetime.now()}')
 
             cache_key = f'{_memcached_prefix}{target_url}'
-            _memcached_client.set(cache_key, response, expire = SchemaConstants.MEMCACHED_TTL)
+            _memcached_client.set(cache_key, response, expire=SchemaConstants.MEMCACHED_TTL)
     else:
         logger.info(f'Using HTTP response cache of GET {target_url} at time {datetime.now()}')
 
     return response
+
 
 """
 Delete the cached data for the given entity uuids
@@ -2033,3 +1971,15 @@ def delete_memcached_cache(uuids_list):
         _memcached_client.delete_many(cache_keys)
 
         logger.info(f"Deleted cache by key: {', '.join(cache_keys)}")
+
+
+def get_entity_api_url():
+    """ Get the entity-api URL to be used by trigger methods.
+
+    Returns
+    -------
+    str
+        The entity-api URL ending with a trailing slash
+    """
+    global _entity_api_url
+    return ensureTrailingSlashURL(_entity_api_url)
