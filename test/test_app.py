@@ -263,7 +263,7 @@ def test_update_entity_success(app, entity_type):
           patch('app.schema_neo4j_queries.get_entity_creation_action_activity', return_value='lab process'),
           patch('requests.put', return_value=Response(status=202))):
 
-        res = client.put(f'/entities/{entity_id}',
+        res = client.put(f'/entities/{entity_id}?return_dict=true',
                          json=test_data['request'],
                          headers=test_data['headers'])
 
