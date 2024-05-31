@@ -1,6 +1,6 @@
 from dataclasses import dataclass, fields
+
 from atlas_consortia_commons.object import enum_val_lower
-from atlas_consortia_commons.string import to_snake_case_upper
 
 from lib.ontology import Ontology
 
@@ -54,7 +54,7 @@ class OrganTypes:
 
 @dataclass
 class AssayTypes:
-    BULKRNA: str = "bulk-RNA" 
+    BULKRNA: str = "bulk-RNA"
     CITESEQ: str = "CITE-Seq"
     CODEX: str = "CODEX"
     CODEXCYTOKIT: str = "codex_cytokit"
@@ -123,7 +123,7 @@ class MockOntology(Ontology):
             return {e.name: e.default for e in fields(Entities)}
         return Entities
 
-    @staticmethod     
+    @staticmethod
     def specimen_categories():
         if MockOntology.Ops.as_arr and MockOntology.Ops.cb == enum_val_lower:
             return [e.default.lower() for e in fields(SpecimenCategories)]

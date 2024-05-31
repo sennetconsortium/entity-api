@@ -326,8 +326,8 @@ def validate_if_retraction_permitted(property_key, normalized_entity_type, reque
     if existing_data_dict['status'].lower() != SchemaConstants.DATASET_STATUS_PUBLISHED:
         raise ValueError("This dataset is not published, retraction is not allowed")
 
-    # Only token in HuBMAP-Data-Admin group can retract a published dataset. Handled by API Gateway.
-    # TODO: need to update HuBMAP-READ to sennet and update hmgroupids
+    # Only token in SenNet-Data-Admin group can retract a published dataset. Handled by API Gateway.
+    # TODO: need to update SenNet-READ to sennet and update hmgroupids
     try:
         # The property 'hmgroupids' is ALWASYS in the output with using schema_manager.get_user_info()
         # when the token in request is a nexus_token
@@ -339,7 +339,7 @@ def validate_if_retraction_permitted(property_key, normalized_entity_type, reque
 
         # If the token is not a nexus token, no group information available
         # The commons.hm_auth.AuthCache would return a Response with 500 error message
-        # We treat such cases as the user not in the HuBMAP-READ group
+        # We treat such cases as the user not in the SenNet-READ group
         raise ValueError("Failed to parse the permission based on token, retraction is not allowed")
 
     if hubmap_read_group_uuid not in user_info['hmgroupids']:
