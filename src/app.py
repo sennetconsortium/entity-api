@@ -1100,6 +1100,9 @@ json
 @require_valid_token(param='user_token')
 @require_json(param='json_data_dict')
 def create_multiple_samples(count: int, user_token: str, json_data_dict: dict):
+    if READ_ONLY_MODE:
+        abort_forbidden("Access not granted when entity-api in READ-ONLY mode")
+
     # Normalize user provided entity_type
     normalized_entity_type = 'Sample'
 
@@ -1272,6 +1275,9 @@ json
 @require_valid_token(param='user_token')
 @require_json(param='json_data_dict')
 def update_entity(id: str, user_token: str, json_data_dict: dict):
+    if READ_ONLY_MODE:
+        abort_forbidden("Access not granted when entity-api in READ-ONLY mode")
+
     # Establish what the default response will be
     return_dict = False
 
@@ -2567,6 +2573,9 @@ dict
 @require_data_admin()
 @require_json(param='json_data_dict')
 def retract_dataset(id: str, token: str, json_data_dict: dict):
+    if READ_ONLY_MODE:
+        abort_forbidden("Access not granted when entity-api in READ-ONLY mode")
+
     # Normalize user provided status
     if "sub_status" in json_data_dict:
         normalized_status = schema_manager.normalize_status(json_data_dict["sub_status"])
@@ -3922,6 +3931,9 @@ dict
     A dict of all the newly created entity detials
 """
 def create_entity_details(request, normalized_entity_type, user_token, json_data_dict):
+    if READ_ONLY_MODE:
+        abort_forbidden("Access not granted when entity-api in READ-ONLY mode")
+
     # Get user info based on request
     user_info_dict = schema_manager.get_user_info(request)
 

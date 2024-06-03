@@ -276,7 +276,7 @@ def test_update_entity_success(app, entity_type):
           patch('app.schema_neo4j_queries.get_entity_creation_action_activity', return_value='lab process'),
           patch('requests.put', return_value=Response(status=202))):
 
-        res = client.put(f'/entities/{entity_id}',
+        res = client.put(f'/entities/{entity_id}?return_dict=true',
                          json=test_data['request'],
                          headers=test_data['headers'])
 
@@ -306,7 +306,7 @@ def test_update_entity_invalid(app, entity_type):
           patch('app.schema_manager.get_sennet_ids', side_effect=test_data['get_sennet_ids']),
           patch('app.app_neo4j_queries.get_entity', side_effect=test_data['get_entity'])):
 
-        res = client.put(f'/entities/{entity_id}',
+        res = client.put(f'/entities/{entity_id}?return_dict=true',
                          json=wrong_data['request'],
                          headers=test_data['headers'])
 
