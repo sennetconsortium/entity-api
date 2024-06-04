@@ -1195,6 +1195,72 @@ def get_source_mapped_metadata(property_key, normalized_type, user_token, existi
     return property_key, mapped_metadata
 
 
+def get_sample_mapped_metadata(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method of auto generating sample mapped metadata.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key
+    normalized_type : str
+        One of the types defined in the schema yaml: Sample
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    str: The target property key
+    dict: The auto generated mapped metadata
+    """
+    if 'metadata' not in existing_data_dict:
+        return property_key, None
+    metadata = json.loads(existing_data_dict['metadata'].replace("'", '"'))
+    mapped_metadata = {}
+
+    for k, v in metadata.items():
+        suffix = None
+        parts = [_capitalize(word) for word in k.split('_')]
+        if parts[-1] == 'Value' or parts[-1] == 'Unit':
+            suffix = parts.pop()
+
+        new_key = ' '.join(parts)
+        if new_key not in mapped_metadata:
+            mapped_metadata[new_key] = v
+        else:
+            curr_val = mapped_metadata[new_key]
+            if len(curr_val) < 1:
+                # Prevent space at the beginning if the value is empty
+                mapped_metadata[new_key] = v
+                continue
+            if suffix == 'Value':
+                mapped_metadata[new_key] = f"{v} {curr_val}"
+            if suffix == 'Unit':
+                mapped_metadata[new_key] = f"{curr_val} {v}"
+
+    return property_key, mapped_metadata
+
+
+def _capitalize(word: str):
+    """Normalize the capitalization of a word. Specific words should be capitalized differently.
+
+    Parameters
+    ----------
+    word : str
+        The word to capitalize
+
+    Returns
+    -------
+    str: The capitalized word
+    """
+    if word in ["id", "doi"]:
+        return word.upper()
+    return word.capitalize()
+
+
 """
 Trigger event method of auto generating the dataset title
 
@@ -1214,7 +1280,7 @@ new_data_dict : dict
 Returns
 -------
 str: The target property key
-str: The generated dataset title 
+str: The generated dataset title
 """
 
 
