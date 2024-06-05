@@ -1,5 +1,5 @@
-Flask==2.1.3
-Werkzeug==2.3.7
+Flask==3.0.3
+Werkzeug==3.0.3
 neo4j==4.4
 prov==2.0.0
 
@@ -10,7 +10,7 @@ pymemcache==4.0.0
 nested-lookup==0.2.22
 
 # The commons package requires requests>=2.22.0 and PyYAML>=5.3.1
-requests==2.25.1
+requests==2.32.0
 PyYAML==5.4.1
 
 # Use the published package from PyPI as default
@@ -18,6 +18,6 @@ PyYAML==5.4.1
 # Default is main branch specified in docker-compose.development.yml if not set
 # git+https://github.com/hubmapconsortium/commons.git@${COMMONS_BRANCH}#egg=hubmap-commons
 hubmap-commons==2.1.14
-atlas-consortia-commons==1.0.8
+atlas-consortia-commons==1.0.9
 
 deepdiff==6.2.3
