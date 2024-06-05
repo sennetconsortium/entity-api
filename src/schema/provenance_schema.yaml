@@ -1008,12 +1008,12 @@ ENTITIES:
         # The updated_peripherally tag is a temporary measure to correctly handle any attributes
         # which are potentially updated by multiple triggers
         updated_peripherally: true
-      sample_mapped_metadata:
+      cedar_mapped_metadata:
         type: json_string # dict
         generated: true # Disallow entry from users via POST
         immutable: true # Disallow update via PUT
         description: "The modified and mapped metadata returned from the processing at data submission time."
-        on_read_trigger: get_sample_mapped_metadata
+        on_read_trigger: get_cedar_mapped_metadata
 
 
   ############################################# Upload #############################################

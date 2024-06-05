@@ -1195,7 +1195,7 @@ def get_source_mapped_metadata(property_key, normalized_type, user_token, existi
     return property_key, mapped_metadata
 
 
-def get_sample_mapped_metadata(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+def get_cedar_mapped_metadata(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     """Trigger event method of auto generating sample mapped metadata.
 
     Parameters
