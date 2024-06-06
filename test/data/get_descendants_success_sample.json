@@ -36,7 +36,7 @@
         "version": "1"
       },
       "sample_category": "Suspension",
-      "sample_mapped_metadata": {
+      "cedar_mapped_metadata": {
         "Notes": "",
         "Preparation Media": "PFA (4%)",
         "Preparation Temperature": "Dry Ice",

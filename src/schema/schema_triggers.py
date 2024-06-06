@@ -6,7 +6,6 @@ from datetime import datetime
 import requests
 from atlas_consortia_commons.string import equals
 from neo4j.exceptions import TransactionError
-from collections import defaultdict
 import re
 
 # Local modules
@@ -1195,7 +1194,7 @@ def get_source_mapped_metadata(property_key, normalized_type, user_token, existi
     return property_key, mapped_metadata
 
 
-def get_sample_mapped_metadata(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+def get_cedar_mapped_metadata(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     """Trigger event method of auto generating sample mapped metadata.
 
     Parameters
@@ -1216,14 +1215,24 @@ def get_sample_mapped_metadata(property_key, normalized_type, user_token, existi
     str: The target property key
     dict: The auto generated mapped metadata
     """
+    # No human sources
+    if equals(Ontology.ops().source_types().HUMAN, existing_data_dict.get('source_type')):
+        return property_key, None
+
     if 'metadata' not in existing_data_dict:
         return property_key, None
-    metadata = json.loads(existing_data_dict['metadata'].replace("'", '"'))
-    mapped_metadata = {}
 
+    metadata = json.loads(existing_data_dict['metadata'].replace("'", '"'))
+
+    if equals(Ontology.ops().entities().DATASET, normalized_type):
+        if 'metadata' not in metadata:
+            return property_key, None
+        metadata = metadata['metadata']
+
+    mapped_metadata = {}
     for k, v in metadata.items():
         suffix = None
-        parts = [_capitalize(word) for word in k.split('_')]
+        parts = [_normalize(word) for word in k.split('_')]
         if parts[-1] == 'Value' or parts[-1] == 'Unit':
             suffix = parts.pop()
 
@@ -1244,20 +1253,35 @@ def get_sample_mapped_metadata(property_key, normalized_type, user_token, existi
     return property_key, mapped_metadata
 
 
-def _capitalize(word: str):
-    """Normalize the capitalization of a word. Specific words should be capitalized differently.
+_normalized_words = {
+    'rnaseq': 'RNAseq',
+    'phix': 'PhiX',
+    'id': 'ID',
+    'doi': 'DOI',
+    'io': 'IO',
+    'pi': 'PI',
+    'dna': 'DNA',
+    'rna': 'RNA',
+    'sc': 'SC',
+    'pcr': 'PCR',
+    'umi': 'UMI'
+}
+
+
+def _normalize(word: str):
+    """Normalize the word. Specific words should be capitalized differently.
 
     Parameters
     ----------
     word : str
-        The word to capitalize
+        The word to normalize
 
     Returns
     -------
-    str: The capitalized word
+    str: The normalized word
     """
-    if word in ["id", "doi"]:
-        return word.upper()
+    if word in _normalized_words:
+        return _normalized_words[word]
     return word.capitalize()
 
 
