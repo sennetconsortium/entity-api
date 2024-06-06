@@ -1219,15 +1219,19 @@ def get_cedar_mapped_metadata(property_key, normalized_type, user_token, existin
     if equals(Ontology.ops().source_types().HUMAN, existing_data_dict.get('source_type')):
         return property_key, None
 
-    if 'metadata' not in existing_data_dict:
-        return property_key, None
-
-    metadata = json.loads(existing_data_dict['metadata'].replace("'", '"'))
-
     if equals(Ontology.ops().entities().DATASET, normalized_type):
-        if 'metadata' not in metadata:
+        # For datasets
+        if 'ingest_metadata' not in existing_data_dict:
             return property_key, None
-        metadata = metadata['metadata']
+        ingest_metadata = json.loads(existing_data_dict['ingest_metadata'].replace("'", '"'))
+        if 'metadata' not in ingest_metadata:
+            return property_key, None
+        metadata = ingest_metadata['metadata']
+    else:
+        # For mouse sources, samples
+        if 'metadata' not in existing_data_dict:
+            return property_key, None
+        metadata = json.loads(existing_data_dict['metadata'].replace("'", '"'))
 
     mapped_metadata = {}
     for k, v in metadata.items():
