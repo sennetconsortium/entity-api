@@ -6,7 +6,6 @@ from datetime import datetime
 import requests
 from atlas_consortia_commons.string import equals
 from neo4j.exceptions import TransactionError
-from collections import defaultdict
 import re
 
 # Local modules
@@ -1216,11 +1215,16 @@ def get_cedar_mapped_metadata(property_key, normalized_type, user_token, existin
     str: The target property key
     dict: The auto generated mapped metadata
     """
+    # No human sources
+    if equals(Ontology.ops().source_types().HUMAN, existing_data_dict.get('source_type')):
+        return property_key, None
+
     if 'metadata' not in existing_data_dict:
         return property_key, None
-    metadata = json.loads(existing_data_dict['metadata'].replace("'", '"'))
-    mapped_metadata = {}
 
+    metadata = json.loads(existing_data_dict['metadata'].replace("'", '"'))
+
+    mapped_metadata = {}
     for k, v in metadata.items():
         suffix = None
         parts = [_capitalize(word) for word in k.split('_')]

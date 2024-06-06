@@ -819,12 +819,20 @@ ENTITIES:
       open_consent:
         type: boolean
         description: "True if the source was consented to allow public, open access to any data, identified or not, derived from the source's tissue.  Otherwise false."
+      # For human sources
       source_mapped_metadata:
         type: json_string # dict
         generated: true # Disallow entry from users via POST
         immutable: true # Disallow update via PUT
         description: "The modified and mapped metadata returned from the processing at data submission time."
         on_read_trigger: get_source_mapped_metadata
+      # For mouse sources
+      cedar_mapped_metadata:
+        type: json_string # dict
+        generated: true # Disallow entry from users via POST
+        immutable: true # Disallow update via PUT
+        description: "The modified and mapped metadata returned from the processing at data submission time."
+        on_read_trigger: get_cedar_mapped_metadata
       source_type:
         type: string
         required_on_create: true
