@@ -583,6 +583,12 @@ ENTITIES:
       dbgap_study_url:
         type: string
         description: 'A URL linking the dataset to the particular study on dbGap it belongs to.'
+      cedar_mapped_metadata:
+        type: json_string # dict
+        generated: true # Disallow entry from users via POST
+        immutable: true # Disallow update via PUT
+        description: "The modified and mapped metadata returned from the processing at data submission time."
+        on_read_trigger: get_cedar_mapped_metadata
 
   ############################################# Publication #############################################
   Publication:
