@@ -6,7 +6,6 @@ from datetime import datetime
 import requests
 from atlas_consortia_commons.string import equals
 from neo4j.exceptions import TransactionError
-from collections import defaultdict
 import re
 
 # Local modules
@@ -1195,6 +1194,101 @@ def get_source_mapped_metadata(property_key, normalized_type, user_token, existi
     return property_key, mapped_metadata
 
 
+def get_cedar_mapped_metadata(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method of auto generating sample mapped metadata.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key
+    normalized_type : str
+        One of the types defined in the schema yaml: Sample
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    str: The target property key
+    dict: The auto generated mapped metadata
+    """
+    # No human sources
+    if equals(Ontology.ops().source_types().HUMAN, existing_data_dict.get('source_type')):
+        return property_key, None
+
+    if equals(Ontology.ops().entities().DATASET, normalized_type):
+        # For datasets
+        if 'ingest_metadata' not in existing_data_dict:
+            return property_key, None
+        ingest_metadata = json.loads(existing_data_dict['ingest_metadata'].replace("'", '"'))
+        if 'metadata' not in ingest_metadata:
+            return property_key, None
+        metadata = ingest_metadata['metadata']
+    else:
+        # For mouse sources, samples
+        if 'metadata' not in existing_data_dict:
+            return property_key, None
+        metadata = json.loads(existing_data_dict['metadata'].replace("'", '"'))
+
+    mapped_metadata = {}
+    for k, v in metadata.items():
+        suffix = None
+        parts = [_normalize(word) for word in k.split('_')]
+        if parts[-1] == 'Value' or parts[-1] == 'Unit':
+            suffix = parts.pop()
+
+        new_key = ' '.join(parts)
+        if new_key not in mapped_metadata:
+            mapped_metadata[new_key] = v
+        else:
+            curr_val = mapped_metadata[new_key]
+            if len(curr_val) < 1:
+                # Prevent space at the beginning if the value is empty
+                mapped_metadata[new_key] = v
+                continue
+            if suffix == 'Value':
+                mapped_metadata[new_key] = f"{v} {curr_val}"
+            if suffix == 'Unit':
+                mapped_metadata[new_key] = f"{curr_val} {v}"
+
+    return property_key, mapped_metadata
+
+
+_normalized_words = {
+    'rnaseq': 'RNAseq',
+    'phix': 'PhiX',
+    'id': 'ID',
+    'doi': 'DOI',
+    'io': 'IO',
+    'pi': 'PI',
+    'dna': 'DNA',
+    'rna': 'RNA',
+    'sc': 'SC',
+    'pcr': 'PCR',
+    'umi': 'UMI'
+}
+
+
+def _normalize(word: str):
+    """Normalize the word. Specific words should be capitalized differently.
+
+    Parameters
+    ----------
+    word : str
+        The word to normalize
+
+    Returns
+    -------
+    str: The normalized word
+    """
+    if word in _normalized_words:
+        return _normalized_words[word]
+    return word.capitalize()
+
+
 """
 Trigger event method of auto generating the dataset title
 
@@ -1214,7 +1308,7 @@ new_data_dict : dict
 Returns
 -------
 str: The target property key
-str: The generated dataset title 
+str: The generated dataset title
 """
 
 
