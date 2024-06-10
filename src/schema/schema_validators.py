@@ -650,6 +650,37 @@ def validate_dataset_not_component(property_key, normalized_entity_type, request
                              f"change must occur on parent multi-assay split dataset")
 
 
+def validate_not_self_referencing(property_key, normalized_entity_type, request, existing_data_dict, new_data_dict):
+    """
+    Validate that any direct ancestor(s) is not the same as the entity uuid being updated
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key
+    normalized_type : str
+        Submission
+    request: Flask request object
+        The instance of Flask request passed in from application request
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        The json data in request body, already after the regular validations
+    """
+
+    def check_uuid(uuid):
+        if uuid == existing_data_dict['uuid']:
+            raise ValueError(f"Unable to modify existing {existing_data_dict['entity_type']} "
+                             f"{existing_data_dict['uuid']}. Cannot self reference the uuid as an ancestor.")
+
+    if 'direct_ancestor_uuid' in new_data_dict:
+        check_uuid(new_data_dict['direct_ancestor_uuid'])
+
+    if 'direct_ancestor_uuids' in new_data_dict:
+        for uuid in new_data_dict['direct_ancestor_uuids']:
+            check_uuid(uuid)
+
+
 ####################################################################################################
 ## Internal Functions
 ####################################################################################################
