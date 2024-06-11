@@ -442,6 +442,7 @@ ENTITIES:
         before_property_update_validators:
           - validate_no_duplicates_in_list
           - validate_not_invalid_creation_action
+          - validate_not_self_referencing
         transient: true
         exposed: false
         description: "The uuids of source entities from which this new entity is derived.  Used to pass source entity ids in on POST or PUT calls used to create the linkages."
@@ -907,6 +908,8 @@ ENTITIES:
         # Note: link_sample_to_direct_ancestor() will always delete all the old linkages first
         after_create_trigger: set_was_generated_by
         after_update_trigger: set_was_generated_by
+        before_property_update_validators:
+          - validate_not_self_referencing
       direct_ancestor:
         type: json_string # dict
         generated: true
