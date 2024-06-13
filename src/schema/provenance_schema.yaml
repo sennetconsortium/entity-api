@@ -442,6 +442,7 @@ ENTITIES:
         before_property_update_validators:
           - validate_no_duplicates_in_list
           - validate_not_invalid_creation_action
+          - validate_not_self_referencing
         transient: true
         exposed: false
         description: "The uuids of source entities from which this new entity is derived.  Used to pass source entity ids in on POST or PUT calls used to create the linkages."
@@ -583,6 +584,12 @@ ENTITIES:
       dbgap_study_url:
         type: string
         description: 'A URL linking the dataset to the particular study on dbGap it belongs to.'
+      cedar_mapped_metadata:
+        type: json_string # dict
+        generated: true # Disallow entry from users via POST
+        immutable: true # Disallow update via PUT
+        description: "The modified and mapped metadata returned from the processing at data submission time."
+        on_read_trigger: get_cedar_mapped_metadata
 
   ############################################# Publication #############################################
   Publication:
@@ -819,12 +826,20 @@ ENTITIES:
       open_consent:
         type: boolean
         description: "True if the source was consented to allow public, open access to any data, identified or not, derived from the source's tissue.  Otherwise false."
+      # For human sources
       source_mapped_metadata:
         type: json_string # dict
         generated: true # Disallow entry from users via POST
         immutable: true # Disallow update via PUT
         description: "The modified and mapped metadata returned from the processing at data submission time."
         on_read_trigger: get_source_mapped_metadata
+      # For mouse sources
+      cedar_mapped_metadata:
+        type: json_string # dict
+        generated: true # Disallow entry from users via POST
+        immutable: true # Disallow update via PUT
+        description: "The modified and mapped metadata returned from the processing at data submission time."
+        on_read_trigger: get_cedar_mapped_metadata
       source_type:
         type: string
         required_on_create: true
@@ -893,6 +908,8 @@ ENTITIES:
         # Note: link_sample_to_direct_ancestor() will always delete all the old linkages first
         after_create_trigger: set_was_generated_by
         after_update_trigger: set_was_generated_by
+        before_property_update_validators:
+          - validate_not_self_referencing
       direct_ancestor:
         type: json_string # dict
         generated: true
@@ -1008,6 +1025,12 @@ ENTITIES:
         # The updated_peripherally tag is a temporary measure to correctly handle any attributes
         # which are potentially updated by multiple triggers
         updated_peripherally: true
+      cedar_mapped_metadata:
+        type: json_string # dict
+        generated: true # Disallow entry from users via POST
+        immutable: true # Disallow update via PUT
+        description: "The modified and mapped metadata returned from the processing at data submission time."
+        on_read_trigger: get_cedar_mapped_metadata
 
 
   ############################################# Upload #############################################
