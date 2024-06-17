@@ -723,8 +723,8 @@ def get_entity_provenance(id):
         return_descendants = request.args.get('return_descendants')
 
         # The value should be in a format expected by the apoc.path.subgraphAll.labelFilter config param
-        label_filter = request.args.get('filter')
-        allowable_filter_chars = "[a-zA-Z+/>\-]"
+        label_filter = request.args.get('filter', '')
+        allowable_filter_chars = "[a-zA-Z+/>\-|]"
         label_filter = ''.join(re.findall(allowable_filter_chars, label_filter))
 
         if (return_descendants is not None) and (return_descendants.lower() == 'true'):
