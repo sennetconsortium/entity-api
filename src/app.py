@@ -722,8 +722,14 @@ def get_entity_provenance(id):
         # The parsed query string value is a string 'true'
         return_descendants = request.args.get('return_descendants')
 
+        # The value should be in a format expected by the apoc.path.subgraphAll.labelFilter config param
+        label_filter = request.args.get('filter', '')
+        allowable_filter_chars = "[a-zA-Z+/>\-|]"
+        label_filter = ''.join(re.findall(allowable_filter_chars, label_filter))
+
         if (return_descendants is not None) and (return_descendants.lower() == 'true'):
-            neo4j_result_descendants = app_neo4j_queries.get_provenance(neo4j_driver_instance, uuid, depth, True)
+            neo4j_result_descendants = app_neo4j_queries.get_provenance(neo4j_driver_instance, uuid, depth, True,
+                                                                        label_filter)
             raw_descendants_dict = dict(neo4j_result_descendants['json'])
 
     # Normalize the raw provenance nodes based on the yaml schema
