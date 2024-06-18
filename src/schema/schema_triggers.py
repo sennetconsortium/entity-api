@@ -1232,7 +1232,7 @@ def get_cedar_mapped_metadata(property_key, normalized_type, user_token, existin
         # For mouse sources, samples
         if 'metadata' not in existing_data_dict:
             return property_key, None
-        metadata = json.loads(existing_data_dict['metadata'].replace("'", '"'))
+        metadata = ast.literal_eval(existing_data_dict['metadata'])
 
     mapped_metadata = {}
     for k, v in metadata.items():
