@@ -1,3 +1,4 @@
+import ast
 import json
 
 import yaml
@@ -1223,7 +1224,7 @@ def get_cedar_mapped_metadata(property_key, normalized_type, user_token, existin
         # For datasets
         if 'ingest_metadata' not in existing_data_dict:
             return property_key, None
-        ingest_metadata = json.loads(existing_data_dict['ingest_metadata'].replace("'", '"'))
+        ingest_metadata = ast.literal_eval(existing_data_dict['ingest_metadata'])
         if 'metadata' not in ingest_metadata:
             return property_key, None
         metadata = ingest_metadata['metadata']
@@ -1231,7 +1232,7 @@ def get_cedar_mapped_metadata(property_key, normalized_type, user_token, existin
         # For mouse sources, samples
         if 'metadata' not in existing_data_dict:
             return property_key, None
-        metadata = json.loads(existing_data_dict['metadata'].replace("'", '"'))
+        metadata = ast.literal_eval(existing_data_dict['metadata'])
 
     mapped_metadata = {}
     for k, v in metadata.items():
