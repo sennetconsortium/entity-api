@@ -130,5 +130,46 @@
     "contains_human_genetic_sequences": false,
     "dataset_type": "RNAseq",
     "status": "New"
-  }
+  },
+  "get_associated_sources" : [
+    {
+      "created_by_user_displayname": "Test User",
+      "created_by_user_email": "TESTUSER@example.com",
+      "created_by_user_sub": "cd17bfa7-24fd-49ca-82ec-2d456ba53730",
+      "created_timestamp": 1681831457448,
+      "data_access_level": "consortium",
+      "description": "Cypress automated description source",
+      "entity_type": "Source",
+      "group_name": "University of Pittsburgh TMC",
+      "group_uuid": "28db7a2b-ed8a-11ec-8b0a-9fe9b51132b1",
+      "lab_source_id": "Aorta",
+      "last_modified_timestamp": 1718896345351,
+      "last_modified_user_displayname": "Test User",
+      "last_modified_user_email": "TESTUSER@example.com",
+      "last_modified_user_sub": "cd17bfa7-24fd-49ca-82ec-2d456ba53730",
+      "metadata": "{}",
+      "sennet_id": "SNT456.NJFC.364",
+      "source_type": "Human",
+      "uuid": "34fb81da75a5386d406a7b1835d92bdd"
+    },
+    {
+      "created_by_user_displayname": "Test User",
+      "created_by_user_email": "TESTUSER@example.com",
+      "created_by_user_sub": "cd17bfa7-24fd-49ca-82ec-2d456ba53730",
+      "created_timestamp": 1682604629437,
+      "data_access_level": "consortium",
+      "description": "Source 1, Male aged 87",
+      "entity_type": "Source",
+      "group_name": "University of Pittsburgh TMC",
+      "group_uuid": "28db7a2b-ed8a-11ec-8b0a-9fe9b51132b1",
+      "lab_source_id": "Human Lab 787/JN316",
+      "last_modified_timestamp": 1682604629437,
+      "last_modified_user_displayname": "Test User",
+      "last_modified_user_email": "TESTUSER@example.com",
+      "last_modified_user_sub": "cd17bfa7-24fd-49ca-82ec-2d456ba53730",
+      "sennet_id": "SNT374.RSJC.452",
+      "source_type": "Human",
+      "uuid": "4d0c04deb49c6c0d95bd34291cbc0809"
+    }
+  ]
 }
