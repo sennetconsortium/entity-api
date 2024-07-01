@@ -82,7 +82,7 @@ def test_get_entity_by_id_success(app, entity_type):
           patch('app.auth_helper_instance.has_read_privs', return_value=test_data['has_read_privs']),
           patch('app.schema_manager.get_sennet_ids', return_value=test_data['get_sennet_ids']),
           patch('app.app_neo4j_queries.get_entity', return_value=test_data['get_entity']),
-          patch('app.schema_manager.set_dataset_sources', side_effect=test_data.get('get_associated_sources')),
+          patch('app.schema_triggers.set_dataset_sources', side_effect=test_data.get('get_associated_sources')),
           patch('app.schema_manager.get_complete_entity_result', return_value=test_data['get_complete_entity_result'])):
 
         res = client.get(f'/entities/{entity_id}',
