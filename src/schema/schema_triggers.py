@@ -3037,7 +3037,7 @@ Parameters
 property_key : str
     The target property key of the value to be generated
 normalized_type : str
-    One of the types defined in the schema yaml: Publication
+    One of the types defined in the schema yaml: Dataset|Publication
 user_token: str
     The user's globus nexus token
 existing_data_dict : dict
@@ -3054,3 +3054,30 @@ def set_dataset_sources(property_key, normalized_type, user_token, existing_data
     sources = schema_neo4j_queries.get_sources_associated_entity(schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'])
 
     return property_key, sources
+
+
+"""
+Trigger event method setting the source dict for a sample
+
+Parameters
+----------
+property_key : str
+    The target property key of the value to be generated
+normalized_type : str
+    One of the types defined in the schema yaml: Sample
+user_token: str
+    The user's globus nexus token
+existing_data_dict : dict
+    A dictionary that contains all existing entity properties
+new_data_dict : dict
+    A merged dictionary that contains all possible input data to be used
+
+Returns
+-------
+dict: The source associated with a sample
+"""
+def set_sample_source(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+
+    sources = schema_neo4j_queries.get_sources_associated_entity(schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'])
+
+    return property_key, sources[0]
