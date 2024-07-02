@@ -3027,3 +3027,30 @@ def set_publication_dataset_type(property_key, normalized_type, user_token, exis
     # Count upon the dataset_type generated: true property in provenance_schema.yaml to assure the
     # request does not contain a value which will be overwritten.
     return property_key, 'Publication'
+
+
+"""
+Trigger event method setting the sources list for a dataset
+
+Parameters
+----------
+property_key : str
+    The target property key of the value to be generated
+normalized_type : str
+    One of the types defined in the schema yaml: Publication
+user_token: str
+    The user's globus nexus token
+existing_data_dict : dict
+    A dictionary that contains all existing entity properties
+new_data_dict : dict
+    A merged dictionary that contains all possible input data to be used
+
+Returns
+-------
+list: The list of sources associated with a dataset
+"""
+def set_dataset_sources(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+
+    sources = schema_neo4j_queries.get_sources_associated_entity(schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'])
+
+    return property_key, sources
