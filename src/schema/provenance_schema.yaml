@@ -439,10 +439,12 @@ ENTITIES:
         type: list
         before_property_create_validators:
           - validate_no_duplicates_in_list
+          - validate_source_types_match
         before_property_update_validators:
           - validate_no_duplicates_in_list
           - validate_not_invalid_creation_action
           - validate_not_self_referencing
+          - validate_source_types_match
         transient: true
         exposed: false
         description: "The uuids of source entities from which this new entity is derived.  Used to pass source entity ids in on POST or PUT calls used to create the linkages."
