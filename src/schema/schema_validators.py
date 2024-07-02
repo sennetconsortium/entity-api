@@ -699,8 +699,16 @@ def validate_source_types_match(property_key, normalized_entity_type, request, e
         The json data in request body, already after the regular validations
     """
 
-    sources = schema_neo4j_queries.get_sources_associated_entity(schema_manager.get_neo4j_driver_instance(),
-                                                                 existing_data_dict['uuid'])
+    sources = []
+    uuids = []
+    for uuid in new_data_dict['direct_ancestor_uuids']:
+        _sources = schema_neo4j_queries.get_sources_associated_entity(schema_manager.get_neo4j_driver_instance(),
+                                                                      uuid, filter_out=uuids)
+        for _source in _sources:
+            uuids.append(_source['uuid'])
+
+        sources = _sources + sources
+
 
     if len(sources) > 1:
         first_source_type = sources[0].get('source_type')
