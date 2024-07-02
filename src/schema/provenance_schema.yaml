@@ -1040,6 +1040,13 @@ ENTITIES:
         immutable: true # Disallow update via PUT
         description: "The modified and mapped metadata returned from the processing at data submission time."
         on_read_trigger: get_cedar_mapped_metadata
+      source:
+        type: json_string
+        generated: true
+        transient: true
+        immutable: true
+        description: "The list of all Sources associated with Datasets"
+        on_read_trigger: set_sample_source
 
 
   ############################################# Upload #############################################
