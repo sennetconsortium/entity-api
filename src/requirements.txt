@@ -20,4 +20,4 @@ PyYAML==5.4.1
 hubmap-commons==2.1.15
 atlas-consortia-commons==1.0.9
 
-deepdiff==6.2.3
+deepdiff~=6.6.0
