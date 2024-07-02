@@ -3051,6 +3051,6 @@ list: The list of sources associated with a dataset
 """
 def set_dataset_sources(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
 
-    sources = schema_neo4j_queries.get_sources_associated_dataset(schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'])
+    sources = schema_neo4j_queries.get_sources_associated_entity(schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'])
 
     return property_key, sources

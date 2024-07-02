@@ -6,6 +6,7 @@ from datetime import datetime
 
 from flask import Response
 from hubmap_commons.file_helper import ensureTrailingSlashURL
+from hubmap_commons.string_helper import convert_str_literal
 
 # Don't confuse urllib (Python native library) with urllib3 (3rd-party library, requests also uses urllib3)
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
@@ -1983,3 +1984,59 @@ def get_entity_api_url():
     """
     global _entity_api_url
     return ensureTrailingSlashURL(_entity_api_url)
+
+
+"""
+Normalize the entity result by filtering out properties that are not defined in the yaml schema
+and the ones that are marked as `exposed: false` prior to sending the response
+
+Parameters
+----------
+entity_dict : dict
+    Either a neo4j node converted dict or complete dict generated from get_complete_entity_result()
+properties_to_exclude : list
+    Any additional properties to exclude from the response
+
+Returns
+-------
+dict
+    A entity dictionary with keys that are all normalized
+"""
+def normalize_entity_result_for_response(entity_dict, properties_to_exclude = []):
+    global _schema
+
+    normalized_entity = {}
+
+    # In case entity_dict is None or
+    # an incorrectly created entity that doesn't have the `entity_type` property
+    if entity_dict and ('entity_type' in entity_dict):
+        normalized_entity_type = entity_dict['entity_type']
+        properties = _schema['ENTITIES'][normalized_entity_type]['properties']
+
+        for key in entity_dict:
+            # Only return the properties defined in the schema yaml
+            # Exclude additional properties if specified
+            if (key in properties) and (key not in properties_to_exclude):
+                # Skip properties with None value and the ones that are marked as not to be exposed.
+                # By default, all properties are exposed if not marked as `exposed: false`
+                # It's still possible to see `exposed: true` marked explictly
+                if (entity_dict[key] is not None) and ('exposed' not in properties[key]) or (('exposed' in properties[key]) and properties[key]['exposed']):
+                    # Only run convert_str_literal() on string representation of Python dict and list with removing control characters
+                    # No convertion for string representation of Python string, meaning that can still contain control characters
+                    if entity_dict[key] and (properties[key]['type'] in ['list', 'json_string']):
+                        logger.info(f"Executing convert_str_literal() on {normalized_entity_type}.{key} of uuid: {entity_dict['uuid']}")
+
+                        # Safely evaluate a string containing a Python dict or list literal
+                        # Only convert to Python list/dict when the string literal is not empty
+                        # instead of returning the json-as-string or array-as-string
+                        # convert_str_literal() also removes those control chars to avoid SyntaxError
+                        entity_dict[key] = convert_str_literal(entity_dict[key])
+
+                    # Add the target key with correct value of data type to the normalized_entity dict
+                    normalized_entity[key] = entity_dict[key]
+
+                    # Final step: remove properties with empty string value, empty dict {}, and empty list []
+                    if (isinstance(normalized_entity[key], (str, dict, list)) and (not normalized_entity[key])):
+                        normalized_entity.pop(key)
+
+    return normalized_entity

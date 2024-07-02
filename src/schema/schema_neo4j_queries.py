@@ -1966,7 +1966,7 @@ def get_uploads(neo4j_driver, uuid, property_key = None):
     return results
 
 """
-Get the associated sources for a given dataset
+Get the associated sources for a given entity (dataset/publication)
 
 Parameters
 ----------
@@ -1978,14 +1978,14 @@ uuid : str
 Returns
 -------
 list
-    A list of sources associated with a dataset
+    A list of sources associated with an entity
 """
 
 
-def get_sources_associated_dataset(neo4j_driver, uuid):
+def get_sources_associated_entity(neo4j_driver, uuid):
     results = []
 
-    query = (f"MATCH (e:Dataset)-[*]->(s:Source) "
+    query = (f"MATCH (e:Entity)-[*]->(s:Source) "
              f"WHERE e.uuid = '{uuid}' "
              f"RETURN apoc.coll.toSet(COLLECT(s))  as {record_field_name}")
 
