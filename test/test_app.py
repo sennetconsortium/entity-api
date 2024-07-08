@@ -214,6 +214,7 @@ def test_create_entity_success(app, entity_type):
           patch('app.schema_manager.get_sennet_ids', return_value=test_data['get_sennet_ids']),
           patch('app.app_neo4j_queries.get_entity', return_value=test_data['get_entity']),
           patch('app.app_neo4j_queries.get_source_organ_count', return_value=0),
+          patch('app.schema_neo4j_queries.get_sources_associated_entity', return_value=test_data.get('get_sources')),
           patch('requests.put', return_value=Response(status=202))):
 
         res = client.post(f'/entities/{entity_type}',

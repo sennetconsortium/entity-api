@@ -1974,6 +1974,8 @@ neo4j_driver : neo4j.Driver object
     The neo4j database connection pool
 uuid : str
     The uuid of entity
+filter_out : list 
+    Any sources that should not be returned
 
 Returns
 -------
@@ -1982,11 +1984,15 @@ list
 """
 
 
-def get_sources_associated_entity(neo4j_driver, uuid):
+def get_sources_associated_entity(neo4j_driver, uuid, filter_out = None):
     results = []
 
+    query_filter = ''
+    if filter_out is not None:
+        query_filter = f" and not s.uuid in {filter_out}"
+
     query = (f"MATCH (e:Entity)-[*]->(s:Source) "
-             f"WHERE e.uuid = '{uuid}' "
+             f"WHERE e.uuid = '{uuid}' {query_filter} "
              f"RETURN apoc.coll.toSet(COLLECT(s))  as {record_field_name}")
 
     logger.info("=====get_sources_associated_dataset() query======")
