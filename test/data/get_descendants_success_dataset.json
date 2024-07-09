@@ -22,7 +22,8 @@
       "sennet_id": "SNT956.SLDZ.526",
       "status": "New",
       "uuid": "373d1294b6aeb77aea31852b257133bb",
-      "creation_action": "Central Process"
+      "creation_action": "Central Process",
+      "sources": null
     }
   ],
   "headers": {

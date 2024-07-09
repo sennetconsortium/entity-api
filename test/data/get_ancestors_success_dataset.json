@@ -52,7 +52,8 @@
       },
       "sample_category": "Suspension",
       "sennet_id": "SNT687.SFVJ.758",
-      "uuid": "5fa78f4fa272db58a7fcc7590376f5e7"
+      "uuid": "5fa78f4fa272db58a7fcc7590376f5e7",
+      "source": null
     },
     {
       "created_by_user_displayname": "Test User",
@@ -71,7 +72,8 @@
       "organ": "BD",
       "sample_category": "Organ",
       "sennet_id": "SNT458.VPHX.635",
-      "uuid": "cf3d0408de9afd703c8bd71808176b38"
+      "uuid": "cf3d0408de9afd703c8bd71808176b38",
+      "source": null
     },
     {
       "created_by_user_displayname": "Test User",
@@ -166,7 +168,8 @@
       "data_access_level": "consortium",
       "entity_type": "Sample",
       "last_modified_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
-      "last_modified_user_email": "TESTUSER@example.com"
+      "last_modified_user_email": "TESTUSER@example.com",
+      "source": null
     },
     {
       "organ": "BD",
@@ -185,7 +188,8 @@
       "data_access_level": "consortium",
       "entity_type": "Sample",
       "last_modified_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
-      "last_modified_user_email": "TESTUSER@example.com"
+      "last_modified_user_email": "TESTUSER@example.com",
+      "source": null
     },
     {
       "metadata": "{}",

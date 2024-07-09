@@ -681,6 +681,45 @@ def validate_not_self_referencing(property_key, normalized_entity_type, request,
             check_uuid(uuid)
 
 
+def validate_source_types_match(property_key, normalized_entity_type, request, existing_data_dict, new_data_dict):
+    """
+    Validate that any registered or updated entity is sourced from matching source types
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key
+    normalized_type : str
+        Submission
+    request: Flask request object
+        The instance of Flask request passed in from application request
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        The json data in request body, already after the regular validations
+    """
+
+    sources = []
+    uuids = []
+    for uuid in new_data_dict['direct_ancestor_uuids']:
+        _sources = schema_neo4j_queries.get_sources_associated_entity(schema_manager.get_neo4j_driver_instance(),
+                                                                      uuid, filter_out=uuids)
+        for _source in _sources:
+            uuids.append(_source['uuid'])
+
+        sources = _sources + sources
+
+
+    if len(sources) > 1:
+        first_source_type = sources[0].get('source_type')
+        for source in sources:
+            current_source_type = source.get('source_type')
+            if current_source_type != first_source_type:
+                raise ValueError(f"Cannot have a {existing_data_dict['entity_type']} that is sourced "
+                                 f"from ancestors with unmatched source types. "
+                                 f"Found both {first_source_type} ({sources[0].get('sennet_id')}) and {current_source_type} ({source.get('sennet_id')})")
+
+
 ####################################################################################################
 ## Internal Functions
 ####################################################################################################
