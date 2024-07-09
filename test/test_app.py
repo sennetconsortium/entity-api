@@ -82,6 +82,8 @@ def test_get_entity_by_id_success(app, entity_type):
           patch('app.auth_helper_instance.has_read_privs', return_value=test_data['has_read_privs']),
           patch('app.schema_manager.get_sennet_ids', return_value=test_data['get_sennet_ids']),
           patch('app.app_neo4j_queries.get_entity', return_value=test_data['get_entity']),
+          patch('app.schema_triggers.set_dataset_sources', side_effect=test_data.get('get_associated_sources')),
+          patch('app.schema_neo4j_queries.get_sources_associated_entity', side_effect=test_data.get('get_associated_sources')),
           patch('app.schema_manager.get_complete_entity_result', return_value=test_data['get_complete_entity_result'])):
 
         res = client.get(f'/entities/{entity_id}',
@@ -212,6 +214,7 @@ def test_create_entity_success(app, entity_type):
           patch('app.schema_manager.get_sennet_ids', return_value=test_data['get_sennet_ids']),
           patch('app.app_neo4j_queries.get_entity', return_value=test_data['get_entity']),
           patch('app.app_neo4j_queries.get_source_organ_count', return_value=0),
+          patch('app.schema_neo4j_queries.get_sources_associated_entity', return_value=test_data.get('get_sources')),
           patch('requests.put', return_value=Response(status=202))):
 
         res = client.post(f'/entities/{entity_type}',
@@ -274,6 +277,7 @@ def test_update_entity_success(app, entity_type):
           patch('app.app_neo4j_queries.get_activity', return_value=test_data['get_activity']),
           patch('app.app_neo4j_queries.get_source_organ_count', return_value=0),
           patch('app.schema_neo4j_queries.get_entity_creation_action_activity', return_value='lab process'),
+          patch('app.schema_neo4j_queries.get_sources_associated_entity', return_value=test_data.get('get_sources')),
           patch('requests.put', return_value=Response(status=202))):
 
         res = client.put(f'/entities/{entity_id}?return_dict=true',

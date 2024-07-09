@@ -30,7 +30,8 @@
         "file_uuid": "ffffb2c9be7816087e13580e244855c5",
         "filename": "image_handler.jpg"
       },
-      "uuid": "3c4fc147a08429f58856779fcde96f42"
+      "uuid": "3c4fc147a08429f58856779fcde96f42",
+      "source": null
     },
     {
       "created_by_user_displayname": "Test User",
@@ -62,7 +63,8 @@
         "file_uuid": "ffffb2c9be7816087e13580e244855c5",
         "filename": "image_handler.jpg"
       },
-      "uuid": "4aff569f5d61477abfe5c40364d04a1c"
+      "uuid": "4aff569f5d61477abfe5c40364d04a1c",
+      "source": null
     }
   ],
   "get_entities_by_type": [

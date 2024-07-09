@@ -1964,3 +1964,45 @@ def get_uploads(neo4j_driver, uuid, property_key = None):
                 results = nodes_to_dicts(record[record_field_name])
 
     return results
+
+"""
+Get the associated sources for a given entity (dataset/publication)
+
+Parameters
+----------
+neo4j_driver : neo4j.Driver object
+    The neo4j database connection pool
+uuid : str
+    The uuid of entity
+filter_out : list 
+    Any sources that should not be returned
+
+Returns
+-------
+list
+    A list of sources associated with an entity
+"""
+
+
+def get_sources_associated_entity(neo4j_driver, uuid, filter_out = None):
+    results = []
+
+    query_filter = ''
+    if filter_out is not None:
+        query_filter = f" and not s.uuid in {filter_out}"
+
+    query = (f"MATCH (e:Entity)-[*]->(s:Source) "
+             f"WHERE e.uuid = '{uuid}' {query_filter} "
+             f"RETURN apoc.coll.toSet(COLLECT(s))  as {record_field_name}")
+
+    logger.info("=====get_sources_associated_dataset() query======")
+    logger.info(query)
+
+    with neo4j_driver.session() as session:
+        record = session.read_transaction(execute_readonly_tx, query)
+
+        if record and record[record_field_name]:
+            # Convert the neo4j node into Python dict
+            results = nodes_to_dicts(record[record_field_name])
+
+    return results

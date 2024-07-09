@@ -52,7 +52,8 @@
       },
       "sample_category": "Suspension",
       "sennet_id": "SNT687.SFVJ.758",
-      "uuid": "5fa78f4fa272db58a7fcc7590376f5e7"
+      "uuid": "5fa78f4fa272db58a7fcc7590376f5e7",
+      "source": null
     },
     {
       "created_by_user_displayname": "Test User",
@@ -69,7 +70,8 @@
       "last_modified_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
       "sample_category": "Suspension",
       "sennet_id": "SNT687.SFVJ.758",
-      "uuid": "2804c83baa714d57bdd9884fa0234a2e"
+      "uuid": "2804c83baa714d57bdd9884fa0234a2e",
+      "source": null
     }
   ],
   "headers": {
@@ -144,7 +146,8 @@
       "metadata": "{'notes': '', 'preparation_media': 'PFA (4%)', 'preparation_temperature': 'Dry Ice', 'processing_time_unit': 'min', 'processing_time_value': '22', 'quality_criteria': '', 'sample_id': 'SNT687.SFVJ.758', 'source_storage_time_unit': 'min', 'source_storage_time_value': '30', 'storage_media': 'Buffered Formalin (10% NBF)', 'storage_temperature': 'Liquid Nitrogen Vapor', 'suspension_enriched': 'yes', 'suspension_enriched_target': '', 'suspension_entity': 'cell', 'suspension_entity_number': '44', 'type': 'suspension', 'version': '1'}",
       "sample_category": "Suspension",
       "sennet_id": "SNT687.SFVJ.758",
-      "uuid": "5fa78f4fa272db58a7fcc7590376f5e7"
+      "uuid": "5fa78f4fa272db58a7fcc7590376f5e7",
+      "source": null
     },
     {
       "created_by_user_displayname": "Test User",
@@ -161,7 +164,8 @@
       "last_modified_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
       "sample_category": "Suspension",
       "sennet_id": "SNT687.SFVJ.758",
-      "uuid": "2804c83baa714d57bdd9884fa0234a2e"
+      "uuid": "2804c83baa714d57bdd9884fa0234a2e",
+      "source": null
     }
   ]
 }
