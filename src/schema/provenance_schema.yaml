@@ -612,6 +612,7 @@ ENTITIES:
         immutable: true
         description: "The list of all Sources associated with Datasets"
         on_read_trigger: set_dataset_sources
+        on_index_trigger: set_dataset_sources
 
   ############################################# Publication #############################################
   Publication:
@@ -1062,6 +1063,7 @@ ENTITIES:
         immutable: true
         description: "The list of all Sources associated with Datasets"
         on_read_trigger: set_sample_source
+        on_index_trigger: set_sample_source
 
 
   ############################################# Upload #############################################
