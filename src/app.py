@@ -5346,7 +5346,7 @@ def _get_metadata_by_id(entity_id:str=None, metadata_scope:MetadataScopeEnum=Met
 
     # Get the entity dict from cache if exists
     # Otherwise query against uuid-api and neo4j to get the entity dict if the id exists
-    entity_dict = query_target_entity(entity_id, token)
+    entity_dict = query_target_entity(entity_id)
     normalized_entity_type = entity_dict['entity_type']
 
     # Get the entity result of the indexable dictionary from cache if exists, otherwise regenerate and cache
