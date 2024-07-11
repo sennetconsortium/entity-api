@@ -5428,7 +5428,7 @@ request : falsk.request
 Returns
 -------
 bool
-    True if the user belongs to SenNet-READ group, otherwise False
+    True if the user belongs to SenNet - Read group, otherwise False
 """
 def user_in_sennet_read_group(request):
     if 'Authorization' not in request.headers:
@@ -5438,7 +5438,7 @@ def user_in_sennet_read_group(request):
         # The property 'hmgroupids' is ALWASYS in the output with using schema_manager.get_user_info()
         # when the token in request is a groups token
         user_info = schema_manager.get_user_info(request)
-        hubmap_read_group_uuid = auth_helper_instance.groupNameToId('SenNet-READ')['uuid']
+        sennet_read_group_uuid = auth_helper_instance.groupNameToId('SenNet - Read')['uuid']
     except Exception as e:
         # Log the full stack trace, prepend a line with our message
         logger.exception(e)
@@ -5449,7 +5449,7 @@ def user_in_sennet_read_group(request):
         return False
 
 
-    return (hubmap_read_group_uuid in user_info['sngroupids'])
+    return (sennet_read_group_uuid in user_info['hmgroupids'])
 ####################################################################################################
 ## For local development/testing
 ####################################################################################################
