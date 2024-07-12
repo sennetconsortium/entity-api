@@ -5372,7 +5372,7 @@ def _get_metadata_by_id(entity_id:str=None, metadata_scope:MetadataScopeEnum=Met
         # Without token, the user can only access public collections, modify the collection result
         # by only returning public datasets attached to this collection
         if isinstance(user_token, Response):
-            abort_forbidden(f"{normalized_entity_type} for {id} is not accessible without presenting a token.")
+            abort_forbidden(f"{normalized_entity_type} for {entity_id} is not accessible without presenting a token.")
         else:
             # When the groups token is valid, but the user doesn't belong to HuBMAP-READ group
             # Or the token is valid but doesn't contain group information (auth token or transfer token)
