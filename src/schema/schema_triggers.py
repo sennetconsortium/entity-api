@@ -1,6 +1,8 @@
 import ast
 import copy
 import json
+import urllib.parse
+from typing import Optional
 
 import yaml
 import logging
@@ -20,6 +22,12 @@ from schema import schema_neo4j_queries
 from schema.schema_constants import SchemaConstants
 
 logger = logging.getLogger(__name__)
+
+ontology_lookup_cache = {}
+sparql_vocabs = {
+    "purl.obolibrary.org": "uberon",
+    "purl.org": "fma",
+}
 
 ####################################################################################################
 ## Trigger methods shared among Collection, Dataset, Source, Sample - DO NOT RENAME
@@ -1643,6 +1651,86 @@ def get_pipeline_message_reduced(property_key, normalized_type, user_token, exis
                 pipeline_message = max_bytes_msg.decode("utf-8")
 
     return property_key, pipeline_message
+
+
+"""
+Trigger event method to parse out the anatomical locations from 'rui_location'
+
+Parameters
+----------
+property_key : str
+    The target property key
+normalized_type : str
+    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+user_token: str
+    The user's globus nexus token
+existing_data_dict : dict
+    A dictionary that contains all existing entity properties
+new_data_dict : dict
+    A merged dictionary that contains all possible input data to be used
+
+Returns
+-------
+str: The target property key
+str: The generated dataset title
+"""
+
+
+def get_rui_location_anatomical_locations(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    rui_location_anatomical_locations = None
+    if "rui_location" in existing_data_dict:
+        rui_location = ast.literal_eval(existing_data_dict["rui_location"])
+        if "ccf_annotations" in rui_location:
+            annotation_urls = rui_location["ccf_annotations"]
+            labels = [
+                label
+                for url in annotation_urls
+                if (label := _get_ontology_label(url))
+            ]
+            if len(labels) > 0:
+                rui_location_anatomical_locations = labels
+
+    return property_key, rui_location_anatomical_locations
+
+
+def _get_ontology_label(ann_url: str) -> Optional[str]:
+    """Get the label from the appropriate ontology lookup service.
+
+    Args:
+        ann_url (str): The annotation url.
+
+    Returns:
+        Optional[dict]: The label and purl if found, otherwise None.
+    """
+    if ann_url in ontology_lookup_cache:
+        return {"label": ontology_lookup_cache[ann_url], "purl": ann_url}
+
+    host = urllib.parse.urlparse(ann_url).hostname
+    vocab = sparql_vocabs.get(host)
+    if not vocab:
+        return None
+
+    schema = "http://www.w3.org/2000/01/rdf-schema#label"
+    table = f"https://purl.humanatlas.io/vocab/{vocab}"
+    query = f"SELECT ?label FROM <{table}> WHERE {{ <{ann_url}> <{schema}> ?label }}"
+    headers = {
+        "Accept": "application/sparql-results+json",
+        "Content-Type": "application/x-www-form-urlencoded",
+    }
+    res = requests.post("https://lod.humanatlas.io/sparql", data={"query": query}, headers=headers)
+    if res.status_code != 200:
+        return None
+
+    bindings = res.json().get("results", {}).get("bindings", [])
+    if len(bindings) != 1:
+        return None
+
+    label = bindings[0].get("label", {}).get("value")
+    if not label:
+        return None
+
+    ontology_lookup_cache[ann_url] = label  # cache the result
+    return {"label": label, "purl": ann_url}
 
 
 """

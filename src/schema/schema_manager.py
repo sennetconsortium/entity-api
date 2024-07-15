@@ -1272,10 +1272,11 @@ Returns
 dict
     An entity metadata dictionary with keys that are all normalized
 """
-def normalize_document_result_for_response(entity_dict, properties_to_exclude=[]):
+def normalize_document_result_for_response(entity_dict, properties_to_exclude=[], properties_to_include=[]):
     return _normalize_metadata( entity_dict=entity_dict
                                 , metadata_scope=MetadataScopeEnum.INDEX
-                                , properties_to_skip=properties_to_exclude)
+                                , properties_to_exclude=properties_to_exclude
+                                , properties_to_include=properties_to_include)
 
 
 """
@@ -1295,13 +1296,15 @@ metadata_scope:
     from Neo4j which are retained.  Default is MetadataScopeEnum.INDEX.
 properties_to_exclude : list
     Any additional properties to exclude from the response
+properties_to_include : list
+    Any additional properties to include in the response
 
 Returns
 -------
 dict
     An entity metadata dictionary with keys that are all normalized appropriately for the metadata_scope argument value.
 """
-def _normalize_metadata(entity_dict, metadata_scope:MetadataScopeEnum, properties_to_skip=[]):
+def _normalize_metadata(entity_dict, metadata_scope:MetadataScopeEnum, properties_to_exclude=[], properties_to_include=[]):
     global _schema
 
     # When the entity_dict is unavailable or the entity was incorrectly created, do not
@@ -1315,12 +1318,20 @@ def _normalize_metadata(entity_dict, metadata_scope:MetadataScopeEnum, propertie
     properties = _schema['ENTITIES'][normalized_entity_type]['properties']
 
     for key in entity_dict:
+        if key in properties_to_include:
+            # Add the target key with correct value of data type to the normalized_metadata dict
+            normalized_metadata[key] = entity_dict[key]
+
+            # Final step: remove properties with empty string value, empty dict {}, and empty list []
+            if (isinstance(normalized_metadata[key], (str, dict, list)) and (not normalized_metadata[key])):
+                normalized_metadata.pop(key)
+
         # Only return the properties defined in the schema yaml
         # Exclude additional schema yaml properties, if specified
         if  key not in properties:
             # Skip Neo4j entity properties not found in the schema yaml
             continue
-        if  key in properties_to_skip:
+        if  key in properties_to_exclude:
             # Skip properties if directed by the calling function
             continue
         if  entity_dict[key] is None:

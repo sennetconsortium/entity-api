@@ -5386,7 +5386,8 @@ def _get_metadata_by_id(entity_id:str=None, metadata_scope:MetadataScopeEnum=Met
         abort_forbidden(f"The requested {normalized_entity_type} has non-public data."
                         f"  A Globus token with access permission is required.")
 
-    final_result = schema_manager.normalize_document_result_for_response(entity_dict=metadata_dict)
+    final_result = schema_manager.normalize_document_result_for_response(entity_dict=metadata_dict,
+                                                                         properties_to_include=['protocol_url'])
 
     # Result filtering based on query string
     # The `data_access_level` property is available in all entities Donor/Sample/Dataset
