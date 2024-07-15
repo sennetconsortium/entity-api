@@ -484,6 +484,7 @@ ENTITIES:
       pipeline_message:
         # Generated from the Ingest Pipeline during processing of a derived dataset
         type: string
+        on_index_trigger: get_pipeline_message_reduced
       ingest_metadata:
         type: json_string # dict
         before_property_create_validators:
@@ -577,6 +578,22 @@ ENTITIES:
         description: "The activity that was performed."
         before_property_create_validators:
           - validate_creation_action
+      dataset_category:
+        type: string
+        description: 'Calculated field based on "creation_action" transformed into either Primary/Derived/Component dataset categorization.'
+        on_index_trigger: get_dataset_category
+      display_subtype:
+        type: string
+        description: 'Calculated field for how an entity should be displayed in the Portal UI.'
+        on_index_trigger: get_display_subtype
+      last_touch:
+        type: string
+        description: 'The timestamp of when this entity was last modified or published.'
+        on_index_trigger: get_last_touch
+      origin_sample:
+        type: json_string
+        description: 'The Sample ancestor that has the sample_category of "Organ".'
+        on_index_trigger: get_origin_sample
       assigned_to_group_name:
         type: string
         description: The group who is responsible for the next step in the ingest process
@@ -605,6 +622,7 @@ ENTITIES:
         immutable: true # Disallow update via PUT
         description: "The modified and mapped metadata returned from the processing at data submission time."
         on_read_trigger: get_cedar_mapped_metadata
+        on_index_trigger: get_cedar_mapped_metadata
       sources:
         type: list
         generated: true
