@@ -875,6 +875,7 @@ ENTITIES:
         immutable: true # Disallow update via PUT
         description: "The modified and mapped metadata returned from the processing at data submission time."
         on_read_trigger: get_source_mapped_metadata
+        on_index_trigger: get_source_mapped_metadata
       # For mouse sources
       cedar_mapped_metadata:
         type: json_string # dict
@@ -882,6 +883,15 @@ ENTITIES:
         immutable: true # Disallow update via PUT
         description: "The modified and mapped metadata returned from the processing at data submission time."
         on_read_trigger: get_cedar_mapped_metadata
+        on_index_trigger: get_cedar_mapped_metadata
+      display_subtype:
+        type: string
+        description: 'Calculated field for how an entity should be displayed in the Portal UI.'
+        on_index_trigger: get_display_subtype
+      last_touch:
+        type: string
+        description: 'The timestamp of when this entity was last modified or published.'
+        on_index_trigger: get_last_touch
       source_type:
         type: string
         required_on_create: true
@@ -1200,3 +1210,11 @@ ENTITIES:
           - validate_in_admin_group
         before_property_update_validators:
           - validate_in_admin_group
+      display_subtype:
+        type: string
+        description: 'Calculated field for how an entity should be displayed in the Portal UI.'
+        on_index_trigger: get_display_subtype
+      last_touch:
+        type: string
+        description: 'The timestamp of when this entity was last modified or published.'
+        on_index_trigger: get_last_touch
