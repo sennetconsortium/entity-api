@@ -1375,7 +1375,8 @@ def update_entity(id: str, user_token: str, json_data_dict: dict):
             if direct_ancestor_uuid_dict['entity_type'] not in ['Source', 'Sample']:
                 abort_bad_req(f"The uuid: {direct_ancestor_uuid} is not a Source neither a Sample, cannot be used as the direct ancestor of this Sample")
 
-            check_multiple_organs_constraint(json_data_dict, direct_ancestor_uuid_dict, entity_dict['uuid'])
+            merged = {**entity_dict, **json_data_dict}
+            check_multiple_organs_constraint(merged, direct_ancestor_uuid_dict, entity_dict['uuid'])
 
         # Generate 'before_update_triiger' data and update the entity details in Neo4j
         merged_updated_dict = update_object_details('ENTITIES', request, normalized_entity_type, user_token, json_data_dict, entity_dict)
