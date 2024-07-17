@@ -32,6 +32,8 @@ from schema import schema_errors
 from schema import schema_neo4j_queries
 from schema.schema_constants import SchemaConstants
 from schema.schema_constants import DataVisibilityEnum
+from schema.schema_constants import MetadataScopeEnum
+from schema.schema_constants import TriggerTypeEnum
 
 # HuBMAP commons
 from hubmap_commons import string_helper
@@ -656,6 +658,31 @@ def get_entities_by_ids_for_dashboard(entity_type: str, json_data_dict: dict):
             abort_not_found(e.response.text)
         else:
             abort_internal_err(e.response.text)
+
+
+"""
+Retrieve the JSON containing the metadata information for a given entity which is to go into an
+OpenSearch document for the entity. Note this is a subset of the "complete" entity metadata returned by the
+`GET /entities/<id>` endpoint, with information design and coding design to perform reasonably for
+large volumes of indexing.
+The gateway treats this endpoint as public accessible.
+Result filtering is supported based on query string
+For example: /documents/<id>?property=data_access_level
+Parameters
+----------
+id : str
+    The HuBMAP ID (e.g. HBM123.ABCD.456) or UUID of target entity 
+Returns
+-------
+json
+    Metadata for the entity appropriate for an OpenSearch document, and filtered by an additional
+    `property` arguments in the HTTP request.
+"""
+@app.route('/documents/<id>', methods = ['GET'])
+def get_document_by_id(id):
+
+    result_dict = _get_metadata_by_id(entity_id=id, metadata_scope=MetadataScopeEnum.INDEX)
+    return jsonify(result_dict)
 
 
 """
@@ -1348,7 +1375,8 @@ def update_entity(id: str, user_token: str, json_data_dict: dict):
             if direct_ancestor_uuid_dict['entity_type'] not in ['Source', 'Sample']:
                 abort_bad_req(f"The uuid: {direct_ancestor_uuid} is not a Source neither a Sample, cannot be used as the direct ancestor of this Sample")
 
-            check_multiple_organs_constraint(json_data_dict, direct_ancestor_uuid_dict, entity_dict['uuid'])
+            merged = {**entity_dict, **json_data_dict}
+            check_multiple_organs_constraint(merged, direct_ancestor_uuid_dict, entity_dict['uuid'])
 
         # Generate 'before_update_triiger' data and update the entity details in Neo4j
         merged_updated_dict = update_object_details('ENTITIES', request, normalized_entity_type, user_token, json_data_dict, entity_dict)
@@ -3988,7 +4016,9 @@ def create_entity_details(request, normalized_entity_type, user_token, json_data
 
     try:
         # Use {} since no existing dict
-        generated_before_create_trigger_data_dict = schema_manager.generate_triggered_data('before_create_trigger', normalized_entity_type, user_token, {}, new_data_dict)
+        generated_before_create_trigger_data_dict = schema_manager.generate_triggered_data(TriggerTypeEnum.BEFORE_CREATE,
+                                                                                           normalized_entity_type, user_token, {}, new_data_dict)
+
     # If one of the before_create_trigger methods fails, we can't create the entity
     except schema_errors.BeforeCreateTriggerException:
         # Log the full stack trace, prepend a line with our message
@@ -4139,7 +4169,7 @@ def create_multiple_samples_details(request, normalized_entity_type, user_token,
     # A bit performance improvement
     try:
         # Use {} since no existing dict
-        generated_before_create_trigger_data_dict = schema_manager.generate_triggered_data('before_create_trigger', normalized_entity_type, user_token, {}, new_data_dict)
+        generated_before_create_trigger_data_dict = schema_manager.generate_triggered_data(TriggerTypeEnum.BEFORE_CREATE, normalized_entity_type, user_token, {}, new_data_dict)
     # If one of the before_create_trigger methods fails, we can't create the entity
     except schema_errors.BeforeCreateTriggerException:
         # Log the full stack trace, prepend a line with our message
@@ -4581,7 +4611,7 @@ def create_multiple_component_details(request, normalized_entity_type, user_toke
         new_data_dict = {**json_data_dict_list[i], **user_info_dict, **new_ids_dict_list[i]}
         try:
             # Use {} since no existing dict
-            generated_before_create_trigger_data_dict = schema_manager.generate_triggered_data('before_create_trigger', normalized_entity_type, user_token, {}, new_data_dict)
+            generated_before_create_trigger_data_dict = schema_manager.generate_triggered_data(TriggerTypeEnum.BEFORE_CREATE, normalized_entity_type, user_token, {}, new_data_dict)
             # If one of the before_create_trigger methods fails, we can't create the entity
         except schema_errors.BeforeCreateTriggerException:
             # Log the full stack trace, prepend a line with our message
@@ -4657,7 +4687,7 @@ def after_create(normalized_entity_type, user_token, merged_data_dict):
         # 'after_create_trigger' and 'after_update_trigger' don't generate property values
         # It just returns the empty dict, no need to assign value
         # Use {} since no new dict
-        schema_manager.generate_triggered_data('after_create_trigger', normalized_entity_type, user_token, merged_data_dict, {})
+        schema_manager.generate_triggered_data(TriggerTypeEnum.AFTER_CREATE, normalized_entity_type, user_token, merged_data_dict, {})
     except schema_errors.AfterCreateTriggerException:
         # Log the full stack trace, prepend a line with our message
         msg = "The entity has been created, but failed to execute one of the 'after_create_trigger' methods"
@@ -4697,7 +4727,7 @@ def update_object_details(provenance_type, request, normalized_entity_type, user
     new_data_dict = {**user_info_dict, **json_data_dict}
 
     try:
-        generated_before_update_trigger_data_dict = schema_manager.generate_triggered_data('before_update_trigger',
+        generated_before_update_trigger_data_dict = schema_manager.generate_triggered_data(TriggerTypeEnum.BEFORE_UPDATE,
                                                                                            normalized_entity_type,
                                                                                            user_token,
                                                                                            existing_entity_dict,
@@ -4771,7 +4801,7 @@ def after_update(normalized_entity_type, user_token, entity_dict):
         # 'after_create_trigger' and 'after_update_trigger' don't generate property values
         # It just returns the empty dict, no need to assign value
         # Use {} sicne no new dict
-        schema_manager.generate_triggered_data('after_update_trigger', normalized_entity_type, user_token, entity_dict, {})
+        schema_manager.generate_triggered_data(TriggerTypeEnum.AFTER_UPDATE, normalized_entity_type, user_token, entity_dict, {})
     except schema_errors.AfterUpdateTriggerException:
         # Log the full stack trace, prepend a line with our message
         msg = "The entity information has been updated, but failed to execute one of the 'after_update_trigger' methods"
@@ -5291,6 +5321,141 @@ def delete_cache(id):
         schema_manager.delete_memcached_cache(uuids_list)
 
 
+
+"""
+Retrieve the JSON containing the normalized metadata information for a given entity appropriate for the
+scope of metadata requested e.g. complete data for a another service, indexing data for an OpenSearch document, etc.
+
+Parameters
+----------
+entity_id : str
+    The HuBMAP ID (e.g. HBM123.ABCD.456) or UUID of target entity 
+metadata_scope:
+    A recognized scope from the SchemaConstants, controlling the triggers which are fired and elements
+    from Neo4j which are retained.  Default is MetadataScopeEnum.INDEX.
+    
+Returns
+-------
+json
+    Metadata for the entity appropriate for the metadata_scope argument, and filtered by an additional
+    `property` arguments in the HTTP request.
+"""
+def _get_metadata_by_id(entity_id:str=None, metadata_scope:MetadataScopeEnum=MetadataScopeEnum.INDEX):
+    # Token is not required, but if an invalid token provided,
+    # we need to tell the client with a 401 error
+    validate_token_if_auth_header_exists(request)
+
+    # Use the internal token to query the target entity
+    # since public entities don't require user token
+    token = get_internal_token()
+
+    # Get the entity dict from cache if exists
+    # Otherwise query against uuid-api and neo4j to get the entity dict if the id exists
+    entity_dict = query_target_entity(entity_id)
+    normalized_entity_type = entity_dict['entity_type']
+
+    # Get the entity result of the indexable dictionary from cache if exists, otherwise regenerate and cache
+    metadata_dict = schema_manager.get_index_metadata(token, entity_dict) \
+        if metadata_scope==MetadataScopeEnum.INDEX \
+        else schema_manager.get_complete_entity_result(token, entity_dict)
+
+    # Determine if the entity is publicly visible base on its data, only.
+    # To verify if a Collection is public, it is necessary to have its Datasets, which
+    # are populated as triggered data.  So pull back the complete entity for
+    # _get_entity_visibility() to check.
+    entity_scope = _get_entity_visibility(normalized_entity_type=normalized_entity_type, entity_dict=entity_dict)
+
+    # Initialize the user as authorized if the data is public.  Otherwise, the
+    # user is not authorized and credentials must be checked.
+    if entity_scope == DataVisibilityEnum.PUBLIC:
+        user_authorized = True
+    else:
+        # It's highly possible that there's no token provided
+        user_token = get_user_token(request)
+
+        # The user_token is flask.Response on error
+        # Without token, the user can only access public collections, modify the collection result
+        # by only returning public datasets attached to this collection
+        if isinstance(user_token, Response):
+            abort_forbidden(f"{normalized_entity_type} for {entity_id} is not accessible without presenting a token.")
+        else:
+            # When the groups token is valid, but the user doesn't belong to HuBMAP-READ group
+            # Or the token is valid but doesn't contain group information (auth token or transfer token)
+            user_authorized = user_in_sennet_read_group(request)
+
+    # We'll need to return all the properties including those generated by
+    # `on_read_trigger` to have a complete result e.g., the 'next_revision_uuid' and
+    # 'previous_revision_uuid' being used below.
+    # Collections, however, will filter out only public properties for return.
+    if not user_authorized:
+        abort_forbidden(f"The requested {normalized_entity_type} has non-public data."
+                        f"  A Globus token with access permission is required.")
+
+    final_result = schema_manager.normalize_document_result_for_response(entity_dict=metadata_dict,
+                                                                         properties_to_include=['protocol_url'])
+
+    # Result filtering based on query string
+    # The `data_access_level` property is available in all entities Donor/Sample/Dataset
+    # and this filter is being used by gateway to check the data_access_level for file assets
+    # The `status` property is only available in Dataset and being used by search-api for revision
+    result_filtering_accepted_property_keys = ['data_access_level', 'status']
+
+    if bool(request.args):
+        property_key = request.args.get('property')
+
+        if property_key is not None:
+            # Validate the target property
+            if property_key not in result_filtering_accepted_property_keys:
+                abort_bad_req(f"Only the following property keys are supported in the query string: {COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}")
+
+            if property_key == 'status' and \
+                    not schema_manager.entity_type_instanceof(normalized_entity_type, 'Dataset'):
+                abort_bad_req(f"Only Dataset or Publication supports 'status' property key in the query string")
+
+            # Response with the property value directly
+            # Don't use jsonify() on string value
+            return entity_dict[property_key]
+        else:
+            abort_bad_req("The specified query string is not supported. Use '?property=<key>' to filter the result")
+    else:
+        # Response with the dict
+        return final_result
+
+
+"""
+Check if the user with token is in the HuBMAP-READ group
+
+Parameters
+----------
+request : falsk.request
+    The flask http request object that containing the Authorization header
+    with a valid Globus groups token for checking group information
+
+Returns
+-------
+bool
+    True if the user belongs to SenNet - Read group, otherwise False
+"""
+def user_in_sennet_read_group(request):
+    if 'Authorization' not in request.headers:
+        return False
+
+    try:
+        # The property 'hmgroupids' is ALWASYS in the output with using schema_manager.get_user_info()
+        # when the token in request is a groups token
+        user_info = schema_manager.get_user_info(request)
+        sennet_read_group_uuid = auth_helper_instance.groupNameToId('SenNet - Read')['uuid']
+    except Exception as e:
+        # Log the full stack trace, prepend a line with our message
+        logger.exception(e)
+
+        # If the token is not a groups token, no group information available
+        # The commons.hm_auth.AuthCache would return a Response with 500 error message
+        # We treat such cases as the user not in the HuBMAP-READ group
+        return False
+
+
+    return (sennet_read_group_uuid in user_info['hmgroupids'])
 ####################################################################################################
 ## For local development/testing
 ####################################################################################################

@@ -59,6 +59,44 @@ def get_dataset_direct_ancestors(neo4j_driver, uuid, property_key=None):
 
 
 """
+Get the origin (organ) sample ancestor of a given entity by uuid
+
+Parameters
+----------
+neo4j_driver : neo4j.Driver object
+    The neo4j database connection pool
+uuid : str
+    The uuid of target entity 
+property_key : str
+    A target property key for result filtering
+
+Returns
+-------
+list
+    A unique list of uuids of source entities
+"""
+
+
+def get_origin_sample(neo4j_driver, uuid):
+    result = {}
+
+    query = (f"MATCH (e:Entity)-[:WAS_GENERATED_BY|USED*]->(s:Sample) "
+             f"WHERE e.uuid='{uuid}' and s.sample_category='Organ' "
+             f"return s AS {record_field_name}")
+
+    logger.info("======get_origin_sample() query======")
+    logger.info(query)
+
+    with neo4j_driver.session() as session:
+        record = session.read_transaction(_execute_readonly_tx, query)
+        if record and record[record_field_name]:
+            # Convert the entity node to dict
+            result = _node_to_dict(record[record_field_name])
+
+    return result
+
+
+"""
 Get the sample organ name and source metadata information of the given dataset uuid
 
 Parameters
