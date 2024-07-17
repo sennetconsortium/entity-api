@@ -1193,7 +1193,7 @@ ENTITIES:
         description: "The datasets that are contained in this Upload."
         # A few time-consuming properties (with read triggers) of each dataset are excluded
         on_read_trigger: get_upload_datasets
-        on_index_trigger: get_upload_datasets
+        on_index_trigger: get_index_upload_datasets
       assigned_to_group_name:
         type: string
         description: The group who is responsible for the next step in the ingest process

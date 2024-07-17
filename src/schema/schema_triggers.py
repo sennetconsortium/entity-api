@@ -2754,6 +2754,49 @@ def get_upload_datasets(property_key, normalized_type, user_token, existing_data
     return property_key, schema_manager.normalize_entities_list_for_response(datasets_list)
 
 
+
+"""
+Trigger event method of getting a list of associated datasets for a given Upload for indexing
+
+Parameters
+----------
+property_key : str
+    The target property key of the value to be generated
+normalized_type : str
+    One of the types defined in the schema yaml: Upload
+user_token: str
+    The user's globus nexus token
+existing_data_dict : dict
+    A dictionary that contains all existing entity properties
+new_data_dict : dict
+    A merged dictionary that contains all possible input data to be used
+Returns
+-------
+str: The target property key
+list: A list of associated dataset dicts with all the normalized information
+"""
+
+
+def get_index_upload_datasets(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    dataset_property_exclusions = ["contacts", "contributors", "ingest_metadata", "pipeline_message", "status_history"]
+    if 'uuid' not in existing_data_dict:
+        msg = create_trigger_error_msg(
+            "Missing 'uuid' key in 'existing_data_dict' during calling 'get_upload_datasets()' trigger method.",
+            existing_data_dict, new_data_dict
+        )
+        raise KeyError(msg)
+
+    logger.info(f"Executing 'get_upload_datasets()' trigger method on uuid: {existing_data_dict['uuid']}")
+
+    datasets_list = schema_neo4j_queries.get_upload_datasets(schema_manager.get_neo4j_driver_instance(),
+                                                             existing_data_dict['uuid'])
+
+    # Get rid of the entity node properties that are not defined in the yaml schema
+    # as well as the ones defined as `exposed: false` in the yaml schema
+    return property_key, schema_manager.normalize_entities_list_for_response(datasets_list,
+                                                                             properties_to_exclude=dataset_property_exclusions)
+
+
 ####################################################################################################
 ## Trigger methods specific to Activity - DO NOT RENAME
 ####################################################################################################
