@@ -1505,6 +1505,12 @@ def update_entity(id: str, user_token: str, json_data_dict: dict):
     if MEMCACHED_MODE:
         delete_cache(id)
 
+    # Generate the complete entity dict
+    complete_dict = schema_manager.get_complete_entity_result(user_token, merged_updated_dict, properties_to_skip)
+
+    # Will also filter the result based on schema
+    normalized_complete_dict = schema_manager.normalize_entity_result_for_response(complete_dict)
+
     if 'protocol_url' in json_data_dict or (
             'ingest_metadata' in json_data_dict and 'dag_provenance_list' in json_data_dict['ingest_metadata']):
         # protocol_url = json_data_dict['protocol_url']
@@ -1520,11 +1526,6 @@ def update_entity(id: str, user_token: str, json_data_dict: dict):
     reindex_entity(entity_dict['uuid'], user_token)
 
     if return_dict:
-        # Generate the complete entity dict
-        complete_dict = schema_manager.get_complete_entity_result(user_token, merged_updated_dict, properties_to_skip)
-
-        # Will also filter the result based on schema
-        normalized_complete_dict = schema_manager.normalize_entity_result_for_response(complete_dict)
         return jsonify(normalized_complete_dict)
     else:
         return jsonify({'message': f"{normalized_entity_type} of {id} has been updated"})
