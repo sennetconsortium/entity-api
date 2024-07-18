@@ -606,23 +606,69 @@ dict
 
 
 def get_complete_entity_result(token, entity_dict, properties_to_skip=[]):
+    global _memcached_client
+    global _memcached_prefix
+
+    complete_entity = {}
+
     # In case entity_dict is None or
     # an incorrectly created entity that doesn't have the `entity_type` property
-    if entity_dict and ('entity_type' in entity_dict):
-        # No error handling here since if a 'on_read_trigger' method failed,
-        # the property value will be the error message
-        # Pass {} since no new_data_dict for 'on_read_trigger'
-        generated_on_read_trigger_data_dict = generate_triggered_data(TriggerTypeEnum.ON_READ, entity_dict['entity_type'],
-                                                                      token, entity_dict, {}, properties_to_skip)
+    if entity_dict and ('entity_type' in entity_dict) and ('uuid' in entity_dict):
+        entity_uuid = entity_dict['uuid']
+        entity_type = entity_dict['entity_type']
+        cache_result = None
 
-        # Merge the entity info and the generated on read data into one dictionary
-        complete_entity_dict = {**entity_dict, **generated_on_read_trigger_data_dict}
+        # Need both client and prefix when fetching the cache
+        # Do NOT fetch cache if properties_to_skip is specified
+        if _memcached_client and _memcached_prefix and (not properties_to_skip):
+            cache_key = f'{_memcached_prefix}_complete_{entity_uuid}'
+            cache_result = _memcached_client.get(cache_key)
 
-        # Remove properties of None value
-        return remove_none_values(complete_entity_dict)
+        # Use the cached data if found and still valid
+        # Otherwise, calculate and add to cache
+        if cache_result is None:
+            if _memcached_client and _memcached_prefix:
+                logger.info(
+                    f'Cache of complete entity of {entity_type} {entity_uuid} not found or expired at time {datetime.now()}')
+
+            # No error handling here since if a 'on_read_trigger' method fails,
+            # the property value will be the error message
+            # Pass {} since no new_data_dict for 'on_read_trigger'
+            generated_on_read_trigger_data_dict = generate_triggered_data(trigger_type=TriggerTypeEnum.ON_READ
+                                                                          , normalized_class=entity_type
+                                                                          , user_token=token
+                                                                          , existing_data_dict=entity_dict
+                                                                          , new_data_dict={}
+                                                                          , properties_to_skip=properties_to_skip)
+
+            # Merge the entity info and the generated on read data into one dictionary
+            complete_entity_dict = {**entity_dict, **generated_on_read_trigger_data_dict}
+
+            # Remove properties of None value
+            complete_entity = remove_none_values(complete_entity_dict)
+
+            # Need both client and prefix when creating the cache
+            # Do NOT cache when properties_to_skip is specified
+            if _memcached_client and _memcached_prefix and (not properties_to_skip):
+                logger.info(f'Creating complete entity cache of {entity_type} {entity_uuid} at time {datetime.now()}')
+
+                cache_key = f'{_memcached_prefix}_complete_{entity_uuid}'
+                _memcached_client.set(cache_key, complete_entity, expire=SchemaConstants.MEMCACHED_TTL)
+
+                logger.debug(
+                    f"Following is the complete {entity_type} cache created at time {datetime.now()} using key {cache_key}:")
+                logger.debug(complete_entity)
+        else:
+            logger.info(f'Using complete entity cache of {entity_type} {entity_uuid} at time {datetime.now()}')
+            logger.debug(cache_result)
+
+            complete_entity = cache_result
     else:
         # Just return the original entity_dict otherwise
-        return entity_dict
+        complete_entity = entity_dict
+
+    # One final return
+    return complete_entity
 
 
 """
