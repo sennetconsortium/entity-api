@@ -1368,9 +1368,12 @@ def _normalize_metadata(entity_dict, metadata_scope:MetadataScopeEnum, propertie
             # Add the target key with correct value of data type to the normalized_metadata dict
             normalized_metadata[key] = entity_dict[key]
 
+            # Max Sibilla: We do not want to remove any properties as the Search API does an update on all fields and if
+            # a property is missing then the Elasticsearch document can be incorrect
+            
             # Final step: remove properties with empty string value, empty dict {}, and empty list []
-            if (isinstance(normalized_metadata[key], (str, dict, list)) and (not normalized_metadata[key])):
-                normalized_metadata.pop(key)
+            # if (isinstance(normalized_metadata[key], (str, dict, list)) and (not normalized_metadata[key])):
+            #     normalized_metadata.pop(key)
 
         # Only return the properties defined in the schema yaml
         # Exclude additional schema yaml properties, if specified
@@ -1407,10 +1410,11 @@ def _normalize_metadata(entity_dict, metadata_scope:MetadataScopeEnum, propertie
         # Add the target key with correct value of data type to the normalized_entity dict
         normalized_metadata[key] = entity_dict[key]
 
-        # After possible modification to entity_dict[key] prior to assigning to normalized_metadata[key], remove
-        # the normalized_metadata entry for the key if it is an empty string, dictionary, or list.
-        if (isinstance(normalized_metadata[key], (str, dict, list)) and (not normalized_metadata[key])):
-            normalized_metadata.pop(key)
+        # Max Sibilla: We do not want to remove any properties as the Search API does an update on all fields and if
+        # a property is missing then the Elasticsearch document can be incorrect
+
+        # if (isinstance(normalized_metadata[key], (str, dict, list)) and (not normalized_metadata[key])):
+        #     normalized_metadata.pop(key)
 
     return normalized_metadata
 
