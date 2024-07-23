@@ -1,9 +1,12 @@
 import ast
+import copy
 import json
+import urllib.parse
+from typing import Optional
 
 import yaml
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 import requests
 from atlas_consortia_commons.string import equals
 from neo4j.exceptions import TransactionError
@@ -19,6 +22,12 @@ from schema import schema_neo4j_queries
 from schema.schema_constants import SchemaConstants
 
 logger = logging.getLogger(__name__)
+
+ontology_lookup_cache = {}
+sparql_vocabs = {
+    "purl.obolibrary.org": "uberon",
+    "purl.org": "fma",
+}
 
 ####################################################################################################
 ## Trigger methods shared among Collection, Dataset, Source, Sample - DO NOT RENAME
@@ -1411,6 +1420,325 @@ def get_dataset_title(property_key, normalized_type, user_token, existing_data_d
     return property_key, generated_title
 
 """
+Trigger event method of auto generating the dataset category
+
+Parameters
+----------
+property_key : str
+    The target property key
+normalized_type : str
+    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+user_token: str
+    The user's globus nexus token
+existing_data_dict : dict
+    A dictionary that contains all existing entity properties
+new_data_dict : dict
+    A merged dictionary that contains all possible input data to be used
+
+Returns
+-------
+str: The target property key
+str: The generated dataset title
+"""
+
+
+def get_dataset_category(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    creation_action = dict([get_creation_action_activity("creation_action_activity", normalized_type, user_token, existing_data_dict, new_data_dict)]).get('creation_action_activity')
+    dataset_category_map = {
+        "Create Dataset Activity": "primary",
+        "Multi-Assay Split": "component",
+        "Central Process": "codcc-processed",
+        "Lab Process": "lab-processed",
+    }
+    if dataset_category := dataset_category_map.get(creation_action):
+        return property_key, dataset_category
+
+    return property_key, None
+
+
+"""
+Trigger event method of auto generating the description of the entity in the Portal UI
+
+Parameters
+----------
+property_key : str
+    The target property key
+normalized_type : str
+    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+user_token: str
+    The user's globus nexus token
+existing_data_dict : dict
+    A dictionary that contains all existing entity properties
+new_data_dict : dict
+    A merged dictionary that contains all possible input data to be used
+
+Returns
+-------
+str: The target property key
+str: The generated dataset title
+"""
+
+
+# For Upload, Dataset, Source and Sample objects:
+# add a calculated (not stored in Neo4j) field called `display_subtype` to
+# all Elasticsearch documents of the above types with the following rules:
+# Upload: Just make it "Data Upload" for all uploads
+# Source: "Source"
+# Sample: if sample_category == 'organ' the display name linked to the corresponding description of organ code
+# otherwise the display name linked to the value of the corresponding description of sample_category code
+def get_display_subtype(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    display_subtype = "{unknown}"
+
+    if equals(Ontology.ops().entities().SOURCE, normalized_type):
+        display_subtype = existing_data_dict["source_type"]
+
+    elif equals(Ontology.ops().entities().SAMPLE, normalized_type):
+        if "sample_category" in existing_data_dict:
+            if equals(existing_data_dict["sample_category"], Ontology.ops().specimen_categories().ORGAN):
+                if "organ" in existing_data_dict:
+                    organ_types = Ontology.ops(as_data_dict=True, prop_callback=None, key="rui_code",
+                                               val_key="term").organ_types()
+                    organ_types["OT"] = "Other"
+                    display_subtype = get_val_by_key(existing_data_dict["organ"], organ_types, "ubkg.organ_types")
+                else:
+                    logger.error(
+                        "Missing missing organ when sample_category is set "
+                        f"of Sample with uuid: {existing_data_dict['uuid']}"
+                    )
+
+            else:
+                sample_categories = Ontology.ops(as_data_dict=True, prop_callback=None).specimen_categories()
+                display_subtype = get_val_by_key(existing_data_dict["sample_category"], sample_categories,
+                                                 "ubkg.specimen_categories")
+
+        else:
+            logger.error(f"Missing sample_category of Sample with uuid: {existing_data_dict['uuid']}")
+
+    elif equals(Ontology.ops().entities().DATASET, normalized_type):
+        if "dataset_type" in existing_data_dict:
+            display_subtype = existing_data_dict["dataset_type"]
+        else:
+            logger.error(f"Missing dataset_type of Dataset with uuid: {existing_data_dict['uuid']}")
+
+    elif equals(Ontology.ops().entities().UPLOAD, normalized_type):
+        display_subtype = "Data Upload"
+
+    else:
+        # Do nothing
+        logger.error(
+            f"Invalid entity_type: {existing_data_dict['entity_type']}. "
+            "Only generate display_subtype for Source/Sample/Dataset/Upload"
+        )
+
+    return property_key, display_subtype
+
+
+def get_val_by_key(type_code, data, source_data_name):
+    # Use triple {{{}}}
+    result_val = f"{{{type_code}}}"
+
+    if type_code in data:
+        result_val = data[type_code]
+    else:
+        # Return the error message as result
+        logger.error(f"Missing key {type_code} in {source_data_name}")
+
+    logger.debug(f"======== get_val_by_key: {result_val}")
+
+    return result_val
+
+
+"""
+Trigger event method of when this entity was last modified or published
+
+Parameters
+----------
+property_key : str
+    The target property key
+normalized_type : str
+    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+user_token: str
+    The user's globus nexus token
+existing_data_dict : dict
+    A dictionary that contains all existing entity properties
+new_data_dict : dict
+    A merged dictionary that contains all possible input data to be used
+
+Returns
+-------
+str: The target property key
+str: The generated dataset title
+"""
+
+
+def get_last_touch(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    time_stamp = (
+        existing_data_dict["published_timestamp"]
+        if "published_timestamp" in existing_data_dict
+        else existing_data_dict["last_modified_timestamp"]
+    )
+    timestamp = str(datetime.fromtimestamp(time_stamp / 1000, tz=timezone.utc))
+    last_touch = timestamp.split("+")[0]
+
+    return property_key, last_touch
+
+
+"""
+Trigger event method to grab the ancestor of this entity where entity type is Sample and the sample_category is Organ
+
+Parameters
+----------
+property_key : str
+    The target property key
+normalized_type : str
+    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+user_token: str
+    The user's globus nexus token
+existing_data_dict : dict
+    A dictionary that contains all existing entity properties
+new_data_dict : dict
+    A merged dictionary that contains all possible input data to be used
+
+Returns
+-------
+str: The target property key
+str: The generated dataset title
+"""
+
+
+def get_origin_sample(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    # The origin_sample is the sample that `sample_category` is "organ" and the `organ` code is set at the same time
+
+    if equals(existing_data_dict.get("sample_category"), Ontology.ops().specimen_categories().ORGAN):
+        # Return the organ if this is an organ
+        return property_key, existing_data_dict
+
+    origin_sample = None
+    if normalized_type in ["Sample", "Dataset", "Publication"]:
+        origin_sample = schema_neo4j_queries.get_origin_sample(schema_manager.get_neo4j_driver_instance(),
+                                                                     existing_data_dict['uuid'])
+
+    return property_key, origin_sample
+
+
+"""
+Trigger event method to reduce the size of pipeline_message to be supported by Elasticsearch
+
+Parameters
+----------
+property_key : str
+    The target property key
+normalized_type : str
+    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+user_token: str
+    The user's globus nexus token
+existing_data_dict : dict
+    A dictionary that contains all existing entity properties
+new_data_dict : dict
+    A merged dictionary that contains all possible input data to be used
+
+Returns
+-------
+str: The target property key
+str: The generated dataset title
+"""
+
+
+def get_pipeline_message_reduced(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    pipeline_message = None
+    if normalized_type in ["Dataset", "Publication"]:
+        # Reduce pipeline_message when it exceeds 32766 bytes
+        if "pipeline_message" in existing_data_dict:
+            max_bytes = 32766
+            msg_byte_array = bytearray(existing_data_dict["pipeline_message"], "utf-8")
+            if len(msg_byte_array) > max_bytes:
+                max_bytes_msg = msg_byte_array[: (max_bytes - 1)]
+                pipeline_message = max_bytes_msg.decode("utf-8")
+
+    return property_key, pipeline_message
+
+
+"""
+Trigger event method to parse out the anatomical locations from 'rui_location'
+
+Parameters
+----------
+property_key : str
+    The target property key
+normalized_type : str
+    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+user_token: str
+    The user's globus nexus token
+existing_data_dict : dict
+    A dictionary that contains all existing entity properties
+new_data_dict : dict
+    A merged dictionary that contains all possible input data to be used
+
+Returns
+-------
+str: The target property key
+str: The generated dataset title
+"""
+
+
+def get_rui_location_anatomical_locations(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    rui_location_anatomical_locations = None
+    if "rui_location" in existing_data_dict:
+        rui_location = ast.literal_eval(existing_data_dict["rui_location"])
+        if "ccf_annotations" in rui_location:
+            annotation_urls = rui_location["ccf_annotations"]
+            labels = [
+                label
+                for url in annotation_urls
+                if (label := _get_ontology_label(url))
+            ]
+            if len(labels) > 0:
+                rui_location_anatomical_locations = labels
+
+    return property_key, rui_location_anatomical_locations
+
+
+def _get_ontology_label(ann_url: str) -> Optional[str]:
+    """Get the label from the appropriate ontology lookup service.
+
+    Args:
+        ann_url (str): The annotation url.
+
+    Returns:
+        Optional[dict]: The label and purl if found, otherwise None.
+    """
+    if ann_url in ontology_lookup_cache:
+        return {"label": ontology_lookup_cache[ann_url], "purl": ann_url}
+
+    host = urllib.parse.urlparse(ann_url).hostname
+    vocab = sparql_vocabs.get(host)
+    if not vocab:
+        return None
+
+    schema = "http://www.w3.org/2000/01/rdf-schema#label"
+    table = f"https://purl.humanatlas.io/vocab/{vocab}"
+    query = f"SELECT ?label FROM <{table}> WHERE {{ <{ann_url}> <{schema}> ?label }}"
+    headers = {
+        "Accept": "application/sparql-results+json",
+        "Content-Type": "application/x-www-form-urlencoded",
+    }
+    res = requests.post("https://lod.humanatlas.io/sparql", data={"query": query}, headers=headers)
+    if res.status_code != 200:
+        return None
+
+    bindings = res.json().get("results", {}).get("bindings", [])
+    if len(bindings) != 1:
+        return None
+
+    label = bindings[0].get("label", {}).get("value")
+    if not label:
+        return None
+
+    ontology_lookup_cache[ann_url] = label  # cache the result
+    return {"label": label, "purl": ann_url}
+
+
+"""
 Trigger event method of getting the list of uuids of the previous revision datasets if exists
 
 Parameters
@@ -2429,6 +2757,49 @@ def get_upload_datasets(property_key, normalized_type, user_token, existing_data
     # Get rid of the entity node properties that are not defined in the yaml schema
     # as well as the ones defined as `exposed: false` in the yaml schema
     return property_key, schema_manager.normalize_entities_list_for_response(datasets_list)
+
+
+
+"""
+Trigger event method of getting a list of associated datasets for a given Upload for indexing
+
+Parameters
+----------
+property_key : str
+    The target property key of the value to be generated
+normalized_type : str
+    One of the types defined in the schema yaml: Upload
+user_token: str
+    The user's globus nexus token
+existing_data_dict : dict
+    A dictionary that contains all existing entity properties
+new_data_dict : dict
+    A merged dictionary that contains all possible input data to be used
+Returns
+-------
+str: The target property key
+list: A list of associated dataset dicts with all the normalized information
+"""
+
+
+def get_index_upload_datasets(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    dataset_property_exclusions = ["contacts", "contributors", "ingest_metadata", "pipeline_message", "status_history"]
+    if 'uuid' not in existing_data_dict:
+        msg = create_trigger_error_msg(
+            "Missing 'uuid' key in 'existing_data_dict' during calling 'get_upload_datasets()' trigger method.",
+            existing_data_dict, new_data_dict
+        )
+        raise KeyError(msg)
+
+    logger.info(f"Executing 'get_upload_datasets()' trigger method on uuid: {existing_data_dict['uuid']}")
+
+    datasets_list = schema_neo4j_queries.get_upload_datasets(schema_manager.get_neo4j_driver_instance(),
+                                                             existing_data_dict['uuid'])
+
+    # Get rid of the entity node properties that are not defined in the yaml schema
+    # as well as the ones defined as `exposed: false` in the yaml schema
+    return property_key, schema_manager.normalize_entities_list_for_response(datasets_list,
+                                                                             properties_to_exclude=dataset_property_exclusions)
 
 
 ####################################################################################################
