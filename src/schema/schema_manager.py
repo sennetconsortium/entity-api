@@ -1,4 +1,5 @@
 import ast
+from typing import Optional
 import yaml
 import logging
 import requests
@@ -15,7 +16,7 @@ from requests.packages.urllib3.exceptions import InsecureRequestWarning
 from schema import schema_errors
 from schema import schema_triggers
 from schema import schema_validators
-from schema.schema_constants import SchemaConstants, MetadataScopeEnum, TriggerTypeEnum
+from schema.schema_constants import CacheTypeEnum, MetadataScopeEnum, SchemaConstants, TriggerTypeEnum
 from schema import schema_neo4j_queries
 
 # Atlas Consortia commons
@@ -595,8 +596,10 @@ token: str
     Either the user's globus nexus token or the internal token
 entity_dict : dict
     The entity dict based on neo4j record
-properties_to_skip : list
+properties_to_skip : list[str]
     Any properties to skip running triggers
+cache_type : Optional[CacheTypeEnum]
+    The type of cache to use. If None, no cache is used
 
 Returns
 -------
@@ -605,41 +608,45 @@ dict
 """
 
 
-def get_complete_entity_result(token, entity_dict, properties_to_skip=[]):
+def get_complete_entity_result(token: str,
+                               entity_dict: dict,
+                               properties_to_skip: list[str] = [],
+                               cache_type: Optional[CacheTypeEnum] = CacheTypeEnum.COMPLETE):
     global _memcached_client
     global _memcached_prefix
 
     complete_entity = {}
 
+    if len(properties_to_skip) < 1:
+        cache_type = CacheTypeEnum.COMPLETE
+
     # In case entity_dict is None or
     # an incorrectly created entity that doesn't have the `entity_type` property
-    if entity_dict and ('entity_type' in entity_dict) and ('uuid' in entity_dict):
+    if entity_dict and ('entity_type' in entity_dict):
         entity_uuid = entity_dict['uuid']
         entity_type = entity_dict['entity_type']
         cache_result = None
 
-        # Need both client and prefix when fetching the cache
-        # Do NOT fetch cache if properties_to_skip is specified
-        if _memcached_client and _memcached_prefix and (not properties_to_skip):
-            cache_key = f'{_memcached_prefix}_complete_{entity_uuid}'
+        # Check the specified cache for the cached entity
+        if _memcached_client and _memcached_prefix and cache_type:
+            cache_key = f'{_memcached_prefix}_{cache_type}_{entity_uuid}'
             cache_result = _memcached_client.get(cache_key)
 
         # Use the cached data if found and still valid
         # Otherwise, calculate and add to cache
         if cache_result is None:
             if _memcached_client and _memcached_prefix:
-                logger.info(
-                    f'Cache of complete entity of {entity_type} {entity_uuid} not found or expired at time {datetime.now()}')
+                logger.info(f'Cache of complete entity of {entity_type} {entity_uuid} not found or expired at time {datetime.now()}')
 
             # No error handling here since if a 'on_read_trigger' method fails,
             # the property value will be the error message
             # Pass {} since no new_data_dict for 'on_read_trigger'
-            generated_on_read_trigger_data_dict = generate_triggered_data(trigger_type=TriggerTypeEnum.ON_READ
-                                                                          , normalized_class=entity_type
-                                                                          , user_token=token
-                                                                          , existing_data_dict=entity_dict
-                                                                          , new_data_dict={}
-                                                                          , properties_to_skip=properties_to_skip)
+            generated_on_read_trigger_data_dict = generate_triggered_data(trigger_type=TriggerTypeEnum.ON_READ,
+                                                                          normalized_class=entity_type,
+                                                                          user_token=token,
+                                                                          existing_data_dict=entity_dict,
+                                                                          new_data_dict={},
+                                                                          properties_to_skip=properties_to_skip)
 
             # Merge the entity info and the generated on read data into one dictionary
             complete_entity_dict = {**entity_dict, **generated_on_read_trigger_data_dict}
@@ -647,19 +654,17 @@ def get_complete_entity_result(token, entity_dict, properties_to_skip=[]):
             # Remove properties of None value
             complete_entity = remove_none_values(complete_entity_dict)
 
-            # Need both client and prefix when creating the cache
-            # Do NOT cache when properties_to_skip is specified
-            if _memcached_client and _memcached_prefix and (not properties_to_skip):
-                logger.info(f'Creating complete entity cache of {entity_type} {entity_uuid} at time {datetime.now()}')
+            # Cache the entity into the specific cache
+            if _memcached_client and _memcached_prefix and cache_type:
+                logger.info(f'Creating {cache_type} entity cache of {entity_type} {entity_uuid} at time {datetime.now()}')
 
-                cache_key = f'{_memcached_prefix}_complete_{entity_uuid}'
+                cache_key = f'{_memcached_prefix}_{cache_type}_{entity_uuid}'
                 _memcached_client.set(cache_key, complete_entity, expire=SchemaConstants.MEMCACHED_TTL)
 
-                logger.debug(
-                    f"Following is the complete {entity_type} cache created at time {datetime.now()} using key {cache_key}:")
+                logger.debug(f"Following is the {cache_type} {entity_type} cache created at time {datetime.now()} using key {cache_key}:")
                 logger.debug(complete_entity)
         else:
-            logger.info(f'Using complete entity cache of {entity_type} {entity_uuid} at time {datetime.now()}')
+            logger.info(f'Using {cache_type} entity cache of {entity_type} {entity_uuid} at time {datetime.now()}')
             logger.debug(cache_result)
 
             complete_entity = cache_result
@@ -734,7 +739,7 @@ def _get_metadata_result(token, entity_dict, metadata_scope:MetadataScopeEnum, p
         # Need both client and prefix when fetching the cache
         # Do NOT fetch cache if properties_to_skip is specified
         if _memcached_client and _memcached_prefix and (not properties_to_skip):
-            cache_key = f'{_memcached_prefix}_complete_index_{entity_uuid}'
+            cache_key = f'{_memcached_prefix}_{CacheTypeEnum.COMPLETE_INDEX}_{entity_uuid}'
             cache_result = _memcached_client.get(cache_key)
 
         # Use the cached data if found and still valid
@@ -787,7 +792,7 @@ def _get_metadata_result(token, entity_dict, metadata_scope:MetadataScopeEnum, p
             if _memcached_client and _memcached_prefix and (not properties_to_skip):
                 logger.info(f'Creating complete entity cache of {entity_type} {entity_uuid} at time {datetime.now()}')
 
-                cache_key = f'{_memcached_prefix}_complete_index_{entity_uuid}'
+                cache_key = f'{_memcached_prefix}_{CacheTypeEnum.COMPLETE_INDEX}_{entity_uuid}'
                 _memcached_client.set(cache_key, metadata_dict, expire=SchemaConstants.MEMCACHED_TTL)
 
                 logger.debug(
@@ -813,10 +818,12 @@ Parameters
 ----------
 token: str
     Either the user's globus nexus token or the internal token
-entities_list : list
+entities_list : list[str]
     A list of entity dictionaries
-properties_to_skip : list
+properties_to_skip : list[str]
     Any properties to skip running triggers
+cache_type : Optional[CacheTypeEnum]
+    The type of cache to use. If None, no cache is used
 
 Returns
 -------
@@ -825,11 +832,14 @@ list
 """
 
 
-def get_complete_entities_list(token, entities_list, properties_to_skip=[]):
+def get_complete_entities_list(token: str,
+                               entities_list: list[str],
+                               properties_to_skip: list[str] = [],
+                               cache_type: Optional[CacheTypeEnum] = CacheTypeEnum.COMPLETE):
     complete_entities_list = []
 
     for entity_dict in entities_list:
-        complete_entity_dict = get_complete_entity_result(token, entity_dict, properties_to_skip)
+        complete_entity_dict = get_complete_entity_result(token, entity_dict, properties_to_skip, cache_type)
         complete_entities_list.append(complete_entity_dict)
 
     return complete_entities_list
@@ -2198,6 +2208,8 @@ Parameters
 ----------
 target_url: str
     The target URL
+internal_token_used: bool
+    A flag to indicate if the internal token is used for making the request
 
 Returns
 -------
@@ -2206,7 +2218,7 @@ flask.Response
 """
 
 
-def make_request_get(target_url, internal_token_used=False):
+def make_request_get(target_url: str, internal_token_used: bool = False):
     global _memcached_client
     global _memcached_prefix
 
@@ -2235,7 +2247,7 @@ def make_request_get(target_url, internal_token_used=False):
         if _memcached_client and _memcached_prefix:
             logger.info(f'Creating HTTP response cache of GET {target_url} at time {datetime.now()}')
 
-            cache_key = f'{_memcached_prefix}{target_url}'
+            cache_key = f'{_memcached_prefix}_{CacheTypeEnum.UUID}_{target_url}'
             _memcached_client.set(cache_key, response, expire=SchemaConstants.MEMCACHED_TTL)
     else:
         logger.info(f'Using HTTP response cache of GET {target_url} at time {datetime.now()}')
@@ -2260,9 +2272,7 @@ def delete_memcached_cache(uuids_list):
     if _memcached_client and _memcached_prefix:
         cache_keys = []
         for uuid in uuids_list:
-            cache_keys.append(f'{_memcached_prefix}_neo4j_{uuid}')
-            cache_keys.append(f'{_memcached_prefix}_complete_{uuid}')
-            cache_keys.append(f'{_memcached_prefix}_complete_index_{uuid}')
+            cache_keys.extend([f'{_memcached_prefix}_{c.value}_{uuid}' for c in CacheTypeEnum if c is not CacheTypeEnum.UUID])
 
         _memcached_client.delete_many(cache_keys)
 

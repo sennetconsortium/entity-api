@@ -1,5 +1,4 @@
 import ast
-import copy
 import json
 import urllib.parse
 from typing import Optional
@@ -667,7 +666,7 @@ def get_collection_entities(property_key, normalized_type, user_token, existing_
         'next_revision_uuid'
     ]
 
-    complete_entities_list = schema_manager.get_complete_entities_list(user_token, entities_list, properties_to_skip)
+    complete_entities_list = schema_manager.get_complete_entities_list(user_token, entities_list, properties_to_skip, None)
 
     return property_key, schema_manager.normalize_entities_list_for_response(complete_entities_list)
 
@@ -836,7 +835,7 @@ def get_dataset_collections(property_key, normalized_type, user_token, existing_
     # Exclude datasets from each resulting collection
     # We don't want to show too much nested information
     properties_to_skip = ['datasets']
-    complete_entities_list = schema_manager.get_complete_entities_list(user_token, collections_list, properties_to_skip)
+    complete_entities_list = schema_manager.get_complete_entities_list(user_token, collections_list, properties_to_skip, None)
 
     return property_key, schema_manager.normalize_entities_list_for_response(complete_entities_list)
 
@@ -882,7 +881,7 @@ def get_dataset_upload(property_key, normalized_type, user_token, existing_data_
         # Exclude datasets from each resulting Upload
         # We don't want to show too much nested information
         properties_to_skip = ['datasets']
-        complete_upload_dict = schema_manager.get_complete_entity_result(user_token, upload_dict, properties_to_skip)
+        complete_upload_dict = schema_manager.get_complete_entity_result(user_token, upload_dict, properties_to_skip, None)
         return_dict = schema_manager.normalize_object_result_for_response('ENTITIES', complete_upload_dict)
 
     return property_key, return_dict
@@ -980,8 +979,7 @@ def get_dataset_direct_ancestors(property_key, normalized_type, user_token, exis
     # Skip running the trigger methods for 'direct_ancestors' and 'collections' if the direct ancestor is Dataset
     # Skip running the trigger methods for 'direct_ancestor' if the direct ancestor is Sample
     properties_to_skip = ['direct_ancestors', 'collections', 'direct_ancestor']
-    complete_entities_list = schema_manager.get_complete_entities_list(user_token, direct_ancestors_list,
-                                                                       properties_to_skip)
+    complete_entities_list = schema_manager.get_complete_entities_list(user_token, direct_ancestors_list, properties_to_skip, None)
 
     return property_key, schema_manager.normalize_entities_list_for_response(complete_entities_list)
 
@@ -2496,7 +2494,7 @@ def get_sample_direct_ancestor(property_key, normalized_type, user_token, existi
 
     # Generate trigger data for sample's direct_ancestor and skip the direct_ancestor's direct_ancestor
     properties_to_skip = ['direct_ancestor']
-    complete_dict = schema_manager.get_complete_entity_result(user_token, direct_ancestor_dict, properties_to_skip)
+    complete_dict = schema_manager.get_complete_entity_result(user_token, direct_ancestor_dict, properties_to_skip, None)
 
     # Get rid of the entity node properties that are not defined in the yaml schema
     # as well as the ones defined as `exposed: false` in the yaml schema

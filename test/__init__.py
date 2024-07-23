@@ -11,3 +11,6 @@ def cwd_to_src():
         test_dir = os.path.dirname(os.path.abspath(__file__))
         src_dir = os.path.join(test_dir, '..', 'src')
         os.chdir(src_dir)
+
+
+cwd_to_src()

@@ -23,7 +23,28 @@
       "status": "New",
       "uuid": "373d1294b6aeb77aea31852b257133bb",
       "creation_action": "Central Process",
-      "sources": null
+      "sources": [
+        {
+          "metadata": "{}",
+          "lab_source_id": "Human Source 1",
+          "group_name": "CODCC Testing Group",
+          "sennet_id": "SNT522.GDLF.724",
+          "last_modified_timestamp": 1681844922032,
+          "created_by_user_displayname": "Test User",
+          "description": "This is a human source. This is an edit.",
+          "source_type": "Human",
+          "group_uuid": "57192604-18e0-11ed-b79b-972795fc9504",
+          "created_timestamp": 1681826847388,
+          "created_by_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
+          "uuid": "325e13d30a43386d97fb3d046677b568",
+          "last_modified_user_displayname": "Test User",
+          "created_by_user_email": "TESTUSER@example.com",
+          "data_access_level": "consortium",
+          "entity_type": "Source",
+          "last_modified_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
+          "last_modified_user_email": "TESTUSER@example.com"
+        }
+      ]
     }
   ],
   "headers": {
@@ -105,5 +126,27 @@
       "uuid": "373d1294b6aeb77aea31852b257133bb"
     }
   ],
-  "get_entity_creation_action_activity": ["Central Process"]
+  "get_entity_creation_action_activity": ["Central Process"],
+  "get_sources_associated_entity": [
+    {
+      "metadata": "{}",
+      "lab_source_id": "Human Source 1",
+      "group_name": "CODCC Testing Group",
+      "sennet_id": "SNT522.GDLF.724",
+      "last_modified_timestamp": 1681844922032,
+      "created_by_user_displayname": "Test User",
+      "description": "This is a human source. This is an edit.",
+      "source_type": "Human",
+      "group_uuid": "57192604-18e0-11ed-b79b-972795fc9504",
+      "created_timestamp": 1681826847388,
+      "created_by_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
+      "uuid": "325e13d30a43386d97fb3d046677b568",
+      "last_modified_user_displayname": "Test User",
+      "created_by_user_email": "TESTUSER@example.com",
+      "data_access_level": "consortium",
+      "entity_type": "Source",
+      "last_modified_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
+      "last_modified_user_email": "TESTUSER@example.com"
+    }
+  ]
 }
