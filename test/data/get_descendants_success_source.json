@@ -53,7 +53,26 @@
       "sample_category": "Suspension",
       "sennet_id": "SNT687.SFVJ.758",
       "uuid": "5fa78f4fa272db58a7fcc7590376f5e7",
-      "source": null
+      "source": {
+        "metadata": "{}",
+        "lab_source_id": "Human Source 1",
+        "group_name": "CODCC Testing Group",
+        "sennet_id": "SNT522.GDLF.724",
+        "last_modified_timestamp": 1681844922032,
+        "created_by_user_displayname": "Test User",
+        "description": "This is a human source. This is an edit.",
+        "source_type": "Human",
+        "group_uuid": "57192604-18e0-11ed-b79b-972795fc9504",
+        "created_timestamp": 1681826847388,
+        "created_by_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
+        "uuid": "325e13d30a43386d97fb3d046677b568",
+        "last_modified_user_displayname": "Test User",
+        "created_by_user_email": "TESTUSER@example.com",
+        "data_access_level": "consortium",
+        "entity_type": "Source",
+        "last_modified_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
+        "last_modified_user_email": "TESTUSER@example.com"
+      }
     },
     {
       "created_by_user_displayname": "Test User",
@@ -71,7 +90,26 @@
       "sample_category": "Suspension",
       "sennet_id": "SNT687.SFVJ.758",
       "uuid": "2804c83baa714d57bdd9884fa0234a2e",
-      "source": null
+      "source": {
+        "metadata": "{}",
+        "lab_source_id": "Human Source 1",
+        "group_name": "CODCC Testing Group",
+        "sennet_id": "SNT522.GDLF.724",
+        "last_modified_timestamp": 1681844922032,
+        "created_by_user_displayname": "Test User",
+        "description": "This is a human source. This is an edit.",
+        "source_type": "Human",
+        "group_uuid": "57192604-18e0-11ed-b79b-972795fc9504",
+        "created_timestamp": 1681826847388,
+        "created_by_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
+        "uuid": "325e13d30a43386d97fb3d046677b568",
+        "last_modified_user_displayname": "Test User",
+        "created_by_user_email": "TESTUSER@example.com",
+        "data_access_level": "consortium",
+        "entity_type": "Source",
+        "last_modified_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
+        "last_modified_user_email": "TESTUSER@example.com"
+      }
     }
   ],
   "headers": {
@@ -97,7 +135,7 @@
     "hmroleids": [],
     "hmscopes": ["test_scope"]
   },
-  "has_read_privs":  true,
+  "has_read_privs": true,
   "get_sennet_ids": {
     "ancestor_id": "0a5ff4a9c6c1d23932f2f1fbfef8355c",
     "ancestor_ids": ["0a5ff4a9c6c1d23932f2f1fbfef8355c"],
@@ -146,8 +184,7 @@
       "metadata": "{'notes': '', 'preparation_media': 'PFA (4%)', 'preparation_temperature': 'Dry Ice', 'processing_time_unit': 'min', 'processing_time_value': '22', 'quality_criteria': '', 'sample_id': 'SNT687.SFVJ.758', 'source_storage_time_unit': 'min', 'source_storage_time_value': '30', 'storage_media': 'Buffered Formalin (10% NBF)', 'storage_temperature': 'Liquid Nitrogen Vapor', 'suspension_enriched': 'yes', 'suspension_enriched_target': '', 'suspension_entity': 'cell', 'suspension_entity_number': '44', 'type': 'suspension', 'version': '1'}",
       "sample_category": "Suspension",
       "sennet_id": "SNT687.SFVJ.758",
-      "uuid": "5fa78f4fa272db58a7fcc7590376f5e7",
-      "source": null
+      "uuid": "5fa78f4fa272db58a7fcc7590376f5e7"
     },
     {
       "created_by_user_displayname": "Test User",
@@ -164,8 +201,29 @@
       "last_modified_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
       "sample_category": "Suspension",
       "sennet_id": "SNT687.SFVJ.758",
-      "uuid": "2804c83baa714d57bdd9884fa0234a2e",
-      "source": null
+      "uuid": "2804c83baa714d57bdd9884fa0234a2e"
+    }
+  ],
+  "get_sources_associated_entity": [
+    {
+      "metadata": "{}",
+      "lab_source_id": "Human Source 1",
+      "group_name": "CODCC Testing Group",
+      "sennet_id": "SNT522.GDLF.724",
+      "last_modified_timestamp": 1681844922032,
+      "created_by_user_displayname": "Test User",
+      "description": "This is a human source. This is an edit.",
+      "source_type": "Human",
+      "group_uuid": "57192604-18e0-11ed-b79b-972795fc9504",
+      "created_timestamp": 1681826847388,
+      "created_by_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
+      "uuid": "325e13d30a43386d97fb3d046677b568",
+      "last_modified_user_displayname": "Test User",
+      "created_by_user_email": "TESTUSER@example.com",
+      "data_access_level": "consortium",
+      "entity_type": "Source",
+      "last_modified_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
+      "last_modified_user_email": "TESTUSER@example.com"
     }
   ]
 }
