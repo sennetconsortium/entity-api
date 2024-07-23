@@ -1,7 +1,3 @@
-import test
-
-test.cwd_to_src()
-
 import json
 import os
 import random
@@ -18,10 +14,10 @@ test_data_dir = os.path.join(os.path.dirname(__file__), 'data')
 
 @pytest.fixture()
 def app():
-    app = app_module.app
-    app.config.update({'TESTING': True})
+    a = app_module.app
+    a.config.update({'TESTING': True})
     # other setup
-    yield app
+    yield a
     # clean up
 
 
