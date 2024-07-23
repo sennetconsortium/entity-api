@@ -401,6 +401,7 @@ ENTITIES:
         immutable: true # Disallow update via PUT
         description: "The auto generated dataset title."
         on_read_trigger: get_dataset_title
+        on_index_trigger: get_dataset_title
       lab_dataset_id:
         type: string
         description: "A name or identifier used by the lab who is uploading the data to cross reference the data locally"
@@ -425,12 +426,14 @@ ENTITIES:
         generated: true
         description: "A list of collections that this dataset belongs to. Will be returned in response"
         on_read_trigger: get_dataset_collections
+        # No on_index_trigger to include collections in the OpenSearch document for a Dataset
       upload:
         type: json_string # dict
         transient: true
         generated: true
         description: "The Upload that this dataset is associated with. Will be returned in response"
         on_read_trigger: get_dataset_upload
+        # No on_index_trigger to include upload in the OpenSearch document for a Dataset
       contributors:
         type: list
         description: "A list of people who contributed to the creation of this dataset.  Returned as an array of contributor where the structure of a contributor is"
@@ -457,6 +460,7 @@ ENTITIES:
         generated: true
         transient: true
         on_read_trigger: get_dataset_direct_ancestors
+        # No on_index_trigger to include direct_ancestors in the OpenSearch document for a Dataset
       published_timestamp:
         type: integer
         immutable: true
@@ -480,6 +484,7 @@ ENTITIES:
       pipeline_message:
         # Generated from the Ingest Pipeline during processing of a derived dataset
         type: string
+        on_index_trigger: get_pipeline_message_reduced
       ingest_metadata:
         type: json_string # dict
         before_property_create_validators:
@@ -492,8 +497,12 @@ ENTITIES:
         type: string
         generated: true
         transient: true
+        # This attribute should not go in the index ever in the way it comes from Neo4j, but also is not
+        # needed now.  So simply excluded it from the index rather than trigger fixing it up & then skipping it.
+        indexed: false
         description: "The path on the local file system, relative to the base data directory, where the data is stored."
         on_read_trigger: get_local_directory_rel_path
+        # No on_index_trigger to include local_directory_rel_path in the OpenSearch document for a Dataset
       run_id:
         type: string
       ingest_id:
@@ -519,6 +528,7 @@ ENTITIES:
 #        description: "The list of uuids of previous revision datasets"
 #        after_create_trigger: link_to_previous_revisions
 #        on_read_trigger: get_previous_revision_uuids
+#     # No on_index_trigger to include previous_revision_uuids in the OpenSearch document for a Dataset
 #      next_revision_uuids:
 #        type: list
 #        generated: true
@@ -526,6 +536,7 @@ ENTITIES:
 #        immutable: true
 #        description: "The list of uuids of next revision datasets"
 #        on_read_trigger: get_next_revision_uuids
+#     # No on_index_trigger to include next_revision_uuids in the OpenSearch document for a Dataset
       previous_revision_uuid:
         type: string
         transient: true
@@ -533,6 +544,7 @@ ENTITIES:
         description: "The uuid of previous revision dataset"
         after_create_trigger: link_to_previous_revision
         on_read_trigger: get_previous_revision_uuid
+        on_index_trigger: get_previous_revision_uuid
       next_revision_uuid:
         type: string
         generated: true
@@ -540,6 +552,7 @@ ENTITIES:
         immutable: true
         description: "The uuid of next revision dataset"
         on_read_trigger: get_next_revision_uuid
+        on_index_trigger: get_next_revision_uuid
       retraction_reason:
         type: string
         before_property_update_validators:
@@ -561,9 +574,26 @@ ENTITIES:
         transient: true
         immutable: true
         on_read_trigger: get_creation_action_activity
+        on_index_trigger: get_creation_action_activity
         description: "The activity that was performed."
         before_property_create_validators:
           - validate_creation_action
+      dataset_category:
+        type: string
+        description: 'Calculated field based on "creation_action" transformed into either Primary/Derived/Component dataset categorization.'
+        on_index_trigger: get_dataset_category
+      display_subtype:
+        type: string
+        description: 'Calculated field for how an entity should be displayed in the Portal UI.'
+        on_index_trigger: get_display_subtype
+      last_touch:
+        type: string
+        description: 'The timestamp of when this entity was last modified or published.'
+        on_index_trigger: get_last_touch
+      origin_sample:
+        type: json_string
+        description: 'The Sample ancestor that has the sample_category of "Organ".'
+        on_index_trigger: get_origin_sample
       assigned_to_group_name:
         type: string
         description: The group who is responsible for the next step in the ingest process
@@ -592,6 +622,7 @@ ENTITIES:
         immutable: true # Disallow update via PUT
         description: "The modified and mapped metadata returned from the processing at data submission time."
         on_read_trigger: get_cedar_mapped_metadata
+        on_index_trigger: get_cedar_mapped_metadata
       sources:
         type: list
         generated: true
@@ -599,6 +630,7 @@ ENTITIES:
         immutable: true
         description: "The list of all Sources associated with Datasets"
         on_read_trigger: set_dataset_sources
+        on_index_trigger: set_dataset_sources
 
   ############################################# Publication #############################################
   Publication:
@@ -734,6 +766,7 @@ ENTITIES:
         generated: true
         transient: true
         on_read_trigger: get_publication_associated_collection
+        on_index_trigger: get_publication_associated_collection
         description: "The collection from which this publication uses data"
       associated_collection_uuid:
         type: string
@@ -842,6 +875,7 @@ ENTITIES:
         immutable: true # Disallow update via PUT
         description: "The modified and mapped metadata returned from the processing at data submission time."
         on_read_trigger: get_source_mapped_metadata
+        on_index_trigger: get_source_mapped_metadata
       # For mouse sources
       cedar_mapped_metadata:
         type: json_string # dict
@@ -849,6 +883,15 @@ ENTITIES:
         immutable: true # Disallow update via PUT
         description: "The modified and mapped metadata returned from the processing at data submission time."
         on_read_trigger: get_cedar_mapped_metadata
+        on_index_trigger: get_cedar_mapped_metadata
+      display_subtype:
+        type: string
+        description: 'Calculated field for how an entity should be displayed in the Portal UI.'
+        on_index_trigger: get_display_subtype
+      last_touch:
+        type: string
+        description: 'The timestamp of when this entity was last modified or published.'
+        on_index_trigger: get_last_touch
       source_type:
         type: string
         required_on_create: true
@@ -924,11 +967,24 @@ ENTITIES:
         generated: true
         transient: true
         on_read_trigger: get_sample_direct_ancestor
+        # No on_index_trigger to include direct_ancestor in the OpenSearch document for a Sample
         description: "The entitiy directly above this sample in the provenance graph (direct parent)."
       lab_tissue_sample_id:
         type: string
         description: "Lab specific id for the sample."
         required_on_create: true
+      display_subtype:
+        type: string
+        description: 'Calculated field for how an entity should be displayed in the Portal UI.'
+        on_index_trigger: get_display_subtype
+      last_touch:
+        type: string
+        description: 'The timestamp of when this entity was last modified or published.'
+        on_index_trigger: get_last_touch
+      origin_sample:
+        type: json_string
+        description: 'The Sample ancestor that has the sample_category of "Organ".'
+        on_index_trigger: get_origin_sample
       next_identifier:
         type: string
         immutable: true
@@ -938,6 +994,10 @@ ENTITIES:
       rui_location:
         type: json_string
         description: "The sample location and orientation in the ancestor organ as specified in the RUI tool."
+      rui_location_anatomical_locations:
+        type: json_string
+        description: "The parsed out anatomical locations generated by 'rui_location'."
+        on_index_trigger: get_rui_location_anatomical_locations
       visit:
         type: string
         description: "The visit id for the source/patient when the sample was obtained."
@@ -1040,6 +1100,7 @@ ENTITIES:
         immutable: true # Disallow update via PUT
         description: "The modified and mapped metadata returned from the processing at data submission time."
         on_read_trigger: get_cedar_mapped_metadata
+        on_index_trigger: get_cedar_mapped_metadata
       source:
         type: json_string
         generated: true
@@ -1047,6 +1108,7 @@ ENTITIES:
         immutable: true
         description: "The list of all Sources associated with Datasets"
         on_read_trigger: set_sample_source
+        on_index_trigger: set_sample_source
 
 
   ############################################# Upload #############################################
@@ -1131,6 +1193,7 @@ ENTITIES:
         description: "The datasets that are contained in this Upload."
         # A few time-consuming properties (with read triggers) of each dataset are excluded
         on_read_trigger: get_upload_datasets
+        on_index_trigger: get_index_upload_datasets
       assigned_to_group_name:
         type: string
         description: The group who is responsible for the next step in the ingest process
@@ -1147,3 +1210,11 @@ ENTITIES:
           - validate_in_admin_group
         before_property_update_validators:
           - validate_in_admin_group
+      display_subtype:
+        type: string
+        description: 'Calculated field for how an entity should be displayed in the Portal UI.'
+        on_index_trigger: get_display_subtype
+      last_touch:
+        type: string
+        description: 'The timestamp of when this entity was last modified or published.'
+        on_index_trigger: get_last_touch
