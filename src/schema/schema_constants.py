@@ -38,6 +38,7 @@ class DataVisibilityEnum(Enum):
     # another entry indicating non-public.
     NONPUBLIC = 'nonpublic'
 
+
 # Define an enumeration to classify metadata scope which can be returned.
 class MetadataScopeEnum(Enum):
     # Legacy notion of complete metadata for an entity includes generated
@@ -48,6 +49,7 @@ class MetadataScopeEnum(Enum):
     # is not stored in an index document.
     INDEX = 'index_metadata'
 
+
 # Define an enumeration of accepted trigger types.
 class TriggerTypeEnum(Enum):
     ON_READ = 'on_read_trigger'
@@ -56,3 +58,11 @@ class TriggerTypeEnum(Enum):
     BEFORE_UPDATE = 'before_update_trigger'
     AFTER_CREATE = 'after_create_trigger'
     AFTER_UPDATE = 'after_update_trigger'
+
+
+class CacheTypeEnum(str, Enum):
+    ANCESTRY = 'ancestry'
+    COMPLETE = 'complete'
+    COMPLETE_INDEX = 'complete_index'
+    NEO4J = 'neo4j'
+    UUID = 'uuid'
