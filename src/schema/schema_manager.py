@@ -1,10 +1,14 @@
 import ast
-import yaml
 import logging
-import requests
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 
-from flask import Response
+import requests
+import yaml
+
+# Atlas Consortia commons
+from atlas_consortia_commons.rest import abort_bad_req
+from flask import Response, current_app
 from hubmap_commons.file_helper import ensureTrailingSlashURL
 from hubmap_commons.string_helper import convert_str_literal
 
@@ -12,14 +16,8 @@ from hubmap_commons.string_helper import convert_str_literal
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
 # Local modules
-from schema import schema_errors
-from schema import schema_triggers
-from schema import schema_validators
-from schema.schema_constants import SchemaConstants, MetadataScopeEnum, TriggerTypeEnum
-from schema import schema_neo4j_queries
-
-# Atlas Consortia commons
-from atlas_consortia_commons.rest import abort_bad_req
+from schema import schema_errors, schema_neo4j_queries, schema_triggers, schema_validators
+from schema.schema_constants import MetadataScopeEnum, SchemaConstants, TriggerTypeEnum
 
 logger = logging.getLogger(__name__)
 
@@ -586,6 +584,11 @@ def remove_transient_and_none_values(provenance_type, merged_dict, normalized_en
     return filtered_dict
 
 
+def get_complete_entity_result_with_context(token, entity_dict, properties_to_skip, app_context):
+    with app_context:
+        return get_complete_entity_result(token, entity_dict, properties_to_skip)
+
+
 """
 Generate the complete entity record as well as result filtering for response
 
@@ -634,12 +637,12 @@ def get_complete_entity_result(token, entity_dict, properties_to_skip=[]):
             # No error handling here since if a 'on_read_trigger' method fails,
             # the property value will be the error message
             # Pass {} since no new_data_dict for 'on_read_trigger'
-            generated_on_read_trigger_data_dict = generate_triggered_data(trigger_type=TriggerTypeEnum.ON_READ
-                                                                          , normalized_class=entity_type
-                                                                          , user_token=token
-                                                                          , existing_data_dict=entity_dict
-                                                                          , new_data_dict={}
-                                                                          , properties_to_skip=properties_to_skip)
+            generated_on_read_trigger_data_dict = generate_triggered_data(trigger_type=TriggerTypeEnum.ON_READ,
+                                                                          normalized_class=entity_type,
+                                                                          user_token=token,
+                                                                          existing_data_dict=entity_dict,
+                                                                          new_data_dict={},
+                                                                          properties_to_skip=properties_to_skip)
 
             # Merge the entity info and the generated on read data into one dictionary
             complete_entity_dict = {**entity_dict, **generated_on_read_trigger_data_dict}
@@ -828,9 +831,17 @@ list
 def get_complete_entities_list(token, entities_list, properties_to_skip=[]):
     complete_entities_list = []
 
-    for entity_dict in entities_list:
-        complete_entity_dict = get_complete_entity_result(token, entity_dict, properties_to_skip)
-        complete_entities_list.append(complete_entity_dict)
+    with ThreadPoolExecutor() as executor:
+        futures = [
+            executor.submit(get_complete_entity_result_with_context, token, entity_dict, [], current_app.app_context())
+            for entity_dict in entities_list
+        ]
+
+        for future in as_completed(futures):
+            complete_entity_dict = future.result()
+            for prop in properties_to_skip:
+                complete_entity_dict.pop(prop, None)
+            complete_entities_list.append(complete_entity_dict)
 
     return complete_entities_list
 
