@@ -138,7 +138,7 @@ def test_get_entities_by_type_success(app, entity_type):
 
     with (app.test_client() as client,
           patch('app.app_neo4j_queries.get_entities_by_type', return_value=test_data['get_entities_by_type']),
-          patch('app.schema_neo4j_queries.get_entity_creation_action_activity', side_effect=test_data.get('get_entity_creation_action_activity')),
+          patch('app.schema_neo4j_queries.get_entity_creation_action_activity', return_value=test_data.get('get_entity_creation_action_activity')),
           patch('app.schema_neo4j_queries.get_sources_associated_entity', return_value=test_data['get_sources_associated_entity'])):
 
         res = client.get(f'/{entity_type}/entities')

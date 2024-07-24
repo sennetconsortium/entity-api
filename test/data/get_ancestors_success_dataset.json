@@ -185,7 +185,7 @@
     "last_modified_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
     "last_modified_user_email": "TESTUSER@example.com",
     "contains_human_genetic_sequences": true,
-    "data_types": ["CODEX"],
+    "dataset_type": "CODEX",
     "status": "Published"
   },
 

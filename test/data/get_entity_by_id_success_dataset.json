@@ -7,7 +7,7 @@
     "created_by_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
     "created_timestamp": 1681831855041,
     "data_access_level": "protected",
-    "data_types": ["CODEX"],
+    "dataset_type": "CODEX",
     "direct_ancestors": [
       {
         "created_by_user_displayname": "Test User",
@@ -112,7 +112,7 @@
     "last_modified_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
     "last_modified_user_email": "TESTUSER@example.com",
     "contains_human_genetic_sequences": true,
-    "data_types": ["CODEX"],
+    "dataset_type": "CODEX",
     "status": "Published"
   },
 
@@ -133,7 +133,7 @@
     "last_modified_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
     "last_modified_user_email": "TESTUSER@example.com",
     "contains_human_genetic_sequences": true,
-    "data_types": ["CODEX"],
+    "dataset_type": "CODEX",
     "status": "Published",
     "title": "CODEX data from the None of a source of unknown age, race and sex",
     "collecttions": [],
