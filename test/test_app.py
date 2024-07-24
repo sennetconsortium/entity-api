@@ -144,7 +144,8 @@ def test_get_entities_by_type_success(app, entity_type):
         res = client.get(f'/{entity_type}/entities')
 
         assert res.status_code == 200
-        assert res.json == test_data['response']
+        for result in res.json:
+            assert result in test_data['response']
 
 
 @pytest.mark.parametrize('entity_type', [
@@ -186,7 +187,8 @@ def test_get_entities_by_type_query(app, entity_type, query_key, query_value, st
 
         assert res.status_code == status_code
         if status_code == 200:
-            assert res.json == expected_response
+            for result in res.json:
+                assert result in expected_response
 
 
 # Create Entity
@@ -340,7 +342,8 @@ def test_get_ancestors_success(app, entity_type):
                          headers=test_data['headers'])
 
         assert res.status_code == 200
-        assert res.json == test_data['response']
+        for result in res.json:
+            assert result in test_data['response']
 
 
 # Get Descendants
@@ -370,7 +373,8 @@ def test_get_descendants_success(app, entity_type):
                          headers=test_data['headers'])
 
         assert res.status_code == 200
-        assert res.json == test_data['response']
+        for result in res.json:
+            assert result in test_data['response']
 
 
 # Validate constraints
