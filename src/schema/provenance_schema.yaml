@@ -409,6 +409,11 @@ ENTITIES:
         type: string
         description: "The data or assay type contained in this dataset."
         required_on_create: true
+      dataset_type_hierarchy:
+        type: string
+        generated: true
+        description: 'The name of the top level of the hierarchy this dataset type belongs to.'
+        on_index_trigger: get_dataset_type_hierarchy
 #      TODO: data_types and data_types_other are deprecated and will be removed
       data_types:
         before_property_create_validators:
@@ -948,6 +953,11 @@ ENTITIES:
       organ:
         type: string
         description: "Organ code specifier, only set if sample_type == organ.  Valid values found in: [organ types](https://github.com/sennetconsortium/search-api/blob/master/src/search-schema/data/definitions/enums/organ_types.yaml)"
+      organ_hierarchy:
+        type: string
+        generated: true
+        description: 'The name of the top level of the hierarchy this organ belongs to based on its laterality.'
+        on_index_trigger: get_organ_hierarchy
       organ_other:
         type: string
         description: The organ type provided by the user if "other" organ type is selected
