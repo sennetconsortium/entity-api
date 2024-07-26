@@ -3475,13 +3475,16 @@ Returns
 str: The organ hierarchy
 """
 def get_organ_hierarchy(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
-    organ_types = Ontology.ops(as_data_dict=True, key='rui_code', val_key='term').organ_types()
-    organ_hierarchy = existing_data_dict['organ']
-    if existing_data_dict['organ'] in organ_types:
-        organ_name = organ_types[existing_data_dict['organ']]
-        res = re.findall('.+?(?=\()', organ_name)  # the pattern will find everything up to the first (
-        if len(res) > 0:
-            organ_hierarchy = res[0].strip()
+    organ_hierarchy = None
+    if equals(existing_data_dict['sample_category'], 'organ'):
+        organ_types = Ontology.ops(as_data_dict=True, key='rui_code', val_key='term').organ_types()
+        organ_hierarchy = existing_data_dict['organ']
+        if existing_data_dict['organ'] in organ_types:
+            organ_name = organ_types[existing_data_dict['organ']]
+            organ_hierarchy = organ_name
+            res = re.findall('.+?(?=\()', organ_name)  # the pattern will find everything up to the first (
+            if len(res) > 0:
+                organ_hierarchy = res[0].strip()
 
     return property_key, organ_hierarchy
 
@@ -3518,6 +3521,7 @@ def get_dataset_type_hierarchy(property_key, normalized_type, user_token, existi
 
     except Exception as e:
         # Fallback value in case of ubkg missing
+        dataset_type_hierarchy = existing_data_dict['dataset_type']
         res = re.findall('.+?(?=\[)', existing_data_dict['dataset_type'])
         if len(res) > 0:
             dataset_type_hierarchy = res[0].strip()
