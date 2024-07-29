@@ -3510,6 +3510,11 @@ str: The dataset type hierarchy
 """
 def get_dataset_type_hierarchy(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     try:
+        # 10x Multiome has an exception where dataset_type.dataset_type (a CEDAR value) is 10X Multiome,
+        # but it needs to be displayed indefinitely as 10x Multiome
+        if equals(existing_data_dict['dataset_type'], '10x Multiome'):
+            return property_key, '10x Multiome'
+
         def prop_callback(d):
             return d.get('description')
 
