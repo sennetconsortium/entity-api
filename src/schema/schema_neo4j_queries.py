@@ -59,6 +59,44 @@ def get_dataset_direct_ancestors(neo4j_driver, uuid, property_key=None):
 
 
 """
+Get the origin (organ) sample ancestor of a given entity by uuid
+
+Parameters
+----------
+neo4j_driver : neo4j.Driver object
+    The neo4j database connection pool
+uuid : str
+    The uuid of target entity 
+property_key : str
+    A target property key for result filtering
+
+Returns
+-------
+list
+    A unique list of uuids of source entities
+"""
+
+
+def get_origin_sample(neo4j_driver, uuid):
+    result = {}
+
+    query = (f"MATCH (e:Entity)-[:WAS_GENERATED_BY|USED*]->(s:Sample) "
+             f"WHERE e.uuid='{uuid}' and s.sample_category='Organ' "
+             f"return s AS {record_field_name}")
+
+    logger.info("======get_origin_sample() query======")
+    logger.info(query)
+
+    with neo4j_driver.session() as session:
+        record = session.read_transaction(_execute_readonly_tx, query)
+        if record and record[record_field_name]:
+            # Convert the entity node to dict
+            result = _node_to_dict(record[record_field_name])
+
+    return result
+
+
+"""
 Get the sample organ name and source metadata information of the given dataset uuid
 
 Parameters
@@ -1867,5 +1905,142 @@ def get_tuplets(neo4j_driver, uuid, property_key=None):
             else:
                 # Convert the list of nodes to a list of dicts
                 results = nodes_to_dicts(record[record_field_name])
+
+    return results
+
+
+"""
+Get all collections by uuid
+Parameters
+----------
+neo4j_driver : neo4j.Driver object
+    The neo4j database connection pool
+uuid : str
+    The uuid of target entity 
+property_key : str
+    A target property key for result filtering
+Returns
+-------
+list
+    A list of unique collection dictionaries returned from the Cypher query
+"""
+def get_collections(neo4j_driver, uuid, property_key = None):
+    results = []
+
+    if property_key:
+        query = (f"MATCH (c:Collection)<-[:IN_COLLECTION]-(ds:Dataset) "
+                 f"WHERE ds.uuid='{uuid}' "
+                 # COLLECT() returns a list
+                 # apoc.coll.toSet() reruns a set containing unique nodes
+                 f"RETURN apoc.coll.toSet(COLLECT(c.{property_key})) AS {record_field_name}")
+    else:
+        query = (f"MATCH (c:Collection)<-[:IN_COLLECTION]-(ds:Dataset) "
+                 f"WHERE ds.uuid='{uuid}' "
+                 # COLLECT() returns a list
+                 # apoc.coll.toSet() reruns a set containing unique nodes
+                 f"RETURN apoc.coll.toSet(COLLECT(c)) AS {record_field_name}")
+
+    logger.info("======get_collections() query======")
+    logger.info(query)
+
+    with neo4j_driver.session() as session:
+        record = session.read_transaction(execute_readonly_tx, query)
+
+        if record and record[record_field_name]:
+            if property_key:
+                # Just return the list of property values from each entity node
+                results = record[record_field_name]
+            else:
+                # Convert the list of nodes to a list of dicts
+                results = nodes_to_dicts(record[record_field_name])
+
+    return results
+
+
+
+"""
+Get all uploads by uuid
+Parameters
+----------
+neo4j_driver : neo4j.Driver object
+    The neo4j database connection pool
+uuid : str
+    The uuid of target entity 
+property_key : str
+    A target property key for result filtering
+Returns
+-------
+list
+    A list of unique upload dictionaries returned from the Cypher query
+"""
+def get_uploads(neo4j_driver, uuid, property_key = None):
+    results = []
+    if property_key:
+        query = (f"MATCH (u:Upload)<-[:IN_UPLOAD]-(ds:Dataset) "
+                 f"WHERE ds.uuid='{uuid}' "
+                 # COLLECT() returns a list
+                 # apoc.coll.toSet() reruns a set containing unique nodes
+                 f"RETURN apoc.coll.toSet(COLLECT(u.{property_key})) AS {record_field_name}")
+    else:
+        query = (f"MATCH (u:Upload)<-[:IN_UPLOAD]-(ds:Dataset) "
+                 f"WHERE ds.uuid='{uuid}' "
+                 # COLLECT() returns a list
+                 # apoc.coll.toSet() reruns a set containing unique nodes
+                 f"RETURN apoc.coll.toSet(COLLECT(u)) AS {record_field_name}")
+
+    logger.info("======get_uploads() query======")
+    logger.info(query)
+
+    with neo4j_driver.session() as session:
+        record = session.read_transaction(execute_readonly_tx, query)
+        if record and record[record_field_name]:
+            if property_key:
+                # Just return the list of property values from each entity node
+                results = record[record_field_name]
+            else:
+                # Convert the list of nodes to a list of dicts
+                results = nodes_to_dicts(record[record_field_name])
+
+    return results
+
+"""
+Get the associated sources for a given entity (dataset/publication)
+
+Parameters
+----------
+neo4j_driver : neo4j.Driver object
+    The neo4j database connection pool
+uuid : str
+    The uuid of entity
+filter_out : list 
+    Any sources that should not be returned
+
+Returns
+-------
+list
+    A list of sources associated with an entity
+"""
+
+
+def get_sources_associated_entity(neo4j_driver, uuid, filter_out = None):
+    results = []
+
+    query_filter = ''
+    if filter_out is not None:
+        query_filter = f" and not s.uuid in {filter_out}"
+
+    query = (f"MATCH (e:Entity)-[*]->(s:Source) "
+             f"WHERE e.uuid = '{uuid}' {query_filter} "
+             f"RETURN apoc.coll.toSet(COLLECT(s))  as {record_field_name}")
+
+    logger.info("=====get_sources_associated_dataset() query======")
+    logger.info(query)
+
+    with neo4j_driver.session() as session:
+        record = session.read_transaction(execute_readonly_tx, query)
+
+        if record and record[record_field_name]:
+            # Convert the neo4j node into Python dict
+            results = nodes_to_dicts(record[record_field_name])
 
     return results

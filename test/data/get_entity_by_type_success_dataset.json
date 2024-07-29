@@ -21,6 +21,7 @@
       "local_directory_rel_path": "protected/University of Pittsburgh TMC/6a7be8e95c62c74545a29666111899d9/",
       "sennet_id": "SNT554.XLGX.327",
       "status": "New",
+      "sources": null,
       "uuid": "6a7be8e95c62c74545a29666111899d9",
       "creation_action": "Create Dataset Activity"
     },
@@ -45,6 +46,7 @@
       "local_directory_rel_path": "protected/University of Pittsburgh TMC/3c2c1ddae16945d48e5940622b615e20/",
       "sennet_id": "SNT554.XLGX.327",
       "status": "New",
+      "sources": null,
       "uuid": "3c2c1ddae16945d48e5940622b615e20",
       "creation_action": "Multi-Assay Split"
     }

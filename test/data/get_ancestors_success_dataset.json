@@ -33,9 +33,27 @@
         "type": "suspension",
         "version": "1"
       },
+      "cedar_mapped_metadata": {
+        "Notes": "",
+        "Preparation Media": "PFA (4%)",
+        "Preparation Temperature": "Dry Ice",
+        "Processing Time": "22 min",
+        "Quality Criteria": "",
+        "Sample ID": "SNT687.SFVJ.758",
+        "Source Storage Time": "30 min",
+        "Storage Media": "Buffered Formalin (10% NBF)",
+        "Storage Temperature": "Liquid Nitrogen Vapor",
+        "Suspension Enriched": "yes",
+        "Suspension Enriched Target": "",
+        "Suspension Entity": "cell",
+        "Suspension Entity Number": "44",
+        "Type": "suspension",
+        "Version": "1"
+      },
       "sample_category": "Suspension",
       "sennet_id": "SNT687.SFVJ.758",
-      "uuid": "5fa78f4fa272db58a7fcc7590376f5e7"
+      "uuid": "5fa78f4fa272db58a7fcc7590376f5e7",
+      "source": null
     },
     {
       "created_by_user_displayname": "Test User",
@@ -54,7 +72,8 @@
       "organ": "BD",
       "sample_category": "Organ",
       "sennet_id": "SNT458.VPHX.635",
-      "uuid": "cf3d0408de9afd703c8bd71808176b38"
+      "uuid": "cf3d0408de9afd703c8bd71808176b38",
+      "source": null
     },
     {
       "created_by_user_displayname": "Test User",
@@ -99,7 +118,7 @@
     "hmroleids": [],
     "hmscopes": ["test_scope"]
   },
-  "has_read_privs":  true,
+  "has_read_privs": true,
   "get_sennet_ids": {
     "ancestor_id": "5fa78f4fa272db58a7fcc7590376f5e7",
     "ancestor_ids": ["5fa78f4fa272db58a7fcc7590376f5e7"],
@@ -149,7 +168,8 @@
       "data_access_level": "consortium",
       "entity_type": "Sample",
       "last_modified_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
-      "last_modified_user_email": "TESTUSER@example.com"
+      "last_modified_user_email": "TESTUSER@example.com",
+      "source": null
     },
     {
       "organ": "BD",
@@ -168,7 +188,8 @@
       "data_access_level": "consortium",
       "entity_type": "Sample",
       "last_modified_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
-      "last_modified_user_email": "TESTUSER@example.com"
+      "last_modified_user_email": "TESTUSER@example.com",
+      "source": null
     },
     {
       "metadata": "{}",
