@@ -1630,7 +1630,7 @@ def get_ancestors(id):
         complete_entities_list = schema_manager.get_complete_entities_list(token, ancestors_list, properties_to_skip)
 
         # Final result after normalization
-        final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list)
+        final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list, properties_to_include=['protocol_url'])
 
     return jsonify(final_result)
 
@@ -1706,7 +1706,7 @@ def get_descendants(id):
         complete_entities_list = schema_manager.get_complete_entities_list(user_token, descendants_list, properties_to_skip)
 
         # Final result after normalization
-        final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list)
+        final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list, properties_to_include=['protocol_url'])
 
     return jsonify(final_result)
 

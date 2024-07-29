@@ -600,6 +600,11 @@ def get_ancestors(neo4j_driver, uuid, property_key=None):
                 # Convert the list of nodes to a list of dicts
                 results = _nodes_to_dicts(record[record_field_name])
 
+                for result in results:
+                    protocol_url = get_activity_protocol(neo4j_driver, result['uuid'])
+                    if protocol_url != {}:
+                        result['protocol_url'] = protocol_url
+
     return results
 
 
@@ -653,6 +658,11 @@ def get_descendants(neo4j_driver, uuid, property_key=None):
             else:
                 # Convert the list of nodes to a list of dicts
                 results = _nodes_to_dicts(record[record_field_name])
+
+                for result in results:
+                    protocol_url = get_activity_protocol(neo4j_driver, result['uuid'])
+                    if protocol_url != {}:
+                        result['protocol_url'] = protocol_url
 
     return results
 
