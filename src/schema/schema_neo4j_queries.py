@@ -1113,6 +1113,58 @@ def get_entity(neo4j_driver, uuid):
     return result
 
 
+""" 
+Retrieve a boolean value for if an ancestor of this entity contains RUI location information
+
+Parameters
+----------
+neo4j_driver : neo4j.Driver object
+    The neo4j database connection pool
+uuid : str
+    The uuid of target entity 
+
+Returns:
+    Boolean: If an ancestor contains RUI location information
+"""
+
+
+def get_has_rui_information(neo4j_driver, entity_uuid):
+    results = str(False)
+
+    # First check the ancestry of the given entity and if the origin sample is
+    # Adipose Tissue (AD), Blood (BD), Bone Marrow (BM), Breast (BS), Muscle (MU), or Other (OT), then return "N/A"
+
+    organ_query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(o:Sample) "
+                   f"WHERE e.uuid='{entity_uuid}' AND o.sample_category='Organ' AND o.organ in ['AD', 'BD', 'BM', 'BS', 'MU', 'OT'] "
+                   f"return 'N/A' as {record_field_name}")
+
+    logger.info("======get_has_rui_information() organ_query======")
+    logger.info(organ_query)
+
+    with neo4j_driver.session() as session:
+        record = session.read_transaction(execute_readonly_tx, organ_query)
+
+        if record and record[record_field_name]:
+            results = (record[record_field_name])
+            return str(results)
+
+    # If the first query fails to return then grab the ancestor Block and check if it contains  rui_location
+    query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(s:Sample) "
+             f"WHERE e.uuid='{entity_uuid}' AND s.rui_location IS NOT NULL AND NOT TRIM(s.rui_location) = '' "
+             f"RETURN COUNT(s) > 0 as {record_field_name}")
+
+    logger.info("======get_has_rui_information() query======")
+    logger.info(query)
+
+    with neo4j_driver.session() as session:
+        record = session.read_transaction(execute_readonly_tx, query)
+
+        if record and record[record_field_name]:
+            results = (record[record_field_name])
+
+    return str(results)
+
+
 ####################################################################################################
 ## Internal Functions
 ####################################################################################################
