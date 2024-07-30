@@ -1672,6 +1672,20 @@ def get_pipeline_message_reduced(property_key, normalized_type, user_token, exis
     return property_key, pipeline_message
 
 
+def get_has_rui_information(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    if normalized_type in ["Sample", "Dataset"]:
+        if normalized_type == "Sample" and 'rui_location' in existing_data_dict:
+            return property_key, True
+
+        has_rui_information = schema_neo4j_queries.get_has_rui_information(schema_manager.get_neo4j_driver_instance(),
+                                                                           existing_data_dict['uuid'])
+        return property_key, has_rui_information
+
+    return property_key, None
+
+
+
+
 """
 Trigger event method to parse out the anatomical locations from 'rui_location'
 
