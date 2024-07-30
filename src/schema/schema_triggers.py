@@ -821,6 +821,8 @@ list: A list of associated collections with all the normalized information
 
 
 def get_dataset_collections(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    return_list = None
+
     if 'uuid' not in existing_data_dict:
         msg = create_trigger_error_msg(
             "Missing 'uuid' key in 'existing_data_dict' during calling 'get_dataset_collections()' trigger method.",
@@ -832,13 +834,14 @@ def get_dataset_collections(property_key, normalized_type, user_token, existing_
     # Get back the list of collection dicts
     collections_list = schema_neo4j_queries.get_dataset_collections(schema_manager.get_neo4j_driver_instance(),
                                                                     existing_data_dict['uuid'])
+    if collections_list:
+        # Exclude datasets from each resulting collection
+        # We don't want to show too much nested information
+        properties_to_skip = ['datasets']
+        complete_entities_list = schema_manager.get_complete_entities_list(user_token, collections_list, properties_to_skip)
+        return_list = schema_manager.normalize_entities_list_for_response(complete_entities_list)
 
-    # Exclude datasets from each resulting collection
-    # We don't want to show too much nested information
-    properties_to_skip = ['datasets']
-    complete_entities_list = schema_manager.get_complete_entities_list(user_token, collections_list, properties_to_skip)
-
-    return property_key, schema_manager.normalize_entities_list_for_response(complete_entities_list)
+    return property_key, return_list
 
 
 """
