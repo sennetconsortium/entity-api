@@ -426,14 +426,15 @@ ENTITIES:
         generated: true
         description: "A list of collections that this dataset belongs to. Will be returned in response"
         on_read_trigger: get_dataset_collections
-        # No on_index_trigger to include collections in the OpenSearch document for a Dataset
+        on_index_trigger: get_dataset_collections
+        # No on_index_trigger to include collections in the OpenSearch document for a Dataset (from HM, we might need this for SN)
       upload:
         type: json_string # dict
         transient: true
         generated: true
         description: "The Upload that this dataset is associated with. Will be returned in response"
         on_read_trigger: get_dataset_upload
-        # No on_index_trigger to include upload in the OpenSearch document for a Dataset
+        on_index_trigger: get_dataset_upload
       contributors:
         type: list
         description: "A list of people who contributed to the creation of this dataset.  Returned as an array of contributor where the structure of a contributor is"
