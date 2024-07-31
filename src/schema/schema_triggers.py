@@ -1612,16 +1612,27 @@ str: The generated dataset title
 def get_origin_sample(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     # The origin_sample is the sample that `sample_category` is "organ" and the `organ` code is set at the same time
 
-    if equals(existing_data_dict.get("sample_category"), Ontology.ops().specimen_categories().ORGAN):
-        # Return the organ if this is an organ
-        return property_key, existing_data_dict
+    try:
+        if equals(existing_data_dict.get("sample_category"), Ontology.ops().specimen_categories().ORGAN):
+            # Return the organ if this is an organ
+            return property_key, existing_data_dict
 
-    origin_sample = None
-    if normalized_type in ["Sample", "Dataset", "Publication"]:
-        origin_sample = schema_neo4j_queries.get_origin_sample(schema_manager.get_neo4j_driver_instance(),
-                                                                     existing_data_dict['uuid'])
+        origin_sample = None
+        if normalized_type in ["Sample", "Dataset", "Publication"]:
+            origin_sample = schema_neo4j_queries.get_origin_sample(schema_manager.get_neo4j_driver_instance(),
+                                                                   existing_data_dict['uuid'])
 
-    return property_key, origin_sample
+            organ_hierarchy_key, organ_hierarchy_value = get_organ_hierarchy(property_key='organ_hierarchy',
+                                                                             normalized_type=Ontology.ops().entities().SAMPLE,
+                                                                             user_token=user_token,
+                                                                             existing_data_dict=origin_sample,
+                                                                             new_data_dict=new_data_dict)
+            origin_sample[organ_hierarchy_key] = organ_hierarchy_value
+
+        return property_key, origin_sample
+    except Exception:
+        logger.error(f"No origin sample found for {normalized_type} with UUID: {existing_data_dict['uuid']}")
+        return property_key, None
 
 
 """
