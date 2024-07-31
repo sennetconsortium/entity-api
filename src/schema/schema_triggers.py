@@ -2803,7 +2803,8 @@ list: A list of associated dataset dicts with all the normalized information
 
 
 def get_index_upload_datasets(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
-    dataset_property_exclusions = ["contacts", "contributors", "ingest_metadata", "pipeline_message", "status_history"]
+    dataset_property_exclusions = ["antibodies", "contacts", "contributors", "ingest_metadata", "pipeline_message",
+                                   "status_history"]
     if 'uuid' not in existing_data_dict:
         msg = create_trigger_error_msg(
             "Missing 'uuid' key in 'existing_data_dict' during calling 'get_upload_datasets()' trigger method.",
