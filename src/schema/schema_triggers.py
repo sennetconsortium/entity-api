@@ -659,17 +659,24 @@ def get_collection_entities(property_key, normalized_type, user_token, existing_
     # Additional properties of the datasets to exclude
     # We don't want to show too much nested information
     properties_to_skip = [
-        'direct_ancestors',
+        'antibodies',
         'collections',
-        'upload',
-        'title',
+        'contacts',
+        'contributors',
+        'direct_ancestors',
+        'ingest_metadata'
+        'next_revision_uuid',
+        'pipeline_message',
         'previous_revision_uuid',
-        'next_revision_uuid'
+        'sources',
+        'status_history',
+        'title',
+        'upload',
     ]
 
     complete_entities_list = schema_manager.get_complete_entities_list(user_token, entities_list, properties_to_skip)
 
-    return property_key, schema_manager.normalize_entities_list_for_response(complete_entities_list)
+    return property_key, schema_manager.normalize_entities_list_for_response(complete_entities_list, properties_to_skip)
 
 
 """
@@ -837,8 +844,9 @@ def get_dataset_collections(property_key, normalized_type, user_token, existing_
     if collections_list:
         # Exclude datasets from each resulting collection
         # We don't want to show too much nested information
-        properties_to_skip = ['datasets']
-        complete_entities_list = schema_manager.get_complete_entities_list(user_token, collections_list, properties_to_skip)
+        properties_to_skip = ['entities']
+        complete_entities_list = schema_manager.get_complete_entities_list(user_token, collections_list,
+                                                                           properties_to_skip)
         return_list = schema_manager.normalize_entities_list_for_response(complete_entities_list)
 
     return property_key, return_list
@@ -2773,21 +2781,8 @@ list: A list of associated dataset dicts with all the normalized information
 
 
 def get_upload_datasets(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
-    if 'uuid' not in existing_data_dict:
-        msg = create_trigger_error_msg(
-            "Missing 'uuid' key in 'existing_data_dict' during calling 'get_upload_datasets()' trigger method.",
-            existing_data_dict, new_data_dict
-        )
-        raise KeyError(msg)
-
-    logger.info(f"Executing 'get_upload_datasets()' trigger method on uuid: {existing_data_dict['uuid']}")
-
-    datasets_list = schema_neo4j_queries.get_upload_datasets(schema_manager.get_neo4j_driver_instance(),
-                                                             existing_data_dict['uuid'])
-
-    # Get rid of the entity node properties that are not defined in the yaml schema
-    # as well as the ones defined as `exposed: false` in the yaml schema
-    return property_key, schema_manager.normalize_entities_list_for_response(datasets_list)
+    upload_datasets = _get_upload_datasets(existing_data_dict)
+    return property_key, upload_datasets
 
 
 
@@ -2814,11 +2809,17 @@ list: A list of associated dataset dicts with all the normalized information
 
 
 def get_index_upload_datasets(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
-    dataset_property_exclusions = ["contacts", "contributors", "ingest_metadata", "pipeline_message", "status_history"]
+    properties_to_exclude = ["antibodies", "contacts", "contributors", "ingest_metadata", "pipeline_message",
+                             "status_history"]
+    upload_datasets = _get_upload_datasets(existing_data_dict, properties_to_exclude)
+    return property_key, upload_datasets
+
+
+def _get_upload_datasets(existing_data_dict, properties_to_exclude=[]):
     if 'uuid' not in existing_data_dict:
         msg = create_trigger_error_msg(
             "Missing 'uuid' key in 'existing_data_dict' during calling 'get_upload_datasets()' trigger method.",
-            existing_data_dict, new_data_dict
+            existing_data_dict
         )
         raise KeyError(msg)
 
@@ -2829,9 +2830,8 @@ def get_index_upload_datasets(property_key, normalized_type, user_token, existin
 
     # Get rid of the entity node properties that are not defined in the yaml schema
     # as well as the ones defined as `exposed: false` in the yaml schema
-    return property_key, schema_manager.normalize_entities_list_for_response(datasets_list,
-                                                                             properties_to_exclude=dataset_property_exclusions)
-
+    return schema_manager.normalize_entities_list_for_response(datasets_list,
+                                                               properties_to_exclude=properties_to_exclude)
 
 ####################################################################################################
 ## Trigger methods specific to Activity - DO NOT RENAME
