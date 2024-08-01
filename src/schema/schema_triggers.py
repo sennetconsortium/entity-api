@@ -659,17 +659,24 @@ def get_collection_entities(property_key, normalized_type, user_token, existing_
     # Additional properties of the datasets to exclude
     # We don't want to show too much nested information
     properties_to_skip = [
-        'direct_ancestors',
+        'antibodies',
         'collections',
-        'upload',
-        'title',
+        'contacts',
+        'contributors',
+        'direct_ancestors',
+        'ingest_metadata'
+        'next_revision_uuid',
+        'pipeline_message',
         'previous_revision_uuid',
-        'next_revision_uuid'
+        'sources',
+        'status_history',
+        'title',
+        'upload',
     ]
 
     complete_entities_list = schema_manager.get_complete_entities_list(user_token, entities_list, properties_to_skip)
 
-    return property_key, schema_manager.normalize_entities_list_for_response(complete_entities_list)
+    return property_key, schema_manager.normalize_entities_list_for_response(complete_entities_list, properties_to_skip)
 
 
 """
@@ -821,6 +828,8 @@ list: A list of associated collections with all the normalized information
 
 
 def get_dataset_collections(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    return_list = None
+
     if 'uuid' not in existing_data_dict:
         msg = create_trigger_error_msg(
             "Missing 'uuid' key in 'existing_data_dict' during calling 'get_dataset_collections()' trigger method.",
@@ -832,13 +841,15 @@ def get_dataset_collections(property_key, normalized_type, user_token, existing_
     # Get back the list of collection dicts
     collections_list = schema_neo4j_queries.get_dataset_collections(schema_manager.get_neo4j_driver_instance(),
                                                                     existing_data_dict['uuid'])
+    if collections_list:
+        # Exclude datasets from each resulting collection
+        # We don't want to show too much nested information
+        properties_to_skip = ['entities']
+        complete_entities_list = schema_manager.get_complete_entities_list(user_token, collections_list,
+                                                                           properties_to_skip)
+        return_list = schema_manager.normalize_entities_list_for_response(complete_entities_list)
 
-    # Exclude datasets from each resulting collection
-    # We don't want to show too much nested information
-    properties_to_skip = ['datasets']
-    complete_entities_list = schema_manager.get_complete_entities_list(user_token, collections_list, properties_to_skip)
-
-    return property_key, schema_manager.normalize_entities_list_for_response(complete_entities_list)
+    return property_key, return_list
 
 
 """
@@ -1609,23 +1620,27 @@ str: The generated dataset title
 def get_origin_sample(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     # The origin_sample is the sample that `sample_category` is "organ" and the `organ` code is set at the same time
 
-    if equals(existing_data_dict.get("sample_category"), Ontology.ops().specimen_categories().ORGAN):
-        # Return the organ if this is an organ
-        return property_key, existing_data_dict
+    try:
+        if equals(existing_data_dict.get("sample_category"), Ontology.ops().specimen_categories().ORGAN):
+            # Return the organ if this is an organ
+            return property_key, existing_data_dict
 
-    origin_sample = None
-    if normalized_type in ["Sample", "Dataset", "Publication"]:
-        origin_sample = schema_neo4j_queries.get_origin_sample(schema_manager.get_neo4j_driver_instance(),
-                                                               existing_data_dict['uuid'])
+        origin_sample = None
+        if normalized_type in ["Sample", "Dataset", "Publication"]:
+            origin_sample = schema_neo4j_queries.get_origin_sample(schema_manager.get_neo4j_driver_instance(),
+                                                                   existing_data_dict['uuid'])
 
-        organ_hierarchy_key, organ_hierarchy_value = get_organ_hierarchy(property_key='organ_hierarchy',
-                                                                         normalized_type=Ontology.ops().entities().SAMPLE,
-                                                                         user_token=user_token,
-                                                                         existing_data_dict=origin_sample,
-                                                                         new_data_dict=new_data_dict)
-        origin_sample[organ_hierarchy_key] = organ_hierarchy_value
+            organ_hierarchy_key, organ_hierarchy_value = get_organ_hierarchy(property_key='organ_hierarchy',
+                                                                             normalized_type=Ontology.ops().entities().SAMPLE,
+                                                                             user_token=user_token,
+                                                                             existing_data_dict=origin_sample,
+                                                                             new_data_dict=new_data_dict)
+            origin_sample[organ_hierarchy_key] = organ_hierarchy_value
 
-    return property_key, origin_sample
+        return property_key, origin_sample
+    except Exception:
+        logger.error(f"No origin sample found for {normalized_type} with UUID: {existing_data_dict['uuid']}")
+        return property_key, None
 
 
 """
@@ -1663,6 +1678,23 @@ def get_pipeline_message_reduced(property_key, normalized_type, user_token, exis
                 pipeline_message = max_bytes_msg.decode("utf-8")
 
     return property_key, pipeline_message
+
+
+def get_has_rui_information(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    if normalized_type in ["Sample", "Dataset"]:
+        if normalized_type == "Sample":
+            if existing_data_dict['sample_category'] == 'Block' and 'rui_location' in existing_data_dict:
+                return property_key, str(True)
+            if existing_data_dict['sample_category'] == 'Organ':
+                return property_key, None
+
+        has_rui_information = schema_neo4j_queries.get_has_rui_information(schema_manager.get_neo4j_driver_instance(),
+                                                                           existing_data_dict['uuid'])
+        return property_key, has_rui_information
+
+    return property_key, None
+
+
 
 
 """
@@ -2749,21 +2781,8 @@ list: A list of associated dataset dicts with all the normalized information
 
 
 def get_upload_datasets(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
-    if 'uuid' not in existing_data_dict:
-        msg = create_trigger_error_msg(
-            "Missing 'uuid' key in 'existing_data_dict' during calling 'get_upload_datasets()' trigger method.",
-            existing_data_dict, new_data_dict
-        )
-        raise KeyError(msg)
-
-    logger.info(f"Executing 'get_upload_datasets()' trigger method on uuid: {existing_data_dict['uuid']}")
-
-    datasets_list = schema_neo4j_queries.get_upload_datasets(schema_manager.get_neo4j_driver_instance(),
-                                                             existing_data_dict['uuid'])
-
-    # Get rid of the entity node properties that are not defined in the yaml schema
-    # as well as the ones defined as `exposed: false` in the yaml schema
-    return property_key, schema_manager.normalize_entities_list_for_response(datasets_list)
+    upload_datasets = _get_upload_datasets(existing_data_dict)
+    return property_key, upload_datasets
 
 
 
@@ -2790,11 +2809,17 @@ list: A list of associated dataset dicts with all the normalized information
 
 
 def get_index_upload_datasets(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
-    dataset_property_exclusions = ["contacts", "contributors", "ingest_metadata", "pipeline_message", "status_history"]
+    properties_to_exclude = ["antibodies", "contacts", "contributors", "ingest_metadata", "pipeline_message",
+                             "status_history"]
+    upload_datasets = _get_upload_datasets(existing_data_dict, properties_to_exclude)
+    return property_key, upload_datasets
+
+
+def _get_upload_datasets(existing_data_dict, properties_to_exclude=[]):
     if 'uuid' not in existing_data_dict:
         msg = create_trigger_error_msg(
             "Missing 'uuid' key in 'existing_data_dict' during calling 'get_upload_datasets()' trigger method.",
-            existing_data_dict, new_data_dict
+            existing_data_dict
         )
         raise KeyError(msg)
 
@@ -2805,9 +2830,8 @@ def get_index_upload_datasets(property_key, normalized_type, user_token, existin
 
     # Get rid of the entity node properties that are not defined in the yaml schema
     # as well as the ones defined as `exposed: false` in the yaml schema
-    return property_key, schema_manager.normalize_entities_list_for_response(datasets_list,
-                                                                             properties_to_exclude=dataset_property_exclusions)
-
+    return schema_manager.normalize_entities_list_for_response(datasets_list,
+                                                               properties_to_exclude=properties_to_exclude)
 
 ####################################################################################################
 ## Trigger methods specific to Activity - DO NOT RENAME
