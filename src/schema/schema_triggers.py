@@ -3483,3 +3483,82 @@ def set_sample_source(property_key, normalized_type, user_token, existing_data_d
     sources = schema_neo4j_queries.get_sources_associated_entity(schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'])
 
     return property_key, sources[0]
+
+
+"""
+Trigger event method setting the name of the top level of the hierarchy this organ belongs to based on its laterality.
+
+Parameters
+----------
+property_key : str
+    The target property key of the value to be generated
+normalized_type : str
+    One of the types defined in the schema yaml: Sample
+user_token: str
+    The user's globus nexus token
+existing_data_dict : dict
+    A dictionary that contains all existing entity properties
+new_data_dict : dict
+    A merged dictionary that contains all possible input data to be used
+
+Returns
+-------
+str: The organ hierarchy
+"""
+def get_organ_hierarchy(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    organ_hierarchy = None
+    if equals(existing_data_dict['sample_category'], 'organ'):
+        organ_types = Ontology.ops(as_data_dict=True, key='rui_code', val_key='term').organ_types()
+        organ_hierarchy = existing_data_dict['organ']
+        if existing_data_dict['organ'] in organ_types:
+            organ_name = organ_types[existing_data_dict['organ']]
+            organ_hierarchy = organ_name
+            res = re.findall('.+?(?=\()', organ_name)  # the pattern will find everything up to the first (
+            if len(res) > 0:
+                organ_hierarchy = res[0].strip()
+
+    return property_key, organ_hierarchy
+
+"""
+Trigger event method setting the name of the top level of the hierarchy this dataset type belongs to.
+
+Parameters
+----------
+property_key : str
+    The target property key of the value to be generated
+normalized_type : str
+    One of the types defined in the schema yaml: Sample
+user_token: str
+    The user's globus nexus token
+existing_data_dict : dict
+    A dictionary that contains all existing entity properties
+new_data_dict : dict
+    A merged dictionary that contains all possible input data to be used
+
+Returns
+-------
+str: The dataset type hierarchy
+"""
+def get_dataset_type_hierarchy(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    try:
+        # 10x Multiome has an exception where dataset_type.dataset_type (a CEDAR value) is 10X Multiome,
+        # but it needs to be displayed indefinitely as 10x Multiome
+        if equals(existing_data_dict['dataset_type'], '10x Multiome'):
+            return property_key, '10x Multiome'
+
+        def prop_callback(d):
+            return d.get('description')
+
+        def val_callback(d):
+            return d.get('dataset_type').get('dataset_type')
+
+        assay_classes = Ontology.ops(prop_callback=prop_callback, val_callback=val_callback, as_data_dict=True).assay_classes()
+        dataset_type_hierarchy = assay_classes[existing_data_dict['dataset_type']]
+
+    except Exception as e:
+        # Fallback value in case of ubkg missing
+        dataset_type_hierarchy = existing_data_dict['dataset_type']
+        res = re.findall('.+?(?=\[)', existing_data_dict['dataset_type'])
+        if len(res) > 0:
+            dataset_type_hierarchy = res[0].strip()
+    return property_key, dataset_type_hierarchy
