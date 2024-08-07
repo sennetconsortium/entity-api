@@ -4073,10 +4073,13 @@ def create_entity_details(request, normalized_entity_type, user_token, json_data
 
     # Create new entity
     try:
+        # Check if the optional `superclass` property is defined, None otherwise
+        superclass = schema_manager.get_entity_superclass(normalized_entity_type)
+
         # Important: `entity_dict` is the resulting neo4j dict, Python list and dicts are stored
         # as string expression literals in it. That's why properties like entity_dict['direct_ancestor_uuid']
         # will need to use ast.literal_eval() in the schema_triggers.py
-        entity_dict = app_neo4j_queries.create_entity(neo4j_driver_instance, normalized_entity_type, filtered_merged_dict)
+        entity_dict = app_neo4j_queries.create_entity(neo4j_driver_instance, normalized_entity_type, filtered_merged_dict, superclass)
     except TransactionError:
         msg = "Failed to create the new " + normalized_entity_type
         # Log the full stack trace, prepend a line with our message
