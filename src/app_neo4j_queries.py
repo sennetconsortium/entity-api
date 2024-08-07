@@ -397,7 +397,7 @@ def create_entity(neo4j_driver, entity_type, entity_data_dict, superclass=None):
     node_properties_map = _build_properties_map(entity_data_dict)
 
     query = (
-        f"CREATE (e:{labels}) "
+        f"CREATE (e{labels}) "
         f"SET e = {node_properties_map} "
         f"RETURN e AS {record_field_name}")
 
