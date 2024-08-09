@@ -1361,7 +1361,7 @@ def _normalize_metadata(entity_dict, metadata_scope:MetadataScopeEnum, propertie
     normalized_metadata = {}
 
     normalized_entity_type = entity_dict['entity_type']
-    properties = _schema['ENTITIES'][normalized_entity_type]['properties']
+    properties = get_entity_properties(_schema['ENTITIES'], normalized_entity_type)
 
     for key in entity_dict:
         if key in properties_to_include:
