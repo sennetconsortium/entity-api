@@ -3,6 +3,7 @@ import copy
 import json
 import urllib.parse
 from typing import Optional
+from unicodedata import category
 
 import yaml
 import logging
@@ -3562,3 +3563,38 @@ def get_dataset_type_hierarchy(property_key, normalized_type, user_token, existi
         if len(res) > 0:
             dataset_type_hierarchy = res[0].strip()
     return property_key, dataset_type_hierarchy
+
+
+"""
+Trigger event method that determines if a primary dataset a processed/derived dataset with a status of 'QA'
+
+Parameters
+----------
+property_key : str
+    The target property key of the value to be generated
+normalized_type : str
+    One of the types defined in the schema yaml: Sample
+user_token: str
+    The user's globus nexus token
+existing_data_dict : dict
+    A dictionary that contains all existing entity properties
+new_data_dict : dict
+    A merged dictionary that contains all possible input data to be used
+
+Returns
+-------
+bool: Whether a primary dataset has at least one processed dataset with a status of 'QA'
+"""
+def get_has_qa_derived_dataset(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    dataset_category = get_dataset_category(property_key, normalized_type, user_token, existing_data_dict, new_data_dict)
+    if equals(dataset_category[1], 'primary'):
+        match_case = "AND s.status = 'QA'"
+        results = schema_neo4j_queries.get_dataset_direct_descendants(schema_manager.get_neo4j_driver_instance(),
+                                                            existing_data_dict['uuid'], property_key=None, match_case=match_case)
+        for r in results:
+            descendant_category = get_dataset_category(property_key, normalized_type, user_token, r, r)
+            if 'processed' in descendant_category[1]:
+                return property_key, True
+        return property_key, False
+    else:
+        return property_key, False
