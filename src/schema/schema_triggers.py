@@ -1,9 +1,7 @@
 import ast
-import copy
 import json
 import urllib.parse
 from typing import Optional
-from unicodedata import category
 
 import yaml
 import logging
