@@ -3592,7 +3592,7 @@ def get_has_qa_derived_dataset(property_key, normalized_type, user_token, existi
         for r in results:
             descendant_category = get_dataset_category(property_key, normalized_type, user_token, r, r)
             if 'processed' in descendant_category[1]:
-                return property_key, True
-        return property_key, False
+                return property_key, "True"
+        return property_key, "False"
     else:
-        return property_key, False
+        return property_key, "False"
