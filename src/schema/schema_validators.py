@@ -86,12 +86,11 @@ criteria of being a public entity.
 def halt_DOI_if_collection_missing_elements(property_key, normalized_entity_type, request, existing_data_dict,
                                             new_data_dict):
     if 'contacts' not in existing_data_dict:
-        raise ValueError(f"Unable to modify existing {existing_data_dict['entity_type']}"
-                         f" {existing_data_dict['uuid']} for DOI because it has no contacts.")
-    if 'creators' not in existing_data_dict:
-        raise ValueError(f"Unable to modify existing {existing_data_dict['entity_type']}"
-                         f" {existing_data_dict['uuid']} for DOI because it has no creators.")
-    # Count up other validations to check 'datasets', since a transient property
+        raise ValueError(f"Unable to modify existing {existing_data_dict['entity_type']} "
+                         f"{existing_data_dict['uuid']} for DOI because it has no contacts.")
+    if 'contributors' not in existing_data_dict:
+        raise ValueError(f"Unable to modify existing {existing_data_dict['entity_type']} "
+                         f"{existing_data_dict['uuid']} for DOI because it has no contributors.")
 
 
 """
