@@ -1,7 +1,7 @@
 import ast
 import json
 import urllib.parse
-from typing import Optional
+from typing import List, Optional
 
 import yaml
 import logging
@@ -2757,35 +2757,29 @@ def unlink_datasets_from_upload(property_key, normalized_type, user_token, exist
         raise
 
 
-"""
-Trigger event method of getting a list of associated datasets for a given Upload
+def get_upload_datasets(property_key: str, normalized_type: str, user_token: str, existing_data_dict: dict, new_data_dict: dict):
+    """Trigger event method of getting a list of associated datasets for a given Upload.
 
-Parameters
-----------
-property_key : str
-    The target property key of the value to be generated
-normalized_type : str
-    One of the types defined in the schema yaml: Upload
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-Returns
--------
-str: The target property key
-list: A list of associated dataset dicts with all the normalized information
-"""
+    Parameters
+    ----------
+    property_key : str
+        The target property key of the value to be generated
+    normalized_type : str
+        One of the types defined in the schema yaml: Upload
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
 
-
-def get_upload_datasets(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
-    upload_datasets = _get_upload_datasets(existing_data_dict)
-    return property_key, upload_datasets
-
-
-def _get_upload_datasets(existing_data_dict, properties_to_exclude=[]):
-    if 'uuid' not in existing_data_dict:
+    Returns
+    -------
+    Tuple[str, list]
+    str: The target property key
+    list: A list of associated dataset dicts with all the normalized information
+    """
+    if "uuid" not in existing_data_dict:
         msg = create_trigger_error_msg(
             "Missing 'uuid' key in 'existing_data_dict' during calling 'get_upload_datasets()' trigger method.",
             existing_data_dict
@@ -2794,13 +2788,32 @@ def _get_upload_datasets(existing_data_dict, properties_to_exclude=[]):
 
     logger.info(f"Executing 'get_upload_datasets()' trigger method on uuid: {existing_data_dict['uuid']}")
 
-    datasets_list = schema_neo4j_queries.get_upload_datasets(schema_manager.get_neo4j_driver_instance(),
-                                                             existing_data_dict['uuid'])
+    upload_datasets = get_normalized_upload_datasets(existing_data_dict["uuid"])
+    return property_key, upload_datasets
+
+
+def get_normalized_upload_datasets(uuid: str, properties_to_exclude: List[str] = []):
+    """Query the Neo4j database to get the associated datasets for a given Upload UUID and normalize the results.
+
+    Parameters
+    ----------
+    uuid : str
+        The UUID of the Upload entity
+    properties_to_exclude : List[str]
+        A list of property keys to exclude from the normalized results
+
+    Returns
+    -------
+    list: A list of associated dataset dicts with all the normalized information
+    """
+    db = schema_manager.get_neo4j_driver_instance()
+    datasets_list = schema_neo4j_queries.get_upload_datasets(db, uuid)
 
     # Get rid of the entity node properties that are not defined in the yaml schema
     # as well as the ones defined as `exposed: false` in the yaml schema
     return schema_manager.normalize_entities_list_for_response(datasets_list,
                                                                properties_to_exclude=properties_to_exclude)
+
 
 ####################################################################################################
 ## Trigger methods specific to Activity - DO NOT RENAME

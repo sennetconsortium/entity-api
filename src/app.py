@@ -4691,7 +4691,7 @@ def get_datasets_for_upload(id: str):
         "pipeline_message",
         "status_history"
     ]
-    datasets = schema_triggers._get_upload_datasets(entity_dict, properties_to_exclude)
+    datasets = schema_triggers.get_normalized_upload_datasets(entity_dict["uuid"], properties_to_exclude)
     return jsonify(datasets)
 
 
