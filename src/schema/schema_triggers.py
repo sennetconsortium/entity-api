@@ -1,5 +1,4 @@
 import ast
-import copy
 import json
 import urllib.parse
 from typing import Optional
@@ -2782,36 +2781,6 @@ list: A list of associated dataset dicts with all the normalized information
 
 def get_upload_datasets(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     upload_datasets = _get_upload_datasets(existing_data_dict)
-    return property_key, upload_datasets
-
-
-
-"""
-Trigger event method of getting a list of associated datasets for a given Upload for indexing
-
-Parameters
-----------
-property_key : str
-    The target property key of the value to be generated
-normalized_type : str
-    One of the types defined in the schema yaml: Upload
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-Returns
--------
-str: The target property key
-list: A list of associated dataset dicts with all the normalized information
-"""
-
-
-def get_index_upload_datasets(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
-    properties_to_exclude = ["antibodies", "contacts", "contributors", "ingest_metadata", "pipeline_message",
-                             "status_history"]
-    upload_datasets = _get_upload_datasets(existing_data_dict, properties_to_exclude)
     return property_key, upload_datasets
 
 

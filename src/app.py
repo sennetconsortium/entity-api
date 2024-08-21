@@ -4674,6 +4674,27 @@ def create_multiple_component_details(request, normalized_entity_type, user_toke
     return created_datasets
 
 
+@app.route("/uploads/<id>/datasets", methods=["GET"])
+@require_valid_token()
+def get_datasets_for_upload(id: str):
+    # Verify that the entity is an upload
+    entity_dict = query_target_entity(id)
+    entity_type = entity_dict["entity_type"]
+    if not equals(entity_type, Ontology.ops().entities().UPLOAD):
+        abort_bad_req(f"{entity_type.title()} with id {id} is not an upload")
+
+    properties_to_exclude = [
+        "antibodies",
+        "contacts",
+        "contributors",
+        "ingest_metadata",
+        "pipeline_message",
+        "status_history"
+    ]
+    datasets = schema_triggers._get_upload_datasets(entity_dict, properties_to_exclude)
+    return jsonify(datasets)
+
+
 """
 Execute 'after_create_triiger' methods
 
