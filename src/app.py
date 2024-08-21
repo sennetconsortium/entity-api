@@ -4695,8 +4695,31 @@ def get_datasets_for_upload(id: str):
     return jsonify(datasets)
 
 
+@app.route("/collections/<id>/entities", methods=["GET"])
+def get_entities_for_collection(id: str):
+    # Verify that the entity is a collection
+    entity_dict = query_target_entity(id)
+    entity_type = entity_dict["entity_type"]
+    if not equals(entity_type, "Collection"):
+        abort_bad_req(f"{entity_type.title()} with id {id} is not a collection")
+
+    needs_auth = "registered_doi" not in entity_dict
+    if needs_auth and not user_in_globus_read_group(request):
+        abort_forbidden("Access not granted")
+
+    if needs_auth:
+        token = request.headers.get("Authorization")
+    else:
+        token = get_internal_token()
+
+    # Get the entities associated with the collection
+    _, entities = schema_triggers.get_collection_entities("entities", entity_type, token, entity_dict, None)
+
+    return jsonify(entities)
+
+
 """
-Execute 'after_create_triiger' methods
+Execute 'after_create_trigger' methods
 
 Parameters
 ----------
