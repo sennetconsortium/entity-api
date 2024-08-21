@@ -4712,8 +4712,10 @@ def get_entities_for_collection(id: str):
     else:
         token = get_internal_token()
 
+    properties_to_skip = []
+
     # Get the entities associated with the collection
-    _, entities = schema_triggers.get_collection_entities("entities", entity_type, token, entity_dict, None)
+    entities = schema_triggers.get_normalized_collection_entities(entity_dict["uuid"], token, properties_to_skip)
 
     return jsonify(entities)
 
