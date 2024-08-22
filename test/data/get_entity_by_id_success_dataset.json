@@ -54,7 +54,7 @@
     "last_modified_user_displayname": "Test User",
     "last_modified_user_email": "TESTUSER@example.com",
     "last_modified_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
-    "local_directory_rel_path": "protected/University of Pittsburgh TMC/6a7be8e95c62c74545a29666111899d9/",
+    "local_directory_rel_path": "protected/TMC - University of Pittsburgh/6a7be8e95c62c74545a29666111899d9/",
     "sennet_id": "SNT554.XLGX.327",
     "status": "Published",
     "title": "CODEX data from the None of a source of unknown age, race and sex",
@@ -137,7 +137,7 @@
     "status": "Published",
     "title": "CODEX data from the None of a source of unknown age, race and sex",
     "collecttions": [],
-    "local_directory_rel_path":"protected/University of Pittsburgh TMC/6a7be8e95c62c74545a29666111899d9/",
+    "local_directory_rel_path":"protected/TMC - University of Pittsburgh/6a7be8e95c62c74545a29666111899d9/",
     "direct_ancestors": [
       {
         "metadata": {
