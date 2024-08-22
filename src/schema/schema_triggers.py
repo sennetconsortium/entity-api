@@ -622,7 +622,6 @@ def update_file_descriptions(property_key, normalized_type, user_token, existing
 ####################################################################################################
 
 
-
 def get_collection_entities(property_key: str, normalized_type: str, user_token: str, existing_data_dict: dict, new_data_dict: dict):
     """Trigger event method of getting a list of associated datasets for a given collection
 
@@ -679,6 +678,8 @@ def get_normalized_collection_entities(uuid: str, token: str, properties_to_excl
     ----------
     uuid : str
         The UUID of the Collection entity
+    token: str
+        The user's globus nexus token or internal token
     properties_to_exclude : List[str]
         A list of property keys to exclude from the normalized results, default is []
     skip_completion : bool
