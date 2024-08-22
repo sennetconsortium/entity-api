@@ -4688,6 +4688,7 @@ def get_datasets_for_upload(id: str):
         "contacts",
         "contributors",
         "ingest_metadata",
+        "ingest_task",
         "pipeline_message",
         "status_history"
     ]
