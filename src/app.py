@@ -4704,18 +4704,44 @@ def get_entities_for_collection(id: str):
         abort_bad_req(f"{entity_type.title()} with id {id} is not a collection")
 
     needs_auth = "registered_doi" not in entity_dict
-    if needs_auth and not user_in_globus_read_group(request):
-        abort_forbidden("Access not granted")
 
     if needs_auth:
-        token = request.headers.get("Authorization")
+        # Collection needs authorization. Make sure the user is in the SenNet read group
+        if not user_in_globus_read_group(request):
+            abort_forbidden("Access not granted")
     else:
+        # Validate the token if it exists. This isn't really necessary since the
+        # collection doesn't require authorization, but to stay consistent with other endpoints
+        validate_token_if_auth_header_exists(request)
+
+    token = get_user_token(request)
+    if not isinstance(token, str):
         token = get_internal_token()
 
-    properties_to_skip = []
+    properties_to_exclude = [
+        "contains_human_genetic_sequences",
+        "created_timestamp",
+        "created_by_user_displayname",
+        "created_by_user_email",
+        "created_by_user_sub",
+        "description",
+        "ingest_metadata",
+        "ingest_task",
+        "status_history",
+        "dataset_info",
+        "last_modified_timestamp",
+        "last_modified_user_displayname",
+        "last_modified_user_email",
+        "last_modified_user_sub",
+    ]
 
     # Get the entities associated with the collection
-    entities = schema_triggers.get_normalized_collection_entities(entity_dict["uuid"], token, properties_to_skip)
+    entities = schema_triggers.get_normalized_collection_entities(
+        entity_dict["uuid"],
+        token,
+        properties_to_exclude,
+        skip_completion=True
+    )
 
     return jsonify(entities)
 

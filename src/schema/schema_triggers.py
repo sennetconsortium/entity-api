@@ -672,7 +672,7 @@ def get_collection_entities(property_key: str, normalized_type: str, user_token:
     return property_key, collection_entities
 
 
-def get_normalized_collection_entities(uuid: str, token: str, properties_to_exclude: List[str] = []):
+def get_normalized_collection_entities(uuid: str, token: str, properties_to_exclude: List[str] = [], skip_completion: bool = False):
     """Query the Neo4j database to get the associated entities for a given Collection UUID and normalize the results.
 
     Parameters
@@ -680,7 +680,9 @@ def get_normalized_collection_entities(uuid: str, token: str, properties_to_excl
     uuid : str
         The UUID of the Collection entity
     properties_to_exclude : List[str]
-        A list of property keys to exclude from the normalized results
+        A list of property keys to exclude from the normalized results, default is []
+    skip_completion : bool
+        Skip the call to get_complete_entities_list, default is False
 
     Returns
     -------
@@ -688,9 +690,14 @@ def get_normalized_collection_entities(uuid: str, token: str, properties_to_excl
     """
     db = schema_manager.get_neo4j_driver_instance()
     entities_list = schema_neo4j_queries.get_collection_entities(db, uuid)
-    complete_entities_list = schema_manager.get_complete_entities_list(token=token,
-                                                                       entities_list=entities_list,
-                                                                       properties_to_skip=properties_to_exclude)
+
+    if skip_completion:
+        complete_entities_list = entities_list
+    else:
+        complete_entities_list = schema_manager.get_complete_entities_list(token=token,
+                                                                           entities_list=entities_list,
+                                                                           properties_to_skip=properties_to_exclude)
+
     return schema_manager.normalize_entities_list_for_response(entities_list=complete_entities_list,
                                                                properties_to_exclude=properties_to_exclude)
 
