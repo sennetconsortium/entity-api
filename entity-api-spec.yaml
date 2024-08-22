@@ -1,7 +1,7 @@
 openapi: 3.0.0
 info:
   description: 'The SenNet Entity API is a standard RESTful web service with create, update and read operations for the standard SenNet provenance graph entities.'
-  version: 1.5.12
+  version: 1.5.14
   title: SenNet Entity API
   contact:
     name: SenNet Help Desk

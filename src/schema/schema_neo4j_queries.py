@@ -59,6 +59,53 @@ def get_dataset_direct_ancestors(neo4j_driver, uuid, property_key=None):
 
 
 """
+Get the direct descendant uuids of a given dataset by uuid
+
+Parameters
+----------
+neo4j_driver : neo4j.Driver object
+    The neo4j database connection pool
+uuid : str
+    The uuid of target entity 
+property_key : str
+    A target property key for result filtering
+match_case : str
+    An additional match case query
+
+Returns
+-------
+list
+    A unique list of entities
+"""
+def get_dataset_direct_descendants(neo4j_driver, uuid, property_key=None, match_case = ''):
+    results = []
+    if property_key:
+        query = (f"MATCH (s:Entity)-[:WAS_GENERATED_BY]->(a:Activity)-[:USED]->(t:Dataset) "
+                 f"WHERE t.uuid = '{uuid}' {match_case}"
+                 f"RETURN apoc.coll.toSet(COLLECT(s.{property_key})) AS {record_field_name}")
+    else:
+        query = (f"MATCH (s:Entity)-[:WAS_GENERATED_BY]->(a:Activity)-[:USED]->(t:Dataset) "
+                 f"WHERE t.uuid = '{uuid}' {match_case}"
+                 f"RETURN apoc.coll.toSet(COLLECT(s)) AS {record_field_name}")
+
+    logger.info("======get_dataset_direct_descendants() query======")
+    logger.info(query)
+
+    # Sessions will often be created and destroyed using a with block context
+    with neo4j_driver.session() as session:
+        record = session.read_transaction(_execute_readonly_tx, query)
+
+        if record and record[record_field_name]:
+            if property_key:
+                # Just return the list of property values from each entity node
+                results = record[record_field_name]
+            else:
+                # Convert the list of nodes to a list of dicts
+                results = _nodes_to_dicts(record[record_field_name])
+
+    return results
+
+"""
 Get the origin (organ) sample ancestor of a given entity by uuid
 
 Parameters
@@ -1111,6 +1158,58 @@ def get_entity(neo4j_driver, uuid):
             result = _node_to_dict(record[record_field_name])
 
     return result
+
+
+""" 
+Retrieve a boolean value for if an ancestor of this entity contains RUI location information
+
+Parameters
+----------
+neo4j_driver : neo4j.Driver object
+    The neo4j database connection pool
+uuid : str
+    The uuid of target entity 
+
+Returns:
+    Boolean: If an ancestor contains RUI location information
+"""
+
+
+def get_has_rui_information(neo4j_driver, entity_uuid):
+    results = str(False)
+
+    # First check the ancestry of the given entity and if the origin sample is
+    # Adipose Tissue (AD), Blood (BD), Bone Marrow (BM), Breast (BS), Muscle (MU), or Other (OT), then return "N/A"
+
+    organ_query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(o:Sample) "
+                   f"WHERE e.uuid='{entity_uuid}' AND o.sample_category='Organ' AND o.organ in ['AD', 'BD', 'BM', 'BS', 'MU', 'OT'] "
+                   f"return 'N/A' as {record_field_name}")
+
+    logger.info("======get_has_rui_information() organ_query======")
+    logger.info(organ_query)
+
+    with neo4j_driver.session() as session:
+        record = session.read_transaction(execute_readonly_tx, organ_query)
+
+        if record and record[record_field_name]:
+            results = (record[record_field_name])
+            return str(results)
+
+    # If the first query fails to return then grab the ancestor Block and check if it contains  rui_location
+    query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(s:Sample) "
+             f"WHERE e.uuid='{entity_uuid}' AND s.rui_location IS NOT NULL AND NOT TRIM(s.rui_location) = '' "
+             f"RETURN COUNT(s) > 0 as {record_field_name}")
+
+    logger.info("======get_has_rui_information() query======")
+    logger.info(query)
+
+    with neo4j_driver.session() as session:
+        record = session.read_transaction(execute_readonly_tx, query)
+
+        if record and record[record_field_name]:
+            results = (record[record_field_name])
+
+    return str(results)
 
 
 ####################################################################################################

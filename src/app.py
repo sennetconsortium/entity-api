@@ -1630,7 +1630,7 @@ def get_ancestors(id):
         complete_entities_list = schema_manager.get_complete_entities_list(token, ancestors_list, properties_to_skip)
 
         # Final result after normalization
-        final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list)
+        final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list, properties_to_include=['protocol_url'])
 
     return jsonify(final_result)
 
@@ -1706,7 +1706,7 @@ def get_descendants(id):
         complete_entities_list = schema_manager.get_complete_entities_list(user_token, descendants_list, properties_to_skip)
 
         # Final result after normalization
-        final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list)
+        final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list, properties_to_include=['protocol_url'])
 
     return jsonify(final_result)
 
@@ -4073,10 +4073,13 @@ def create_entity_details(request, normalized_entity_type, user_token, json_data
 
     # Create new entity
     try:
+        # Check if the optional `superclass` property is defined, None otherwise
+        superclass = schema_manager.get_entity_superclass(normalized_entity_type)
+
         # Important: `entity_dict` is the resulting neo4j dict, Python list and dicts are stored
         # as string expression literals in it. That's why properties like entity_dict['direct_ancestor_uuid']
         # will need to use ast.literal_eval() in the schema_triggers.py
-        entity_dict = app_neo4j_queries.create_entity(neo4j_driver_instance, normalized_entity_type, filtered_merged_dict)
+        entity_dict = app_neo4j_queries.create_entity(neo4j_driver_instance, normalized_entity_type, filtered_merged_dict, superclass)
     except TransactionError:
         msg = "Failed to create the new " + normalized_entity_type
         # Log the full stack trace, prepend a line with our message
@@ -5397,7 +5400,10 @@ def _get_metadata_by_id(entity_id:str=None, metadata_scope:MetadataScopeEnum=Met
         abort_forbidden(f"The requested {normalized_entity_type} has non-public data."
                         f"  A Globus token with access permission is required.")
 
+    # We need to exclude `antibodies` for now as it conflicts with some dynamic templates in the Search API
+    # We need to include `protocol_url` as those are needed in the Portal
     final_result = schema_manager.normalize_document_result_for_response(entity_dict=metadata_dict,
+                                                                         properties_to_exclude=['antibodies'],
                                                                          properties_to_include=['protocol_url'])
 
     # Result filtering based on query string

@@ -377,6 +377,8 @@ entity_type : str
     One of the normalized entity types: Dataset, Collection, Sample, Source
 entity_data_dict : dict
     The target Entity node to be created
+superclass : str
+    The normalized entity superclass type if defined, None by default
 
 Returns
 -------
@@ -385,11 +387,17 @@ dict
 """
 
 
-def create_entity(neo4j_driver, entity_type, entity_data_dict):
+def create_entity(neo4j_driver, entity_type, entity_data_dict, superclass=None):
+    # Always define the Entity label in addition to the target `entity_type` label
+    labels = f':Entity:{entity_type}'
+
+    if superclass is not None:
+        labels = f':Entity:{entity_type}:{superclass}'
+
     node_properties_map = _build_properties_map(entity_data_dict)
 
-    query = (  # Always define the Entity label in addition to the target `entity_type` label
-        f"CREATE (e:Entity:{entity_type}) "
+    query = (
+        f"CREATE (e{labels}) "
         f"SET e = {node_properties_map} "
         f"RETURN e AS {record_field_name}")
 
@@ -600,6 +608,11 @@ def get_ancestors(neo4j_driver, uuid, property_key=None):
                 # Convert the list of nodes to a list of dicts
                 results = _nodes_to_dicts(record[record_field_name])
 
+                for result in results:
+                    protocol_url = get_activity_protocol(neo4j_driver, result['uuid'])
+                    if protocol_url != {}:
+                        result['protocol_url'] = protocol_url
+
     return results
 
 
@@ -653,6 +666,11 @@ def get_descendants(neo4j_driver, uuid, property_key=None):
             else:
                 # Convert the list of nodes to a list of dicts
                 results = _nodes_to_dicts(record[record_field_name])
+
+                for result in results:
+                    protocol_url = get_activity_protocol(neo4j_driver, result['uuid'])
+                    if protocol_url != {}:
+                        result['protocol_url'] = protocol_url
 
     return results
 
