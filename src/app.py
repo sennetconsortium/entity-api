@@ -4708,7 +4708,10 @@ def get_entities_for_collection(id: str):
     if not equals(entity_type, "Collection"):
         abort_bad_req(f"{entity_type.title()} with id {id} is not a collection")
 
-    needs_auth = "registered_doi" not in entity_dict
+    needs_auth = (
+        "registered_doi" not in entity_dict
+        or entity_dict["registered_doi"].strip() == ""
+    )
 
     if needs_auth:
         # Collection needs authorization. Make sure the user is in the SenNet read group
