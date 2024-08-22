@@ -4706,7 +4706,7 @@ def get_entities_for_collection(id: str):
 
     needs_auth = (
         "registered_doi" not in entity_dict
-        and entity_dict["registered_doi"].strip() != ""
+        or entity_dict["registered_doi"].strip() == ""
     )
 
     if needs_auth:
