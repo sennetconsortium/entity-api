@@ -292,13 +292,14 @@ ENTITIES:
           - halt_update_if_DOI_exists
           - halt_DOI_if_collection_missing_elements
           - halt_if_DOI_for_unpublished_dataset
-      # Creators and contacts are required for a Collection to be public
-      creators:
+
+      # Contributors and contacts are required for a Collection to be public
+      contributors:
         type: list
-        description: "See description in doi_properties section above"
+        description: "A list of the people who created the entity with full name, email, ORCID iD, institution, etc.. This is analogus to the author list on a publication."
       contacts:
         type: list
-        description: "See description in doi_properties section above"
+        description: "A list of the people who are the main contacts to get information about the entity."
 
       ###### entity-specific validations ######
       title:
@@ -331,7 +332,6 @@ ENTITIES:
         description: "The entities that are contained in the collection."
         # A few time-consuming properties (with read triggers) of each dataset are excluded
         on_read_trigger: get_collection_entities
-        on_index_trigger: get_collection_entities
       group_uuid:
         type: string
         immutable: true
@@ -1216,7 +1216,6 @@ ENTITIES:
         description: "The datasets that are contained in this Upload."
         # A few time-consuming properties (with read triggers) of each dataset are excluded
         on_read_trigger: get_upload_datasets
-        on_index_trigger: get_index_upload_datasets
       assigned_to_group_name:
         type: string
         description: The group who is responsible for the next step in the ingest process

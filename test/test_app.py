@@ -1,7 +1,3 @@
-import test
-
-test.cwd_to_src()
-
 import json
 import os
 import random
@@ -18,36 +14,36 @@ test_data_dir = os.path.join(os.path.dirname(__file__), 'data')
 
 @pytest.fixture()
 def app():
-    app = app_module.app
-    app.config.update({'TESTING': True})
+    a = app_module.app
+    a.config.update({'TESTING': True})
     # other setup
-    yield app
+    yield a
     # clean up
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope='session', autouse=True)
 def ontology_mock():
     """Automatically add ontology mock functions to all tests"""
     with (patch('atlas_consortia_commons.ubkg.ubkg_sdk.UbkgSDK', new=test_utils.MockOntology)):
         yield
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope='session', autouse=True)
 def auth_helper_mock():
     auth_mock = MagicMock()
-    auth_mock.getUserTokenFromRequest.return_value = "test_token"
+    auth_mock.getUserTokenFromRequest.return_value = 'test_token'
     auth_mock.getUserInfo.return_value = {
-        "sub": "8cb9cda5-1930-493a-8cb9-df6742e0fb42",
-        "email": "TESTUSER@example.com",
-        "hmgroupids": ["60b692ac-8f6d-485f-b965-36886ecc5a26"],
+        'sub': '8cb9cda5-1930-493a-8cb9-df6742e0fb42',
+        'email': 'TESTUSER@example.com',
+        'hmgroupids': ['60b692ac-8f6d-485f-b965-36886ecc5a26'],
     }
 
     # auth_helper_instance gets created (from 'import app') before fixture is called
     app_module.auth_helper_instance = auth_mock
     with (
-        patch("hubmap_commons.hm_auth.AuthHelper.configured_instance", return_value=auth_mock),
-        patch("hubmap_commons.hm_auth.AuthHelper.create", return_value=auth_mock),
-        patch("hubmap_commons.hm_auth.AuthHelper.instance", return_value=auth_mock),
+        patch('hubmap_commons.hm_auth.AuthHelper.configured_instance', return_value=auth_mock),
+        patch('hubmap_commons.hm_auth.AuthHelper.create', return_value=auth_mock),
+        patch('hubmap_commons.hm_auth.AuthHelper.instance', return_value=auth_mock),
     ):
         yield
 
@@ -142,7 +138,8 @@ def test_get_entities_by_type_success(app, entity_type):
 
     with (app.test_client() as client,
           patch('app.app_neo4j_queries.get_entities_by_type', return_value=test_data['get_entities_by_type']),
-          patch('app.schema_neo4j_queries.get_entity_creation_action_activity', side_effect=test_data.get('get_entity_creation_action_activity'))):
+          patch('app.schema_neo4j_queries.get_entity_creation_action_activity', return_value=test_data.get('get_entity_creation_action_activity')),
+          patch('app.schema_neo4j_queries.get_sources_associated_entity', return_value=test_data['get_sources_associated_entity'])):
 
         res = client.get(f'/{entity_type}/entities')
 
@@ -336,7 +333,8 @@ def test_get_ancestors_success(app, entity_type):
           patch('app.auth_helper_instance.has_read_privs', return_value=test_data['has_read_privs']),
           patch('app.schema_manager.get_sennet_ids', return_value=test_data['get_sennet_ids']),
           patch('app.app_neo4j_queries.get_entity', return_value=test_data['get_entity']),
-          patch('app.app_neo4j_queries.get_ancestors', return_value=test_data['get_ancestors'])):
+          patch('app.app_neo4j_queries.get_ancestors', return_value=test_data['get_ancestors']),
+          patch('app.schema_neo4j_queries.get_sources_associated_entity', return_value=test_data['get_sources_associated_entity'])):
 
         res = client.get(f'/ancestors/{entity_id}',
                          headers=test_data['headers'])
@@ -365,7 +363,8 @@ def test_get_descendants_success(app, entity_type):
           patch('app.schema_manager.get_sennet_ids', return_value=test_data['get_sennet_ids']),
           patch('app.app_neo4j_queries.get_entity', return_value=test_data['get_entity']),
           patch('app.app_neo4j_queries.get_descendants', return_value=test_data['get_descendants']),
-          patch('app.schema_neo4j_queries.get_entity_creation_action_activity', side_effect=test_data.get('get_entity_creation_action_activity'))):
+          patch('app.schema_neo4j_queries.get_entity_creation_action_activity', side_effect=test_data.get('get_entity_creation_action_activity')),
+          patch('app.schema_neo4j_queries.get_sources_associated_entity', return_value=test_data['get_sources_associated_entity'])):
 
         res = client.get(f'/descendants/{entity_id}',
                          headers=test_data['headers'])
