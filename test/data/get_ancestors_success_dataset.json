@@ -53,7 +53,26 @@
       "sample_category": "Suspension",
       "sennet_id": "SNT687.SFVJ.758",
       "uuid": "5fa78f4fa272db58a7fcc7590376f5e7",
-      "source": null
+      "source": {
+        "metadata": "{}",
+        "lab_source_id": "Human Source 1",
+        "group_name": "CODCC Testing Group",
+        "sennet_id": "SNT522.GDLF.724",
+        "last_modified_timestamp": 1681844922032,
+        "created_by_user_displayname": "Test User",
+        "description": "This is a human source. This is an edit.",
+        "source_type": "Human",
+        "group_uuid": "57192604-18e0-11ed-b79b-972795fc9504",
+        "created_timestamp": 1681826847388,
+        "created_by_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
+        "uuid": "325e13d30a43386d97fb3d046677b568",
+        "last_modified_user_displayname": "Test User",
+        "created_by_user_email": "TESTUSER@example.com",
+        "data_access_level": "consortium",
+        "entity_type": "Source",
+        "last_modified_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
+        "last_modified_user_email": "TESTUSER@example.com"
+      }
     },
     {
       "created_by_user_displayname": "Test User",
@@ -73,7 +92,26 @@
       "sample_category": "Organ",
       "sennet_id": "SNT458.VPHX.635",
       "uuid": "cf3d0408de9afd703c8bd71808176b38",
-      "source": null
+      "source": {
+        "metadata": "{}",
+        "lab_source_id": "Human Source 1",
+        "group_name": "CODCC Testing Group",
+        "sennet_id": "SNT522.GDLF.724",
+        "last_modified_timestamp": 1681844922032,
+        "created_by_user_displayname": "Test User",
+        "description": "This is a human source. This is an edit.",
+        "source_type": "Human",
+        "group_uuid": "57192604-18e0-11ed-b79b-972795fc9504",
+        "created_timestamp": 1681826847388,
+        "created_by_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
+        "uuid": "325e13d30a43386d97fb3d046677b568",
+        "last_modified_user_displayname": "Test User",
+        "created_by_user_email": "TESTUSER@example.com",
+        "data_access_level": "consortium",
+        "entity_type": "Source",
+        "last_modified_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
+        "last_modified_user_email": "TESTUSER@example.com"
+      }
     },
     {
       "created_by_user_displayname": "Test User",
@@ -147,7 +185,7 @@
     "last_modified_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
     "last_modified_user_email": "TESTUSER@example.com",
     "contains_human_genetic_sequences": true,
-    "data_types": ["CODEX"],
+    "dataset_type": "CODEX",
     "status": "Published"
   },
 
@@ -168,8 +206,7 @@
       "data_access_level": "consortium",
       "entity_type": "Sample",
       "last_modified_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
-      "last_modified_user_email": "TESTUSER@example.com",
-      "source": null
+      "last_modified_user_email": "TESTUSER@example.com"
     },
     {
       "organ": "BD",
@@ -188,9 +225,30 @@
       "data_access_level": "consortium",
       "entity_type": "Sample",
       "last_modified_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
-      "last_modified_user_email": "TESTUSER@example.com",
-      "source": null
+      "last_modified_user_email": "TESTUSER@example.com"
     },
+    {
+      "metadata": "{}",
+      "lab_source_id": "Human Source 1",
+      "group_name": "CODCC Testing Group",
+      "sennet_id": "SNT522.GDLF.724",
+      "last_modified_timestamp": 1681844922032,
+      "created_by_user_displayname": "Test User",
+      "description": "This is a human source. This is an edit.",
+      "source_type": "Human",
+      "group_uuid": "57192604-18e0-11ed-b79b-972795fc9504",
+      "created_timestamp": 1681826847388,
+      "created_by_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
+      "uuid": "325e13d30a43386d97fb3d046677b568",
+      "last_modified_user_displayname": "Test User",
+      "created_by_user_email": "TESTUSER@example.com",
+      "data_access_level": "consortium",
+      "entity_type": "Source",
+      "last_modified_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
+      "last_modified_user_email": "TESTUSER@example.com"
+    }
+  ],
+  "get_sources_associated_entity": [
     {
       "metadata": "{}",
       "lab_source_id": "Human Source 1",

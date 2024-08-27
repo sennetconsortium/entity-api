@@ -488,9 +488,9 @@ def _get_entity_visibility(normalized_entity_type, entity_dict):
             'registered_doi' in entity_dict and \
             'doi_url' in entity_dict and \
             'contacts' in entity_dict and \
-            'creators' in entity_dict and \
+            'contributors' in entity_dict and \
             len(entity_dict['contacts']) > 0 and \
-            len(entity_dict['creators']) > 0:
+            len(entity_dict['contributors']) > 0:
 
         # Get the data_access_level for each Dataset in the Collection from Neo4j
         collection_dataset_statuses = schema_neo4j_queries.get_collection_datasets_statuses(neo4j_driver_instance,
@@ -4674,8 +4674,81 @@ def create_multiple_component_details(request, normalized_entity_type, user_toke
     return created_datasets
 
 
+@app.route("/uploads/<id>/datasets", methods=["GET"])
+@require_valid_token()
+def get_datasets_for_upload(id: str):
+    # Verify that the entity is an upload
+    entity_dict = query_target_entity(id)
+    entity_type = entity_dict["entity_type"]
+    if not equals(entity_type, Ontology.ops().entities().UPLOAD):
+        abort_bad_req(f"{entity_type.title()} with id {id} is not an upload")
+
+    properties_to_exclude = [
+        "antibodies",
+        "contacts",
+        "contributors",
+        "ingest_metadata",
+        "ingest_task",
+        "pipeline_message",
+        "status_history"
+    ]
+    datasets = schema_triggers.get_normalized_upload_datasets(entity_dict["uuid"], properties_to_exclude)
+    return jsonify(datasets)
+
+
+@app.route("/collections/<id>/entities", methods=["GET"])
+def get_entities_for_collection(id: str):
+    # Verify that the entity is a collection
+    entity_dict = query_target_entity(id)
+    entity_type = entity_dict["entity_type"]
+    if not equals(entity_type, "Collection"):
+        abort_bad_req(f"{entity_type.title()} with id {id} is not a collection")
+
+    needs_auth = "registered_doi" not in entity_dict
+
+    if needs_auth:
+        # Collection needs authorization. Make sure the user is in the SenNet read group
+        if not user_in_globus_read_group(request):
+            abort_forbidden("Access not granted")
+    else:
+        # Validate the token if it exists. This isn't really necessary since the
+        # collection doesn't require authorization, but to stay consistent with other endpoints
+        validate_token_if_auth_header_exists(request)
+
+    token = get_user_token(request)
+    if not isinstance(token, str):
+        token = get_internal_token()
+
+    properties_to_exclude = [
+        "contains_human_genetic_sequences",
+        "created_timestamp",
+        "created_by_user_displayname",
+        "created_by_user_email",
+        "created_by_user_sub",
+        "description",
+        "ingest_metadata",
+        "ingest_task",
+        "status_history",
+        "dataset_info",
+        "last_modified_timestamp",
+        "last_modified_user_displayname",
+        "last_modified_user_email",
+        "last_modified_user_sub",
+    ]
+
+    # Get the entities associated with the collection
+    entities = schema_triggers.get_normalized_collection_entities(
+        entity_dict["uuid"],
+        token,
+        properties_to_exclude,
+        skip_completion=True
+    )
+
+    return jsonify(entities)
+
+
 """
-Execute 'after_create_triiger' methods
+Execute 'after_create_trigger' methods
 
 Parameters
 ----------
