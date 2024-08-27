@@ -642,6 +642,9 @@ ENTITIES:
         type: boolean
         description: "Whether this entity or an ancestor of this entity contains RUI location information."
         on_index_trigger: get_has_rui_information
+      has_qa_derived_dataset:
+        type: boolean
+        on_index_trigger: get_has_qa_derived_dataset
 
   ############################################# Publication #############################################
   Publication:
