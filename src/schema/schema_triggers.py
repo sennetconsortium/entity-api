@@ -3604,3 +3604,48 @@ def get_has_qa_derived_dataset(property_key, normalized_type, user_token, existi
         return property_key, "False"
     else:
         return property_key, "False"
+
+
+def get_assay_displayname(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """
+    Trigger event method that retreives the display name of the assay from the ingest-api assaytype endpoint
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key of the value to be generated
+    normalized_type : str
+        One of the types defined in the schema yaml: Sample
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    str: The target property key
+    str: The display name of the assay
+    """
+    if "uuid" not in existing_data_dict:
+        msg = create_trigger_error_msg(
+            "Missing 'uuid' key in 'existing_data_dict' during calling 'get_assay_displayname()' trigger method.",
+            existing_data_dict, new_data_dict
+        )
+        raise KeyError(msg)
+
+    uuid = existing_data_dict["uuid"]
+    ingest_api_target_url = f"{schema_manager.get_ingest_api_url()}/assaytype/{uuid}"
+
+    headers = {
+        "Authorization": f"Bearer {user_token}",
+    }
+    res = requests.get(ingest_api_target_url, headers=headers)
+    if res.status_code != 200:
+        return property_key, None
+
+    if "description" not in res.json():
+        return property_key, None
+
+    return property_key, res.json()["description"]

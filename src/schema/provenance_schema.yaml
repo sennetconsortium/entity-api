@@ -645,6 +645,10 @@ ENTITIES:
       has_qa_derived_dataset:
         type: boolean
         on_index_trigger: get_has_qa_derived_dataset
+      assay_displayname:
+        type: string
+        description: "The display name of the assay type."
+        on_index_trigger: get_assay_displayname
 
   ############################################# Publication #############################################
   Publication:
