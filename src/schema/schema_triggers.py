@@ -3428,7 +3428,7 @@ def get_organ_hierarchy(property_key, normalized_type, user_token, existing_data
 
 
 def get_dataset_type_hierarchy(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
-    """Trigger event method setting the name of the top level of the hierarchy this dataset type belongs to.
+    """Trigger event method for setting the dataset type hierarchy.
 
     Parameters
     ----------
@@ -3447,31 +3447,45 @@ def get_dataset_type_hierarchy(property_key, normalized_type, user_token, existi
     -------
     Tuple[str, str]
         str: The target property key
-        str: The dataset type hierarchy
+        dict: The dataset type hierarchy with keys of 'first_level' and 'second_level'
     """
-    try:
-        # 10x Multiome has an exception where dataset_type.dataset_type (a CEDAR value) is 10X Multiome,
-        # but it needs to be displayed indefinitely as 10x Multiome
-        if equals(existing_data_dict['dataset_type'], '10x Multiome'):
-            return property_key, '10x Multiome'
+    if "uuid" not in existing_data_dict:
+        msg = create_trigger_error_msg(
+            "Missing 'uuid' key in 'existing_data_dict' during calling 'get_dataset_type_hierarchy()' trigger method.",
+            existing_data_dict, new_data_dict
+        )
+        raise KeyError(msg)
 
-        def prop_callback(d):
-            return d.get('description')
+    uuid = existing_data_dict["uuid"]
+    ingest_api_target_url = f"{schema_manager.get_ingest_api_url()}/assaytype/{uuid}"
 
-        def val_callback(d):
-            return d.get('dataset_type').get('dataset_type')
+    headers = {
+        "Authorization": f"Bearer {user_token}",
+    }
+    res = requests.get(ingest_api_target_url, headers=headers)
+    if res.status_code != 200:
+        return property_key, None
 
-        assay_classes = Ontology.ops(prop_callback=prop_callback, val_callback=val_callback, as_data_dict=True).assay_classes()
-        dataset_type_hierarchy = assay_classes[existing_data_dict['dataset_type']]
+    if "description" not in res.json() or "assaytype" not in res.json():
+        return property_key, None
 
-    except Exception:
-        # Fallback value in case of ubkg missing
-        dataset_type_hierarchy = existing_data_dict['dataset_type']
-        res = re.findall('.+?(?=\[)', existing_data_dict['dataset_type'])
-        if len(res) > 0:
-            dataset_type_hierarchy = res[0].strip()
+    desc = res.json()["description"]
+    assay_type = res.json()["assaytype"]
 
-    return property_key, dataset_type_hierarchy
+    def prop_callback(d):
+        return d["assaytype"]
+
+    def val_callback(d):
+        return d["dataset_type"]["fig2"]["modality"]
+
+    assay_classes = Ontology.ops(prop_callback=prop_callback, val_callback=val_callback, as_data_dict=True).assay_classes()
+    if assay_type not in assay_classes:
+        return property_key, None
+
+    return property_key, {
+        "first_level": assay_classes[assay_type],
+        "second_level": desc
+    }
 
 
 def get_has_qa_derived_dataset(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
@@ -3510,48 +3524,3 @@ def get_has_qa_derived_dataset(property_key, normalized_type, user_token, existi
         return property_key, "False"
     else:
         return property_key, "False"
-
-
-def get_assay_displayname(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
-    """Trigger event method that retreives the display name of the assay from the ingest-api assaytype endpoint.
-
-    Parameters
-    ----------
-    property_key : str
-        The target property key of the value to be generated
-    normalized_type : str
-        One of the types defined in the schema yaml: Sample
-    user_token: str
-        The user's globus nexus token
-    existing_data_dict : dict
-        A dictionary that contains all existing entity properties
-    new_data_dict : dict
-        A merged dictionary that contains all possible input data to be used
-
-    Returns
-    -------
-    Tuple[str, str]
-        str: The target property key
-        str: The display name of the assay
-    """
-    if "uuid" not in existing_data_dict:
-        msg = create_trigger_error_msg(
-            "Missing 'uuid' key in 'existing_data_dict' during calling 'get_assay_displayname()' trigger method.",
-            existing_data_dict, new_data_dict
-        )
-        raise KeyError(msg)
-
-    uuid = existing_data_dict["uuid"]
-    ingest_api_target_url = f"{schema_manager.get_ingest_api_url()}/assaytype/{uuid}"
-
-    headers = {
-        "Authorization": f"Bearer {user_token}",
-    }
-    res = requests.get(ingest_api_target_url, headers=headers)
-    if res.status_code != 200:
-        return property_key, None
-
-    if "description" not in res.json():
-        return property_key, None
-
-    return property_key, res.json()["description"]
