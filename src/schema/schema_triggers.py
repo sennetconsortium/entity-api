@@ -1059,7 +1059,7 @@ def get_sample_block_descendants(property_key, normalized_type, user_token, exis
             descendant_list = schema_manager.normalize_entities_list_for_response(app_neo4j_queries.get_descendants(driver, existing_data_dict['uuid']))
 
             # These are the fields required by the HRA EUI
-            properties_to_keep = ['created_by_user_displayname', 'dataset_type', 'entity_id', 'group_name', 'group_uuid', 'last_modified_timestamp', 'sennet_id', 'thumbnail_file', 'uuid']
+            properties_to_keep = ['created_by_user_displayname', 'dataset_type', 'entity_type', 'group_name', 'group_uuid', 'last_modified_timestamp', 'sennet_id', 'thumbnail_file', 'uuid']
             descendant_list = [remove_fields(d, properties_to_keep) for d in descendant_list]
             return property_key, descendant_list
 
