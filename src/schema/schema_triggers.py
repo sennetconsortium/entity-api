@@ -1059,8 +1059,17 @@ def get_sample_block_descendants(property_key, normalized_type, user_token, exis
             descendant_list = schema_manager.normalize_entities_list_for_response(app_neo4j_queries.get_descendants(driver, existing_data_dict['uuid']))
 
             # These are the fields required by the HRA EUI
-            properties_to_keep = ['created_by_user_displayname', 'dataset_type', 'entity_type', 'group_name', 'group_uuid', 'last_modified_timestamp', 'sennet_id', 'thumbnail_file', 'uuid']
-            descendant_list = [remove_fields(d, properties_to_keep) for d in descendant_list]
+            properties_to_keep = ['created_by_user_displayname', 'dataset_type', 'entity_type', 'group_name',
+                                  'group_uuid', 'last_modified_timestamp', 'sennet_id',
+                                  'thumbnail_file', 'uuid']
+            for i, descendant in enumerate(descendant_list):
+                tissue_id = descendant.get('ingest_metadata', {}).get('metadata', {}).get('tissue_id', None)
+                descendant = remove_fields(descendant, properties_to_keep)
+                if tissue_id:
+                    descendant['ingest_metadata'] = {}
+                    descendant['ingest_metadata']['metadata'] = {}
+                    descendant['ingest_metadata']['metadata']['tissue_id'] = tissue_id
+                descendant_list[i] = descendant
             return property_key, descendant_list
 
     return property_key, None
