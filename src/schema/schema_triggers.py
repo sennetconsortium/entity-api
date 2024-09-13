@@ -12,6 +12,7 @@ from neo4j.exceptions import TransactionError
 import re
 
 # Local modules
+import app_neo4j_queries
 from lib import github
 from lib.exceptions import create_trigger_error_msg
 from lib.ontology import Ontology
@@ -977,6 +978,60 @@ def get_dataset_direct_ancestors(property_key, normalized_type, user_token, exis
                                                                        properties_to_skip)
 
     return property_key, schema_manager.normalize_entities_list_for_response(complete_entities_list)
+
+def get_sample_block_descendants(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method of getting descendants for Sample Blocks.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key of the value to be generated
+    normalized_type : str
+        One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, list]
+        str: The target property key
+        list: A list of associated descendants for Sample Blocks
+    """
+    if 'uuid' not in existing_data_dict:
+        msg = create_trigger_error_msg(
+            "Missing 'uuid' key in 'existing_data_dict' during calling 'get_dataset_direct_ancestors()' trigger method.",
+            existing_data_dict, new_data_dict
+        )
+        raise KeyError(msg)
+
+    # Check if the entity is a Sample Block, skip otherwise
+    if equals(Ontology.ops().entities().SAMPLE, normalized_type):
+        if equals(existing_data_dict['sample_category'], "Block"):
+            driver = schema_manager.get_neo4j_driver_instance()
+            descendant_list = schema_manager.normalize_entities_list_for_response(app_neo4j_queries.get_descendants(driver, existing_data_dict['uuid']))
+
+            # These are the fields required by the HRA EUI
+            properties_to_keep = ['created_by_user_displayname', 'dataset_type', 'entity_type', 'group_name',
+                                  'group_uuid', 'last_modified_timestamp', 'sennet_id',
+                                  'thumbnail_file', 'uuid']
+            for i, descendant in enumerate(descendant_list):
+                tissue_id = descendant.get('ingest_metadata', {}).get('metadata', {}).get('tissue_id', None)
+                descendant = remove_fields(descendant, properties_to_keep)
+                if tissue_id:
+                    descendant['ingest_metadata'] = {}
+                    descendant['ingest_metadata']['metadata'] = {}
+                    descendant['ingest_metadata']['metadata']['tissue_id'] = tissue_id
+                descendant_list[i] = descendant
+            return property_key, descendant_list
+
+    return property_key, None
+
+def remove_fields(d, properties_to_keep):
+    return {key: value for key, value in d.items() if key in properties_to_keep}
 
 
 def get_local_directory_rel_path(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):

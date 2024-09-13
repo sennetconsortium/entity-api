@@ -1132,7 +1132,12 @@ ENTITIES:
         description: "The list of all Sources associated with Datasets"
         on_read_trigger: set_sample_source
         on_index_trigger: set_sample_source
-
+      descendants:
+        type: list
+        generated: true
+        immutable: true
+        description: "The list of all descendants for Sample Blocks. This is utilized by the HRA EUI."
+        on_index_trigger: get_sample_block_descendants
 
   ############################################# Upload #############################################
   # Eventually we might allow folks to bulk register Samples or Sources through the same mechanism.
