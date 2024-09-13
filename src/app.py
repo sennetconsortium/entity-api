@@ -489,8 +489,8 @@ def _get_entity_visibility(normalized_entity_type, entity_dict):
             'doi_url' in entity_dict and \
             'contacts' in entity_dict and \
             'contributors' in entity_dict and \
-            len(entity_dict['contacts']) > 0 and \
-            len(entity_dict['contributors']) > 0:
+            len(entity_dict['contacts'].strip()) > 0 and \
+            len(entity_dict['contributors'].strip()) > 0:
 
         # Get the data_access_level for each Dataset in the Collection from Neo4j
         collection_dataset_statuses = schema_neo4j_queries.get_collection_datasets_statuses(neo4j_driver_instance,
@@ -4708,15 +4708,17 @@ def get_entities_for_collection(id: str):
     if not equals(entity_type, "Collection"):
         abort_bad_req(f"{entity_type.title()} with id {id} is not a collection")
 
-    needs_auth = "registered_doi" not in entity_dict
+    # Determine if the entity is publicly visible base on its data, only.
+    entity_scope = _get_entity_visibility(normalized_entity_type=entity_type,
+                                          entity_dict=entity_dict)
 
-    if needs_auth:
+    if entity_scope != DataVisibilityEnum.PUBLIC:
         # Collection needs authorization. Make sure the user is in the SenNet read group
         if not user_in_globus_read_group(request):
             abort_forbidden("Access not granted")
     else:
         # Validate the token if it exists. This isn't really necessary since the
-        # collection doesn't require authorization, but to stay consistent with other endpoints
+        # collection is pulic, but to stay consistent with other endpoints
         validate_token_if_auth_header_exists(request)
 
     token = get_user_token(request)
