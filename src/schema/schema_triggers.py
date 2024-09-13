@@ -3504,6 +3504,7 @@ def get_dataset_type_hierarchy(property_key, normalized_type, user_token, existi
         str: The target property key
         dict: The dataset type hierarchy with keys of 'first_level' and 'second_level'
     """
+    return_dict = None
     if "uuid" not in existing_data_dict:
         msg = create_trigger_error_msg(
             "Missing 'uuid' key in 'existing_data_dict' during calling 'get_dataset_type_hierarchy()' trigger method.",
@@ -3538,13 +3539,13 @@ def get_dataset_type_hierarchy(property_key, normalized_type, user_token, existi
         return d["dataset_type"]["fig2"]["modality"]
 
     assay_classes = Ontology.ops(prop_callback=prop_callback, val_callback=val_callback, as_data_dict=True).assay_classes()
+    logger.info("Assay classes: " + str(assay_classes))
     if assay_type not in assay_classes:
-        return property_key, None
+        return property_key, return_dict
 
-    return property_key, {
-        "first_level": assay_classes[assay_type],
-        "second_level": desc
-    }
+    return_dict = {'first_level': assay_classes[assay_type], 'second_level': desc}
+
+    return property_key, return_dict
 
 
 def get_has_qa_derived_dataset(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
