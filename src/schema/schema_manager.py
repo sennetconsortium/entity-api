@@ -1405,6 +1405,7 @@ def _normalize_metadata(entity_dict, metadata_scope:MetadataScopeEnum, propertie
             # Only convert to Python list/dict when the string literal is not empty
             # instead of returning the json-as-string or array-as-string
             # convert_str_literal() also removes those control chars to avoid SyntaxError
+            logger.info(entity_dict[key])
             entity_dict[key] = convert_str_literal(entity_dict[key])
 
         # Add the target key with correct value of data type to the normalized_entity dict
