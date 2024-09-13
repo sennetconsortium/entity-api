@@ -33,86 +33,82 @@ sparql_vocabs = {
 ## Trigger methods shared among Collection, Dataset, Source, Sample - DO NOT RENAME
 ####################################################################################################
 
-"""
-Trigger event method of generating current timestamp
-
-Parameters
-----------
-property_key : str
-    The target property key of the value to be generated
-normalized_type : str
-    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-
-Returns
--------
-str: The target property key
-str: The neo4j TIMESTAMP() function as string
-"""
-
 
 def set_timestamp(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method of generating current timestamp.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key of the value to be generated
+    normalized_type : str
+        One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, str]
+        str: The target property key
+        str: The neo4j TIMESTAMP() function as string
+    """
     # Use the neo4j TIMESTAMP() function during entity creation
     # Will be proessed in app_neo4j_queries._build_properties_map()
     # and schema_neo4j_queries._build_properties_map()
     return property_key, 'TIMESTAMP()'
 
-"""
-Trigger event method of setting the entity type of a given entity
-
-Parameters
-----------
-property_key : str
-    The target property key of the value to be generated
-normalized_type : str
-    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-
-Returns
--------
-str: The target property key
-str: The string of normalized entity type
-"""
-
 
 def set_entity_type(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method of setting the entity type of a given entity.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key of the value to be generated
+    normalized_type : str
+        One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, str]
+        str: The target property key
+        str: The string of normalized entity type
+    """
     return property_key, normalized_type
 
 
-"""
-Trigger event method of getting user sub
-
-Parameters
-----------
-property_key : str
-    The target property key of the value to be generated
-normalized_type : str
-    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-
-Returns
--------
-str: The target property key
-str: The 'sub' string
-"""
-
-
 def set_user_sub(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method of getting user sub.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key of the value to be generated
+    normalized_type : str
+        One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, str]
+        str: The target property key
+        str: The 'sub' string
+    """
     if 'sub' not in new_data_dict:
         msg = create_trigger_error_msg(
             "Missing 'sub' key in 'new_data_dict' during calling 'set_user_sub()' trigger method.",
@@ -123,30 +119,28 @@ def set_user_sub(property_key, normalized_type, user_token, existing_data_dict, 
     return property_key, new_data_dict['sub']
 
 
-"""
-Trigger event method of getting user email
-
-Parameters
-----------
-property_key : str
-    The target property key of the value to be generated
-normalized_type : str
-    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-
-Returns
--------
-str: The target property key
-str: The 'email' string
-"""
-
-
 def set_user_email(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method of getting user email.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key of the value to be generated
+    normalized_type : str
+        One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, str]
+        str: The target property key
+        str: The 'email' string
+    """
     if 'email' not in new_data_dict:
         msg = create_trigger_error_msg(
             "Missing 'email' key in 'new_data_dict' during calling 'set_user_email()' trigger method.",
@@ -157,30 +151,28 @@ def set_user_email(property_key, normalized_type, user_token, existing_data_dict
     return property_key, new_data_dict['email']
 
 
-"""
-Trigger event method of getting user name
-
-Parameters
-----------
-property_key : str
-    The target property key of the value to be generated
-normalized_type : str
-    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-
-Returns
--------
-str: The target property key
-str: The 'name' string
-"""
-
-
 def set_user_displayname(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method of getting user name.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key of the value to be generated
+    normalized_type : str
+        One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, str]
+        str: The target property key
+        str: The 'name' string
+    """
     if 'name' not in new_data_dict:
         msg = create_trigger_error_msg(
             "Missing 'name' key in 'new_data_dict' during calling 'set_user_displayname()' trigger method.",
@@ -191,30 +183,28 @@ def set_user_displayname(property_key, normalized_type, user_token, existing_dat
     return property_key, new_data_dict['name']
 
 
-"""
-Trigger event method of getting uuid, hubmap_id for a new entity to be created
-
-Parameters
-----------
-property_key : str
-    The target property key of the value to be generated
-normalized_type : str
-    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-
-Returns
--------
-str: The target property key
-str: The uuid created via uuid-api
-"""
-
-
 def set_uuid(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method of getting uuid, hubmap_id for a new entity to be created.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key of the value to be generated
+    normalized_type : str
+        One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, str]
+        str: The target property key
+        str: The uuid created via uuid-api
+    """
     if 'uuid' not in new_data_dict:
         msg = create_trigger_error_msg(
             "Missing 'uuid' key in 'new_data_dict' during calling 'set_uuid()' trigger method.",
@@ -225,30 +215,28 @@ def set_uuid(property_key, normalized_type, user_token, existing_data_dict, new_
     return property_key, new_data_dict['uuid']
 
 
-"""
-Trigger event method of getting uuid, hubmap_id for a new entity to be created
-
-Parameters
-----------
-property_key : str
-    The target property key of the value to be generated
-normalized_type : str
-    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-
-Returns
--------
-str: The target property key
-str: The sennet_id/sennet_id created via uuid-api
-"""
-
-
 def set_sennet_id(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method of getting uuid, hubmap_id for a new entity to be created.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key of the value to be generated
+    normalized_type : str
+        One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, str]
+        str: The target property key
+        str: The sennet_id/sennet_id created via uuid-api
+    """
     if 'sennet_id' not in new_data_dict:
         msg = create_trigger_error_msg(
             "Missing 'sennet_id' key in 'new_data_dict' during calling 'set_sennet_id()' trigger method.",
@@ -264,30 +252,28 @@ def set_sennet_id(property_key, normalized_type, user_token, existing_data_dict,
 ####################################################################################################
 
 
-"""
-Trigger event method of generating data access level
-
-Parameters
-----------
-property_key : str
-    The target property key of the value to be generated
-normalized_type : str
-    One of the entity types defined in the schema yaml: Source, Sample, Dataset
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-
-Returns
--------
-str: The target property key
-str: The data access level string
-"""
-
-
 def set_data_access_level(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method of generating data access level.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key of the value to be generated
+    normalized_type : str
+        One of the entity types defined in the schema yaml: Source, Sample, Dataset
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, str]
+        str: The target property key
+        str: The data access level string
+    """
     if 'uuid' not in new_data_dict:
         msg = create_trigger_error_msg(
             "Missing 'uuid' key in 'new_data_dict' during calling 'set_data_access_level()' trigger method.",
@@ -330,30 +316,28 @@ def set_data_access_level(property_key, normalized_type, user_token, existing_da
     return property_key, data_access_level
 
 
-"""
-Trigger event method of setting the group_uuid
-
-Parameters
-----------
-property_key : str
-    The target property key of the value to be generated
-normalized_type : str
-    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-
-Returns
--------
-str: The target property key
-str: The group uuid
-"""
-
-
 def set_group_uuid(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method of setting the group_uuid.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key of the value to be generated
+    normalized_type : str
+        One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, str]
+        str: The target property key
+        str: The group uuid
+    """
     group_uuid = None
 
     # Look for membership in a single "data provider" group and sets to that.
@@ -396,30 +380,28 @@ def set_group_uuid(property_key, normalized_type, user_token, existing_data_dict
     return property_key, group_uuid
 
 
-"""
-Trigger event method of setting the group_name
-
-Parameters
-----------
-property_key : str
-    The target property key of the value to be generated
-normalized_type : str
-    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-
-Returns
--------
-str: The target property key
-str: The group name
-"""
-
-
 def set_group_name(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method of setting the group_name.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key of the value to be generated
+    normalized_type : str
+        One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, str]
+        str: The target property key
+        str: The group name
+    """
     group_name = None
 
     # If `group_uuid` is not already set, looks for membership in a single "data provider" group and sets to that.
@@ -452,119 +434,112 @@ def set_group_name(property_key, normalized_type, user_token, existing_data_dict
 ## Trigger methods shared by Source and Sample - DO NOT RENAME
 ####################################################################################################
 
-"""
-Trigger event method to commit files saved that were previously uploaded with UploadFileHelper.save_file
-
-The information, filename and optional description is saved in the field with name specified by `target_property_key`
-in the provided data_dict.  The image files needed to be previously uploaded
-using the temp file service (UploadFileHelper.save_file).  The temp file id provided
-from UploadFileHelper, paired with an optional description of the file must be provided
-in the field `image_files_to_add` in the data_dict for each file being committed
-in a JSON array like below ("description" is optional): 
-
-[
-  {
-    "temp_file_id": "eiaja823jafd",
-    "description": "Image file 1"
-  },
-  {
-    "temp_file_id": "pd34hu4spb3lk43usdr"
-  },
-  {
-    "temp_file_id": "32kafoiw4fbazd",
-    "description": "Image file 3"
-  }
-]
-
-
-Parameters
-----------
-property_key : str
-    The target property key of the value to be generated
-normalized_type : str
-    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-
-Returns
--------
-str: The target property key
-list: The file info dicts in a list
-"""
-
 
 def commit_image_files(property_key, normalized_type, user_token, existing_data_dict, new_data_dict, generated_dict):
-    return _commit_files('image_files', property_key, normalized_type, user_token, existing_data_dict, new_data_dict,
-                         generated_dict)
+    """Trigger event method to commit files saved that were previously uploaded with UploadFileHelper.save_file.
 
+    The information, filename and optional description is saved in the field with name specified by `target_property_key`
+    in the provided data_dict.  The image files needed to be previously uploaded
+    using the temp file service (UploadFileHelper.save_file).  The temp file id provided
+    from UploadFileHelper, paired with an optional description of the file must be provided
+    in the field `image_files_to_add` in the data_dict for each file being committed
+    in a JSON array like below ("description" is optional):
 
-"""
-Trigger event methods for removing files from an entity during update
+    [
+      {
+        "temp_file_id": "eiaja823jafd",
+        "description": "Image file 1"
+      },
+      {
+        "temp_file_id": "pd34hu4spb3lk43usdr"
+      },
+      {
+        "temp_file_id": "32kafoiw4fbazd",
+        "description": "Image file 3"
+      }
+    ]
 
-Files are stored in a json encoded text field with property name 'target_property_key' in the entity dict
-The files to remove are specified as file uuids in the `property_key` field
+    Parameters
+    ----------
+    property_key : str
+        The target property key of the value to be generated
+    normalized_type : str
+        One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+    generated_dict : dict
+        A dictionary that contains all final data
 
-The two outer methods (delete_image_files and delete_metadata_files) pass the target property
-field name to private method, _delete_files along with the other required trigger properties
-
-Parameters
-----------
-property_key : str
-    The target property key
-normalized_type : str
-    One of the types defined in the schema yaml: Source, Sample
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-
------------
-target_property_key: str
-    The name of the property where the file information is stored
-
-Returns
--------
-str: The target property key
-list: The file info dicts in a list
-"""
+    Returns
+    -------
+    Tuple[str, list]
+        str: The target property key
+        list: The file info dicts in a list
+    """
+    return _commit_files('image_files', property_key, normalized_type, user_token, existing_data_dict, new_data_dict, generated_dict)
 
 
 def delete_image_files(property_key, normalized_type, user_token, existing_data_dict, new_data_dict, generated_dict):
-    return _delete_files('image_files', property_key, normalized_type, user_token, existing_data_dict, new_data_dict,
-                         generated_dict)
+    """Trigger event methods for removing files from an entity during update.
+
+    Files are stored in a json encoded text field with property name 'target_property_key' in the entity dict
+    The files to remove are specified as file uuids in the `property_key` field
+
+    The two outer methods (delete_image_files and delete_metadata_files) pass the target property
+    field name to private method, _delete_files along with the other required trigger properties
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key
+    normalized_type : str
+        One of the types defined in the schema yaml: Source, Sample
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+    generated_dict : dict
+        A dictionary that contains all final data
+
+    Returns
+    -------
+    Tuple[str, list]
+        str: The target property key
+        list: The file info dicts in a list
+    """
+    return _delete_files('image_files', property_key, normalized_type, user_token, existing_data_dict, new_data_dict, generated_dict)
 
 
-"""
-Trigger event method to ONLY update descriptions of existing files
+def update_file_descriptions(property_key, normalized_type, user_token, existing_data_dict, new_data_dict, generated_dict):
+    """Trigger event method to ONLY update descriptions of existing files.
 
-Parameters
-----------
-property_key : str
-    The target property key of the value to be generated
-normalized_type : str
-    One of the types defined in the schema yaml: Source, Sample
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
+    Parameters
+    ----------
+    property_key : str
+        The target property key of the value to be generated
+    normalized_type : str
+        One of the types defined in the schema yaml: Source, Sample
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+    generated_dict : dict
+        A dictionary that contains all final data
 
-Returns
--------
-str: The target property key
-list: The file info dicts (with updated descriptions) in a list
-"""
-
-
-def update_file_descriptions(property_key, normalized_type, user_token, existing_data_dict, new_data_dict,
-                             generated_dict):
+    Returns
+    -------
+    Tuple[str, list]
+        str: The target property key
+        list: The file info dicts (with updated descriptions) in a list
+    """
     if property_key not in new_data_dict:
         msg = create_trigger_error_msg(
             f"Missing '{property_key}' key in 'new_data_dict' during calling 'update_file_descriptions()' trigger method.",
@@ -624,7 +599,7 @@ def update_file_descriptions(property_key, normalized_type, user_token, existing
 
 
 def get_collection_entities(property_key: str, normalized_type: str, user_token: str, existing_data_dict: dict, new_data_dict: dict):
-    """Trigger event method of getting a list of associated datasets for a given collection
+    """Trigger event method of getting a list of associated datasets for a given collection.
 
     Parameters
     ----------
@@ -641,8 +616,9 @@ def get_collection_entities(property_key: str, normalized_type: str, user_token:
 
     Returns
     -------
-    str: The target property key
-    list: A list of associated dataset dicts with all the normalized information
+    Tuple[str, list]
+        str: The target property key
+        list: A list of associated dataset dicts with all the normalized information
     """
     if "uuid" not in existing_data_dict:
         msg = create_trigger_error_msg(
@@ -688,7 +664,9 @@ def get_normalized_collection_entities(uuid: str, token: str, properties_to_excl
 
     Returns
     -------
-    list: A list of associated entity dicts with all the normalized information
+    Tuple[str, list]
+        str: The target property key
+        list: A list of associated entity dicts with all the normalized information
     """
     db = schema_manager.get_neo4j_driver_instance()
     entities_list = schema_neo4j_queries.get_collection_entities(db, uuid)
@@ -704,30 +682,28 @@ def get_normalized_collection_entities(uuid: str, token: str, properties_to_excl
                                                                properties_to_exclude=properties_to_exclude)
 
 
-"""
-Trigger event method of getting the associated collection for this publication
-
-Parameters
-----------
-property_key : str
-    The target property key
-normalized_type : str
-    One of the types defined in the schema yaml: Dataset
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-
-Returns
--------
-str: The target property key
-dict: A dictionary representation of the associated collection with all the normalized information
-"""
-
-
 def get_publication_associated_collection(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method of getting the associated collection for this publication.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key
+    normalized_type : str
+        One of the types defined in the schema yaml: Dataset
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, dict]
+        str: The target property key
+        dict: A dictionary representation of the associated collection with all the normalized information
+    """
     if 'uuid' not in existing_data_dict:
         msg = create_trigger_error_msg(
             "Missing 'uuid' key in 'existing_data_dict' during calling 'get_publication_associated_collection()' trigger method.",
@@ -746,26 +722,22 @@ def get_publication_associated_collection(property_key, normalized_type, user_to
     return property_key, schema_manager.normalize_entity_result_for_response(collection_dict)
 
 
-"""
-Trigger event method of creating or recreating linkages between this new publication and its associated_collection
+def link_publication_to_associated_collection(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method of creating or recreating linkages between this new publication and its associated_collection.
 
-Parameters
-----------
-property_key : str
-    The target property key
-normalized_type : str
-    One of the types defined in the schema yaml: Publication
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-"""
-
-
-def link_publication_to_associated_collection(property_key, normalized_type, user_token, existing_data_dict,
-                                              new_data_dict):
+    Parameters
+    ----------
+    property_key : str
+        The target property key
+    normalized_type : str
+        One of the types defined in the schema yaml: Publication
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+    """
     if 'uuid' not in existing_data_dict:
         msg = create_trigger_error_msg(
             "Missing 'uuid' key in 'existing_data_dict' during calling 'link_publication_to_associated_collection()' trigger method.",
@@ -801,58 +773,55 @@ def link_publication_to_associated_collection(property_key, normalized_type, use
 ## Trigger methods specific to Dataset - DO NOT RENAME
 ####################################################################################################
 
-"""
-Trigger event method of setting the default "New" status for this new Dataset
-
-Parameters
-----------
-property_key : str
-    The target property key
-normalized_type : str
-    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-
-Returns
--------
-str: The target property key
-str: Initial status of "New"
-"""
-
 
 def set_dataset_status_new(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method of setting the default "New" status for this new Dataset.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key
+    normalized_type : str
+        One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, str]
+        str: The target property key
+        str: Initial status of "New"
+    """
     # Always 'New' on dataset creation
     return property_key, 'New'
 
 
-"""
-Trigger event method of getting a list of collections for this new Dataset
-
-Parameters
-----------
-property_key : str
-    The target property key
-normalized_type : str
-    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-
-Returns
--------
-str: The target property key
-list: A list of associated collections with all the normalized information
-"""
-
-
 def get_dataset_collections(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method of getting a list of collections for this new Dataset.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key
+    normalized_type : str
+        One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, list]
+        str: The target property key
+        list: A list of associated collections with all the normalized information
+    """
     return_list = None
 
     if 'uuid' not in existing_data_dict:
@@ -877,30 +846,28 @@ def get_dataset_collections(property_key, normalized_type, user_token, existing_
     return property_key, return_list
 
 
-"""
-Trigger event method of getting the associated Upload for this Dataset
-
-Parameters
-----------
-property_key : str
-    The target property key
-normalized_type : str
-    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-
-Returns
--------
-str: The target property key
-dict: A dict of associated Upload detail with all the normalized information
-"""
-
-
 def get_dataset_upload(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method of getting the associated Upload for this Dataset.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key
+    normalized_type : str
+        One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, dict]
+        str: The target property key
+        dict: A dict of associated Upload detail with all the normalized information
+    """
     return_dict = None
 
     if 'uuid' not in existing_data_dict:
@@ -924,31 +891,22 @@ def get_dataset_upload(property_key, normalized_type, user_token, existing_data_
     return property_key, return_dict
 
 
-
-"""
-Trigger event method for creating or recreating linkages between this new Collection and the Datasets it contains
-
-Parameters
-----------
-property_key : str
-    The target property key
-normalized_type : str
-    One of the types defined in the schema yaml: Dataset
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-
-Returns
--------
-str: The target property key
-str: The uuid string of source entity
-"""
-
-
 def link_collection_to_entities(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method for creating or recreating linkages between this new Collection and the Datasets it contains.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key
+    normalized_type : str
+        One of the types defined in the schema yaml: Dataset
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+    """
     if 'uuid' not in existing_data_dict:
         msg = create_trigger_error_msg(
             "Missing 'uuid' key in 'existing_data_dict' during calling 'link_collection_to_entities()' trigger method.",
@@ -967,38 +925,36 @@ def link_collection_to_entities(property_key, normalized_type, user_token, exist
 
     try:
         # Create a linkage (without an Activity node) between the Collection node and each Entity it contains.
-        schema_neo4j_queries.link_collection_to_entities(neo4j_driver=schema_manager.get_neo4j_driver_instance()
-                                                         , collection_uuid=existing_data_dict['uuid']
-                                                         , entities_uuid_list=entity_uuids)
-    except TransactionError as te:
+        schema_neo4j_queries.link_collection_to_entities(neo4j_driver=schema_manager.get_neo4j_driver_instance(),
+                                                         collection_uuid=existing_data_dict['uuid'],
+                                                         entities_uuid_list=entity_uuids)
+    except TransactionError:
         # No need to log
         raise
 
 
-"""
-Trigger event method of getting source uuid
-
-Parameters
-----------
-property_key : str
-    The target property key of the value to be generated
-normalized_type : str
-    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-
-Returns
--------
-str: The target property key
-list: A list of associated direct ancestors with all the normalized information
-"""
-
-
 def get_dataset_direct_ancestors(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method of getting direct ancestors.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key of the value to be generated
+    normalized_type : str
+        One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, list]
+        str: The target property key
+        list: A list of associated direct ancestors with all the normalized information
+    """
     if 'uuid' not in existing_data_dict:
         msg = create_trigger_error_msg(
             "Missing 'uuid' key in 'existing_data_dict' during calling 'get_dataset_direct_ancestors()' trigger method.",
@@ -1008,20 +964,20 @@ def get_dataset_direct_ancestors(property_key, normalized_type, user_token, exis
 
     # No property key needs to filter the result
     # Get back the list of ancestor dicts
-    direct_ancestors_list = schema_neo4j_queries.get_dataset_direct_ancestors(
-        schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'])
+    driver = schema_manager.get_neo4j_driver_instance()
+    direct_ancestors_list = schema_neo4j_queries.get_dataset_direct_ancestors(driver,
+                                                                              existing_data_dict['uuid'])
 
     # We don't want to show too much nested information
     # The direct ancestor of a Dataset could be: Dataset or Sample
     # Skip running the trigger methods for 'direct_ancestors' and 'collections' if the direct ancestor is Dataset
     # Skip running the trigger methods for 'direct_ancestor' if the direct ancestor is Sample
     properties_to_skip = ['direct_ancestors', 'collections', 'direct_ancestor']
-    complete_entities_list = schema_manager.get_complete_entities_list(user_token, direct_ancestors_list,
+    complete_entities_list = schema_manager.get_complete_entities_list(user_token,
+                                                                       direct_ancestors_list,
                                                                        properties_to_skip)
 
     return property_key, schema_manager.normalize_entities_list_for_response(complete_entities_list)
-
-
 
 def get_sample_block_descendants(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     """Trigger event method of getting descendants for Sample Blocks.
@@ -1077,30 +1033,29 @@ def get_sample_block_descendants(property_key, normalized_type, user_token, exis
 def remove_fields(d, properties_to_keep):
     return {key: value for key, value in d.items() if key in properties_to_keep}
 
-"""
-Trigger event method of getting the relative directory path of a given dataset
-
-Parameters
-----------
-property_key : str
-    The target property key of the value to be generated
-normalized_type : str
-    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-
-Returns
--------
-str: The target property key
-str: The relative directory path
-"""
-
 
 def get_local_directory_rel_path(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method of getting the relative directory path of a given dataset.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key of the value to be generated
+    normalized_type : str
+        One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, str]
+        str: The target property key
+        str: The relative directory path
+    """
     if 'uuid' not in existing_data_dict:
         msg = create_trigger_error_msg(
             "Missing 'uuid' key in 'existing_data_dict' during calling 'get_local_directory_rel_path()' trigger method.",
@@ -1137,30 +1092,23 @@ def get_local_directory_rel_path(property_key, normalized_type, user_token, exis
 
     return property_key, dir_path
 
-"""
-Trigger event method of building linkage from this new Dataset to the dataset of its previous revision
-
-Parameters
-----------
-property_key : str
-    The target property key
-normalized_type : str
-    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-
-Returns
--------
-str: The target property key
-str: The uuid string of source entity
-"""
-
 
 def link_to_previous_revisions(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method of building linkage from this new Dataset to the dataset of its previous revision.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key
+    normalized_type : str
+        One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+    """
     if 'uuid' not in existing_data_dict:
         msg = create_trigger_error_msg(
             "Missing 'uuid' key in 'existing_data_dict' during calling 'link_to_previous_revision()' trigger method.",
@@ -1184,30 +1132,23 @@ def link_to_previous_revisions(property_key, normalized_type, user_token, existi
         # No need to log
         raise
 
-"""
-Trigger event method of building linkage from this new Dataset to the dataset of its previous revision
-
-Parameters
-----------
-property_key : str
-    The target property key
-normalized_type : str
-    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-
-Returns
--------
-str: The target property key
-str: The uuid string of source entity
-"""
-
 
 def link_to_previous_revision(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method of building linkage from this new Dataset to the dataset of its previous revision.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key
+    normalized_type : str
+        One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+    """
     if 'uuid' not in existing_data_dict:
         msg = create_trigger_error_msg(
             "Missing 'uuid' key in 'existing_data_dict' during calling 'link_to_previous_revision()' trigger method.",
@@ -1250,16 +1191,19 @@ def get_source_mapped_metadata(property_key, normalized_type, user_token, existi
 
     Returns
     -------
-    str: The target property key
-    dict: The auto generated mapped metadata
+    Tuple[str, dict]
+        str: The target property key
+        dict: The auto generated mapped metadata
     """
     if not equals(Ontology.ops().source_types().HUMAN, existing_data_dict['source_type']):
         return property_key, None
     if 'metadata' not in existing_data_dict:
         return property_key, None
 
-    if ('organ_donor_data' not in existing_data_dict['metadata']
-            and 'living_donor_data' not in existing_data_dict['metadata']):
+    if (
+        'organ_donor_data' not in existing_data_dict['metadata']
+        and 'living_donor_data' not in existing_data_dict['metadata']
+    ):
         msg = create_trigger_error_msg(
             "Missing 'organ_donor_data' or 'living_donor_data' key in 'existing_data_dict[metadata]' during calling 'get_source_mapped_metadata()' trigger method.",
             existing_data_dict, new_data_dict
@@ -1313,8 +1257,9 @@ def get_cedar_mapped_metadata(property_key, normalized_type, user_token, existin
 
     Returns
     -------
-    str: The target property key
-    dict: The auto generated mapped metadata
+    Tuple[str, dict]
+        str: The target property key
+        dict: The auto generated mapped metadata
     """
     # No human sources
     if equals(Ontology.ops().source_types().HUMAN, existing_data_dict.get('source_type')):
@@ -1390,30 +1335,28 @@ def _normalize(word: str):
     return word.capitalize()
 
 
-"""
-Trigger event method of auto generating the dataset title
-
-Parameters
-----------
-property_key : str
-    The target property key
-normalized_type : str
-    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-
-Returns
--------
-str: The target property key
-str: The generated dataset title
-"""
-
-
 def get_dataset_title(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method of auto generating the dataset title.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key
+    normalized_type : str
+        One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, str]
+        str: The target property key
+        str: The generated dataset title
+    """
     if 'uuid' not in existing_data_dict:
         msg = create_trigger_error_msg(
             "Missing 'uuid' key in 'existing_data_dict' during calling 'get_dataset_title()' trigger method.",
@@ -1510,30 +1453,29 @@ def get_dataset_title(property_key, normalized_type, user_token, existing_data_d
 
     return property_key, generated_title
 
-"""
-Trigger event method of auto generating the dataset category
-
-Parameters
-----------
-property_key : str
-    The target property key
-normalized_type : str
-    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-
-Returns
--------
-str: The target property key
-str: The generated dataset title
-"""
-
 
 def get_dataset_category(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method of auto generating the dataset category.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key
+    normalized_type : str
+        One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, str]
+        str: The target property key
+        str: The generated dataset category
+    """
     creation_action = dict([get_creation_action_activity("creation_action_activity", normalized_type, user_token, existing_data_dict, new_data_dict)]).get('creation_action_activity')
     dataset_category_map = {
         "Create Dataset Activity": "primary",
@@ -1547,29 +1489,6 @@ def get_dataset_category(property_key, normalized_type, user_token, existing_dat
     return property_key, None
 
 
-"""
-Trigger event method of auto generating the description of the entity in the Portal UI
-
-Parameters
-----------
-property_key : str
-    The target property key
-normalized_type : str
-    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-
-Returns
--------
-str: The target property key
-str: The generated dataset title
-"""
-
-
 # For Upload, Dataset, Source and Sample objects:
 # add a calculated (not stored in Neo4j) field called `display_subtype` to
 # all Elasticsearch documents of the above types with the following rules:
@@ -1578,6 +1497,27 @@ str: The generated dataset title
 # Sample: if sample_category == 'organ' the display name linked to the corresponding description of organ code
 # otherwise the display name linked to the value of the corresponding description of sample_category code
 def get_display_subtype(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method of generating the display subtype for the entity.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key
+    normalized_type : str
+        One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, str]
+        str: The target property key
+        str: The display subtype
+    """
     display_subtype = "{unknown}"
 
     if equals(Ontology.ops().entities().SOURCE, normalized_type):
@@ -1639,30 +1579,28 @@ def get_val_by_key(type_code, data, source_data_name):
     return result_val
 
 
-"""
-Trigger event method of when this entity was last modified or published
-
-Parameters
-----------
-property_key : str
-    The target property key
-normalized_type : str
-    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-
-Returns
--------
-str: The target property key
-str: The generated dataset title
-"""
-
-
 def get_last_touch(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method of when this entity was last modified or published.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key
+    normalized_type : str
+        One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, str]
+        str: The target property key
+        str: The last touch time
+    """
     time_stamp = (
         existing_data_dict["published_timestamp"]
         if "published_timestamp" in existing_data_dict
@@ -1674,30 +1612,28 @@ def get_last_touch(property_key, normalized_type, user_token, existing_data_dict
     return property_key, last_touch
 
 
-"""
-Trigger event method to grab the ancestor of this entity where entity type is Sample and the sample_category is Organ
-
-Parameters
-----------
-property_key : str
-    The target property key
-normalized_type : str
-    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-
-Returns
--------
-str: The target property key
-str: The generated dataset title
-"""
-
-
 def get_origin_sample(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method to grab the ancestor of this entity where entity type is Sample and the sample_category is Organ.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key
+    normalized_type : str
+        One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, dict]
+        str: The target property key
+        dict: The origin sample
+    """
     # The origin_sample is the sample that `sample_category` is "organ" and the `organ` code is set at the same time
 
     try:
@@ -1723,30 +1659,28 @@ def get_origin_sample(property_key, normalized_type, user_token, existing_data_d
         return property_key, None
 
 
-"""
-Trigger event method to reduce the size of pipeline_message to be supported by Elasticsearch
-
-Parameters
-----------
-property_key : str
-    The target property key
-normalized_type : str
-    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-
-Returns
--------
-str: The target property key
-str: The generated dataset title
-"""
-
-
 def get_pipeline_message_reduced(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method to reduce the size of pipeline_message to be supported by Elasticsearch.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key
+    normalized_type : str
+        One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, str]
+        str: The target property key
+        str: The size reduced pipeline message
+    """
     pipeline_message = None
     if normalized_type in ["Dataset", "Publication"]:
         # Reduce pipeline_message when it exceeds 32766 bytes
@@ -1775,32 +1709,28 @@ def get_has_rui_information(property_key, normalized_type, user_token, existing_
     return property_key, None
 
 
-
-
-"""
-Trigger event method to parse out the anatomical locations from 'rui_location'
-
-Parameters
-----------
-property_key : str
-    The target property key
-normalized_type : str
-    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-
-Returns
--------
-str: The target property key
-str: The generated dataset title
-"""
-
-
 def get_rui_location_anatomical_locations(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method to parse out the anatomical locations from 'rui_location'.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key
+    normalized_type : str
+        One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, list]
+        str: The target property key
+        list: The anatomical locations
+    """
     rui_location_anatomical_locations = None
     if "rui_location" in existing_data_dict:
         rui_location = ast.literal_eval(existing_data_dict["rui_location"])
@@ -1820,11 +1750,14 @@ def get_rui_location_anatomical_locations(property_key, normalized_type, user_to
 def _get_ontology_label(ann_url: str) -> Optional[str]:
     """Get the label from the appropriate ontology lookup service.
 
-    Args:
-        ann_url (str): The annotation url.
+    Parameters
+    ----------
+        ann_url : str
+            The annotation url.
 
-    Returns:
-        Optional[dict]: The label and purl if found, otherwise None.
+    Returns
+    -------
+    Optional[dict] : The label and purl if found, otherwise None.
     """
     if ann_url in ontology_lookup_cache:
         return {"label": ontology_lookup_cache[ann_url], "purl": ann_url}
@@ -1857,30 +1790,28 @@ def _get_ontology_label(ann_url: str) -> Optional[str]:
     return {"label": label, "purl": ann_url}
 
 
-"""
-Trigger event method of getting the list of uuids of the previous revision datasets if exists
-
-Parameters
-----------
-property_key : str
-    The target property key
-normalized_type : str
-    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-
-Returns
--------
-str: The target property key
-str: The uuid list of previous revision entities or [] if not found
-"""
-
-
 def get_previous_revision_uuids(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method of getting the list of uuids of the previous revision datasets if exists.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key
+    normalized_type : str
+        One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, list]
+        str: The target property key
+        list: The uuid list of previous revision entities or [] if not found
+    """
     if 'uuid' not in existing_data_dict:
         msg = create_trigger_error_msg(
             "Missing 'uuid' key in 'existing_data_dict' during calling 'get_previous_revision_uuids()' trigger method.",
@@ -1889,37 +1820,35 @@ def get_previous_revision_uuids(property_key, normalized_type, user_token, exist
         raise KeyError(msg)
 
     previous_revision_uuid = schema_neo4j_queries.get_previous_revision_uuids(schema_manager.get_neo4j_driver_instance(),
-                                                                             existing_data_dict['uuid'])
+                                                                              existing_data_dict['uuid'])
 
     # previous_revision_uuid can be None, but will be filtered out by
     # schema_manager.normalize_entity_result_for_response()
     return property_key, previous_revision_uuid
 
 
-"""
-Trigger event method of getting the uuid of the next version dataset if exists
-
-Parameters
-----------
-property_key : str
-    The target property key
-normalized_type : str
-    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-
-Returns
--------
-str: The target property key
-str: The uuid list of next revision entities or [] if not found
-"""
-
-
 def get_next_revision_uuids(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method of getting the uuid of the next version dataset if exists.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key
+    normalized_type : str
+        One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, list]
+        str: The target property key
+        list: The uuid list of next revision entities or [] if not found
+    """
     if 'uuid' not in existing_data_dict:
         msg = create_trigger_error_msg(
             "Missing 'uuid' key in 'existing_data_dict' during calling 'get_next_revision_uuids()' trigger method.",
@@ -1928,37 +1857,35 @@ def get_next_revision_uuids(property_key, normalized_type, user_token, existing_
         raise KeyError(msg)
 
     next_revision_uuids = schema_neo4j_queries.get_next_revision_uuids(schema_manager.get_neo4j_driver_instance(),
-                                                                     existing_data_dict['uuid'])
+                                                                       existing_data_dict['uuid'])
 
     # next_revision_uuid can be None, but will be filtered out by
     # schema_manager.normalize_entity_result_for_response()
     return property_key, next_revision_uuids
 
 
-"""
-Trigger event method of getting the uuid of the previous revision dataset if exists
-
-Parameters
-----------
-property_key : str
-    The target property key
-normalized_type : str
-    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-
-Returns
--------
-str: The target property key
-str: The uuid string of previous revision entity or None if not found
-"""
-
-
 def get_previous_revision_uuid(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method of getting the uuid of the previous revision dataset if exists.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key
+    normalized_type : str
+        One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, str]
+        str: The target property key
+        str: The uuid string of previous revision entity or None if not found
+    """
     if 'uuid' not in existing_data_dict:
         msg = create_trigger_error_msg(
             "Missing 'uuid' key in 'existing_data_dict' during calling 'get_previous_revision_uuid()' trigger method.",
@@ -1974,30 +1901,28 @@ def get_previous_revision_uuid(property_key, normalized_type, user_token, existi
     return property_key, previous_revision_uuid
 
 
-"""
-Trigger event method of getting the uuid of the next version dataset if exists
-
-Parameters
-----------
-property_key : str
-    The target property key
-normalized_type : str
-    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-
-Returns
--------
-str: The target property key
-str: The uuid string of next version entity or None if not found
-"""
-
-
 def get_next_revision_uuid(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method of getting the uuid of the next version dataset if exists.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key
+    normalized_type : str
+        One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, str]
+        str: The target property key
+        str: The uuid string of next version entity or None if not found
+    """
     if 'uuid' not in existing_data_dict:
         msg = create_trigger_error_msg(
             "Missing 'uuid' key in 'existing_data_dict' during calling 'get_next_revision_uuid()' trigger method.",
@@ -2013,39 +1938,36 @@ def get_next_revision_uuid(property_key, normalized_type, user_token, existing_d
     return property_key, next_revision_uuid
 
 
-"""
-Trigger event method to commit thumbnail file saved that were previously uploaded via ingest-api
-
-The information, filename is saved in the field with name specified by `target_property_key`
-in the provided data_dict.  The thumbnail file needed to be previously uploaded
-using the temp file service.  The temp file id provided must be provided
-in the field `thumbnail_file_to_add` in the data_dict for file being committed
-in a JSON object like below: 
-
-{"temp_file_id": "eiaja823jafd"}
-
-Parameters
-----------
-property_key : str
-    The property key for which the original trigger method is defined
-normalized_type : str
-    One of the types defined in the schema yaml: Source, Sample
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-generated_dict : dict 
-    A dictionary that contains all final data
-
-Returns
--------
-dict: The updated generated dict
-"""
-
-
 def commit_thumbnail_file(property_key, normalized_type, user_token, existing_data_dict, new_data_dict, generated_dict):
+    """Trigger event method to commit thumbnail file saved that were previously uploaded via ingest-api.
+
+    The information, filename is saved in the field with name specified by `target_property_key`
+    in the provided data_dict.  The thumbnail file needed to be previously uploaded
+    using the temp file service.  The temp file id provided must be provided
+    in the field `thumbnail_file_to_add` in the data_dict for file being committed
+    in a JSON object like below:
+
+    {"temp_file_id": "eiaja823jafd"}
+
+    Parameters
+    ----------
+    property_key : str
+        The property key for which the original trigger method is defined
+    normalized_type : str
+        One of the types defined in the schema yaml: Source, Sample
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+    generated_dict : dict
+        A dictionary that contains all final data
+
+    Returns
+    -------
+    dict: The updated generated dict
+    """
     # The name of the property where the file information is stored
     target_property_key = 'thumbnail_file'
 
@@ -2102,34 +2024,31 @@ def commit_thumbnail_file(property_key, normalized_type, user_token, existing_da
         raise
 
 
-"""
-Trigger event method for removing the thumbnail file from a dataset during update
-
-File is stored in a json encoded text field with property name 'target_property_key' in the entity dict
-The file to remove is specified as file uuid in the `property_key` field
-
-Parameters
-----------
-property_key : str
-    The property key for which the original trigger method is defined
-normalized_type : str
-    One of the types defined in the schema yaml: Source, Sample
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-generated_dict : dict 
-    A dictionary that contains all final data
-
-Returns
--------
-dict: The updated generated dict
-"""
-
-
 def delete_thumbnail_file(property_key, normalized_type, user_token, existing_data_dict, new_data_dict, generated_dict):
+    """Trigger event method for removing the thumbnail file from a dataset during update.
+
+    File is stored in a json encoded text field with property name 'target_property_key' in the entity dict
+    The file to remove is specified as file uuid in the `property_key` field
+
+    Parameters
+    ----------
+    property_key : str
+        The property key for which the original trigger method is defined
+    normalized_type : str
+        One of the types defined in the schema yaml: Source, Sample
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+    generated_dict : dict
+        A dictionary that contains all final data
+
+    Returns
+    -------
+    dict: The updated generated dict
+    """
     # The name of the property where the file information is stored
     target_property_key = 'thumbnail_file'
 
@@ -2206,25 +2125,22 @@ def delete_thumbnail_file(property_key, normalized_type, user_token, existing_da
 ####################################################################################################
 
 
-"""
-Trigger event method of building linkage between this new Entity and Agent
-
-Parameters
-----------
-property_key : str
-    The target property key
-normalized_type : str
-    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-"""
-
-
 def set_was_attributed_to(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method of building linkage between this new Entity and Agent.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key
+    normalized_type : str
+        One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+    """
     if 'uuid' not in existing_data_dict:
         msg = create_trigger_error_msg(
             "Missing 'uuid' key in 'existing_data_dict' during calling 'set_was_attributed_to()' trigger method.",
@@ -2256,25 +2172,22 @@ def set_was_attributed_to(property_key, normalized_type, user_token, existing_da
         raise
 
 
-"""
-Trigger event method of building linkage between this new Entity and another Entity through an Activity
-
-Parameters
-----------
-property_key : str
-    The target property key
-normalized_type : str
-    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-"""
-
-
 def set_was_generated_by(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method of building linkage between this new Entity and another Entity through an Activity.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key
+    normalized_type : str
+        One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+    """
     if 'uuid' not in existing_data_dict:
         msg = create_trigger_error_msg(
             "Missing 'uuid' key in 'existing_data_dict' during calling 'set_was_generated_by()' trigger method.",
@@ -2315,25 +2228,22 @@ def set_was_generated_by(property_key, normalized_type, user_token, existing_dat
         raise
 
 
-"""
-Trigger event method of building linkage between this new Entity and another Entity
-
-Parameters
-----------
-property_key : str
-    The target property key
-normalized_type : str
-    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-"""
-
-
 def set_was_derived_from(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method of building linkage between this new Entity and another Entity.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key
+    normalized_type : str
+        One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+    """
     if 'uuid' not in existing_data_dict:
         msg = create_trigger_error_msg(
             "Missing 'uuid' key in 'existing_data_dict' during calling 'set_was_derived_from()' trigger method.",
@@ -2367,8 +2277,7 @@ def set_was_derived_from(property_key, normalized_type, user_token, existing_dat
 
 
 def update_status(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
-    """
-    Trigger event method that calls related functions involved with updating the status value
+    """Trigger event method that calls related functions involved with updating the status value.
 
     Parameters
     ----------
@@ -2383,7 +2292,6 @@ def update_status(property_key, normalized_type, user_token, existing_data_dict,
     new_data_dict : dict
         A merged dictionary that contains all possible input data to be used
     """
-
     # execute set_status_history
     set_status_history(property_key, normalized_type, user_token, existing_data_dict, new_data_dict)
 
@@ -2392,8 +2300,7 @@ def update_status(property_key, normalized_type, user_token, existing_data_dict,
 
 
 def sync_component_dataset_status(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
-    """
-    Function that changes the status of component datasets when their parent multi-assay dataset's status changes.
+    """Function that changes the status of component datasets when their parent multi-assay dataset's status changes.
 
     Parameters
     ----------
@@ -2435,25 +2342,23 @@ def sync_component_dataset_status(property_key, normalized_type, user_token, exi
 ## Trigger methods specific to Collection - DO NOT RENAME
 ####################################################################################################
 
-"""
-Trigger event method of building linkage between this new Collection and the entities it contains
-
-Parameters
-----------
-property_key : str
-    The target property key
-normalized_type : str
-    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-"""
-
 
 def set_in_collection(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method of building linkage between this new Collection and the entities it contains.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key
+    normalized_type : str
+        One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+    """
     if 'uuid' not in existing_data_dict:
         msg = create_trigger_error_msg(
             "Missing 'uuid' key in 'existing_data_dict' during calling 'set_in_collection()' trigger method.",
@@ -2484,118 +2389,117 @@ def set_in_collection(property_key, normalized_type, user_token, existing_data_d
 ## Trigger methods specific to Sample - DO NOT RENAME
 ####################################################################################################
 
-"""
-Trigger event method to commit files saved that were previously uploaded with UploadFileHelper.save_file
-
-The information, filename and optional description is saved in the field with name specified by `target_property_key`
-in the provided data_dict.  The image files needed to be previously uploaded
-using the temp file service (UploadFileHelper.save_file).  The temp file id provided
-from UploadFileHelper, paired with an optional description of the file must be provided
-in the field `image_files_to_add` in the data_dict for each file being committed
-in a JSON array like below ("description" is optional): 
-
-[
-  {
-    "temp_file_id": "eiaja823jafd",
-    "description": "Metadata file 1"
-  },
-  {
-    "temp_file_id": "pd34hu4spb3lk43usdr"
-  },
-  {
-    "temp_file_id": "32kafoiw4fbazd",
-    "description": "Metadata file 3"
-  }
-]
-
-
-Parameters
-----------
-property_key : str
-    The target property key of the value to be generated
-normalized_type : str
-    One of the types defined in the schema yaml: Sample
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-
-Returns
--------
-str: The target property key
-list: The file info dicts in a list
-"""
-
 
 def commit_metadata_files(property_key, normalized_type, user_token, existing_data_dict, new_data_dict, generated_dict):
+    """Trigger event method to commit files saved that were previously uploaded with UploadFileHelper.save_file.
+
+    The information, filename and optional description is saved in the field with name specified by `target_property_key`
+    in the provided data_dict.  The image files needed to be previously uploaded
+    using the temp file service (UploadFileHelper.save_file).  The temp file id provided
+    from UploadFileHelper, paired with an optional description of the file must be provided
+    in the field `image_files_to_add` in the data_dict for each file being committed
+    in a JSON array like below ("description" is optional):
+
+    [
+      {
+        "temp_file_id": "eiaja823jafd",
+        "description": "Metadata file 1"
+      },
+      {
+        "temp_file_id": "pd34hu4spb3lk43usdr"
+      },
+      {
+        "temp_file_id": "32kafoiw4fbazd",
+        "description": "Metadata file 3"
+      }
+    ]
+
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key of the value to be generated
+    normalized_type : str
+        One of the types defined in the schema yaml: Sample
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+    generated_dict : dict
+        A dictionary that contains all final data
+
+    Returns
+    -------
+    Tuple[str, list]
+        str: The target property key
+        list: The file info dicts in a list
+    """
     return _commit_files('metadata_files', property_key, normalized_type, user_token, existing_data_dict, new_data_dict,
                          generated_dict)
 
 
-"""
-Trigger event methods for removing files from an entity during update
-
-Files are stored in a json encoded text field with property name 'target_property_key' in the entity dict
-The files to remove are specified as file uuids in the `property_key` field
-
-The two outer methods (delete_image_files and delete_metadata_files) pass the target property
-field name to private method, _delete_files along with the other required trigger properties
-
-Parameters
-----------
-property_key : str
-    The target property key
-normalized_type : str
-    One of the types defined in the schema yaml: Sample
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-
------------
-target_property_key: str
-    The name of the property where the file information is stored
-
-Returns
--------
-str: The target property key
-list: The file info dicts in a list
-"""
-
-
 def delete_metadata_files(property_key, normalized_type, user_token, existing_data_dict, new_data_dict, generated_dict):
+    """Trigger event methods for removing files from an entity during update.
+
+    Files are stored in a json encoded text field with property name 'target_property_key' in the entity dict
+    The files to remove are specified as file uuids in the `property_key` field
+
+    The two outer methods (delete_image_files and delete_metadata_files) pass the target property
+    field name to private method, _delete_files along with the other required trigger properties
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key
+    normalized_type : str
+        One of the types defined in the schema yaml: Sample
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+    generated_dict : dict
+        A dictionary that contains all final data
+
+    -----------
+    target_property_key: str
+        The name of the property where the file information is stored
+
+    Returns
+    -------
+    Tuple[str, list]
+        str: The target property key
+        list: The file info dicts in a list
+    """
     return _delete_files('metadata_files', property_key, normalized_type, user_token, existing_data_dict, new_data_dict,
                          generated_dict)
 
 
-"""
-Trigger event method of getting the parent of a Sample
-
-Parameters
-----------
-property_key : str
-    The target property key of the value to be generated
-normalized_type : str
-    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-
-Returns
--------
-str: The target property key
-dict: The direct ancestor entity (either another Sample or a Source) with all the normalized information
-"""
-
-
 def get_sample_direct_ancestor(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method of getting the parent of a Sample.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key of the value to be generated
+    normalized_type : str
+        One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, dict]
+        str: The target property key
+        dict: The direct ancestor entity (either another Sample or a Source) with all the normalized information
+    """
     if 'uuid' not in existing_data_dict:
         msg = create_trigger_error_msg(
             "Missing 'uuid' key in 'existing_data_dict' during calling 'get_sample_direct_ancestor()' trigger method.",
@@ -2626,29 +2530,29 @@ def get_sample_direct_ancestor(property_key, normalized_type, user_token, existi
 ## Trigger methods specific to Publication - DO NOT RENAME
 ####################################################################################################
 
-"""
-Trigger event method of truncating the time part of publication_date if provided by users
-
-Parameters
-----------
-property_key : str
-    The target property key of the value to be generated
-normalized_type : str
-    One of the types defined in the schema yaml: Publication
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-
-Returns
--------
-str: The date part YYYY-MM-DD of ISO 8601
-"""
-
 
 def set_publication_date(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method of truncating the time part of publication_date if provided by users.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key of the value to be generated
+    normalized_type : str
+        One of the types defined in the schema yaml: Publication
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, str]
+        str: The target property key
+        str: The date part YYYY-MM-DD of ISO 8601
+    """
     # We only store the date part 'YYYY-MM-DD', base on the ISO 8601 format, it's fine if the user entered the time part
     date_obj = datetime.fromisoformat(new_data_dict[property_key])
 
@@ -2659,51 +2563,48 @@ def set_publication_date(property_key, normalized_type, user_token, existing_dat
 ## Trigger methods specific to Upload - DO NOT RENAME
 ####################################################################################################
 
-"""
-Trigger event method of setting the Upload initial status - "New"
-
-Parameters
-----------
-property_key : str
-    The target property key of the value to be generated
-normalized_type : str
-    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-
-Returns
--------
-str: The target property key
-str: The "New" status
-"""
-
 
 def set_upload_status_new(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method of setting the Upload initial status - "New".
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key of the value to be generated
+    normalized_type : str
+        One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, str]
+        str: The target property key
+        str: The "New" status
+    """
     return property_key, 'New'
 
 
-"""
-Trigger event method of building linkage between this new Upload and Lab
-Parameters
-----------
-property_key : str
-    The target property key
-normalized_type : str
-    One of the types defined in the schema yaml: Upload
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-"""
-
-
 def link_upload_to_lab(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method of building linkage between this new Upload and Lab.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key
+    normalized_type : str
+        One of the types defined in the schema yaml: Upload
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+    """
     if 'uuid' not in existing_data_dict:
         msg = create_trigger_error_msg(
             "Missing 'uuid' key in 'existing_data_dict' during calling 'link_upload_to_lab()' trigger method.",
@@ -2738,25 +2639,22 @@ def link_upload_to_lab(property_key, normalized_type, user_token, existing_data_
         raise
 
 
-"""
-Trigger event method of building linkages between this Submission and the given datasets
-
-Parameters
-----------
-property_key : str
-    The target property key
-normalized_type : str
-    One of the types defined in the schema yaml: Upload
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-"""
-
-
 def link_datasets_to_upload(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method of building linkages between this Submission and the given datasets.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key
+    normalized_type : str
+        One of the types defined in the schema yaml: Upload
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+    """
     if 'uuid' not in existing_data_dict:
         msg = create_trigger_error_msg(
             "Missing 'uuid' key in 'existing_data_dict' during calling 'link_datasets_to_upload()' trigger method.",
@@ -2788,25 +2686,22 @@ def link_datasets_to_upload(property_key, normalized_type, user_token, existing_
         raise
 
 
-"""
-Trigger event method of deleting linkages between this target Submission and the given datasets
-
-Parameters
-----------
-property_key : str
-    The target property key
-normalized_type : str
-    One of the types defined in the schema yaml: Upload
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-"""
-
-
 def unlink_datasets_from_upload(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method of deleting linkages between this target Submission and the given datasets.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key
+    normalized_type : str
+        One of the types defined in the schema yaml: Upload
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+    """
     if 'uuid' not in existing_data_dict:
         msg = create_trigger_error_msg(
             "Missing 'uuid' key in 'existing_data_dict' during calling 'unlink_datasets_from_upload()' trigger method.",
@@ -2857,8 +2752,8 @@ def get_upload_datasets(property_key: str, normalized_type: str, user_token: str
     Returns
     -------
     Tuple[str, list]
-    str: The target property key
-    list: A list of associated dataset dicts with all the normalized information
+        str: The target property key
+        list: A list of associated dataset dicts with all the normalized information
     """
     if "uuid" not in existing_data_dict:
         msg = create_trigger_error_msg(
@@ -2900,37 +2795,36 @@ def get_normalized_upload_datasets(uuid: str, properties_to_exclude: List[str] =
 ## Trigger methods specific to Activity - DO NOT RENAME
 ####################################################################################################
 
-"""
-Trigger event method of getting creation_action for Activity
-
-Lab->Activity->Source (Not needed for now)
-Lab->Activity->Submission
-Source->Activity->Sample
-Sample->Activity->Sample
-Sample->Activity->Dataset
-Dataset->Activity->Dataset
-
-Parameters
-----------
-property_key : str
-    The target property key of the value to be generated
-normalized_type : str
-    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-
-Returns
--------
-str: The target property key
-str: The creation_action string
-"""
-
 
 def set_activity_creation_action(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method of getting creation_action for Activity.
+
+    Lab->Activity->Source (Not needed for now)
+    Lab->Activity->Submission
+    Source->Activity->Sample
+    Sample->Activity->Sample
+    Sample->Activity->Dataset
+    Dataset->Activity->Dataset
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key of the value to be generated
+    normalized_type : str
+        One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, str]
+        str: The target property key
+        str: The creation_action string
+    """
     if new_data_dict and new_data_dict.get('creation_action'):
         return property_key, new_data_dict['creation_action'].title()
 
@@ -2944,32 +2838,28 @@ def set_activity_creation_action(property_key, normalized_type, user_token, exis
     return property_key, f"Create {new_data_dict['normalized_entity_type']} Activity"
 
 
-
-
-"""
-Trigger event method of passing the protocol_url from the entity to the activity
-
-Parameters
-----------
-property_key : str
-    The target property key of the value to be generated
-normalized_type : str
-    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-
-Returns
--------
-str: The target property key
-str: The protocol_url string
-"""
-
-
 def set_activity_protocol_url(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method of passing the protocol_url from the entity to the activity.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key of the value to be generated
+    normalized_type : str
+        One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, str]
+        str: The target property key
+        str: The protocol_url string
+    """
     if normalized_type in ['Activity'] and 'protocol_url' not in new_data_dict:
         return property_key, None
     if 'entity_type' in new_data_dict and new_data_dict['entity_type'] in ['Dataset', 'Upload', 'Publication']:
@@ -3002,30 +2892,29 @@ def get_creation_action_activity(property_key, normalized_type, user_token, exis
 
     return property_key, creation_action_activity
 
-"""
-Trigger event method of passing the processing_information from the entity to the activity
-
-Parameters
-----------
-property_key : str
-    The target property key of the value to be generated
-normalized_type : str
-    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-
-Returns
--------
-str: The target property key
-str: The processing_information list
-"""
-
 
 def set_processing_information(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method of passing the processing_information from the entity to the activity.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key of the value to be generated
+    normalized_type : str
+        One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, str]
+        str: The target property key
+        str: The processing_information list
+    """
     # Need to hard set `processing_information` as this gets called
     # when `metadata` is passed in the payload
     if ('entity_type' in new_data_dict
@@ -3101,56 +2990,54 @@ def set_processing_information(property_key, normalized_type, user_token, existi
 ## Internal functions
 ####################################################################################################
 
-"""
-Trigger event method to commit files saved that were previously uploaded with UploadFileHelper.save_file
-
-The information, filename and optional description is saved in the field with name specified by `target_property_key`
-in the provided data_dict.  The image files needed to be previously uploaded
-using the temp file service (UploadFileHelper.save_file).  The temp file id provided
-from UploadFileHelper, paired with an optional description of the file must be provided
-in the field `image_files_to_add` in the data_dict for each file being committed
-in a JSON array like below ("description" is optional): 
-
-[
-  {
-    "temp_file_id": "eiaja823jafd",
-    "description": "File 1"
-  },
-  {
-    "temp_file_id": "pd34hu4spb3lk43usdr"
-  },
-  {
-    "temp_file_id": "32kafoiw4fbazd",
-    "description": "File 3"
-  }
-]
-
-
-Parameters
-----------
-target_property_key : str
-    The name of the property where the file information is stored
-property_key : str
-    The property key for which the original trigger method is defined
-normalized_type : str
-    One of the types defined in the schema yaml: Source, Sample
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-generated_dict : dict 
-    A dictionary that contains all final data
-
-Returns
--------
-dict: The updated generated dict
-"""
-
 
 def _commit_files(target_property_key, property_key, normalized_type, user_token, existing_data_dict, new_data_dict,
                   generated_dict):
+    """Trigger event method to commit files saved that were previously uploaded with UploadFileHelper.save_file.
+
+    The information, filename and optional description is saved in the field with name specified by `target_property_key`
+    in the provided data_dict.  The image files needed to be previously uploaded
+    using the temp file service (UploadFileHelper.save_file).  The temp file id provided
+    from UploadFileHelper, paired with an optional description of the file must be provided
+    in the field `image_files_to_add` in the data_dict for each file being committed
+    in a JSON array like below ("description" is optional):
+
+    [
+      {
+        "temp_file_id": "eiaja823jafd",
+        "description": "File 1"
+      },
+      {
+        "temp_file_id": "pd34hu4spb3lk43usdr"
+      },
+      {
+        "temp_file_id": "32kafoiw4fbazd",
+        "description": "File 3"
+      }
+    ]
+
+
+    Parameters
+    ----------
+    target_property_key : str
+        The name of the property where the file information is stored
+    property_key : str
+        The property key for which the original trigger method is defined
+    normalized_type : str
+        One of the types defined in the schema yaml: Source, Sample
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+    generated_dict : dict
+        A dictionary that contains all final data
+
+    Returns
+    -------
+    dict: The updated generated dict
+    """
     # Do nothing if no files to add are provided (missing or empty property)
     # For image files the property name is "image_files_to_add"
     # For metadata files the property name is "metadata_files_to_add"
@@ -3233,40 +3120,37 @@ def _commit_files(target_property_key, property_key, normalized_type, user_token
         raise
 
 
-"""
-Trigger event method for removing files from an entity during update
-
-Files are stored in a json encoded text field with property name 'target_property_key' in the entity dict
-The files to remove are specified as file uuids in the `property_key` field
-
-The two outer methods (delete_image_files and delete_metadata_files) pass the target property
-field name to private method, _delete_files along with the other required trigger properties
-
-Parameters
-----------
-target_property_key : str
-    The name of the property where the file information is stored
-property_key : str
-    The property key for which the original trigger method is defined
-normalized_type : str
-    One of the types defined in the schema yaml: Source, Sample
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-generated_dict : dict 
-    A dictionary that contains all final data
-
-Returns
--------
-dict: The updated generated dict
-"""
-
-
 def _delete_files(target_property_key, property_key, normalized_type, user_token, existing_data_dict, new_data_dict,
                   generated_dict):
+    """Trigger event method for removing files from an entity during update.
+
+    Files are stored in a json encoded text field with property name 'target_property_key' in the entity dict
+    The files to remove are specified as file uuids in the `property_key` field
+
+    The two outer methods (delete_image_files and delete_metadata_files) pass the target property
+    field name to private method, _delete_files along with the other required trigger properties
+
+    Parameters
+    ----------
+    target_property_key : str
+        The name of the property where the file information is stored
+    property_key : str
+        The property key for which the original trigger method is defined
+    normalized_type : str
+        One of the types defined in the schema yaml: Source, Sample
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+    generated_dict : dict
+        A dictionary that contains all final data
+
+    Returns
+    -------
+    dict: The updated generated dict
+    """
     # do nothing if no files to delete are provided in the field specified by property_key
     if (not property_key in new_data_dict) or (not new_data_dict[property_key]):
         return generated_dict
@@ -3335,21 +3219,18 @@ def _delete_files(target_property_key, property_key, normalized_type, user_token
     return generated_dict
 
 
-"""
-Get the organ description based on the given organ code
-
-Parameters
-----------
-organ_code : str
-    The two-letter organ code
-
-Returns
--------
-str: The organ code description
-"""
-
-
 def _get_organ_description(organ_code):
+    """Get the organ description based on the given organ code.
+
+    Parameters
+    ----------
+    organ_code : str
+        The two-letter organ code
+
+    Returns
+    -------
+    str: The organ code description
+    """
     ORGAN_TYPES = Ontology.ops(as_arr=False, as_data_dict=True, data_as_val=True).organ_types()
 
     for key in ORGAN_TYPES:
@@ -3427,7 +3308,23 @@ def source_metadata_display_value(metadata_item: dict) -> str:
 ## Trigger methods shared by Dataset, Upload, and Publication - DO NOT RENAME
 ####################################################################################################
 
+
 def set_status_history(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method for setting the status history for a given dataset or upload
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key of the value to be generated
+    normalized_type : str
+        One of the types defined in the schema yaml: Dataset, Upload
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+    """
     new_status_history = []
     status_entry = {}
 
@@ -3467,108 +3364,110 @@ def set_status_history(property_key, normalized_type, user_token, existing_data_
 
     schema_neo4j_queries.update_entity(schema_manager.get_neo4j_driver_instance(), normalized_type, entity_data_dict, uuid)
 
-"""
-Trigger event method setting the dataset_type immutable property for a Publication.
 
-Parameters
-----------
-property_key : str
-    The target property key of the value to be generated
-normalized_type : str
-    One of the types defined in the schema yaml: Publication
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-
-Returns
--------
-str: The target property key
-str: Immutable dataset_type of "Publication"
-"""
 def set_publication_dataset_type(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method setting the dataset_type immutable property for a Publication.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key of the value to be generated
+    normalized_type : str
+        One of the types defined in the schema yaml: Publication
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, str]
+        str: The target property key
+        str: Immutable dataset_type of "Publication"
+    """
     # Count upon the dataset_type generated: true property in provenance_schema.yaml to assure the
     # request does not contain a value which will be overwritten.
     return property_key, 'Publication'
 
 
-"""
-Trigger event method setting the sources list for a dataset
-
-Parameters
-----------
-property_key : str
-    The target property key of the value to be generated
-normalized_type : str
-    One of the types defined in the schema yaml: Dataset|Publication
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-
-Returns
--------
-list: The list of sources associated with a dataset
-"""
 def set_dataset_sources(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method setting the sources list for a dataset.
 
+    Parameters
+    ----------
+    property_key : str
+        The target property key of the value to be generated
+    normalized_type : str
+        One of the types defined in the schema yaml: Dataset|Publication
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, list]
+        str: The target property key
+        list: The list of sources associated with a dataset
+    """
     sources = schema_neo4j_queries.get_sources_associated_entity(schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'])
 
     return property_key, sources
 
 
-"""
-Trigger event method setting the source dict for a sample
-
-Parameters
-----------
-property_key : str
-    The target property key of the value to be generated
-normalized_type : str
-    One of the types defined in the schema yaml: Sample
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-
-Returns
--------
-dict: The source associated with a sample
-"""
 def set_sample_source(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method setting the source dict for a sample.
 
+    Parameters
+    ----------
+    property_key : str
+        The target property key of the value to be generated
+    normalized_type : str
+        One of the types defined in the schema yaml: Sample
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, dict]
+        str: The target property key
+        dict: The source associated with a sample
+    """
     sources = schema_neo4j_queries.get_sources_associated_entity(schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'])
 
     return property_key, sources[0]
 
 
-"""
-Trigger event method setting the name of the top level of the hierarchy this organ belongs to based on its laterality.
-
-Parameters
-----------
-property_key : str
-    The target property key of the value to be generated
-normalized_type : str
-    One of the types defined in the schema yaml: Sample
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-
-Returns
--------
-str: The organ hierarchy
-"""
 def get_organ_hierarchy(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method setting the name of the top level of the hierarchy this organ belongs to based on its laterality.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key of the value to be generated
+    normalized_type : str
+        One of the types defined in the schema yaml: Sample
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, str]
+        str: The target property key
+        str: The organ hierarchy
+    """
     organ_hierarchy = None
     if equals(existing_data_dict['sample_category'], 'organ'):
         organ_types = Ontology.ops(as_data_dict=True, key='rui_code', val_key='term').organ_types()
@@ -3582,77 +3481,97 @@ def get_organ_hierarchy(property_key, normalized_type, user_token, existing_data
 
     return property_key, organ_hierarchy
 
-"""
-Trigger event method setting the name of the top level of the hierarchy this dataset type belongs to.
 
-Parameters
-----------
-property_key : str
-    The target property key of the value to be generated
-normalized_type : str
-    One of the types defined in the schema yaml: Sample
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-
-Returns
--------
-str: The dataset type hierarchy
-"""
 def get_dataset_type_hierarchy(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
-    try:
-        # 10x Multiome has an exception where dataset_type.dataset_type (a CEDAR value) is 10X Multiome,
-        # but it needs to be displayed indefinitely as 10x Multiome
-        if equals(existing_data_dict['dataset_type'], '10x Multiome'):
-            return property_key, '10x Multiome'
+    """Trigger event method for setting the dataset type hierarchy.
 
-        def prop_callback(d):
-            return d.get('description')
+    Parameters
+    ----------
+    property_key : str
+        The target property key of the value to be generated
+    normalized_type : str
+        One of the types defined in the schema yaml: Sample
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
 
-        def val_callback(d):
-            return d.get('dataset_type').get('dataset_type')
+    Returns
+    -------
+    Tuple[str, str]
+        str: The target property key
+        dict: The dataset type hierarchy with keys of 'first_level' and 'second_level'
+    """
+    if "uuid" not in existing_data_dict:
+        msg = create_trigger_error_msg(
+            "Missing 'uuid' key in 'existing_data_dict' during calling 'get_dataset_type_hierarchy()' trigger method.",
+            existing_data_dict, new_data_dict
+        )
+        raise KeyError(msg)
 
-        assay_classes = Ontology.ops(prop_callback=prop_callback, val_callback=val_callback, as_data_dict=True).assay_classes()
-        dataset_type_hierarchy = assay_classes[existing_data_dict['dataset_type']]
+    uuid = existing_data_dict["uuid"]
+    ingest_api_target_url = f"{schema_manager.get_ingest_api_url()}/assaytype/{uuid}"
 
-    except Exception as e:
-        # Fallback value in case of ubkg missing
-        dataset_type_hierarchy = existing_data_dict['dataset_type']
-        res = re.findall('.+?(?=\[)', existing_data_dict['dataset_type'])
-        if len(res) > 0:
-            dataset_type_hierarchy = res[0].strip()
-    return property_key, dataset_type_hierarchy
+    headers = {
+        "Authorization": f"Bearer {user_token}",
+    }
+    res = requests.get(ingest_api_target_url, headers=headers)
+    if res.status_code != 200:
+        return property_key, None
+
+    if "description" not in res.json() or "assaytype" not in res.json():
+        return property_key, None
+
+    desc = res.json()["description"]
+    assay_type = res.json()["assaytype"]
+
+    def prop_callback(d):
+        return d["assaytype"]
+
+    def val_callback(d):
+        return d["dataset_type"]["fig2"]["modality"]
+
+    assay_classes = Ontology.ops(prop_callback=prop_callback, val_callback=val_callback, as_data_dict=True).assay_classes()
+    if assay_type not in assay_classes:
+        return property_key, None
+
+    return property_key, {
+        "first_level": assay_classes[assay_type],
+        "second_level": desc
+    }
 
 
-"""
-Trigger event method that determines if a primary dataset a processed/derived dataset with a status of 'QA'
-
-Parameters
-----------
-property_key : str
-    The target property key of the value to be generated
-normalized_type : str
-    One of the types defined in the schema yaml: Sample
-user_token: str
-    The user's globus nexus token
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    A merged dictionary that contains all possible input data to be used
-
-Returns
--------
-bool: Whether a primary dataset has at least one processed dataset with a status of 'QA'
-"""
 def get_has_qa_derived_dataset(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method that determines if a primary dataset a processed/derived dataset with a status of 'QA'.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key of the value to be generated
+    normalized_type : str
+        One of the types defined in the schema yaml: Sample
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, str]
+        str: The target property key
+        str: Whether a primary dataset has at least one processed dataset with a status of 'QA', 'True' or 'False'
+    """
     dataset_category = get_dataset_category(property_key, normalized_type, user_token, existing_data_dict, new_data_dict)
     if equals(dataset_category[1], 'primary'):
         match_case = "AND s.status = 'QA'"
         results = schema_neo4j_queries.get_dataset_direct_descendants(schema_manager.get_neo4j_driver_instance(),
-                                                            existing_data_dict['uuid'], property_key=None, match_case=match_case)
+                                                                      existing_data_dict['uuid'],
+                                                                      property_key=None,
+                                                                      match_case=match_case)
         for r in results:
             descendant_category = get_dataset_category(property_key, normalized_type, user_token, r, r)
             if 'processed' in descendant_category[1]:
