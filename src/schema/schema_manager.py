@@ -1362,7 +1362,6 @@ def _normalize_metadata(entity_dict, metadata_scope:MetadataScopeEnum, propertie
 
     normalized_entity_type = entity_dict['entity_type']
     properties = get_entity_properties(_schema['ENTITIES'], normalized_entity_type)
-    logger.info("entity_dict: " + entity_dict)
     for key in entity_dict:
         if key in properties_to_include:
             # Add the target key with correct value of data type to the normalized_metadata dict
@@ -1405,7 +1404,6 @@ def _normalize_metadata(entity_dict, metadata_scope:MetadataScopeEnum, propertie
             # Only convert to Python list/dict when the string literal is not empty
             # instead of returning the json-as-string or array-as-string
             # convert_str_literal() also removes those control chars to avoid SyntaxError
-            logger.info(entity_dict[key])
             entity_dict[key] = convert_str_literal(entity_dict[key])
 
         # Add the target key with correct value of data type to the normalized_entity dict
