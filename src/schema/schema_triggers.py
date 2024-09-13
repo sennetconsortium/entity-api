@@ -3504,43 +3504,46 @@ def get_dataset_type_hierarchy(property_key, normalized_type, user_token, existi
         str: The target property key
         dict: The dataset type hierarchy with keys of 'first_level' and 'second_level'
     """
-    if "uuid" not in existing_data_dict:
-        msg = create_trigger_error_msg(
-            "Missing 'uuid' key in 'existing_data_dict' during calling 'get_dataset_type_hierarchy()' trigger method.",
-            existing_data_dict, new_data_dict
-        )
-        raise KeyError(msg)
+    try:
+        if "uuid" not in existing_data_dict:
+            msg = create_trigger_error_msg(
+                "Missing 'uuid' key in 'existing_data_dict' during calling 'get_dataset_type_hierarchy()' trigger method.",
+                existing_data_dict, new_data_dict
+            )
+            raise KeyError(msg)
 
-    uuid = existing_data_dict["uuid"]
-    ingest_api_target_url = f"{schema_manager.get_ingest_api_url()}/assaytype/{uuid}"
+        uuid = existing_data_dict["uuid"]
+        ingest_api_target_url = f"{schema_manager.get_ingest_api_url()}/assaytype/{uuid}"
 
-    headers = {
-        "Authorization": f"Bearer {user_token}",
-    }
-    res = requests.get(ingest_api_target_url, headers=headers)
-    if res.status_code != 200:
-        return property_key, None
+        headers = {
+            "Authorization": f"Bearer {user_token}",
+        }
+        res = requests.get(ingest_api_target_url, headers=headers)
+        if res.status_code != 200:
+            return property_key, None
 
-    if "description" not in res.json() or "assaytype" not in res.json():
-        return property_key, None
+        if "description" not in res.json() or "assaytype" not in res.json():
+            return property_key, None
 
-    desc = res.json()["description"]
-    assay_type = res.json()["assaytype"]
+        desc = res.json()["description"]
+        assay_type = res.json()["assaytype"]
 
-    def prop_callback(d):
-        return d["assaytype"]
+        def prop_callback(d):
+            return d["assaytype"]
 
-    def val_callback(d):
-        return d["dataset_type"]["fig2"]["modality"]
+        def val_callback(d):
+            return d["dataset_type"]["fig2"]["modality"]
 
-    assay_classes = Ontology.ops(prop_callback=prop_callback, val_callback=val_callback, as_data_dict=True).assay_classes()
-    if assay_type not in assay_classes:
-        return property_key, None
+        assay_classes = Ontology.ops(prop_callback=prop_callback, val_callback=val_callback, as_data_dict=True).assay_classes()
+        if assay_type not in assay_classes:
+            return property_key, None
 
-    return property_key, {
-        "first_level": assay_classes[assay_type],
-        "second_level": desc
-    }
+        return property_key, {
+            "first_level": assay_classes[assay_type],
+            "second_level": desc
+        }
+    except Exception as e:
+        logger.error(e)
 
 
 def get_has_qa_derived_dataset(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
