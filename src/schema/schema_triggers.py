@@ -3513,11 +3513,13 @@ def get_dataset_type_hierarchy(property_key, normalized_type, user_token, existi
 
     uuid = existing_data_dict["uuid"]
     ingest_api_target_url = f"{schema_manager.get_ingest_api_url()}/assaytype/{uuid}"
+    logger.info("Assaytype endpoint: " + ingest_api_target_url)
 
     headers = {
         "Authorization": f"Bearer {user_token}",
     }
     res = requests.get(ingest_api_target_url, headers=headers)
+    logger.info("Response code: " + str(res.status_code))
     if res.status_code != 200:
         return property_key, None
 
@@ -3525,7 +3527,9 @@ def get_dataset_type_hierarchy(property_key, normalized_type, user_token, existi
         return property_key, None
 
     desc = res.json()["description"]
+    logger.info("desc: " + desc)
     assay_type = res.json()["assaytype"]
+    logger.info("assay_type: " + assay_type)
 
     def prop_callback(d):
         return d["assaytype"]
