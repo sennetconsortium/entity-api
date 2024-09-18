@@ -616,39 +616,36 @@ def get_ancestors(neo4j_driver, uuid, property_key=None):
     return results
 
 
-"""
-Get all descendants by uuid
-
-Parameters
-----------
-neo4j_driver : neo4j.Driver object
-    The neo4j database connection pool
-uuid : str
-    The uuid of target entity
-property_key : str
-    A target property key for result filtering
-
-Returns
--------
-dict
-    A list of unique desendant dictionaries returned from the Cypher query
-"""
-
-
 def get_descendants(neo4j_driver, uuid, property_key=None):
+    """ Get all descendants by uuid
+
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    uuid : str
+        The uuid of target entity
+    property_key : str
+        A target property key for result filtering
+
+    Returns
+    -------
+    dict
+        A list of unique desendant dictionaries returned from the Cypher query
+    """
     results = []
 
     if property_key:
         query = (f"MATCH (e:Entity)<-[:USED|WAS_GENERATED_BY*]-(descendant:Entity) "
                  # The target entity can't be a Lab
-                 f"WHERE e.uuid='{uuid}' AND e.entity_type <> 'Lab' "
+                 f"WHERE e.uuid=$uuid AND e.entity_type <> 'Lab' "
                  # COLLECT() returns a list
                  # apoc.coll.toSet() reruns a set containing unique nodes
                  f"RETURN apoc.coll.toSet(COLLECT(descendant.{property_key})) AS {record_field_name}")
     else:
         query = (f"MATCH (e:Entity)<-[:USED|WAS_GENERATED_BY*]-(descendant:Entity) "
                  # The target entity can't be a Lab
-                 f"WHERE e.uuid='{uuid}' AND e.entity_type <> 'Lab' "
+                 f"WHERE e.uuid=$uuid AND e.entity_type <> 'Lab' "
                  # COLLECT() returns a list
                  # apoc.coll.toSet() reruns a set containing unique nodes
                  f"RETURN apoc.coll.toSet(COLLECT(descendant)) AS {record_field_name}")
@@ -657,7 +654,63 @@ def get_descendants(neo4j_driver, uuid, property_key=None):
     logger.info(query)
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(_execute_readonly_tx, query)
+        record = session.read_transaction(_execute_readonly_tx, query, uuid=uuid)
+
+        if record and record[record_field_name]:
+            if property_key:
+                # Just return the list of property values from each entity node
+                results = record[record_field_name]
+            else:
+                # Convert the list of nodes to a list of dicts
+                results = _nodes_to_dicts(record[record_field_name])
+
+                for result in results:
+                    protocol_url = get_activity_protocol(neo4j_driver, result['uuid'])
+                    if protocol_url != {}:
+                        result['protocol_url'] = protocol_url
+
+    return results
+
+
+def get_descendant_datasets(neo4j_driver, uuid, property_key=None):
+    """Get all descendant datasets for a given entity.
+
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    uuid : str
+        The uuid of target entity
+    property_key : str
+        A target property key for result filtering
+
+    Returns
+    -------
+    dict
+        A list of unique descendant datasets returned from the Cypher query
+    """
+    results = []
+
+    if property_key:
+        query = (f"MATCH (e:Entity)<-[:USED|WAS_GENERATED_BY*]-(descendant:Dataset) "
+                 # The target entity can't be a Lab
+                 f"WHERE e.uuid=$uuid AND e.entity_type <> 'Lab' "
+                 # COLLECT() returns a list
+                 # apoc.coll.toSet() reruns a set containing unique nodes
+                 f"RETURN apoc.coll.toSet(COLLECT(descendant.{property_key})) AS {record_field_name}")
+    else:
+        query = (f"MATCH (e:Entity)<-[:USED|WAS_GENERATED_BY*]-(descendant:Datset) "
+                 # The target entity can't be a Lab
+                 f"WHERE e.uuid=$uuid AND e.entity_type <> 'Lab' "
+                 # COLLECT() returns a list
+                 # apoc.coll.toSet() reruns a set containing unique nodes
+                 f"RETURN apoc.coll.toSet(COLLECT(descendant)) AS {record_field_name}")
+
+    logger.info("======get_descendant_datasets() query======")
+    logger.info(query)
+
+    with neo4j_driver.session() as session:
+        record = session.read_transaction(_execute_readonly_tx, query, uuid=uuid)
 
         if record and record[record_field_name]:
             if property_key:
@@ -1818,8 +1871,8 @@ neo4j.Record or None
 """
 
 
-def _execute_readonly_tx(tx, query):
-    result = tx.run(query)
+def _execute_readonly_tx(tx, query, **kwargs):
+    result = tx.run(query, **kwargs)
     record = result.single()
     return record
 
