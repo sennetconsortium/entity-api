@@ -699,7 +699,7 @@ def get_descendant_datasets(neo4j_driver, uuid, property_key=None):
                  # apoc.coll.toSet() reruns a set containing unique nodes
                  f"RETURN apoc.coll.toSet(COLLECT(descendant.{property_key})) AS {record_field_name}")
     else:
-        query = (f"MATCH (e:Entity)<-[:USED|WAS_GENERATED_BY*]-(descendant:Datset) "
+        query = (f"MATCH (e:Entity)<-[:USED|WAS_GENERATED_BY*]-(descendant:Dataset) "
                  # The target entity can't be a Lab
                  f"WHERE e.uuid=$uuid AND e.entity_type <> 'Lab' "
                  # COLLECT() returns a list
