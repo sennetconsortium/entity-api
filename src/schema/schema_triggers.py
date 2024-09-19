@@ -3601,21 +3601,15 @@ def get_has_all_published_datasets(property_key, normalized_type, user_token, ex
     -------
     Tuple[str, str]
         str: The target property key
-        dict: The result with keys 'all' for any datasets that are all published, and 'primary' for the primary datasets which are all published
+        str: The result whether all the primary datasets which are all published
     """
 
-    published_filter = 'AND e.status = "published"'
-    db = schema_manager.get_neo4j_driver_instance()
-    datasets_list = schema_neo4j_queries.get_upload_datasets(db, existing_data_dict['uuid'], 'uuid')
-    datasets_list_published = schema_neo4j_queries.get_upload_datasets(db, existing_data_dict['uuid'], 'uuid',
-                                                             query_filter=published_filter)
 
+    db = schema_manager.get_neo4j_driver_instance()
     primary_filter = 'AND e.creation_action = "Create Dataset Activity"'
+    published_filter = 'AND e.status = "published"'
     datasets_primary_list = schema_neo4j_queries.get_upload_datasets(db, existing_data_dict['uuid'], 'uuid', query_filter=primary_filter)
     datasets_primary_list_published = schema_neo4j_queries.get_upload_datasets(db, existing_data_dict['uuid'], 'uuid',
                                                                        query_filter=f'{primary_filter} {published_filter}')
 
-    return property_key, {
-        "any": str(len(datasets_list) == len(datasets_list_published)),
-        "primary": str(len(datasets_primary_list) == len(datasets_primary_list_published)) if len(datasets_primary_list) > 0 else "False"
-    }
+    return property_key, str(len(datasets_primary_list) == len(datasets_primary_list_published)) if len(datasets_primary_list) > 0 else "False"
