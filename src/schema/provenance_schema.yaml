@@ -1245,3 +1245,7 @@ ENTITIES:
         type: string
         description: 'The timestamp of when this entity was last modified or published.'
         on_index_trigger: get_last_touch
+      has_all_published_datasets:
+        type: boolean
+        description: 'Determines if the datasets of an upload are all published.'
+        on_index_trigger: get_has_all_published_datasets
