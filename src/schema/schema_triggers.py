@@ -3606,10 +3606,10 @@ def get_has_all_published_datasets(property_key, normalized_type, user_token, ex
 
 
     db = schema_manager.get_neo4j_driver_instance()
-    primary_filter = 'AND e.creation_action = "Create Dataset Activity"'
-    published_filter = 'AND e.status = "published"'
-    datasets_primary_list = schema_neo4j_queries.get_upload_datasets(db, existing_data_dict['uuid'], 'uuid', query_filter=primary_filter)
+
+    published_filter = 'AND e.status = "Published"'
+    datasets_primary_list = schema_neo4j_queries.get_upload_datasets(db, existing_data_dict['uuid'], 'uuid')
     datasets_primary_list_published = schema_neo4j_queries.get_upload_datasets(db, existing_data_dict['uuid'], 'uuid',
-                                                                       query_filter=f'{primary_filter} {published_filter}')
+                                                                       query_filter=f'{published_filter}')
 
     return property_key, str(len(datasets_primary_list) == len(datasets_primary_list_published)) if len(datasets_primary_list) > 0 else "False"
