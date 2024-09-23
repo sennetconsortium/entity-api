@@ -840,8 +840,8 @@ def get_source_samples(neo4j_driver, uuid, property_keys=None):
         joined_props = ', '.join([f'{key}: s.{key}' for key in property_keys])
         return_statement = f'COLLECT({{ {joined_props} }})'
 
-    query = ("MATCH (d:Dataset)-[:WAS_GENERATED_BY]->(:Activity)-[:USED]->(s:Sample) "
-             "WHERE d.uuid=$uuid "
+    query = (f"MATCH (d:Dataset)-[:WAS_GENERATED_BY|USED*]->(s:Sample) "
+             f"WHERE d.uuid='{uuid}' "
              f"RETURN {return_statement} AS {record_field_name}")
 
     with neo4j_driver.session() as session:
