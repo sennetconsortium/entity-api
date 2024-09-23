@@ -3470,11 +3470,17 @@ def get_organ_hierarchy(property_key, normalized_type, user_token, existing_data
     """
     organ_hierarchy = None
     if equals(existing_data_dict['sample_category'], 'organ'):
-        organ_types = Ontology.ops(as_data_dict=True, key='rui_code', val_key='term').organ_types()
+        organ_types_categories = Ontology.ops(as_data_dict=True, key='rui_code', val_key='category').organ_types()
         organ_hierarchy = existing_data_dict['organ']
+        if existing_data_dict['organ'] in organ_types_categories and organ_types_categories[existing_data_dict['organ']] is not None:
+            return property_key, organ_types_categories[existing_data_dict['organ']]['term']
+
+        organ_types = Ontology.ops(as_data_dict=True, key='rui_code', val_key='term').organ_types()
         if existing_data_dict['organ'] in organ_types:
             organ_name = organ_types[existing_data_dict['organ']]
             organ_hierarchy = organ_name
+
+            # Deprecated. For backwards compatibility. Can eventually remove this regex on the text.
             res = re.findall('.+?(?=\()', organ_name)  # the pattern will find everything up to the first (
             if len(res) > 0:
                 organ_hierarchy = res[0].strip()
