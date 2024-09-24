@@ -1,5 +1,6 @@
 import logging
 
+from atlas_consortia_commons.object import enum_val
 from neo4j.exceptions import TransactionError
 
 from lib.ontology import Ontology
@@ -557,26 +558,23 @@ def update_entity(neo4j_driver, entity_type, entity_data_dict, uuid):
         raise TransactionError(msg)
 
 
-"""
-Get all ancestors by uuid
-
-Parameters
-----------
-neo4j_driver : neo4j.Driver object
-    The neo4j database connection pool
-uuid : str
-    The uuid of target entity
-property_key : str
-    A target property key for result filtering
-
-Returns
--------
-list
-    A list of unique ancestor dictionaries returned from the Cypher query
-"""
-
-
 def get_ancestors(neo4j_driver, uuid, property_key=None):
+    """Get all ancestors by uuid.
+
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    uuid : str
+        The uuid of target entity
+    property_key : str
+        A target property key for result filtering
+
+    Returns
+    -------
+    list
+        A list of unique ancestor dictionaries returned from the Cypher query
+    """
     results = []
 
     if property_key:
@@ -726,6 +724,133 @@ def get_descendant_datasets(neo4j_driver, uuid, property_key=None):
                         result['protocol_url'] = protocol_url
 
     return results
+
+
+def get_ancestors_by_type(neo4j_driver, uuid, ancestor_type, property_keys=None):
+    """Get all ancestors of a specific type for a given entity.
+
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    uuid : str
+        The uuid of target entity
+    ancestor_type : str
+        The target entity type or sample category (Samples). This should be a value of one of the following:
+        - Ontology.ops().entities()
+        - Ontology.ops().specimen_categories()
+    property_key : str
+        Properies to return in the result. Use None to return all properties. Default is None.
+
+    Returns
+    -------
+    list[dict]
+        The list of ancestor entities as a dictionary
+    """
+    if ancestor_type in Ontology.ops(as_arr=True, cb=enum_val).entities():
+        predicate = f"a.entity_type='{ancestor_type}'"
+    elif ancestor_type in Ontology.ops(as_arr=True, cb=enum_val).specimen_categories():
+        predicate = f"a.sample_category='{ancestor_type}'"
+    else:
+        raise ValueError(f'Unsupported entity type: {ancestor_type}')
+
+    return_statement = 'COLLECT(a)'
+    if property_keys is not None:
+        joined_props = ', '.join([f'{key}: a.{key}' for key in property_keys])
+        return_statement = f'COLLECT({{ {joined_props} }})'
+
+    query = ("MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(a:Entity) "
+             f"WHERE e.uuid=$uuid AND {predicate} "
+             f"RETURN {return_statement} AS {record_field_name}")
+
+    with neo4j_driver.session() as session:
+        record = session.read_transaction(_execute_readonly_tx, query, uuid=uuid)
+
+        if record and record[record_field_name]:
+            return list(record[record_field_name])
+
+    return []
+
+
+def get_descendants_by_type(neo4j_driver, uuid, descendant_type, property_keys=None):
+    """Get all descendants of a specific type for a given entity.
+
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    uuid : str
+        The uuid of target entity
+    descendant_type : str
+        The target entity type or sample category (Samples). This should be a value of one of the following:
+        - Ontology.ops().entities()
+        - Ontology.ops().specimen_categories()
+    property_key : str
+        Properies to return in the result. Use None to return all properties. Default is None.
+
+    Returns
+    -------
+    list[dict]
+        The list of descendant entities as a dictionary
+    """
+    if descendant_type in Ontology.ops(as_arr=True, cb=enum_val).entities():
+        predicate = f"AND d.entity_type='{descendant_type}'"
+    elif descendant_type in Ontology.ops(as_arr=True, cb=enum_val).specimen_categories():
+        predicate = f"AND d.sample_category='{descendant_type}'"
+    else:
+        raise ValueError(f'Unsupported entity type: {descendant_type}')
+
+    return_statement = 'COLLECT(d)'
+    if property_keys is not None:
+        joined_props = ', '.join([f'{key}: d.{key}' for key in property_keys])
+        return_statement = f'COLLECT({{ {joined_props} }})'
+
+    query = ("MATCH (e:Entity)<-[:USED|WAS_GENERATED_BY*]-(d:Entity) "
+             f"WHERE e.uuid=$uuid {predicate} "
+             f"RETURN {return_statement} AS {record_field_name}")
+
+    with neo4j_driver.session() as session:
+        record = session.read_transaction(_execute_readonly_tx, query, uuid=uuid)
+
+        if record and record[record_field_name]:
+            return list(record[record_field_name])
+
+    return []
+
+
+def get_source_samples(neo4j_driver, uuid, property_keys=None):
+    """Get all samples immediately connected to a given dataset.
+
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    uuid : str
+        The uuid of target entity
+    property_key : str
+        Properies to return in the result. Use None to return all properties. Default is None.
+
+    Returns
+    -------
+    list[dict]
+        The list of source samples as a dictionary
+    """
+    return_statement = 'COLLECT(s)'
+    if property_keys is not None:
+        joined_props = ', '.join([f'{key}: s.{key}' for key in property_keys])
+        return_statement = f'COLLECT({{ {joined_props} }})'
+
+    query = (f"MATCH (d:Dataset)-[:WAS_GENERATED_BY|USED*]->(s:Sample) "
+             f"WHERE d.uuid='{uuid}' "
+             f"RETURN {return_statement} AS {record_field_name}")
+
+    with neo4j_driver.session() as session:
+        record = session.read_transaction(_execute_readonly_tx, query, uuid=uuid)
+
+        if record and record[record_field_name]:
+            return list(record[record_field_name])
+
+    return []
 
 
 """
