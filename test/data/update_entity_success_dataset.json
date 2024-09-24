@@ -214,7 +214,7 @@
       "last_modified_user_displayname": "Test User",
       "last_modified_user_email": "TESTUSER@example.com",
       "last_modified_user_sub": "cd17bfa7-24fd-49ca-82ec-2d456ba53730",
-      "metadata": "{}",
+      "metadata": {},
       "sennet_id": "SNT456.NJFC.364",
       "source_type": "Human",
       "uuid": "34fb81da75a5386d406a7b1835d92bdd"

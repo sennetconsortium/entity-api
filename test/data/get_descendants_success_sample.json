@@ -56,7 +56,7 @@
       "sennet_id": "SNT796.HPLZ.939",
       "uuid": "122406f18d6a30b6c0d1a7bd0478abbe",
       "source": {
-        "metadata": "{}",
+        "metadata": {},
         "lab_source_id": "Human Source 1",
         "group_name": "CODCC Testing Group",
         "sennet_id": "SNT522.GDLF.724",
@@ -157,7 +157,7 @@
   ],
   "get_sources_associated_entity": [
     {
-      "metadata": "{}",
+      "metadata": {},
       "lab_source_id": "Human Source 1",
       "group_name": "CODCC Testing Group",
       "sennet_id": "SNT522.GDLF.724",
