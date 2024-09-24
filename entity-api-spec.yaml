@@ -38,7 +38,61 @@ components:
         affiliation:
           type: string
           description: The institution that the person is affiliated with.
-
+    SourceMetadata:
+      type: object
+      properties:
+        code:
+          type: string
+          description: "This is a Code from a source vocabulary in the SenNet Knowledge Graph, currently limited to UMLS source vocabulary terms."
+        sab:
+          type: string
+          description: "This is the source vocabulary in the SenNet Knowledge Graph.  Currently limited to UMLS source vocabularies."
+        concept_id:
+          type: string
+          description: "This is the Concept ID from the SenNet Knowledge Graph.  Currently limited to UMLS concepts."
+        data_type:
+          type: string
+          enum:
+            - Nominal
+            - Numeric
+          description: "This is the data type of thw record. Numeric types will generally have non-null data_value. Nominal types will generally have null data_value."
+        data_value:
+          type: string
+          description: "The data value of the record."
+        numeric_operator:
+          type: string
+          enum:
+            - EQ
+            - GT
+            - LT
+          description: "This is the numeric operator for the data value .This enables inputing thresholds and ranges for data values by using greater than or less than."
+        units:
+          type: string
+          description: "This are the units for the data value."
+        preferred_term:
+          type: string
+          description: "This is the preferred display term for the item. It may or may not correspond to a term in UMLS for this concept."
+        grouping_concept:
+          type: string
+          description: "This is the Concept ID from the SenNet Knowledge Graph, currently limited to UMLS concetps, that is to be used for grouping the record."
+        grouping_concept_preferred_term:
+          type: string
+          description: "This is the preferred display term for the facet in which this record should be counted for faceted search in the portal. It may or may not correspond to a term in UMLS for the grouping concept."
+        grouping_code:
+          type: string
+          description: "This is a Code from a source vocabulary in the SenNet Knowledge Graph, currently limited to UMLS vocabulary codes. This code corresponds to the grouping_concept."
+        grouping_sab:
+          type: string
+          description: "This is a grouping for the source vocabulary in the SenNet Knowledge Graph, currently limited to UMLS source vocabularies.. This sab corresponds to the grouping_code."
+        graph_version:
+          type: string
+          description: "This is the version of the SenNet Knowledge Graph that the Concept appears in, currently the version of UMLS that is used."
+        start_datetime:
+          type: integer
+          description: "This is the approximate time difference in seconds between the procurement and the start of this event (this is to construct time series records of clinical data for event-level data not source-level data). An empty or zero value designates missing data or that this field is not applicable for the concept."
+        end_datetime:
+          type: integer
+          description: "This is the approximate time difference in seconds between the procurement and the end of this event (this is to construct time series records of clinical data for event-level data not source-level data). An empty of zero value designates missing data or that this field is not applicable for the concept"
     File:
       type: object
       properties:
@@ -1085,7 +1139,7 @@ paths:
       parameters:
         - name: id
           in: path
-          description: The unique identifier of entity.  This identifier can be either an HuBMAP ID (e.g. HBM123.ABCD.456) or UUID
+          description: The unique identifier of entity.  This identifier can be either an SenNet ID (e.g. HBM123.ABCD.456) or UUID
           required: true
           schema:
             type: string
@@ -1122,7 +1176,7 @@ paths:
       parameters:
         - name: id
           in: path
-          description: The unique identifier of entity.  This identifier can be either an HuBMAP ID (e.g. HBM123.ABCD.456) or UUID
+          description: The unique identifier of entity.  This identifier can be either an SenNet ID (e.g. SNT123.ABCD.456) or UUID
           required: true
           schema:
             type: string

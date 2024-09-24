@@ -997,18 +997,18 @@ list
 """
 
 
-def get_upload_datasets(neo4j_driver, uuid, property_key=None):
+def get_upload_datasets(neo4j_driver, uuid, property_key=None, query_filter=''):
     results = []
 
     if property_key:
         query = (f"MATCH (e:Dataset)-[:IN_UPLOAD]->(s:Upload) "
-                 f"WHERE s.uuid = '{uuid}' "
+                 f"WHERE s.uuid = '{uuid}' {query_filter} "
                  # COLLECT() returns a list
                  # apoc.coll.toSet() reruns a set containing unique nodes
                  f"RETURN apoc.coll.toSet(COLLECT(e.{property_key})) AS {record_field_name}")
     else:
         query = (f"MATCH (e:Dataset)-[:IN_UPLOAD]->(s:Upload) "
-                 f"WHERE s.uuid = '{uuid}' "
+                 f"WHERE s.uuid = '{uuid}' {query_filter} "
                  f"RETURN apoc.coll.toSet(COLLECT(e)) AS {record_field_name}")
 
     logger.info("======get_upload_datasets() query======")
