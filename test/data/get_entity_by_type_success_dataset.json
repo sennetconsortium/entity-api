@@ -24,7 +24,7 @@
       "uuid": "6a7be8e95c62c74545a29666111899d9",
       "creation_action": "Multi-Assay Split",
       "sources": {
-        "metadata": "{}",
+        "metadata": {},
         "lab_source_id": "Human Source 1",
         "group_name": "CODCC Testing Group",
         "sennet_id": "SNT522.GDLF.724",
@@ -68,7 +68,7 @@
       "uuid": "3c2c1ddae16945d48e5940622b615e20",
       "creation_action": "Multi-Assay Split",
       "sources": {
-        "metadata": "{}",
+        "metadata": {},
         "lab_source_id": "Human Source 1",
         "group_name": "CODCC Testing Group",
         "sennet_id": "SNT522.GDLF.724",
@@ -139,7 +139,7 @@
   ],
   "get_entity_creation_action_activity": "Multi-Assay Split",
   "get_sources_associated_entity": {
-    "metadata": "{}",
+    "metadata": {},
     "lab_source_id": "Human Source 1",
     "group_name": "CODCC Testing Group",
     "sennet_id": "SNT522.GDLF.724",

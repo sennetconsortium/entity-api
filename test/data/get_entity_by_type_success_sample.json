@@ -32,7 +32,7 @@
       },
       "uuid": "3c4fc147a08429f58856779fcde96f42",
       "source": {
-        "metadata": "{}",
+        "metadata": {},
         "lab_source_id": "Human Source 1",
         "group_name": "CODCC Testing Group",
         "sennet_id": "SNT522.GDLF.724",
@@ -84,7 +84,7 @@
       },
       "uuid": "4aff569f5d61477abfe5c40364d04a1c",
       "source": {
-        "metadata": "{}",
+        "metadata": {},
         "lab_source_id": "Human Source 1",
         "group_name": "CODCC Testing Group",
         "sennet_id": "SNT522.GDLF.724",
@@ -173,7 +173,7 @@
   ],
   "get_sources_associated_entity": [
     {
-      "metadata": "{}",
+      "metadata": {},
       "lab_source_id": "Human Source 1",
       "group_name": "CODCC Testing Group",
       "sennet_id": "SNT522.GDLF.724",
