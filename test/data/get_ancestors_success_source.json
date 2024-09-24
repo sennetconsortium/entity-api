@@ -59,7 +59,7 @@
   "get_ancestors": null,
   "get_sources_associated_entity": [
     {
-      "metadata": "{}",
+      "metadata": {},
       "lab_source_id": "Human Source 1",
       "group_name": "CODCC Testing Group",
       "sennet_id": "SNT522.GDLF.724",
