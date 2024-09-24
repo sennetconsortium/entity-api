@@ -3639,8 +3639,10 @@ def set_dataset_sources(property_key, normalized_type, user_token, existing_data
 
     sources = schema_neo4j_queries.get_sources_associated_entity(schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'])
     for source in sources:
-        if 'metadata' in source and bool(source['metadata']):
+        if 'metadata' in source and source['metadata'] != '{}':
             source['metadata'] = ast.literal_eval(source['metadata'])
+        else:
+            source.pop('metadata', None)
     return property_key, sources
 
 
@@ -3665,11 +3667,13 @@ Returns
 dict: The source associated with a sample
 """
 def set_sample_source(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
-
-    sources = schema_neo4j_queries.get_sources_associated_entity(schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'])
+    sources = schema_neo4j_queries.get_sources_associated_entity(schema_manager.get_neo4j_driver_instance(),
+                                                                 existing_data_dict['uuid'])
     for source in sources:
-        if 'metadata' in source and bool(source['metadata']):
+        if 'metadata' in source and source['metadata'] != '{}':
             source['metadata'] = ast.literal_eval(source['metadata'])
+        else:
+            source.pop('metadata', None)
     return property_key, sources[0]
 
 
