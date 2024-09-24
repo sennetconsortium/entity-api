@@ -54,7 +54,7 @@
       "sennet_id": "SNT687.SFVJ.758",
       "uuid": "5fa78f4fa272db58a7fcc7590376f5e7",
       "source": {
-        "metadata": "{}",
+        "metadata": {},
         "lab_source_id": "Human Source 1",
         "group_name": "CODCC Testing Group",
         "sennet_id": "SNT522.GDLF.724",
@@ -93,7 +93,7 @@
       "sennet_id": "SNT458.VPHX.635",
       "uuid": "cf3d0408de9afd703c8bd71808176b38",
       "source": {
-        "metadata": "{}",
+        "metadata": {},
         "lab_source_id": "Human Source 1",
         "group_name": "CODCC Testing Group",
         "sennet_id": "SNT522.GDLF.724",
@@ -228,7 +228,7 @@
       "last_modified_user_email": "TESTUSER@example.com"
     },
     {
-      "metadata": "{}",
+      "metadata": {},
       "lab_source_id": "Human Source 1",
       "group_name": "CODCC Testing Group",
       "sennet_id": "SNT522.GDLF.724",
@@ -250,7 +250,7 @@
   ],
   "get_sources_associated_entity": [
     {
-      "metadata": "{}",
+      "metadata": {},
       "lab_source_id": "Human Source 1",
       "group_name": "CODCC Testing Group",
       "sennet_id": "SNT522.GDLF.724",
