@@ -645,6 +645,18 @@ ENTITIES:
       has_qa_derived_dataset:
         type: boolean
         on_index_trigger: get_has_qa_derived_dataset
+      ancestors:
+        type: list
+        generated: true
+        immutable: true
+        description: "The list of all ancestors. This is utilized by the HRA EUI and returns limited properties."
+        on_index_trigger: get_ancestor_blocks
+      source_samples:
+        type: list
+        generated: true
+        immutable: true
+        description: "The list of all source samples. This is utilized by the HRA EUI and returns limited properties."
+        on_index_trigger: get_source_samples
 
   ############################################# Publication #############################################
   Publication:
@@ -1132,7 +1144,24 @@ ENTITIES:
         description: "The list of all Sources associated with Datasets"
         on_read_trigger: set_sample_source
         on_index_trigger: set_sample_source
-
+      descendants:
+        type: list
+        generated: true
+        immutable: true
+        description: "The list of all descendant datasets for Sample Sections. This is utilized by the HRA EUI and returns limited properties."
+        on_index_trigger: get_sample_section_descendant_datasets
+      ancestors:
+        type: list
+        generated: true
+        immutable: true
+        description: "The list of all ancestor Blocks for Sample Sections. This is utilized by the HRA EUI and returns limited properties."
+        on_index_trigger: get_ancestor_blocks
+      ancestor_ids:
+        type: list
+        generated: true
+        immutable: true
+        description: "The list of all ancestor ids for Sample Sections. This is utilized by the HRA EUI and returns just uuids."
+        on_index_trigger: get_sample_section_ancestor_ids
 
   ############################################# Upload #############################################
   # Eventually we might allow folks to bulk register Samples or Sources through the same mechanism.
