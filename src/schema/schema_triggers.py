@@ -3601,11 +3601,17 @@ def get_organ_hierarchy(property_key, normalized_type, user_token, existing_data
     """
     organ_hierarchy = None
     if equals(existing_data_dict['sample_category'], 'organ'):
-        organ_types = Ontology.ops(as_data_dict=True, key='rui_code', val_key='term').organ_types()
+        organ_types_categories = Ontology.ops(as_data_dict=True, key='rui_code', val_key='category').organ_types()
         organ_hierarchy = existing_data_dict['organ']
+        if existing_data_dict['organ'] in organ_types_categories and organ_types_categories[existing_data_dict['organ']] is not None:
+            return property_key, organ_types_categories[existing_data_dict['organ']]['term']
+
+        organ_types = Ontology.ops(as_data_dict=True, key='rui_code', val_key='term').organ_types()
         if existing_data_dict['organ'] in organ_types:
             organ_name = organ_types[existing_data_dict['organ']]
             organ_hierarchy = organ_name
+
+            # Deprecated. For backwards compatibility. Can eventually remove this regex on the text.
             res = re.findall('.+?(?=\()', organ_name)  # the pattern will find everything up to the first (
             if len(res) > 0:
                 organ_hierarchy = res[0].strip()
@@ -3710,3 +3716,37 @@ def get_has_qa_derived_dataset(property_key, normalized_type, user_token, existi
         return property_key, "False"
     else:
         return property_key, "False"
+
+
+def get_has_all_published_datasets(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method that determines if the datasets of an upload are all published.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key of the value to be generated
+    normalized_type : str
+        One of the types defined in the schema yaml: Sample
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, str]
+        str: The target property key
+        str: The result whether all the primary datasets which are all published
+    """
+
+
+    db = schema_manager.get_neo4j_driver_instance()
+
+    published_filter = 'AND e.status = "Published"'
+    datasets_primary_list = schema_neo4j_queries.get_upload_datasets(db, existing_data_dict['uuid'], 'uuid')
+    datasets_primary_list_published = schema_neo4j_queries.get_upload_datasets(db, existing_data_dict['uuid'], 'uuid',
+                                                                       query_filter=f'{published_filter}')
+
+    return property_key, str(len(datasets_primary_list) == len(datasets_primary_list_published)) if len(datasets_primary_list) > 0 else "False"
