@@ -1,3 +1,5 @@
+import ast
+
 from neo4j.exceptions import TransactionError
 import logging
 
@@ -2141,5 +2143,11 @@ def get_sources_associated_entity(neo4j_driver, uuid, filter_out = None):
         if record and record[record_field_name]:
             # Convert the neo4j node into Python dict
             results = nodes_to_dicts(record[record_field_name])
+
+        for result in results:
+            if 'metadata' in result and result['metadata'] != '{}':
+                result['metadata'] = ast.literal_eval(result['metadata'])
+            else:
+                result.pop('metadata', None)
 
     return results
