@@ -411,9 +411,9 @@ ENTITIES:
         description: "The data or assay type contained in this dataset."
         required_on_create: true
       dataset_type_hierarchy:
-        type: string
+        type: json_string # dict
         generated: true
-        description: 'The name of the top level of the hierarchy this dataset type belongs to.'
+        description: 'The hierarchy of the dataset type. This is a json object with the keys "first_level" and "second_level".'
         on_index_trigger: get_dataset_type_hierarchy
 #      TODO: data_types and data_types_other are deprecated and will be removed
       data_types:
