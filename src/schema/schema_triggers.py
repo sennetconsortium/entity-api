@@ -3536,12 +3536,8 @@ def set_dataset_sources(property_key, normalized_type, user_token, existing_data
         str: The target property key
         list: The list of sources associated with a dataset
     """
-    sources = schema_neo4j_queries.get_sources_associated_entity(schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'])
-    for source in sources:
-        if 'metadata' in source and source['metadata'] != '{}':
-            source['metadata'] = ast.literal_eval(source['metadata'])
-        else:
-            source.pop('metadata', None)
+    sources = schema_neo4j_queries.get_sources_associated_entity(schema_manager.get_neo4j_driver_instance(),
+                                                                 existing_data_dict['uuid'])
     return property_key, sources
 
 
@@ -3569,11 +3565,6 @@ def set_sample_source(property_key, normalized_type, user_token, existing_data_d
     """
     sources = schema_neo4j_queries.get_sources_associated_entity(schema_manager.get_neo4j_driver_instance(),
                                                                  existing_data_dict['uuid'])
-    for source in sources:
-        if 'metadata' in source and source['metadata'] != '{}':
-            source['metadata'] = ast.literal_eval(source['metadata'])
-        else:
-            source.pop('metadata', None)
     return property_key, sources[0]
 
 
