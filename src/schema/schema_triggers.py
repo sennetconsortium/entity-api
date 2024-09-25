@@ -979,8 +979,9 @@ def get_dataset_direct_ancestors(property_key, normalized_type, user_token, exis
 
     return property_key, schema_manager.normalize_entities_list_for_response(complete_entities_list)
 
-def get_sample_block_descendants(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
-    """Trigger event method of getting descendants for Sample Blocks.
+
+def get_sample_section_descendant_datasets(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method for getting the descendant datasets for a sample section.
 
     Parameters
     ----------
@@ -998,37 +999,158 @@ def get_sample_block_descendants(property_key, normalized_type, user_token, exis
     Returns
     -------
     Tuple[str, list]
-        str: The target property key
-        list: A list of associated descendants for Sample Blocks
+    str: The target property key
+    list: A list of descendant datasets
     """
     if 'uuid' not in existing_data_dict:
         msg = create_trigger_error_msg(
-            "Missing 'uuid' key in 'existing_data_dict' during calling 'get_dataset_direct_ancestors()' trigger method.",
+            "Missing 'uuid' key in 'existing_data_dict' during calling 'get_sample_section_descendant_datasets()' trigger method.",
             existing_data_dict, new_data_dict
         )
         raise KeyError(msg)
 
-    # Check if the entity is a Sample Block, skip otherwise
+    # Check if the entity is a Sample Section, skip otherwise
     if equals(Ontology.ops().entities().SAMPLE, normalized_type):
-        if equals(existing_data_dict['sample_category'], "Block"):
+        if equals(Ontology.ops().specimen_categories().SECTION, existing_data_dict['sample_category']):
             driver = schema_manager.get_neo4j_driver_instance()
-            descendant_list = schema_manager.normalize_entities_list_for_response(app_neo4j_queries.get_descendants(driver, existing_data_dict['uuid']))
+            uuid = existing_data_dict['uuid']
 
-            # These are the fields required by the HRA EUI
-            properties_to_keep = ['created_by_user_displayname', 'dataset_type', 'entity_type', 'group_name',
-                                  'group_uuid', 'last_modified_timestamp', 'sennet_id',
-                                  'thumbnail_file', 'uuid']
-            for i, descendant in enumerate(descendant_list):
-                tissue_id = descendant.get('ingest_metadata', {}).get('metadata', {}).get('tissue_id', None)
-                descendant = remove_fields(descendant, properties_to_keep)
-                if tissue_id:
-                    descendant['ingest_metadata'] = {}
-                    descendant['ingest_metadata']['metadata'] = {}
-                    descendant['ingest_metadata']['metadata']['tissue_id'] = tissue_id
-                descendant_list[i] = descendant
-            return property_key, descendant_list
+            # HRA EUI only requires the 'dataset_type' field
+            properties = ['uuid', 'dataset_type']
+            datasets = app_neo4j_queries.get_descendants_by_type(driver, uuid, Ontology.ops().entities().DATASET, properties)
+            return property_key, datasets
 
     return property_key, None
+
+
+def get_ancestor_blocks(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method for getting the ancestor blocks for a sample section or dataset.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key of the value to be generated
+    normalized_type : str
+        One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, list]
+    str: The target property key
+    list: A list of ancestor blocks
+    """
+    if 'uuid' not in existing_data_dict:
+        msg = create_trigger_error_msg(
+            "Missing 'uuid' key in 'existing_data_dict' during calling 'get_ancestor_blocks()' trigger method.",
+            existing_data_dict, new_data_dict
+        )
+        raise KeyError(msg)
+
+    # Check if the entity is a sample section or dataset, skip otherwise
+    entity_types = Ontology.ops().entities()
+    sample_categories = Ontology.ops().specimen_categories()
+    if (
+        (equals(entity_types.SAMPLE, normalized_type) and equals(sample_categories.SECTION, existing_data_dict['sample_category']))
+        or equals(entity_types.DATASET, normalized_type)
+    ):
+        driver = schema_manager.get_neo4j_driver_instance()
+        uuid = existing_data_dict['uuid']
+
+        # HRA EUI only requires the 'rui_location' field
+        properties = ['uuid', 'rui_location']
+        blocks = app_neo4j_queries.get_ancestors_by_type(driver, uuid, Ontology.ops().specimen_categories().BLOCK, properties)
+        blocks = [b for b in blocks if b.get('rui_location') is not None]
+        if len(blocks) > 0:
+            return property_key, blocks
+
+    return property_key, None
+
+
+def get_sample_section_ancestor_ids(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method for getting the ancestor ids for a sample section.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key of the value to be generated
+    normalized_type : str
+        One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, list]
+    str: The target property key
+    list: A list of ancestor ids
+    """
+    if 'uuid' not in existing_data_dict:
+        msg = create_trigger_error_msg(
+            "Missing 'uuid' key in 'existing_data_dict' during calling 'get_sample_section_ancestor_blocks()' trigger method.",
+            existing_data_dict, new_data_dict
+        )
+        raise KeyError(msg)
+
+    # Check if the entity is a Sample Section, skip otherwise
+    if equals(Ontology.ops().entities().SAMPLE, normalized_type):
+        if equals(Ontology.ops().specimen_categories().SECTION, existing_data_dict['sample_category']):
+            driver = schema_manager.get_neo4j_driver_instance()
+            uuid = existing_data_dict['uuid']
+            ancestor_ids = app_neo4j_queries.get_ancestors(driver, uuid, 'uuid')
+            if len(ancestor_ids) > 0:
+                return property_key, ancestor_ids
+
+    return property_key, None
+
+
+def get_source_samples(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method for getting the samples immediately connected to a given dataset.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key of the value to be generated
+    normalized_type : str
+        One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, list]
+    str: The target property key
+    list: A list of source samples
+    """
+    if 'uuid' not in existing_data_dict:
+        msg = create_trigger_error_msg(
+            "Missing 'uuid' key in 'existing_data_dict' during calling 'get_sample_section_ancestor_blocks()' trigger method.",
+            existing_data_dict, new_data_dict
+        )
+        raise KeyError(msg)
+
+    driver = schema_manager.get_neo4j_driver_instance()
+    uuid = existing_data_dict['uuid']
+    properties = ['uuid', 'sample_category']
+    samples = app_neo4j_queries.get_source_samples(driver, uuid, properties)
+    if len(samples) < 1:
+        return property_key, None
+
+    return property_key, samples
+
 
 def remove_fields(d, properties_to_keep):
     return {key: value for key, value in d.items() if key in properties_to_keep}
@@ -3415,7 +3537,11 @@ def set_dataset_sources(property_key, normalized_type, user_token, existing_data
         list: The list of sources associated with a dataset
     """
     sources = schema_neo4j_queries.get_sources_associated_entity(schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'])
-
+    for source in sources:
+        if 'metadata' in source and source['metadata'] != '{}':
+            source['metadata'] = ast.literal_eval(source['metadata'])
+        else:
+            source.pop('metadata', None)
     return property_key, sources
 
 
@@ -3441,8 +3567,13 @@ def set_sample_source(property_key, normalized_type, user_token, existing_data_d
         str: The target property key
         dict: The source associated with a sample
     """
-    sources = schema_neo4j_queries.get_sources_associated_entity(schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'])
-
+    sources = schema_neo4j_queries.get_sources_associated_entity(schema_manager.get_neo4j_driver_instance(),
+                                                                 existing_data_dict['uuid'])
+    for source in sources:
+        if 'metadata' in source and source['metadata'] != '{}':
+            source['metadata'] = ast.literal_eval(source['metadata'])
+        else:
+            source.pop('metadata', None)
     return property_key, sources[0]
 
 
