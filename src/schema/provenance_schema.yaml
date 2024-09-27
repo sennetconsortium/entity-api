@@ -355,7 +355,7 @@ ENTITIES:
     derivation:
       source: true
       target: true
-    properties:
+    properties: &shared_dataset_properties
       <<: *shared_properties
       <<: *shared_entity_properties
       <<: *doi_properties
@@ -669,87 +669,25 @@ ENTITIES:
       source: true
       target: true
     properties:
-      error_message:
+      <<: *shared_dataset_properties
+      title:
         type: string
-        description: "An open text field that holds the last error message that arose from pipeline validation or analysis."
+        description: "The title of the publication."
+        required_on_create: true # Only required for create via POST, not update via PUT
+      creation_action:
+        type: string
+        transient: true
+        generated: true
+        immutable: true
+        on_read_trigger: get_creation_action_activity
+        on_index_trigger: get_creation_action_activity
+        description: "The activity that was performed."
       dataset_type:
         before_create_trigger: set_publication_dataset_type
         type: string
         generated: true
         immutable: true
         description: "The assay types of this Dataset. Valid values are from UBKG are queried by schema_manager.get_valueset_dataset_type() using the Ontology API."
-      title:
-        type: string
-        description: "The title of the publication."
-        required_on_create: true # Only required for create via POST, not update via PUT
-      pipeline_message:
-        #todo: where is this attribute sourced from?  Is it stored in the database? <- Not in neo4j
-        type: string
-      ingest_metadata:
-        type: json_string # dict
-        description: "The metadata returned from the processing at data submission time."
-      run_id:
-        type: string
-      ingest_id:
-        type: string
-      # A user who is a member of multiple groups HAS to send in the group_uuid
-      group_uuid:
-        type: string
-        immutable: true
-        description: "The uuid of globus group which the user who created this entity is a member of.  This is required on Create/POST if the user creating the Donor is a member of more than one write group.  This property cannot be set via PUT (only on Create/POST)."
-        before_create_trigger: set_group_uuid #method that, if group_uuid is not already set looks for membership in a single "data provider" group and sets to that. Otherwise if not set and no single "provider group" membership throws error
-      # No like image and metadata files handling for Donor/Sample
-      # Dataset has only one thumbnail file
-      thumbnail_file:
-        generated: true
-        type: json_string
-        description: "The dataset thumbnail file detail. Stored in db as a stringfied json, e.g., {'filename': 'thumbnail.jpg', 'file_uuid': 'dadasdasdadda'}"
-        # The updated_peripherally tag is a temporary measure to correctly handle any attributes
-        # which are potentially updated by multiple triggers
-        updated_peripherally: true
-      thumbnail_file_to_add:
-        type: json_string
-        transient: true
-        exposed: false
-        description: 'Just a temporary file id. Provide as a json object with an temp_file_id like {"temp_file_id":"dzevgd6xjs4d5grmcp4n"}'
-        before_create_trigger: commit_thumbnail_file
-        # This before_update_trigger with the same commit process can be used by ingest-api to update the dataset via PUT call
-        before_update_trigger: commit_thumbnail_file
-        # The updated_peripherally tag is a temporary measure to correctly handle any attributes
-        # which are potentially updated by multiple triggers
-        updated_peripherally: true
-      thumbnail_file_to_remove:
-        # This is only valid on update via a PUT request
-        type: string
-        transient: true
-        exposed: false
-        description: 'The thumbnail image file previously uploaded to delete. Provide as a string of the file_uuid like: "232934234234234234234270c0ea6c51d604a850558ef2247d0b4"'
-        before_update_trigger: delete_thumbnail_file
-        # The updated_peripherally tag is a temporary measure to correctly handle any attributes
-        # which are potentially updated by multiple triggers
-        updated_peripherally: true
-      retraction_reason:
-        type: string
-        before_property_update_validators:
-          - validate_if_retraction_permitted
-          - validate_sub_status_provided
-        description: 'Information recorded about why a the dataset was retracted.'
-      sub_status:
-        type: string
-        before_property_update_validators:
-          - validate_if_retraction_permitted
-          - validate_retraction_reason_provided
-          - validate_retracted_dataset_sub_status_value
-        description: 'A sub-status provided to further define the status. The only current allowable value is "Retracted"'
-      provider_info:
-        type: string
-        description: 'Information recorded about the data provider before an analysis pipeline is run on the data.'
-      dbgap_sra_experiment_url:
-        type: string
-        description: 'A URL linking the dataset to the associated uploaded data at dbGaP.'
-      dbgap_study_url:
-        type: string
-        description: 'A URL linking the dataset to the particular study on dbGap it belongs to'
       publication_date:
         type: string
         description: 'The date of publication'
