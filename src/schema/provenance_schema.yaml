@@ -239,6 +239,12 @@ shared_entity_properties: &shared_entity_properties
     before_property_update_validators:
       - validate_application_header_before_property_update
     description: "The metadata returned from the processing at data submission time."
+  has_metadata:
+    type: string
+    generated: true # Disallow entry from users via POST
+    immutable: true # Disallow update via PUT
+    description: "True if the entity has metadata associated with it. Otherwise False."
+    on_index_trigger: get_has_metadata
   was_attributed_to:
     type: list
     description: "Attribution is the ascribing of an entity to an agent."
