@@ -126,12 +126,12 @@ list
 """
 
 
-def get_origin_sample(neo4j_driver, uuid):
+def get_origin_samples(neo4j_driver, uuid):
     result = {}
 
     query = (f"MATCH (e:Entity)-[:WAS_GENERATED_BY|USED*]->(s:Sample) "
              f"WHERE e.uuid='{uuid}' and s.sample_category='Organ' "
-             f"return s AS {record_field_name}")
+             f"return apoc.coll.toSet(COLLECT(s)) AS {record_field_name}")
 
     logger.info("======get_origin_sample() query======")
     logger.info(query)
@@ -140,7 +140,7 @@ def get_origin_sample(neo4j_driver, uuid):
         record = session.read_transaction(_execute_readonly_tx, query)
         if record and record[record_field_name]:
             # Convert the entity node to dict
-            result = _node_to_dict(record[record_field_name])
+            result = _nodes_to_dicts(record[record_field_name])
 
     return result
 

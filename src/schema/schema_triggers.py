@@ -1734,7 +1734,7 @@ def get_last_touch(property_key, normalized_type, user_token, existing_data_dict
     return property_key, last_touch
 
 
-def get_origin_sample(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+def get_origin_samples(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     """Trigger event method to grab the ancestor of this entity where entity type is Sample and the sample_category is Organ.
 
     Parameters
@@ -1763,19 +1763,20 @@ def get_origin_sample(property_key, normalized_type, user_token, existing_data_d
             # Return the organ if this is an organ
             return property_key, existing_data_dict
 
-        origin_sample = None
+        origin_samples = None
         if normalized_type in ["Sample", "Dataset", "Publication"]:
-            origin_sample = schema_neo4j_queries.get_origin_sample(schema_manager.get_neo4j_driver_instance(),
+            origin_samples = schema_neo4j_queries.get_origin_samples(schema_manager.get_neo4j_driver_instance(),
                                                                    existing_data_dict['uuid'])
 
-            organ_hierarchy_key, organ_hierarchy_value = get_organ_hierarchy(property_key='organ_hierarchy',
-                                                                             normalized_type=Ontology.ops().entities().SAMPLE,
-                                                                             user_token=user_token,
-                                                                             existing_data_dict=origin_sample,
-                                                                             new_data_dict=new_data_dict)
-            origin_sample[organ_hierarchy_key] = organ_hierarchy_value
+            for origin_sample in origin_samples:
+                organ_hierarchy_key, organ_hierarchy_value = get_organ_hierarchy(property_key='organ_hierarchy',
+                                                                                 normalized_type=Ontology.ops().entities().SAMPLE,
+                                                                                 user_token=user_token,
+                                                                                 existing_data_dict=origin_sample,
+                                                                                 new_data_dict=new_data_dict)
+                origin_sample[organ_hierarchy_key] = organ_hierarchy_value
 
-        return property_key, origin_sample
+        return property_key, origin_samples
     except Exception:
         logger.error(f"No origin sample found for {normalized_type} with UUID: {existing_data_dict['uuid']}")
         return property_key, None

@@ -597,10 +597,10 @@ ENTITIES:
         type: string
         description: 'The timestamp of when this entity was last modified or published.'
         on_index_trigger: get_last_touch
-      origin_sample:
+      origin_samples:
         type: json_string
-        description: 'The Sample ancestor that has the sample_category of "Organ".'
-        on_index_trigger: get_origin_sample
+        description: 'The Sample ancestors that has the sample_category of "Organ".'
+        on_index_trigger: get_origin_samples
       assigned_to_group_name:
         type: string
         description: The group who is responsible for the next step in the ingest process
