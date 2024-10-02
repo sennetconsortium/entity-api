@@ -956,10 +956,10 @@ ENTITIES:
         type: string
         description: 'The timestamp of when this entity was last modified or published.'
         on_index_trigger: get_last_touch
-      origin_sample:
+      origin_samples:
         type: json_string
-        description: 'The Sample ancestor that has the sample_category of "Organ".'
-        on_index_trigger: get_origin_sample
+        description: 'The list of Sample ancestors that has the sample_category of "Organ".'
+        on_index_trigger: get_origin_samples
       next_identifier:
         type: string
         immutable: true
