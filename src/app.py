@@ -1697,16 +1697,19 @@ def get_descendants(id):
     entity_dict = query_target_entity(id)
     normalized_entity_type = entity_dict['entity_type']
     uuid = entity_dict['uuid']
+    public_entity = True
 
     if schema_manager.entity_type_instanceof(normalized_entity_type, 'Dataset'):
         # Only published/public datasets don't require token
         if entity_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
             # Token is required and the user must belong to SenNet-READ group
             token = get_user_token(request, non_public_access_required=True)
+            public_entity = False
     elif normalized_entity_type == 'Sample' or normalized_entity_type == 'Source':
         # The `data_access_level` of Sample/Source can only be either 'public' or 'consortium'
         if entity_dict['data_access_level'] == ACCESS_LEVEL_CONSORTIUM:
             token = get_user_token(request, non_public_access_required=True)
+            public_entity = False
     elif normalized_entity_type == 'Upload':
         # Uploads are always consortium level
         token = get_user_token(request, non_public_access_required=True)
@@ -1756,6 +1759,16 @@ def get_descendants(id):
 
         # Final result after normalization
         final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list, properties_to_include=['protocol_url'])
+
+        if public_entity and not user_in_sennet_read_group(request):
+            filtered_final_result = []
+            for ancestor in final_result:
+                ancestor_entity_type = ancestor.get('entity_type')
+                fields_to_exclude = schema_manager.get_fields_to_exclude(ancestor_entity_type)
+                filtered_ancestor = schema_manager.exclude_properties_from_response(fields_to_exclude, ancestor)
+                filtered_final_result.append(filtered_ancestor)
+
+            final_result = filtered_final_result
 
     return jsonify(final_result)
 
