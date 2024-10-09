@@ -1295,6 +1295,55 @@ def link_to_previous_revision(property_key, normalized_type, user_token, existin
         raise
 
 
+def get_has_metadata(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method for determining if the entity has metadata.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key
+    normalized_type : str
+        One of the types defined in the schema yaml
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, str]
+        str: The target property key
+        str: "True" or "False" if the entity has metadata
+    """
+    if 'uuid' not in existing_data_dict:
+        msg = create_trigger_error_msg(
+            "Missing 'uuid' key in 'existing_data_dict' during calling 'get_has_metadata()' trigger method.",
+            existing_data_dict, new_data_dict
+        )
+        raise KeyError(msg)
+
+    if equals(Ontology.ops().entities().DATASET, existing_data_dict['entity_type']):
+        ingest_metadata = existing_data_dict.get('ingest_metadata', {})
+        has_metadata = 'metadata' in ingest_metadata
+        return property_key, str(has_metadata)
+
+    SpecimenCategories = Ontology.ops().specimen_categories()
+    if (
+        equals(Ontology.ops().entities().SOURCE, existing_data_dict['entity_type'])
+        or equals('Collection', existing_data_dict['entity_type'])
+        or equals('Publication', existing_data_dict['entity_type'])
+        or equals(SpecimenCategories.BLOCK, existing_data_dict.get('sample_category'))
+        or equals(SpecimenCategories.SECTION, existing_data_dict.get('sample_category'))
+        or equals(SpecimenCategories.SUSPENSION, existing_data_dict.get('sample_category'))
+    ):
+        has_metadata = 'metadata' in existing_data_dict
+        return property_key, str(has_metadata)
+
+    return property_key, None
+
+
 def get_source_mapped_metadata(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     """Trigger event method of auto generating mapped metadata from 'living_donor_data' or 'organ_donor_data'.
 
