@@ -1610,6 +1610,9 @@ def get_ancestors(id):
         # So no need to execute the code below
         return jsonify(final_result)
 
+    authorized = user_in_sennet_read_group(request)
+    data_access_level = 'public' if authorized is False else None
+
     # By now, either the entity is public accessible or the user token has the correct access level
     # Result filtering based on query string
     if bool(request.args):
@@ -1623,7 +1626,7 @@ def get_ancestors(id):
                 abort_bad_req(f"Only the following property keys are supported in the query string: {COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}")
 
             # Only return a list of the filtered property value of each entity
-            property_list = app_neo4j_queries.get_ancestors(neo4j_driver_instance, uuid, property_key)
+            property_list = app_neo4j_queries.get_ancestors(neo4j_driver_instance, uuid, data_access_level, property_key)
 
             # Final result
             final_result = property_list
@@ -1631,7 +1634,7 @@ def get_ancestors(id):
             abort_bad_req("The specified query string is not supported. Use '?property=<key>' to filter the result")
     # Return all the details if no property filtering
     else:
-        ancestors_list = app_neo4j_queries.get_ancestors(neo4j_driver_instance, uuid)
+        ancestors_list = app_neo4j_queries.get_ancestors(neo4j_driver_instance, uuid, data_access_level)
 
         # Generate trigger data
         # Skip some of the properties that are time-consuming to generate via triggers
@@ -1717,6 +1720,9 @@ def get_descendants(id):
     else:
         return jsonify(final_result)
 
+    authorized = user_in_sennet_read_group(request)
+    data_access_level = 'public' if authorized is False else None
+
     # Result filtering based on query string
     if bool(request.args):
         property_key = request.args.get('property')
@@ -1729,7 +1735,7 @@ def get_descendants(id):
                 abort_bad_req(f"Only the following property keys are supported in the query string: {COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}")
 
             # Only return a list of the filtered property value of each entity
-            property_list = app_neo4j_queries.get_descendants(neo4j_driver_instance, uuid, property_key)
+            property_list = app_neo4j_queries.get_descendants(neo4j_driver_instance, uuid, data_access_level, property_key)
 
             # Final result
             final_result = property_list
@@ -1737,7 +1743,7 @@ def get_descendants(id):
             abort_bad_req("The specified query string is not supported. Use '?property=<key>' to filter the result")
     # Return all the details if no property filtering
     else:
-        descendants_list = app_neo4j_queries.get_descendants(neo4j_driver_instance, uuid)
+        descendants_list = app_neo4j_queries.get_descendants(neo4j_driver_instance, uuid, data_access_level)
 
         # Generate trigger data and merge into a big dict
         # and skip some of the properties that are time-consuming to generate via triggers
@@ -1760,7 +1766,7 @@ def get_descendants(id):
         # Final result after normalization
         final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list, properties_to_include=['protocol_url'])
 
-        if public_entity and not user_in_sennet_read_group(request):
+        if public_entity and not authorized:
             filtered_final_result = []
             for ancestor in final_result:
                 ancestor_entity_type = ancestor.get('entity_type')
