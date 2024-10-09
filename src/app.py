@@ -1018,7 +1018,9 @@ def create_entity(entity_type: str, user_token: str, json_data_dict: dict):
         direct_ancestor_uuids = []
         for direct_ancestor_uuid in json_data_dict['direct_ancestor_uuids']:
             direct_ancestor_dict = query_target_entity(direct_ancestor_uuid)
-            validate_constraints_by_entities(direct_ancestor_dict, json_data_dict, normalized_entity_type)
+            # We don't need to check this for Publications or Collections
+            if normalized_entity_type == 'Dataset':
+                validate_constraints_by_entities(direct_ancestor_dict, json_data_dict, normalized_entity_type)
             direct_ancestor_uuids.append(direct_ancestor_dict['uuid'])
 
         json_data_dict['direct_ancestor_uuids'] = direct_ancestor_uuids
