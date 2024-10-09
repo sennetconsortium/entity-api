@@ -1688,16 +1688,31 @@ json
 def get_descendants(id):
     final_result = []
 
-    # Get user token from Authorization header
-    user_token = get_user_token(request)
+    # Use the internal token to query the target entity
+    # since public entities don't require user token
+    token = get_internal_token()
 
     # Make sure the id exists in uuid-api and
     # the corresponding entity also exists in neo4j
     entity_dict = query_target_entity(id)
+    normalized_entity_type = entity_dict['entity_type']
     uuid = entity_dict['uuid']
 
-    # Collection and Upload don't have descendants via Activity nodes
-    # No need to check, it'll always return empty list
+    if schema_manager.entity_type_instanceof(normalized_entity_type, 'Dataset'):
+        # Only published/public datasets don't require token
+        if entity_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
+            # Token is required and the user must belong to SenNet-READ group
+            token = get_user_token(request, non_public_access_required=True)
+    elif normalized_entity_type == 'Sample' or normalized_entity_type == 'Source':
+        # The `data_access_level` of Sample/Source can only be either 'public' or 'consortium'
+        if entity_dict['data_access_level'] == ACCESS_LEVEL_CONSORTIUM:
+            token = get_user_token(request, non_public_access_required=True)
+    elif normalized_entity_type == 'Upload':
+        # Uploads are always consortium level
+        token = get_user_token(request, non_public_access_required=True)
+        return jsonify(final_result)
+    else:
+        return jsonify(final_result)
 
     # Result filtering based on query string
     if bool(request.args):
@@ -1737,7 +1752,7 @@ def get_descendants(id):
             'previous_revision_uuids'
         ]
 
-        complete_entities_list = schema_manager.get_complete_entities_list(user_token, descendants_list, properties_to_skip)
+        complete_entities_list = schema_manager.get_complete_entities_list(token, descendants_list, properties_to_skip)
 
         # Final result after normalization
         final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list, properties_to_include=['protocol_url'])
@@ -3947,7 +3962,7 @@ Returns
 str
     The token string if valid
 """
-def get_user_token(request, non_public_access_required = False):
+def get_user_token(request, non_public_access_required=False):
     # Get user token from Authorization header
     # getAuthorizationTokens() also handles MAuthorization header but we are not using that here
     try:
