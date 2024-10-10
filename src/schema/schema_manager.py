@@ -298,6 +298,77 @@ def get_all_entity_types():
     return list(dict_keys)
 
 
+def get_fields_to_exclude(normalized_class=None):
+    """Retrieves fields designated in the provenance schema yaml under
+    excluded_properties_from_public_response and returns the fields in a list.
+
+    Parameters
+    ----------
+    normalized_class : Optional[str]
+        the normalized entity type of the entity who's fields are to be removed
+
+    Returns
+    -------
+    list[str]
+        A list of strings where each entry is a field to be excluded
+    """
+    # Determine the schema section based on class
+    excluded_fields = []
+    schema_section = _schema['ENTITIES']
+    exclude_list = schema_section[normalized_class].get('excluded_properties_from_public_response')
+    if exclude_list:
+        excluded_fields.extend(exclude_list)
+    return excluded_fields
+
+
+def exclude_properties_from_response(excluded_fields, output_dict):
+    """Removes specified fields from an existing dictionary.
+
+    Parameters
+    ----------
+    excluded_fields : list
+        A list of the fields to be excluded
+    output_dict : dictionary
+        A dictionary representing the data to be modified
+
+    Returns
+    -------
+    dict
+        The modified data with removed fields
+    """
+    def delete_nested_field(data, nested_path):
+        if isinstance(nested_path, dict):
+            for key, value in nested_path.items():
+                if key in data:
+                    if isinstance(value, list):
+                        for nested_field in value:
+                            if isinstance(nested_field, dict):
+                                delete_nested_field(data[key], nested_field)
+
+                            elif isinstance(data[key], list):
+                                for item in data[key]:
+                                    if nested_field in item:
+                                        del item[nested_field]
+
+                            elif nested_field in data[key]:
+                                del data[key][nested_field]
+                    elif isinstance(value, dict):
+                        delete_nested_field(data[key], value)
+
+        elif nested_path in data:
+            if isinstance(data[nested_path], list):
+                for item in data[nested_path]:
+                    if nested_path in item:
+                        del item[nested_path]
+            else:
+                del data[nested_path]
+
+    for field in excluded_fields:
+        delete_nested_field(output_dict, field)
+
+    return output_dict
+
+
 """
 Generating triggered data based on the target events and methods
 
@@ -2043,6 +2114,12 @@ def generate_activity_data(normalized_entity_type, user_token, user_info_dict, c
                                                            user_token, {}, data_dict_for_activity)
 
     return generated_activity_data_dict
+
+
+
+
+
+
 
 
 """

@@ -357,6 +357,17 @@ ENTITIES:
   Dataset:
     # Only allowed applications can create new Dataset via POST
     before_entity_create_validator: validate_application_header_before_entity_create
+    excluded_properties_from_public_response:
+      - lab_dataset_id
+      - sources:
+          - lab_source_id
+      - ingest_metadata:
+          - metadata:
+              - lab_id
+              - slide_id
+      - cedar_mapped_metadata:
+          - Lab ID
+          - Slide ID
     # Dataset can be either derivation source or target
     derivation:
       source: true
@@ -757,6 +768,9 @@ ENTITIES:
     derivation:
       source: false
       target: true
+    excluded_properties_from_public_response:
+      - lab_source_id
+      - label
     properties:
       <<: *shared_properties
       <<: *shared_entity_properties
@@ -875,6 +889,20 @@ ENTITIES:
     derivation:
       source: true
       target: true
+    excluded_properties_from_public_response:
+      - lab_tissue_sample_id
+      - origin_sample:
+          - lab_tissue_sample_id
+      - origin_samples:
+          - lab_tissue_sample_id
+      - source:
+          - lab_source_id
+      - metadata:
+          - lab_id
+          - slide_id
+      - cedar_mapped_metadata:
+          - Lab ID
+          - Slide ID
     properties:
       <<: *shared_properties
       <<: *shared_entity_properties
