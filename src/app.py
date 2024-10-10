@@ -5426,7 +5426,7 @@ def verify_ubkg_properties(json_data_dict):
     if 'dataset_type' in json_data_dict:
         ancillary = re.compile('\[.*\]$')
         if ancillary.search(json_data_dict['dataset_type']) is None:
-            compare_property_against_ubkg(DATASET_TYPE, json_data_dict['dataset_type'], 'dataset_type')
+            compare_property_against_ubkg(DATASET_TYPE, {'dataset_type': json_data_dict['dataset_type']}, 'dataset_type')
 
 
 def compare_property_list_against_ubkg(ubkg_dict, json_data_dict, field):
