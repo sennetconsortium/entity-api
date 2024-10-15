@@ -1552,12 +1552,13 @@ def get_dataset_title(property_key, normalized_type, user_token, existing_data_d
     organ_list = []
     if organ_names is not None and bool(organ_names):
         for organ_name in organ_names:
-            try:
-                # The organ_name is the two-letter code only set if specimen_type == 'organ'
-                # Convert the two-letter code to a description
-                organ_list.append(_get_organ_description(organ_name))
-            except (requests.exceptions.RequestException) as e:
-                raise Exception(e)
+            if organ_name is not None:
+                try:
+                    # The organ_name is the two-letter code only set if specimen_type == 'organ'
+                    # Convert the two-letter code to a description
+                    organ_list.append(_get_organ_description(organ_name))
+                except (requests.exceptions.RequestException) as e:
+                    raise Exception(e)
 
         organ_desc = ", ".join(organ_list[:-2] + [" and ".join(organ_list[-2:])])
 
@@ -1567,69 +1568,73 @@ def get_dataset_title(property_key, normalized_type, user_token, existing_data_d
     source_metadata_desc = ''
     source_metadata_list = []
     if source_metadata is not None and bool(source_metadata):
-        for source_metadata in source_metadata:
-            # Note: The donor_metadata is stored in Neo4j as a string representation of the Python dict
-            # It's not stored in Neo4j as a json string! And we can't store it as a json string
-            # due to the way that Cypher handles single/double quotes.
-            ancestor_metadata_dict = schema_manager.convert_str_to_data(source_metadata)
+        for metadata in source_metadata:
+            if metadata is not None:
+                # Note: The donor_metadata is stored in Neo4j as a string representation of the Python dict
+                # It's not stored in Neo4j as a json string! And we can't store it as a json string
+                # due to the way that Cypher handles single/double quotes.
+                ancestor_metadata_dict = schema_manager.convert_str_to_data(metadata)
 
-            if equals(source_type, Ontology.ops().source_types().MOUSE):
-                sex = 'female' if equals(ancestor_metadata_dict['sex'], 'F') else 'male'
-                is_embryo = ancestor_metadata_dict['is_embryo']
-                embryo = ' embryo' if is_embryo is True or equals(is_embryo, 'True') else ''
+                if equals(source_type, Ontology.ops().source_types().MOUSE):
+                    sex = 'female' if equals(ancestor_metadata_dict['sex'], 'F') else 'male'
+                    is_embryo = ancestor_metadata_dict['is_embryo']
+                    embryo = ' embryo' if is_embryo is True or equals(is_embryo, 'True') else ''
 
-                source_metadata_list.append(f"{ancestor_metadata_dict['strain']} {sex} mouse{embryo}")
+                    source_metadata_list.append(f"{ancestor_metadata_dict['strain']} {sex} mouse{embryo}")
 
-            else:
-                data_list = []
-
-                # Either 'organ_donor_data' or 'living_donor_data' can be present, but not both
-                if 'organ_donor_data' in ancestor_metadata_dict:
-                    data_list = ancestor_metadata_dict['organ_donor_data']
-                elif 'living_donor_data' in ancestor_metadata_dict:
-                    data_list = ancestor_metadata_dict['living_donor_data']
                 else:
-                    # When neither 'organ_donor_data' nor 'living_donor_data' exists, use default None and continue
-                    pass
+                    data_list = []
 
-                for data in data_list:
-                    if 'grouping_concept_preferred_term' in data:
-                        if data['grouping_concept_preferred_term'].lower() == 'age':
-                            # The actual value of age stored in 'data_value' instead of 'preferred_term'
-                            age = data['data_value']
+                    # Either 'organ_donor_data' or 'living_donor_data' can be present, but not both
+                    if 'organ_donor_data' in ancestor_metadata_dict:
+                        data_list = ancestor_metadata_dict['organ_donor_data']
+                    elif 'living_donor_data' in ancestor_metadata_dict:
+                        data_list = ancestor_metadata_dict['living_donor_data']
+                    else:
+                        # When neither 'organ_donor_data' nor 'living_donor_data' exists, use default None and continue
+                        pass
 
-                        if data['grouping_concept_preferred_term'].lower() == 'race':
-                            race = data['preferred_term'].lower()
+                    for data in data_list:
+                        if 'grouping_concept_preferred_term' in data:
+                            if data['grouping_concept_preferred_term'].lower() == 'age':
+                                # The actual value of age stored in 'data_value' instead of 'preferred_term'
+                                age = data['data_value']
 
-                        if data['grouping_concept_preferred_term'].lower() == 'sex':
-                            sex = data['preferred_term'].lower()
+                            if data['grouping_concept_preferred_term'].lower() == 'race':
+                                race = data['preferred_term'].lower()
 
-                age_race_sex_info = None
+                            if data['grouping_concept_preferred_term'].lower() == 'sex':
+                                sex = data['preferred_term'].lower()
 
-                if (age is None) and (race is not None) and (sex is not None):
-                    age_race_sex_info = f"{race} {sex} of unknown age"
-                elif (race is None) and (age is not None) and (sex is not None):
-                    age_race_sex_info = f"{age}-year-old {sex} of unknown race"
-                elif (sex is None) and (age is not None) and (race is not None):
-                    age_race_sex_info = f"{age}-year-old {race} source of unknown sex"
-                elif (age is None) and (race is None) and (sex is not None):
-                    age_race_sex_info = f"{sex} source of unknown age and race"
-                elif (age is None) and (sex is None) and (race is not None):
-                    age_race_sex_info = f"{race} source of unknown age and sex"
-                elif (race is None) and (sex is None) and (age is not None):
-                    age_race_sex_info = f"{age}-year-old source of unknown race and sex"
-                elif (age is None) and (race is None) and (sex is None):
-                    age_race_sex_info = "source of unknown age, race and sex"
-                else:
-                    age_race_sex_info = f"{age}-year-old {race} {sex}"
+                    age_race_sex_info = None
 
-                source_metadata_list.append(f"{age_race_sex_info}")
+                    if (age is None) and (race is not None) and (sex is not None):
+                        age_race_sex_info = f"{race} {sex} of unknown age"
+                    elif (race is None) and (age is not None) and (sex is not None):
+                        age_race_sex_info = f"{age}-year-old {sex} of unknown race"
+                    elif (sex is None) and (age is not None) and (race is not None):
+                        age_race_sex_info = f"{age}-year-old {race} source of unknown sex"
+                    elif (age is None) and (race is None) and (sex is not None):
+                        age_race_sex_info = f"{sex} source of unknown age and race"
+                    elif (age is None) and (sex is None) and (race is not None):
+                        age_race_sex_info = f"{race} source of unknown age and sex"
+                    elif (race is None) and (sex is None) and (age is not None):
+                        age_race_sex_info = f"{age}-year-old source of unknown race and sex"
+                    elif (age is None) and (race is None) and (sex is None):
+                        age_race_sex_info = "source of unknown age, race and sex"
+                    else:
+                        age_race_sex_info = f"{age}-year-old {race} {sex}"
+
+                    source_metadata_list.append(f"{age_race_sex_info}")
     else:
         if equals(source_type, Ontology.ops().source_types().MOUSE) or \
                 equals(source_type, Ontology.ops().source_types().MOUSE_ORGANOID):
             source_metadata_list.append(f"source of unknown strain, sex, and age")
         else:
             source_metadata_list.append(f"source of unknown age, race and sex")
+
+    if len(source_metadata_list) == 0:
+        source_metadata_list.append(f"source of unknown age, race and sex")
 
     source_metadata_desc = ", ".join(source_metadata_list[:-2] + [" and ".join(source_metadata_list[-2:])])
     generated_title += " of a " + source_metadata_desc
@@ -1822,7 +1827,7 @@ def get_origin_samples(property_key, normalized_type, user_token, existing_data_
     try:
         if equals(existing_data_dict.get("sample_category"), Ontology.ops().specimen_categories().ORGAN):
             # Return the organ if this is an organ
-            return property_key, existing_data_dict
+            return property_key, [existing_data_dict]
 
         origin_samples = None
         if normalized_type in ["Sample", "Dataset", "Publication"]:
