@@ -1827,6 +1827,12 @@ def get_origin_samples(property_key, normalized_type, user_token, existing_data_
     try:
         if equals(existing_data_dict.get("sample_category"), Ontology.ops().specimen_categories().ORGAN):
             # Return the organ if this is an organ
+            organ_hierarchy_key, organ_hierarchy_value = get_organ_hierarchy(property_key='organ_hierarchy',
+                                normalized_type=Ontology.ops().entities().SAMPLE,
+                                user_token=user_token,
+                                existing_data_dict=existing_data_dict,
+                                new_data_dict=new_data_dict)
+            existing_data_dict[organ_hierarchy_key] = organ_hierarchy_value
             return property_key, [existing_data_dict]
 
         origin_samples = None
