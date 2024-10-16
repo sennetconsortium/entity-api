@@ -46,6 +46,7 @@
         "last_modified_user_email": "TESTUSER@example.com",
         "last_modified_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
         "organ": "BR",
+        "organ_hierarchy": "Brain",
         "protocol_url": "dx.doi.org/10.17504/protocols.io.3byl4j398lo5/v1",
         "sample_category": "Organ",
         "sennet_id": "SNT834.LVJG.639",
@@ -130,6 +131,7 @@
         "last_modified_user_email": "TESTUSER@example.com",
         "last_modified_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
         "organ": "BR",
+        "organ_hierarchy": "Brain",
         "protocol_url": "dx.doi.org/10.17504/protocols.io.3byl4j398lo5/v1",
         "sample_category": "Organ",
         "sennet_id": "SNT834.LVJG.639",
@@ -193,6 +195,41 @@
       "last_modified_user_email": "TESTUSER@example.com",
       "last_modified_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
       "organ": "BR",
+      "origin_samples": [
+        {
+          "created_by_user_displayname": "Test User",
+          "created_by_user_email": "TESTUSER@example.com",
+          "created_by_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
+          "created_timestamp": 1681828388360,
+          "data_access_level": "consortium",
+          "description": "Sample lab notes",
+          "entity_type": "Sample",
+          "group_name": "CODCC Testing Group",
+          "group_uuid": "57192604-18e0-11ed-b79b-972795fc9504",
+          "image_files": [
+            {
+              "description": "Test image",
+              "file_uuid": "ffff1b46e377b91565ed53464cc8d859",
+              "filename": "a4fc82ba0010139e33c6209b917ac9c487172222.png"
+            }
+          ],
+          "lab_tissue_sample_id": "Human Brain",
+          "last_modified_timestamp": 1681828388360,
+          "last_modified_user_displayname": "Test User",
+          "last_modified_user_email": "TESTUSER@example.com",
+          "last_modified_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
+          "organ": "BR",
+          "organ_hierarchy": "Brain",
+          "protocol_url": "dx.doi.org/10.17504/protocols.io.3byl4j398lo5/v1",
+          "sample_category": "Organ",
+          "sennet_id": "SNT834.LVJG.639",
+          "thumbnail_file": {
+            "file_uuid": "ffffb2c9be7816087e13580e244855c5",
+            "filename": "image_handler.jpg"
+          },
+          "uuid": "3c4fc147a08429f58856779fcde96f42"
+        }
+      ],
       "protocol_url": "dx.doi.org/10.17504/protocols.io.3byl4j398lo5/v1",
       "sample_category": "Organ",
       "sennet_id": "SNT834.LVJG.639",
@@ -225,6 +262,41 @@
       "last_modified_user_email": "TESTUSER@example.com",
       "last_modified_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
       "organ": "BR",
+      "origin_samples": [
+        {
+          "created_by_user_displayname": "Test User",
+          "created_by_user_email": "TESTUSER@example.com",
+          "created_by_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
+          "created_timestamp": 1681828388360,
+          "data_access_level": "consortium",
+          "description": "Sample lab notes",
+          "entity_type": "Sample",
+          "group_name": "CODCC Testing Group",
+          "group_uuid": "57192604-18e0-11ed-b79b-972795fc9504",
+          "image_files": [
+            {
+              "description": "Test image",
+              "file_uuid": "ffff1b46e377b91565ed53464cc8d859",
+              "filename": "a4fc82ba0010139e33c6209b917ac9c487172222.png"
+            }
+          ],
+          "lab_tissue_sample_id": "Human Brain",
+          "last_modified_timestamp": 1681828388360,
+          "last_modified_user_displayname": "Test User",
+          "last_modified_user_email": "TESTUSER@example.com",
+          "last_modified_user_sub": "9e5b670f-228d-433c-bb86-a3228d5ca49d",
+          "organ": "BR",
+          "organ_hierarchy": "Brain",
+          "protocol_url": "dx.doi.org/10.17504/protocols.io.3byl4j398lo5/v1",
+          "sample_category": "Organ",
+          "sennet_id": "SNT834.LVJG.639",
+          "thumbnail_file": {
+            "file_uuid": "ffffb2c9be7816087e13580e244855c5",
+            "filename": "image_handler.jpg"
+          },
+          "uuid": "4aff569f5d61477abfe5c40364d04a1c"
+        }
+      ],
       "protocol_url": "dx.doi.org/10.17504/protocols.io.3byl4j398lo5/v1",
       "sample_category": "Organ",
       "sennet_id": "SNT834.LVJG.639",
