@@ -683,6 +683,17 @@ ENTITIES:
     # Only allowed applications can create new Publication via POST
     before_entity_create_validator: validate_application_header_before_entity_create
     # Publications can be either derivation source or target
+    excluded_properties_from_public_response:
+      - lab_dataset_id
+      - sources:
+          - lab_source_id
+      - ingest_metadata:
+          - metadata:
+              - lab_id
+              - slide_id
+      - cedar_mapped_metadata:
+          - Lab ID
+          - Slide ID
     derivation:
       source: true
       target: true
