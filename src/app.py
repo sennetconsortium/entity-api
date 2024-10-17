@@ -490,11 +490,11 @@ def _get_entity_visibility(normalized_entity_type, entity_dict):
     # it can be used along with the user's authorization to determine access.
     entity_visibility = DataVisibilityEnum.NONPUBLIC
 
-    if normalized_entity_type == 'Dataset' and \
+    if schema_manager.entity_type_instanceof(normalized_entity_type, 'Dataset') and \
             entity_dict['status'].lower() == DATASET_STATUS_PUBLISHED:
         entity_visibility = DataVisibilityEnum.PUBLIC
 
-    elif normalized_entity_type == 'Collection' and \
+    elif schema_manager.entity_type_instanceof(normalized_entity_type, 'Collection') and \
             'registered_doi' in entity_dict and \
             'doi_url' in entity_dict and \
             'contacts' in entity_dict and \
