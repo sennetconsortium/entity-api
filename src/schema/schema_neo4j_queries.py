@@ -126,12 +126,12 @@ list
 """
 
 
-def get_origin_sample(neo4j_driver, uuid):
+def get_origin_samples(neo4j_driver, uuid):
     result = {}
 
     query = (f"MATCH (e:Entity)-[:WAS_GENERATED_BY|USED*]->(s:Sample) "
              f"WHERE e.uuid='{uuid}' and s.sample_category='Organ' "
-             f"return s AS {record_field_name}")
+             f"return apoc.coll.toSet(COLLECT(s)) AS {record_field_name}")
 
     logger.info("======get_origin_sample() query======")
     logger.info(query)
@@ -140,7 +140,7 @@ def get_origin_sample(neo4j_driver, uuid):
         record = session.read_transaction(_execute_readonly_tx, query)
         if record and record[record_field_name]:
             # Convert the entity node to dict
-            result = _node_to_dict(record[record_field_name])
+            result = _nodes_to_dicts(record[record_field_name])
 
     return result
 
@@ -163,61 +163,46 @@ str: The source metadata (string representation of a Python dict)
 
 
 def get_dataset_organ_and_source_info(neo4j_driver, uuid):
-    organ_name = None
-    source_metadata = None
+    organ_names = set()
+    source_metadata = set()
+    source_type = None
 
     with neo4j_driver.session() as session:
-        # Old time-consuming single query, it takes a significant amounts of DB hits
-        # query = (f"MATCH (e:Dataset)-[:USED|WAS_GENERATED_BY*]->(s:Sample)-[:USED|WAS_GENERATED_BY*]->(d:Source) "
-        #          f"WHERE e.uuid='{uuid}' AND s.specimen_type='organ' AND EXISTS(s.organ) "
-        #          f"RETURN s.organ AS organ_name, d.metadata AS source_metadata")
-
-        # query = (f"MATCH (e:Dataset)<-[:ACTIVITY_INPUT|ACTIVITY_OUTPUT*]-(s:Sample)<-[:ACTIVITY_INPUT|ACTIVITY_OUTPUT*]-(d:Donor) "
-        #          f"WHERE e.uuid='{uuid}' AND s.specimen_type='organ' AND EXISTS(s.organ) "
-        #          f"RETURN s.organ AS organ_name, d.metadata AS source_metadata")
-
-        # logger.info("======get_dataset_organ_and_source_info() query======")
-        # logger.info(query)
-
-        # with neo4j_driver.session() as session:
-        #     record = session.read_transaction(_execute_readonly_tx, query)
-
-        #     if record:
-        #         organ_name = record['organ_name']
-        #         source_metadata = record['source_metadata']
-
-        # To improve the query performance, we implement the two-step queries to drastically reduce the DB hits
         sample_query = (f"MATCH (e:Dataset)-[:USED|WAS_GENERATED_BY*]->(s:Sample) "
                         f"WHERE e.uuid='{uuid}' AND s.sample_category is not null and s.sample_category='Organ' "
-                        f"RETURN DISTINCT s.sample_category AS sample_category, s.organ AS organ_name, s.uuid AS sample_uuid")
+                        f"RETURN apoc.coll.toSet(COLLECT(s)) AS {record_field_name}")
 
         logger.info("======get_dataset_organ_and_source_info() sample_query======")
         logger.info(sample_query)
 
-        sample_record = session.read_transaction(_execute_readonly_tx, sample_query)
-        source_type = None
-        if sample_record:
-            if sample_record['organ_name'] is None:
-                organ_name = sample_record['sample_category']
-            else:
-                organ_name = sample_record['organ_name']
+        with neo4j_driver.session() as session:
+            record = session.read_transaction(_execute_readonly_tx, sample_query)
 
-            sample_uuid = sample_record['sample_uuid']
+            if record and record[record_field_name]:
+                # Convert the list of nodes to a list of dicts
+                sample_records = _nodes_to_dicts(record[record_field_name])
+                for sample_record in sample_records:
+                    if sample_record['organ'] is None:
+                        organ_names.add(sample_record['sample_category'])
+                    else:
+                        organ_names.add(sample_record['organ'])
 
-            source_query = (f"MATCH (s:Sample)-[:USED|WAS_GENERATED_BY*]->(d:Source) "
-                            f"WHERE s.uuid='{sample_uuid}' AND s.sample_category is not null "
-                            f"RETURN DISTINCT d.metadata AS source_metadata, d.source_type AS source_type")
+                    sample_uuid = sample_record['uuid']
 
-            logger.info("======get_dataset_organ_and_source_info() source_query======")
-            logger.info(source_query)
+                    source_query = (f"MATCH (s:Sample)-[:USED|WAS_GENERATED_BY*]->(d:Source) "
+                                    f"WHERE s.uuid='{sample_uuid}' AND s.sample_category is not null "
+                                    f"RETURN DISTINCT d.metadata AS source_metadata, d.source_type AS source_type")
 
-            source_record = session.read_transaction(_execute_readonly_tx, source_query)
+                    logger.info("======get_dataset_organ_and_source_info() source_query======")
+                    logger.info(source_query)
 
-            if source_record:
-                source_metadata = source_record[0]
-                source_type = source_record[1]
+                    source_record = session.read_transaction(_execute_readonly_tx, source_query)
 
-    return organ_name, source_metadata, source_type
+                    if source_record:
+                        source_metadata.add(source_record[0])
+                        source_type = source_record[1]
+
+    return organ_names, source_metadata, source_type
 
 
 def get_entity_type(neo4j_driver, entity_uuid: str) -> str:

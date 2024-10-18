@@ -446,18 +446,22 @@ def get_ancestor_organs(id):
     # since public entities don't require user token
     token = get_internal_token()
 
+    public_entity = True
     if schema_manager.entity_type_instanceof(normalized_entity_type, 'Dataset'):
         # Only published/public datasets don't require token
         if entity_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
             # Token is required and the user must belong to SenNet-READ group
             token = get_user_token(request, non_public_access_required=True)
+            public_entity = False
     else:
         # The `data_access_level` of Sample can only be either 'public' or 'consortium'
         if entity_dict['data_access_level'] == ACCESS_LEVEL_CONSORTIUM:
             token = get_user_token(request, non_public_access_required=True)
+            public_entity = False
 
     # By now, either the entity is public accessible or the user token has the correct access level
     organs = app_neo4j_queries.get_ancestor_organs(neo4j_driver_instance, entity_dict['uuid'])
+    excluded_fields = schema_manager.get_fields_to_exclude('Sample')
 
     # Skip executing the trigger method to get Sample.direct_ancestor
     properties_to_skip = ['direct_ancestor']
@@ -465,6 +469,12 @@ def get_ancestor_organs(id):
 
     # Final result after normalization
     final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list)
+
+    if public_entity and not user_in_sennet_read_group(request):
+        filtered_organs_list = []
+        for organ in final_result:
+            filtered_organs_list.append(schema_manager.exclude_properties_from_response(excluded_fields, organ))
+        final_result = filtered_organs_list
 
     return jsonify(final_result)
 
@@ -480,11 +490,11 @@ def _get_entity_visibility(normalized_entity_type, entity_dict):
     # it can be used along with the user's authorization to determine access.
     entity_visibility = DataVisibilityEnum.NONPUBLIC
 
-    if normalized_entity_type == 'Dataset' and \
+    if schema_manager.entity_type_instanceof(normalized_entity_type, 'Dataset') and \
             entity_dict['status'].lower() == DATASET_STATUS_PUBLISHED:
         entity_visibility = DataVisibilityEnum.PUBLIC
 
-    elif normalized_entity_type == 'Collection' and \
+    elif schema_manager.entity_type_instanceof(normalized_entity_type, 'Collection') and \
             'registered_doi' in entity_dict and \
             'doi_url' in entity_dict and \
             'contacts' in entity_dict and \
@@ -540,6 +550,7 @@ def get_entity_by_id(id):
     # Query target entity against uuid-api and neo4j and return as a dict if exists
     entity_dict = query_target_entity(id)
     normalized_entity_type = entity_dict['entity_type']
+    fields_to_exclude = schema_manager.get_fields_to_exclude(normalized_entity_type)
 
     # Use the internal token to query the target entity
     # since public entities don't require user token
@@ -553,11 +564,13 @@ def get_entity_by_id(id):
     # Determine if the entity is publicly visible base on its data, only.
     entity_scope = _get_entity_visibility(normalized_entity_type=normalized_entity_type,
                                           entity_dict=complete_dict)
+    public_entity = False
 
     # Initialize the user as authorized if the data is public.  Otherwise, the
     # user is not authorized and credentials must be checked.
     if entity_scope == DataVisibilityEnum.PUBLIC:
         user_authorized = True
+        public_entity = True
     else:
         # It's highly possible that there's no token provided
         user_token = get_user_token(request)
@@ -609,6 +622,8 @@ def get_entity_by_id(id):
             abort_bad_req("The specified query string is not supported. Use '?property=<key>' to filter the result")
     else:
         # Response with the dict
+        if public_entity and not user_in_sennet_read_group(request):
+            final_result = schema_manager.exclude_properties_from_response(fields_to_exclude, final_result)
         return jsonify(final_result)
 
 
@@ -678,9 +693,8 @@ json
     Metadata for the entity appropriate for an OpenSearch document, and filtered by an additional
     `property` arguments in the HTTP request.
 """
-@app.route('/documents/<id>', methods = ['GET'])
+@app.route('/documents/<id>', methods=['GET'])
 def get_document_by_id(id):
-
     result_dict = _get_metadata_by_id(entity_id=id, metadata_scope=MetadataScopeEnum.INDEX)
     return jsonify(result_dict)
 
@@ -1573,6 +1587,7 @@ def get_ancestors(id):
     entity_dict = query_target_entity(id)
     normalized_entity_type = entity_dict['entity_type']
     uuid = entity_dict['uuid']
+    public_entity = True
 
     # Collection doesn't have ancestors via Activity nodes
     if normalized_entity_type == 'Collection':
@@ -1583,15 +1598,20 @@ def get_ancestors(id):
         if entity_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
             # Token is required and the user must belong to SenNet-READ group
             token = get_user_token(request, non_public_access_required=True)
+            public_entity = False
     elif normalized_entity_type == 'Sample':
         # The `data_access_level` of Sample can only be either 'public' or 'consortium'
         if entity_dict['data_access_level'] == ACCESS_LEVEL_CONSORTIUM:
             token = get_user_token(request, non_public_access_required=True)
+            public_entity = False
     else:
         # Source and Upload will always get back an empty list
         # becuase their direct ancestor is Lab, which is being skipped by Neo4j query
         # So no need to execute the code below
         return jsonify(final_result)
+
+    authorized = user_in_sennet_read_group(request)
+    data_access_level = 'public' if authorized is False else None
 
     # By now, either the entity is public accessible or the user token has the correct access level
     # Result filtering based on query string
@@ -1606,7 +1626,7 @@ def get_ancestors(id):
                 abort_bad_req(f"Only the following property keys are supported in the query string: {COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}")
 
             # Only return a list of the filtered property value of each entity
-            property_list = app_neo4j_queries.get_ancestors(neo4j_driver_instance, uuid, property_key)
+            property_list = app_neo4j_queries.get_ancestors(neo4j_driver_instance, uuid, data_access_level, property_key)
 
             # Final result
             final_result = property_list
@@ -1614,7 +1634,7 @@ def get_ancestors(id):
             abort_bad_req("The specified query string is not supported. Use '?property=<key>' to filter the result")
     # Return all the details if no property filtering
     else:
-        ancestors_list = app_neo4j_queries.get_ancestors(neo4j_driver_instance, uuid)
+        ancestors_list = app_neo4j_queries.get_ancestors(neo4j_driver_instance, uuid, data_access_level)
 
         # Generate trigger data
         # Skip some of the properties that are time-consuming to generate via triggers
@@ -1639,6 +1659,16 @@ def get_ancestors(id):
         # Final result after normalization
         final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list, properties_to_include=['protocol_url'])
 
+        if public_entity and not user_in_sennet_read_group(request):
+            filtered_final_result = []
+            for ancestor in final_result:
+                ancestor_entity_type = ancestor.get('entity_type')
+                fields_to_exclude = schema_manager.get_fields_to_exclude(ancestor_entity_type)
+                filtered_ancestor = schema_manager.exclude_properties_from_response(fields_to_exclude, ancestor)
+                filtered_final_result.append(filtered_ancestor)
+
+            final_result = filtered_final_result
+
     return jsonify(final_result)
 
 
@@ -1661,16 +1691,37 @@ json
 def get_descendants(id):
     final_result = []
 
-    # Get user token from Authorization header
-    user_token = get_user_token(request)
+    # Use the internal token to query the target entity
+    # since public entities don't require user token
+    token = get_internal_token()
 
     # Make sure the id exists in uuid-api and
     # the corresponding entity also exists in neo4j
     entity_dict = query_target_entity(id)
+    normalized_entity_type = entity_dict['entity_type']
     uuid = entity_dict['uuid']
+    public_entity = True
 
-    # Collection and Upload don't have descendants via Activity nodes
-    # No need to check, it'll always return empty list
+    if schema_manager.entity_type_instanceof(normalized_entity_type, 'Dataset'):
+        # Only published/public datasets don't require token
+        if entity_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
+            # Token is required and the user must belong to SenNet-READ group
+            token = get_user_token(request, non_public_access_required=True)
+            public_entity = False
+    elif normalized_entity_type == 'Sample' or normalized_entity_type == 'Source':
+        # The `data_access_level` of Sample/Source can only be either 'public' or 'consortium'
+        if entity_dict['data_access_level'] == ACCESS_LEVEL_CONSORTIUM:
+            token = get_user_token(request, non_public_access_required=True)
+            public_entity = False
+    elif normalized_entity_type == 'Upload':
+        # Uploads are always consortium level
+        token = get_user_token(request, non_public_access_required=True)
+        return jsonify(final_result)
+    else:
+        return jsonify(final_result)
+
+    authorized = user_in_sennet_read_group(request)
+    data_access_level = 'public' if authorized is False else None
 
     # Result filtering based on query string
     if bool(request.args):
@@ -1684,7 +1735,7 @@ def get_descendants(id):
                 abort_bad_req(f"Only the following property keys are supported in the query string: {COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}")
 
             # Only return a list of the filtered property value of each entity
-            property_list = app_neo4j_queries.get_descendants(neo4j_driver_instance, uuid, property_key)
+            property_list = app_neo4j_queries.get_descendants(neo4j_driver_instance, uuid, data_access_level, property_key)
 
             # Final result
             final_result = property_list
@@ -1692,7 +1743,7 @@ def get_descendants(id):
             abort_bad_req("The specified query string is not supported. Use '?property=<key>' to filter the result")
     # Return all the details if no property filtering
     else:
-        descendants_list = app_neo4j_queries.get_descendants(neo4j_driver_instance, uuid)
+        descendants_list = app_neo4j_queries.get_descendants(neo4j_driver_instance, uuid, data_access_level)
 
         # Generate trigger data and merge into a big dict
         # and skip some of the properties that are time-consuming to generate via triggers
@@ -1710,10 +1761,20 @@ def get_descendants(id):
             'previous_revision_uuids'
         ]
 
-        complete_entities_list = schema_manager.get_complete_entities_list(user_token, descendants_list, properties_to_skip)
+        complete_entities_list = schema_manager.get_complete_entities_list(token, descendants_list, properties_to_skip)
 
         # Final result after normalization
         final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list, properties_to_include=['protocol_url'])
+
+        if public_entity and not authorized:
+            filtered_final_result = []
+            for ancestor in final_result:
+                ancestor_entity_type = ancestor.get('entity_type')
+                fields_to_exclude = schema_manager.get_fields_to_exclude(ancestor_entity_type)
+                filtered_ancestor = schema_manager.exclude_properties_from_response(fields_to_exclude, ancestor)
+                filtered_final_result.append(filtered_ancestor)
+
+            final_result = filtered_final_result
 
     return jsonify(final_result)
 
@@ -1753,6 +1814,7 @@ def get_parents(id):
     entity_dict = query_target_entity(id)
     normalized_entity_type = entity_dict['entity_type']
     uuid = entity_dict['uuid']
+    public_entity = True
 
     # Collection doesn't have ancestors via Activity nodes
     if normalized_entity_type == 'Collection':
@@ -1763,10 +1825,12 @@ def get_parents(id):
         if entity_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
             # Token is required and the user must belong to SenNet-READ group
             token = get_user_token(request, non_public_access_required=True)
+            public_entity = False
     elif normalized_entity_type == 'Sample':
         # The `data_access_level` of Sample can only be either 'public' or 'consortium'
         if entity_dict['data_access_level'] == ACCESS_LEVEL_CONSORTIUM:
             token = get_user_token(request, non_public_access_required=True)
+            public_entity = False
     else:
         # Source and Upload will always get back an empty list
         # becuase their direct ancestor is Lab, which is being skipped by Neo4j query
@@ -1818,6 +1882,17 @@ def get_parents(id):
 
         # Final result after normalization
         final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list)
+
+        filtered_final_result = []
+        for parent in final_result:
+            parent_entity_type = parent.get('entity_type')
+            fields_to_exclude = schema_manager.get_fields_to_exclude(parent_entity_type)
+            if public_entity and not user_in_sennet_read_group(request):
+                filtered_parent = schema_manager.exclude_properties_from_response(fields_to_exclude, parent)
+                filtered_final_result.append(filtered_parent)
+            else:
+                filtered_final_result.append(parent)
+        final_result = filtered_final_result
 
     return jsonify(final_result)
 
@@ -1933,6 +2008,7 @@ def get_siblings(id):
     entity_dict = query_target_entity(id)
     normalized_entity_type = entity_dict['entity_type']
     uuid = entity_dict['uuid']
+    public_entity = True
 
     # Collection doesn't have ancestors via Activity nodes
     if normalized_entity_type == 'Collection':
@@ -1943,10 +2019,12 @@ def get_siblings(id):
         if entity_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
             # Token is required and the user must belong to SenNet-READ group
             token = get_user_token(request, non_public_access_required=True)
+            public_entity = False
     elif normalized_entity_type == 'Sample':
         # The `data_access_level` of Sample can only be either 'public' or 'consortium'
         if entity_dict['data_access_level'] == ACCESS_LEVEL_CONSORTIUM:
             token = get_user_token(request, non_public_access_required=True)
+            public_entity = False
     else:
         # Source and Upload will always get back an empty list
         # becuase their direct ancestor is Lab, which is being skipped by Neo4j query
@@ -2011,6 +2089,17 @@ def get_siblings(id):
     # Final result after normalization
     final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list)
 
+    filtered_final_result = []
+    for sibling in final_result:
+        sibling_entity_type = sibling.get('entity_type')
+        fields_to_exclude = schema_manager.get_fields_to_exclude(sibling_entity_type)
+        if public_entity and not user_in_sennet_read_group(request):
+            filtered_sibling = schema_manager.exclude_properties_from_response(fields_to_exclude, sibling)
+            filtered_final_result.append(filtered_sibling)
+        else:
+            filtered_final_result.append(sibling)
+    final_result = filtered_final_result
+
     return jsonify(final_result)
 
 
@@ -2049,6 +2138,7 @@ def get_tuplets(id):
     entity_dict = query_target_entity(id)
     normalized_entity_type = entity_dict['entity_type']
     uuid = entity_dict['uuid']
+    public_entity = True
 
     # Collection doesn't have ancestors via Activity nodes
     if normalized_entity_type == 'Collection':
@@ -2059,10 +2149,12 @@ def get_tuplets(id):
         if entity_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
             # Token is required and the user must belong to SenNet-READ group
             token = get_user_token(request, non_public_access_required=True)
+            public_entity = False
     elif normalized_entity_type == 'Sample':
         # The `data_access_level` of Sample can only be either 'public' or 'consortium'
         if entity_dict['data_access_level'] == ACCESS_LEVEL_CONSORTIUM:
             token = get_user_token(request, non_public_access_required=True)
+            public_entity = False
     else:
         # Source and Upload will always get back an empty list
         # becuase their direct ancestor is Lab, which is being skipped by Neo4j query
@@ -2116,6 +2208,17 @@ def get_tuplets(id):
     complete_entities_list = schema_manager.get_complete_entities_list(token, tuplet_list, properties_to_skip)
     # Final result after normalization
     final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list)
+
+    filtered_final_result = []
+    for tuplet in final_result:
+        tuple_entity_type = tuplet.get('entity_type')
+        fields_to_exclude = schema_manager.get_fields_to_exclude(tuple_entity_type)
+        if public_entity and not user_in_sennet_read_group(request):
+            filtered_tuplet = schema_manager.exclude_properties_from_response(fields_to_exclude, tuplet)
+            filtered_final_result.append(filtered_tuplet)
+        else:
+            filtered_final_result.append(tuplet)
+    final_result = filtered_final_result
 
     return jsonify(final_result)
 
@@ -2500,7 +2603,9 @@ def get_dataset_latest_revision(id):
     # Query target entity against uuid-api and neo4j and return as a dict if exists
     entity_dict = query_target_entity(id)
     normalized_entity_type = entity_dict['entity_type']
+    fields_to_exclude = schema_manager.get_fields_to_exclude(normalized_entity_type)
     uuid = entity_dict['uuid']
+    public_entity = True
 
     # Only for Dataset
     if not schema_manager.entity_type_instanceof(normalized_entity_type, 'Dataset'):
@@ -2512,7 +2617,7 @@ def get_dataset_latest_revision(id):
     if entity_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
         # Token is required and the user must belong to SenNet-READ group
         token = get_user_token(request, non_public_access_required=True)
-
+        public_entity = False
         latest_revision_dict = app_neo4j_queries.get_dataset_latest_revision(neo4j_driver_instance, uuid)
     else:
         # Default to the latest "public" revision dataset
@@ -2538,6 +2643,9 @@ def get_dataset_latest_revision(id):
 
     # Also normalize the result based on schema
     final_result = schema_manager.normalize_object_result_for_response('ENTITIES', complete_dict)
+
+    if user_in_sennet_read_group(request) and public_entity:
+        final_result = schema_manager.exclude_properties_from_response(fields_to_exclude, final_result)
 
     # Response with the dict
     return jsonify(final_result)
@@ -2750,10 +2858,13 @@ def get_revisions_list(id):
     ]
     complete_revisions_list = schema_manager.get_complete_entities_list(token, sorted_revisions_list, properties_to_skip)
     normalized_revisions_list = schema_manager.normalize_entities_list_for_response(complete_revisions_list)
+    fields_to_exclude = schema_manager.get_fields_to_exclude(normalized_entity_type)
 
     # Only check the very last revision (the first revision dict since normalized_revisions_list is already sorted DESC)
     # to determine if send it back or not
+    is_in_read_group = True
     if not user_in_globus_read_group(request):
+        is_in_read_group = False
         latest_revision = normalized_revisions_list[0]
 
         if latest_revision['status'].lower() != DATASET_STATUS_PUBLISHED:
@@ -2773,6 +2884,8 @@ def get_revisions_list(id):
         }
         if show_dataset:
             result['dataset'] = revision
+            if not is_in_read_group:
+                result['dataset'] = schema_manager.exclude_properties_from_response(fields_to_exclude, revision)
         results.append(result)
         revision_number -= 1
 
@@ -2904,11 +3017,14 @@ def get_associated_organs_from_dataset(id):
     # Use the internal token to query the target entity
     # since public entities don't require user token
     token = get_internal_token()
+    excluded_fields = schema_manager.get_fields_to_exclude('Sample')
+    public_entity = True
 
     # published/public datasets don't require token
     if entity_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
         # Token is required and the user must belong to SenNet-READ group
         token = get_user_token(request, non_public_access_required=True)
+        public_entity = False
 
     # By now, either the entity is public accessible or
     # the user token has the correct access level
@@ -2923,6 +3039,12 @@ def get_associated_organs_from_dataset(id):
 
     # Final result after normalization
     final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list)
+
+    if public_entity and not user_in_sennet_read_group(request):
+        filtered_organs_list = []
+        for organ in final_result:
+            filtered_organs_list.append(schema_manager.exclude_properties_from_response(excluded_fields, organ))
+        final_result = filtered_organs_list
 
     return jsonify(final_result)
 
@@ -2953,6 +3075,7 @@ def get_associated_samples_from_dataset(id):
     # Query target entity against uuid-api and neo4j and return as a dict if exists
     entity_dict = query_target_entity(id)
     normalized_entity_type = entity_dict['entity_type']
+    excluded_fields = schema_manager.get_fields_to_exclude('Sample')
 
     # Only for Dataset
     if not schema_manager.entity_type_instanceof(normalized_entity_type, 'Dataset'):
@@ -2961,11 +3084,13 @@ def get_associated_samples_from_dataset(id):
     # Use the internal token to query the target entity
     # since public entities don't require user token
     token = get_internal_token()
+    public_entity = True
 
     # published/public datasets don't require token
     if entity_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
         # Token is required and the user must belong to SenNet-READ group
         token = get_user_token(request, non_public_access_required=True)
+        public_entity = False
 
     # By now, either the entity is public accessible or the user token has the correct access level
     associated_samples = app_neo4j_queries.get_associated_samples_from_dataset(neo4j_driver_instance, entity_dict['uuid'])
@@ -2979,6 +3104,12 @@ def get_associated_samples_from_dataset(id):
 
     # Final result after normalization
     final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list)
+
+    if public_entity and not user_in_sennet_read_group(request):
+        filtered_sample_list = []
+        for sample in final_result:
+            filtered_sample_list.append(schema_manager.exclude_properties_from_response(excluded_fields, sample))
+        final_result = filtered_sample_list
 
     return jsonify(final_result)
 
@@ -3009,6 +3140,7 @@ def get_associated_sources_from_dataset(id):
     # Query target entity against uuid-api and neo4j and return as a dict if exists
     entity_dict = query_target_entity(id)
     normalized_entity_type = entity_dict['entity_type']
+    excluded_fields = schema_manager.get_fields_to_exclude('Source')
 
     # Only for Dataset
     if not schema_manager.entity_type_instanceof(normalized_entity_type, 'Dataset'):
@@ -3017,11 +3149,13 @@ def get_associated_sources_from_dataset(id):
     # Use the internal token to query the target entity
     # since public entities don't require user token
     token = get_internal_token()
+    public_entity = True
 
     # published/public datasets don't require token
     if entity_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
         # Token is required and the user must belong to SenNet-READ group
         token = get_user_token(request, non_public_access_required=True)
+        public_entity = False
 
     # By now, either the entity is public accessible or the user token has the correct access level
     associated_sources = app_neo4j_queries.get_associated_sources_from_dataset(neo4j_driver_instance, entity_dict['uuid'])
@@ -3035,6 +3169,12 @@ def get_associated_sources_from_dataset(id):
 
     # Final result after normalization
     final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list)
+
+    if public_entity and not user_in_sennet_read_group(request):
+        filtered_donor_list = []
+        for donor in final_result:
+            filtered_donor_list.append(schema_manager.exclude_properties_from_response(excluded_fields, donor))
+        final_result = filtered_donor_list
 
     return jsonify(final_result)
 
@@ -3845,7 +3985,7 @@ Returns
 str
     The token string if valid
 """
-def get_user_token(request, non_public_access_required = False):
+def get_user_token(request, non_public_access_required=False):
     # Get user token from Authorization header
     # getAuthorizationTokens() also handles MAuthorization header but we are not using that here
     try:
@@ -4407,13 +4547,13 @@ For example: /entities/<id>/collections?property=uuid
 Parameters
 ----------
 id : str
-    The SenNet ID (e.g. SNT123.ABCD.456) or UUID of given entity 
+    The SenNet ID (e.g. SNT123.ABCD.456) or UUID of given entity
 Returns
 -------
 json
     A list of all the collections of the target entity
 """
-@app.route('/entities/<id>/collections', methods = ['GET'])
+@app.route('/entities/<id>/collections', methods=['GET'])
 def get_collections(id):
     final_result = []
 
@@ -4430,13 +4570,15 @@ def get_collections(id):
     entity_dict = query_target_entity(id)
     normalized_entity_type = entity_dict['entity_type']
     uuid = entity_dict['uuid']
+    public_entity = True
 
     if not schema_manager.entity_type_instanceof(normalized_entity_type, 'Dataset'):
         abort_bad_req(f"Unsupported entity type of id {id}: {normalized_entity_type}")
 
     if entity_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
         # Token is required and the user must belong to HuBMAP-READ group
-        token = get_user_token(request, non_public_access_required = True)
+        token = get_user_token(request, non_public_access_required=True)
+        public_entity = False
 
     # By now, either the entity is public accessible or the user token has the correct access level
     # Result filtering based on query string
@@ -4481,6 +4623,24 @@ def get_collections(id):
 
         # Final result after normalization
         final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list)
+
+        filtered_final_result = []
+        for collection in final_result:
+            collection_entity_type = collection.get('entity_type')
+            fields_to_exclude = schema_manager.get_fields_to_exclude(collection_entity_type)
+            if public_entity and not user_in_sennet_read_group(request):
+                filtered_collection = schema_manager.exclude_properties_from_response(fields_to_exclude, collection)
+                datasets = filtered_collection.get('datasets')
+                filtered_datasets = []
+                for dataset in datasets:
+                    dataset_fields_to_exclude = schema_manager.get_fields_to_exclude(dataset.get('entity_type'))
+                    filtered_dataset = schema_manager.exclude_properties_from_response(dataset_fields_to_exclude, dataset)
+                    filtered_datasets.append(filtered_dataset)
+                filtered_collection['datasets'] = filtered_datasets
+                filtered_final_result.append(filtered_collection)
+            else:
+                filtered_final_result.append(collection)
+        final_result = filtered_final_result
 
     return jsonify(final_result)
 
@@ -5262,11 +5422,11 @@ def verify_ubkg_properties(json_data_dict):
     if 'organ' in json_data_dict:
         compare_property_against_ubkg(ORGAN_TYPES, json_data_dict, 'organ')
 
-    # If the proposed Dataset dataset_type ends with something in square brackets, anything inside
-    # those square brackets are acceptable at the end of the string.  Simply validate the start.
+    # If the proposed Dataset dataset_type contains square brackets then no need to verify
     if 'dataset_type' in json_data_dict:
-        dataset_type_dict = {'dataset_type': re.sub(pattern='(\S)\s\[.*\]$', repl=r'\1', string=json_data_dict['dataset_type'])}
-        compare_property_against_ubkg(DATASET_TYPE, dataset_type_dict, 'dataset_type')
+        ancillary = re.compile('\[.*\]$')
+        if ancillary.search(json_data_dict['dataset_type']) is None:
+            compare_property_against_ubkg(DATASET_TYPE, {'dataset_type': json_data_dict['dataset_type']}, 'dataset_type')
 
 
 def compare_property_list_against_ubkg(ubkg_dict, json_data_dict, field):
@@ -5412,7 +5572,6 @@ def delete_cache(id):
         schema_manager.delete_memcached_cache(uuids_list)
 
 
-
 """
 Retrieve the JSON containing the normalized metadata information for a given entity appropriate for the
 scope of metadata requested e.g. complete data for a another service, indexing data for an OpenSearch document, etc.
@@ -5424,14 +5583,14 @@ entity_id : str
 metadata_scope:
     A recognized scope from the SchemaConstants, controlling the triggers which are fired and elements
     from Neo4j which are retained.  Default is MetadataScopeEnum.INDEX.
-    
+
 Returns
 -------
 json
     Metadata for the entity appropriate for the metadata_scope argument, and filtered by an additional
     `property` arguments in the HTTP request.
 """
-def _get_metadata_by_id(entity_id:str=None, metadata_scope:MetadataScopeEnum=MetadataScopeEnum.INDEX):
+def _get_metadata_by_id(entity_id: str = None, metadata_scope: MetadataScopeEnum = MetadataScopeEnum.INDEX):
     # Token is not required, but if an invalid token provided,
     # we need to tell the client with a 401 error
     validate_token_if_auth_header_exists(request)
@@ -5444,10 +5603,11 @@ def _get_metadata_by_id(entity_id:str=None, metadata_scope:MetadataScopeEnum=Met
     # Otherwise query against uuid-api and neo4j to get the entity dict if the id exists
     entity_dict = query_target_entity(entity_id)
     normalized_entity_type = entity_dict['entity_type']
+    excluded_fields = schema_manager.get_fields_to_exclude(normalized_entity_type)
 
     # Get the entity result of the indexable dictionary from cache if exists, otherwise regenerate and cache
     metadata_dict = schema_manager.get_index_metadata(token, entity_dict) \
-        if metadata_scope==MetadataScopeEnum.INDEX \
+        if metadata_scope == MetadataScopeEnum.INDEX \
         else schema_manager.get_complete_entity_result(token, entity_dict)
 
     # Determine if the entity is publicly visible base on its data, only.
@@ -5455,11 +5615,14 @@ def _get_metadata_by_id(entity_id:str=None, metadata_scope:MetadataScopeEnum=Met
     # are populated as triggered data.  So pull back the complete entity for
     # _get_entity_visibility() to check.
     entity_scope = _get_entity_visibility(normalized_entity_type=normalized_entity_type, entity_dict=entity_dict)
+    public_entity = False
+    has_access = True
 
     # Initialize the user as authorized if the data is public.  Otherwise, the
     # user is not authorized and credentials must be checked.
     if entity_scope == DataVisibilityEnum.PUBLIC:
         user_authorized = True
+        public_entity = True
     else:
         # It's highly possible that there's no token provided
         user_token = get_user_token(request)
@@ -5474,13 +5637,19 @@ def _get_metadata_by_id(entity_id:str=None, metadata_scope:MetadataScopeEnum=Met
             # Or the token is valid but doesn't contain group information (auth token or transfer token)
             user_authorized = user_in_sennet_read_group(request)
 
+    user_token = get_user_token(request)
+    if isinstance(user_token, Response):
+        has_access = False
+    if not user_in_sennet_read_group(request):
+        has_access = False
+
     # We'll need to return all the properties including those generated by
     # `on_read_trigger` to have a complete result e.g., the 'next_revision_uuid' and
     # 'previous_revision_uuid' being used below.
     # Collections, however, will filter out only public properties for return.
     if not user_authorized:
-        abort_forbidden(f"The requested {normalized_entity_type} has non-public data."
-                        f"  A Globus token with access permission is required.")
+        abort_forbidden(f"The requested {normalized_entity_type} has non-public data. "
+                        "A Globus token with access permission is required.")
 
     # We need to exclude `antibodies` for now as it conflicts with some dynamic templates in the Search API
     # We need to include `protocol_url` as those are needed in the Portal
@@ -5504,7 +5673,7 @@ def _get_metadata_by_id(entity_id:str=None, metadata_scope:MetadataScopeEnum=Met
 
             if property_key == 'status' and \
                     not schema_manager.entity_type_instanceof(normalized_entity_type, 'Dataset'):
-                abort_bad_req(f"Only Dataset or Publication supports 'status' property key in the query string")
+                abort_bad_req("Only Dataset or Publication supports 'status' property key in the query string")
 
             # Response with the property value directly
             # Don't use jsonify() on string value
@@ -5512,6 +5681,10 @@ def _get_metadata_by_id(entity_id:str=None, metadata_scope:MetadataScopeEnum=Met
         else:
             abort_bad_req("The specified query string is not supported. Use '?property=<key>' to filter the result")
     else:
+        if public_entity and has_access is False:
+            modified_final_result = schema_manager.exclude_properties_from_response(excluded_fields, final_result)
+            return modified_final_result
+
         # Response with the dict
         return final_result
 
@@ -5548,8 +5721,9 @@ def user_in_sennet_read_group(request):
         # We treat such cases as the user not in the HuBMAP-READ group
         return False
 
-
     return (sennet_read_group_uuid in user_info['hmgroupids'])
+
+
 ####################################################################################################
 ## For local development/testing
 ####################################################################################################
