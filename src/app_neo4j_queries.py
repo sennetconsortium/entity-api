@@ -558,7 +558,7 @@ def update_entity(neo4j_driver, entity_type, entity_data_dict, uuid):
         raise TransactionError(msg)
 
 
-def get_ancestors(neo4j_driver, uuid, property_key=None):
+def get_ancestors(neo4j_driver, uuid, data_access_level=None, property_key=None):
     """Get all ancestors by uuid.
 
     Parameters
@@ -567,6 +567,8 @@ def get_ancestors(neo4j_driver, uuid, property_key=None):
         The neo4j database connection pool
     uuid : str
         The uuid of target entity
+    data_access_level : Optional[str]
+        The data access level of the ancestor entities (public or consortium). None returns all ancestors.
     property_key : str
         A target property key for result filtering
 
@@ -577,17 +579,21 @@ def get_ancestors(neo4j_driver, uuid, property_key=None):
     """
     results = []
 
+    predicate = ''
+    if data_access_level:
+        predicate = f"AND ancestor.data_access_level = '{data_access_level}' "
+
     if property_key:
         query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(ancestor:Entity) "
                  # Filter out the Lab entities
-                 f"WHERE e.uuid='{uuid}' AND ancestor.entity_type <> 'Lab' "
+                 f"WHERE e.uuid='{uuid}' AND ancestor.entity_type <> 'Lab' {predicate}"
                  # COLLECT() returns a list
                  # apoc.coll.toSet() reruns a set containing unique nodes
                  f"RETURN apoc.coll.toSet(COLLECT(ancestor.{property_key})) AS {record_field_name}")
     else:
         query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(ancestor:Entity) "
                  # Filter out the Lab entities
-                 f"WHERE e.uuid='{uuid}' AND ancestor.entity_type <> 'Lab' "
+                 f"WHERE e.uuid='{uuid}' AND ancestor.entity_type <> 'Lab' {predicate}"
                  # COLLECT() returns a list
                  # apoc.coll.toSet() reruns a set containing unique nodes
                  f"RETURN apoc.coll.toSet(COLLECT(ancestor)) AS {record_field_name}")
@@ -614,7 +620,7 @@ def get_ancestors(neo4j_driver, uuid, property_key=None):
     return results
 
 
-def get_descendants(neo4j_driver, uuid, property_key=None):
+def get_descendants(neo4j_driver, uuid, data_access_level=None, property_key=None):
     """ Get all descendants by uuid
 
     Parameters
@@ -623,6 +629,8 @@ def get_descendants(neo4j_driver, uuid, property_key=None):
         The neo4j database connection pool
     uuid : str
         The uuid of target entity
+    data_access_level : Optional[str]
+        The data access level of the descendant entities (public or consortium). None returns all descendants.
     property_key : str
         A target property key for result filtering
 
@@ -633,17 +641,21 @@ def get_descendants(neo4j_driver, uuid, property_key=None):
     """
     results = []
 
+    predicate = ''
+    if data_access_level:
+        predicate = f"AND descendant.data_access_level = '{data_access_level}' "
+
     if property_key:
         query = (f"MATCH (e:Entity)<-[:USED|WAS_GENERATED_BY*]-(descendant:Entity) "
                  # The target entity can't be a Lab
-                 f"WHERE e.uuid=$uuid AND e.entity_type <> 'Lab' "
+                 f"WHERE e.uuid=$uuid AND e.entity_type <> 'Lab' {predicate}"
                  # COLLECT() returns a list
                  # apoc.coll.toSet() reruns a set containing unique nodes
                  f"RETURN apoc.coll.toSet(COLLECT(descendant.{property_key})) AS {record_field_name}")
     else:
         query = (f"MATCH (e:Entity)<-[:USED|WAS_GENERATED_BY*]-(descendant:Entity) "
                  # The target entity can't be a Lab
-                 f"WHERE e.uuid=$uuid AND e.entity_type <> 'Lab' "
+                 f"WHERE e.uuid=$uuid AND e.entity_type <> 'Lab' {predicate}"
                  # COLLECT() returns a list
                  # apoc.coll.toSet() reruns a set containing unique nodes
                  f"RETURN apoc.coll.toSet(COLLECT(descendant)) AS {record_field_name}")

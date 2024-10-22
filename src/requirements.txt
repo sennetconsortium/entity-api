@@ -10,7 +10,7 @@ pymemcache==4.0.0
 nested-lookup==0.2.22
 
 # The commons package requires requests>=2.22.0 and PyYAML>=5.3.1
-requests==2.32.0
+requests==2.32.3
 PyYAML==5.4.1
 
 # Pinning specific version of neo4j
@@ -20,7 +20,7 @@ neo4j==5.22.0
 # Use the branch name of commons from github for testing new changes made in commons from different branch
 # Default is main branch specified in docker-compose.development.yml if not set
 # git+https://github.com/hubmapconsortium/commons.git@${COMMONS_BRANCH}#egg=hubmap-commons
-hubmap-commons==2.1.17
+hubmap-commons==2.1.18
 atlas-consortia-commons==1.0.10
 
 deepdiff~=6.6.0
