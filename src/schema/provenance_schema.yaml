@@ -522,6 +522,13 @@ ENTITIES:
         before_property_update_validators:
           - validate_application_header_before_property_update
         description: "A list of files associated with the dataset." 
+      calculated_metadata:
+        type: json_string # dict
+        before_property_create_validators:
+          - validate_application_header_before_property_update
+        before_property_update_validators:
+          - validate_application_header_before_property_update
+        description: "Calculated metadata outputted from the processing pipeline." 
       ingest_metadata:
         type: json_string # dict
         before_property_create_validators:
