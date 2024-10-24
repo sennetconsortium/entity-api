@@ -361,10 +361,9 @@ ENTITIES:
       - lab_dataset_id
       - sources:
           - lab_source_id
-      - ingest_metadata:
-          - metadata:
-              - lab_id
-              - slide_id
+      - metadata:
+          - lab_id
+          - slide_id
       - cedar_mapped_metadata:
           - Lab ID
           - Slide ID
@@ -509,6 +508,27 @@ ENTITIES:
         # Generated from the Ingest Pipeline during processing of a derived dataset
         type: string
         on_index_trigger: get_pipeline_message_reduced
+      metadata:
+        type: json_string # dict
+        before_property_create_validators:
+          - validate_application_header_before_property_update
+        before_property_update_validators:
+          - validate_application_header_before_property_update
+        description: "The metadata returned from the processing at data submission time."
+      files:
+        type: list
+        before_property_create_validators:
+          - validate_application_header_before_property_update
+        before_property_update_validators:
+          - validate_application_header_before_property_update
+        description: "A list of files associated with the dataset." 
+      calculated_metadata:
+        type: json_string # dict
+        before_property_create_validators:
+          - validate_application_header_before_property_update
+        before_property_update_validators:
+          - validate_application_header_before_property_update
+        description: "Calculated metadata outputted from the processing pipeline." 
       ingest_metadata:
         type: json_string # dict
         before_property_create_validators:
@@ -687,10 +707,9 @@ ENTITIES:
       - lab_dataset_id
       - sources:
           - lab_source_id
-      - ingest_metadata:
-          - metadata:
-              - lab_id
-              - slide_id
+      - metadata:
+          - lab_id
+          - slide_id
       - cedar_mapped_metadata:
           - Lab ID
           - Slide ID
