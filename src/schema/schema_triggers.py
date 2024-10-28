@@ -1325,9 +1325,8 @@ def get_has_metadata(property_key, normalized_type, user_token, existing_data_di
         raise KeyError(msg)
 
     if equals(Ontology.ops().entities().DATASET, existing_data_dict['entity_type']):
-        ingest_metadata = existing_data_dict.get('ingest_metadata', {})
-        has_metadata = 'metadata' in ingest_metadata
-        return property_key, str(has_metadata)
+        metadata = existing_data_dict.get('metadata')
+        return property_key, str(metadata is not None)
 
     SpecimenCategories = Ontology.ops().specimen_categories()
     if (
@@ -1436,19 +1435,11 @@ def get_cedar_mapped_metadata(property_key, normalized_type, user_token, existin
     if equals(Ontology.ops().source_types().HUMAN, existing_data_dict.get('source_type')):
         return property_key, None
 
-    if equals(Ontology.ops().entities().DATASET, normalized_type):
-        # For datasets
-        if 'ingest_metadata' not in existing_data_dict:
-            return property_key, None
-        ingest_metadata = ast.literal_eval(existing_data_dict['ingest_metadata'])
-        if 'metadata' not in ingest_metadata:
-            return property_key, None
-        metadata = ingest_metadata['metadata']
-    else:
-        # For mouse sources, samples
-        if 'metadata' not in existing_data_dict:
-            return property_key, None
-        metadata = ast.literal_eval(existing_data_dict['metadata'])
+    # For mouse sources, all samples, and all datasets
+    if 'metadata' not in existing_data_dict:
+        return property_key, None
+
+    metadata = ast.literal_eval(existing_data_dict['metadata'])
 
     mapped_metadata = {}
     for k, v in metadata.items():
