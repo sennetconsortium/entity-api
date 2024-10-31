@@ -3,7 +3,6 @@ import json
 import urllib.parse
 from typing import List, Optional
 
-import yaml
 import logging
 from datetime import datetime, timezone
 import requests
@@ -3814,3 +3813,43 @@ def get_has_all_published_datasets(property_key, normalized_type, user_token, ex
                                                                        query_filter=f'{published_filter}')
 
     return property_key, str(len(datasets_primary_list) == len(datasets_primary_list_published)) if len(datasets_primary_list) > 0 else "False"
+
+
+def get_contains_data(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method that determines if a sample has any descendant datasets.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key of the value to be generated
+    normalized_type : str
+        One of the types defined in the schema yaml: Sample
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, str]
+        str: The target property key
+        str: "True" or "False" if the sample has any descendant datasets
+    """
+    if 'uuid' not in existing_data_dict:
+        msg = create_trigger_error_msg(
+            "Missing 'uuid' key in 'existing_data_dict' during calling 'get_contains_data()' trigger method.",
+            existing_data_dict, new_data_dict
+        )
+        raise KeyError(msg)
+
+    if not equals(Ontology.ops().entities().SAMPLE, existing_data_dict['entity_type']):
+        return property_key, None
+
+    datasets = app_neo4j_queries.get_descendants_by_type(neo4j_driver=schema_manager.get_neo4j_driver_instance(),
+                                                         uuid=existing_data_dict['uuid'],
+                                                         descendant_type=Ontology.ops().entities().DATASET,
+                                                         property_keys=['uuid'])
+
+    return property_key, str(len(datasets) > 0)
