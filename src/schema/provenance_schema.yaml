@@ -234,8 +234,6 @@ shared_entity_properties: &shared_entity_properties
     before_create_trigger: set_entity_type
   metadata:
     type: json_string # dict
-    before_property_create_validators:
-      - validate_application_header_before_property_create
     description: "The metadata returned from the processing at data submission time."
   has_metadata:
     type: string
