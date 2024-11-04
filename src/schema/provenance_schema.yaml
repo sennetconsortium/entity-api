@@ -1147,13 +1147,19 @@ ENTITIES:
         immutable: true
         description: "The list of all ancestor ids for Sample Sections. This is utilized by the HRA EUI and returns just uuids."
         on_index_trigger: get_sample_section_ancestor_ids
+      contains_data:
+        type: boolean
+        generated: true
+        immutable: true
+        description: "A boolean indicating if the Sample contains any Datasets in its descendants."
+        on_index_trigger: get_contains_data
 
   ############################################# Upload #############################################
   # Eventually we might allow folks to bulk register Samples or Sources through the same mechanism.
   Upload:
     # Only allowed applications can create new Upload via POST
     before_entity_create_validator: validate_application_header_before_entity_create
-    # Upload requires an ancestor of Lab, and and has no allowed decesndents
+    # Upload requires an ancestor of Lab, and and has no allowed descendants
     derivation:
       source: false
       target: false # Set to false since the schema doesn't handle Lab currently
