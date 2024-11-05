@@ -628,6 +628,55 @@ def get_entity_by_id(id):
 
 
 """
+Retrieve the entity's pipeline message property
+
+Parameters
+----------
+id : str
+    The SenNet ID (e.g. SNT123.ABCD.456) or UUID of target entity
+
+Returns
+-------
+json
+    The pipeline message property of the target entity
+"""
+@app.route('/entities/<id>/pipeline-message', methods=['GET'])
+@app.route('/entities/<id>/validation-message', methods=['GET'])
+@require_valid_token()
+def get_entity_pipeline_message(id: str):
+    try:
+        sennet_ids = schema_manager.get_sennet_ids(id)
+        uuid = sennet_ids['uuid']
+
+        # Get the last part of the request path. Validate just in case
+        path = request.path.split('/')[-1]
+        if path not in ['pipeline-message', 'validation-message']:
+            abort_bad_req(f"Unsupported path: {path}")
+
+        property = path.replace('-', '_')
+        property_keys = [property]
+        entity_dict = app_neo4j_queries.get_entity_by_id(neo4j_driver_instance, uuid, property_keys)
+        if entity_dict is None:
+            abort_not_found(f"Entity of id: {id} not found in Neo4j")
+
+        return Response(entity_dict[property], mimetype="text/plain")
+
+    except requests.exceptions.RequestException as e:
+        # Due to the use of response.raise_for_status() in schema_manager.get_sennet_ids()
+        # we can access the status codes from the exception
+        status_code = e.response.status_code
+
+        if status_code == 400:
+            abort_bad_req(e.response.text)
+        if status_code == 404:
+            abort_not_found(e.response.text)
+        else:
+            abort_internal_err(e.response.text)
+    except Exception as e:
+        abort_internal_err(str(e))
+
+
+"""
 Retrieve handful of information to be display in the Data Sharing Portal job dashboard.
 
 Takes as input a json body with required field "entity_uuids", which is an array of entity UUIDs
@@ -673,6 +722,8 @@ def get_entities_by_ids_for_dashboard(entity_type: str, json_data_dict: dict):
             abort_not_found(e.response.text)
         else:
             abort_internal_err(e.response.text)
+
+
 
 
 """
