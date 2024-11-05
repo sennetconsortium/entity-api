@@ -645,21 +645,26 @@ json
 @require_valid_token()
 def get_entity_pipeline_message(id: str):
     try:
-        sennet_ids = schema_manager.get_sennet_ids(id)
-        uuid = sennet_ids['uuid']
-
         # Get the last part of the request path. Validate just in case
         path = request.path.split('/')[-1]
         if path not in ['pipeline-message', 'validation-message']:
-            abort_bad_req(f"Unsupported path: {path}")
+            abort_bad_req(f'Unsupported path: {path}')
+
+        sennet_ids = schema_manager.get_sennet_ids(id)
+        uuid = sennet_ids['uuid']
+        if (
+            (path == 'pipeline-message' and not equals(sennet_ids['type'], Ontology.ops().entities().DATASET)) or
+            (path == 'validation-message' and not equals(sennet_ids['type'], Ontology.ops().entities().UPLOAD))
+        ):
+            abort_bad_req(f"Unsupported entity type {sennet_ids['type'].title()} for {path}")
 
         property = path.replace('-', '_')
         property_keys = [property]
         entity_dict = app_neo4j_queries.get_entity_by_id(neo4j_driver_instance, uuid, property_keys)
         if entity_dict is None:
-            abort_not_found(f"Entity of id: {id} not found in Neo4j")
+            abort_not_found(f'Entity of id: {id} not found in Neo4j')
 
-        return Response(entity_dict[property], mimetype="text/plain")
+        return Response(entity_dict[property], mimetype='text/plain')
 
     except requests.exceptions.RequestException as e:
         # Due to the use of response.raise_for_status() in schema_manager.get_sennet_ids()
@@ -672,8 +677,6 @@ def get_entity_pipeline_message(id: str):
             abort_not_found(e.response.text)
         else:
             abort_internal_err(e.response.text)
-    except Exception as e:
-        abort_internal_err(str(e))
 
 
 """
