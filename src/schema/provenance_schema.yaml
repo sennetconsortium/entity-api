@@ -505,10 +505,6 @@ ENTITIES:
         generated: true
         immutable: true
         description: "The email address provided by the authorization mechanism for the person or process authenticated when published.  Cannot be set directly must be set with the /datasets/<id>/publish method."
-      pipeline_message:
-        # Generated from the Ingest Pipeline during processing of a derived dataset
-        type: string
-        on_index_trigger: get_pipeline_message_reduced
       ingest_metadata:
         type: json_string # dict
         before_property_create_validators:

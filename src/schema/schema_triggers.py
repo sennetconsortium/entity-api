@@ -1853,41 +1853,6 @@ def get_origin_samples(property_key, normalized_type, user_token, existing_data_
         return property_key, None
 
 
-def get_pipeline_message_reduced(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
-    """Trigger event method to reduce the size of pipeline_message to be supported by Elasticsearch.
-
-    Parameters
-    ----------
-    property_key : str
-        The target property key
-    normalized_type : str
-        One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
-    user_token: str
-        The user's globus nexus token
-    existing_data_dict : dict
-        A dictionary that contains all existing entity properties
-    new_data_dict : dict
-        A merged dictionary that contains all possible input data to be used
-
-    Returns
-    -------
-    Tuple[str, str]
-        str: The target property key
-        str: The size reduced pipeline message
-    """
-    pipeline_message = None
-    if normalized_type in ["Dataset", "Publication"]:
-        # Reduce pipeline_message when it exceeds 10000 (32766 bytes is the max for Elasticsearch for a single property)
-        if "pipeline_message" in existing_data_dict:
-            max_bytes = 10000
-            msg_byte_array = bytearray(existing_data_dict["pipeline_message"], "utf-8")
-            if len(msg_byte_array) > max_bytes:
-                max_bytes_msg = msg_byte_array[: (max_bytes - 1)]
-                pipeline_message = max_bytes_msg.decode("utf-8")
-
-    return property_key, pipeline_message
-
-
 def get_has_rui_information(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     if normalized_type in ["Sample", "Dataset"]:
         if normalized_type == "Sample":
