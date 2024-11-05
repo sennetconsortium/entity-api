@@ -1853,6 +1853,39 @@ def get_origin_samples(property_key, normalized_type, user_token, existing_data_
         return property_key, None
 
 
+def get_has_pipeline_or_validation_message(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method to determine if the dataset has a pipeline message or upload has validation message.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key
+    normalized_type : str
+        One of the types defined in the schema yaml: Dataset or Upload
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, str]
+        str: The target property key
+        str: "True" or "False" if the dataset has a pipeline message or upload has validation message
+    """
+    if equals(normalized_type, Ontology.ops().entities().DATASET):
+        property = 'pipeline_message'
+    elif equals(normalized_type, Ontology.ops().entities().UPLOAD):
+        property = 'validation_message'
+    else:
+        return property_key, None
+
+    has_msg = property in existing_data_dict and len(existing_data_dict[property]) > 0
+    return property_key, str(has_msg)
+
+
 def get_has_rui_information(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     if normalized_type in ["Sample", "Dataset"]:
         if normalized_type == "Sample":

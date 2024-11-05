@@ -505,6 +505,10 @@ ENTITIES:
         generated: true
         immutable: true
         description: "The email address provided by the authorization mechanism for the person or process authenticated when published.  Cannot be set directly must be set with the /datasets/<id>/publish method."
+      has_pipeline_message:
+        type: boolean
+        description: "Whether this dataset has a pipeline message."
+        on_index_trigger: get_has_pipeline_or_validation_message
       ingest_metadata:
         type: json_string # dict
         before_property_create_validators:
@@ -1260,3 +1264,7 @@ ENTITIES:
         type: boolean
         description: 'Determines if the datasets of an upload are all published.'
         on_index_trigger: get_has_all_published_datasets
+      has_validation_message:
+        type: boolean
+        description: "Whether this upload has a validation message."
+        on_index_trigger: get_has_pipeline_or_validation_message
