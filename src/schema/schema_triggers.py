@@ -1883,7 +1883,7 @@ def get_has_pipeline_or_validation_message(property_key, normalized_type, user_t
         return property_key, None
 
     has_msg = property in existing_data_dict and len(existing_data_dict[property]) > 0
-    return property_key, str(has_msg)
+    return property_key, has_msg
 
 
 def get_has_rui_information(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
