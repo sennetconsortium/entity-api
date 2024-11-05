@@ -1877,9 +1877,9 @@ def get_pipeline_message_reduced(property_key, normalized_type, user_token, exis
     """
     pipeline_message = None
     if normalized_type in ["Dataset", "Publication"]:
-        # Reduce pipeline_message when it exceeds 32766 bytes
+        # Reduce pipeline_message when it exceeds 10000 (32766 bytes is the max for Elasticsearch for a single property)
         if "pipeline_message" in existing_data_dict:
-            max_bytes = 32766
+            max_bytes = 10000
             msg_byte_array = bytearray(existing_data_dict["pipeline_message"], "utf-8")
             if len(msg_byte_array) > max_bytes:
                 max_bytes_msg = msg_byte_array[: (max_bytes - 1)]
