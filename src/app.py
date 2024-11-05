@@ -643,7 +643,7 @@ json
 @app.route('/entities/<id>/pipeline-message', methods=['GET'])
 @app.route('/entities/<id>/validation-message', methods=['GET'])
 @require_valid_token()
-def get_entity_pipeline_message(id: str):
+def get_entity_pipeline_validation_message(id: str):
     try:
         # Get the last part of the request path. Validate just in case
         path = request.path.split('/')[-1]
