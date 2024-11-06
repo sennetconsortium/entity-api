@@ -202,6 +202,43 @@ def get_entity(neo4j_driver, uuid):
     return result
 
 
+def get_entity_by_id(neo4j_driver, uuid, property_keys=None):
+    """
+    Get target entity dict given the entity uuid
+
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    uuid : str
+        The uuid of target entity
+    property_keys : Union[List[str], None]
+        Properies to return in the result. Use None to return all properties. Default is None.
+
+    Returns
+    -------
+    Union[dict, None]
+        A dictionary of entity details returned from the Cypher query. None if the entity does not exist.
+    """
+    return_statement = 'e'
+    if property_keys is not None:
+        joined_props = ', '.join([f'{key}: e.{key}' for key in property_keys])
+        return_statement = f'{{ {joined_props} }}'
+
+    query = f"MATCH (e:Entity) WHERE e.uuid=$uuid RETURN {return_statement} AS {record_field_name}"
+
+    logger.info("======get_entity_by_id() query======")
+    logger.info(query)
+
+    with neo4j_driver.session() as session:
+        record = session.read_transaction(_execute_readonly_tx, query, uuid=uuid)
+
+        if record and record[record_field_name]:
+            return dict(record[record_field_name])
+
+    return None
+
+
 """
 Get all the entity nodes for the given entity type
 
