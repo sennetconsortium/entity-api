@@ -1853,15 +1853,15 @@ def get_origin_samples(property_key, normalized_type, user_token, existing_data_
         return property_key, None
 
 
-def get_pipeline_message_reduced(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
-    """Trigger event method to reduce the size of pipeline_message to be supported by Elasticsearch.
+def get_has_pipeline_or_validation_message(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method to determine if the dataset has a pipeline message or upload has validation message.
 
     Parameters
     ----------
     property_key : str
         The target property key
     normalized_type : str
-        One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+        One of the types defined in the schema yaml: Dataset or Upload
     user_token: str
         The user's globus nexus token
     existing_data_dict : dict
@@ -1873,19 +1873,17 @@ def get_pipeline_message_reduced(property_key, normalized_type, user_token, exis
     -------
     Tuple[str, str]
         str: The target property key
-        str: The size reduced pipeline message
+        str: "True" or "False" if the dataset has a pipeline message or upload has validation message
     """
-    pipeline_message = None
-    if normalized_type in ["Dataset", "Publication"]:
-        # Reduce pipeline_message when it exceeds 32766 bytes
-        if "pipeline_message" in existing_data_dict:
-            max_bytes = 32766
-            msg_byte_array = bytearray(existing_data_dict["pipeline_message"], "utf-8")
-            if len(msg_byte_array) > max_bytes:
-                max_bytes_msg = msg_byte_array[: (max_bytes - 1)]
-                pipeline_message = max_bytes_msg.decode("utf-8")
+    if equals(normalized_type, Ontology.ops().entities().DATASET):
+        property = 'pipeline_message'
+    elif equals(normalized_type, Ontology.ops().entities().UPLOAD):
+        property = 'validation_message'
+    else:
+        return property_key, None
 
-    return property_key, pipeline_message
+    has_msg = property in existing_data_dict and len(existing_data_dict[property]) > 0
+    return property_key, has_msg
 
 
 def get_has_rui_information(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
