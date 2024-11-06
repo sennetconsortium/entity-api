@@ -378,6 +378,7 @@ ENTITIES:
       <<: *doi_properties
       antibodies:
         type: list
+        indexed: false
         description: "A list of antibodies used in the assay that created the dataset"
       description:
         type: string
@@ -508,6 +509,7 @@ ENTITIES:
       pipeline_message:
         # Generated from the Ingest Pipeline during processing of a derived dataset
         type: string
+        indexed: false
       has_pipeline_message:
         type: boolean
         description: "Whether this dataset has a pipeline message."
@@ -1194,7 +1196,12 @@ ENTITIES:
         immutable: true
       validation_message:
         type: string
+        indexed: false
         description: A message from the validation tools describing what is invalid with the upload.
+      has_validation_message:
+        type: boolean
+        description: "Whether this upload has a validation message."
+        on_index_trigger: get_has_pipeline_or_validation_message
       group_uuid:
         type: string
         immutable: true
@@ -1267,7 +1274,3 @@ ENTITIES:
         type: boolean
         description: 'Determines if the datasets of an upload are all published.'
         on_index_trigger: get_has_all_published_datasets
-      has_validation_message:
-        type: boolean
-        description: "Whether this upload has a validation message."
-        on_index_trigger: get_has_pipeline_or_validation_message
