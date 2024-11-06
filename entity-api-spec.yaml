@@ -1413,7 +1413,7 @@ paths:
       parameters:
         - name: id
           in: path
-          description: The ID (e.g. SNT123.ABCD.456) or UUID of the given ntity
+          description: The ID (e.g. SNT123.ABCD.456) or UUID of the given entity
           required: true
           schema:
             type: string
@@ -1430,7 +1430,69 @@ paths:
         '401':
           description: The user's token has expired or the user did not supply a valid token
         '403':
-          description: The user is not autorizized to access the data
+          description: The user is not authorized to access the data
+        '404':
+          description: The target entity could not be found
+        '500':
+          description: Internal error
+
+  /entities/{id}/pipeline-message:
+    get:
+      tags:
+        - entities
+      summary: Get the pipeline message for the given Dataset
+      parameters:
+        - name: id
+          in: path
+          description: The ID (e.g. SNT123.ABCD.456) or UUID of the given entity
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Returns the pipeline message for the given Dataset
+          content:
+            text/plain:
+              schema:
+                type: string
+                format: text
+        '400':
+          description: Invalid or misformatted entity identifier or the given entity is not a Dataset
+        '401':
+          description: The user's token has expired or the user did not supply a valid token
+        '403':
+          description: The user is not authorized to access the data
+        '404':
+          description: The target entity could not be found
+        '500':
+          description: Internal error
+
+  /entities/{id}/validation-message:
+    get:
+      tags:
+        - entities
+      summary: Get the validation message for the given Upload
+      parameters:
+        - name: id
+          in: path
+          description: The ID (e.g. SNT123.ABCD.456) or UUID of the given entity
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Returns the validation message for the given Upload
+          content:
+            text/plain:
+              schema:
+                type: string
+                format: text
+        '400':
+          description: Invalid or misformatted entity identifier or the given entity is not an Upload
+        '401':
+          description: The user's token has expired or the user did not supply a valid token
+        '403':
+          description: The user is not authorized to access the data
         '404':
           description: The target entity could not be found
         '500':
