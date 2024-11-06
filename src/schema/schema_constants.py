@@ -29,6 +29,9 @@ class SchemaConstants(object):
     ALLOWED_DATASET_STATUSES = ['new', 'processing', 'published', 'qa', 'error', 'hold', 'invalid', 'submitted', 'incomplete']
     ALLOWED_UPLOAD_STATUSES = ['new', 'valid', 'invalid', 'error', 'reorganized', 'processing', 'submitted', 'incomplete']
 
+    # Used to validate the X-SenNet-Application header
+    ALLOWED_APPLICATIONS = [INGEST_API_APP, INGEST_PIPELINE_APP, INGEST_PORTAL_APP]
+
 
 # Define an enumeration to classify an entity's visibility, which can be combined with
 # authorization info when verify operations on a request.
@@ -37,6 +40,7 @@ class DataVisibilityEnum(Enum):
     # Since initial release just requires public/non-public, add
     # another entry indicating non-public.
     NONPUBLIC = 'nonpublic'
+
 
 # Define an enumeration to classify metadata scope which can be returned.
 class MetadataScopeEnum(Enum):
@@ -47,6 +51,7 @@ class MetadataScopeEnum(Enum):
     # include data which must be generated and then removed, nor any data which
     # is not stored in an index document.
     INDEX = 'index_metadata'
+
 
 # Define an enumeration of accepted trigger types.
 class TriggerTypeEnum(Enum):

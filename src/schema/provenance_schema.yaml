@@ -234,10 +234,6 @@ shared_entity_properties: &shared_entity_properties
     before_create_trigger: set_entity_type
   metadata:
     type: json_string # dict
-    before_property_create_validators:
-      - validate_application_header_before_property_update
-    before_property_update_validators:
-      - validate_application_header_before_property_update
     description: "The metadata returned from the processing at data submission time."
   has_metadata:
     type: string
@@ -361,10 +357,9 @@ ENTITIES:
       - lab_dataset_id
       - sources:
           - lab_source_id
-      - ingest_metadata:
-          - metadata:
-              - lab_id
-              - slide_id
+      - metadata:
+          - lab_id
+          - slide_id
       - cedar_mapped_metadata:
           - Lab ID
           - Slide ID
@@ -399,7 +394,6 @@ ENTITIES:
       status:
         type: string
         before_property_update_validators:
-          - validate_application_header_before_property_update
           - validate_dataset_status_value
           - validate_status_changed
           - validate_dataset_not_component
@@ -509,12 +503,29 @@ ENTITIES:
         # Generated from the Ingest Pipeline during processing of a derived dataset
         type: string
         on_index_trigger: get_pipeline_message_reduced
-      ingest_metadata:
+      metadata:
         type: json_string # dict
         before_property_create_validators:
           - validate_application_header_before_property_update
         before_property_update_validators:
           - validate_application_header_before_property_update
+        description: "The metadata returned from the processing at data submission time."
+      files:
+        type: list
+        before_property_create_validators:
+          - validate_application_header_before_property_update
+        before_property_update_validators:
+          - validate_application_header_before_property_update
+        description: "A list of files associated with the dataset." 
+      calculated_metadata:
+        type: json_string # dict
+        before_property_create_validators:
+          - validate_application_header_before_property_update
+        before_property_update_validators:
+          - validate_application_header_before_property_update
+        description: "Calculated metadata outputted from the processing pipeline." 
+      ingest_metadata:
+        type: json_string # dict
         description: "The metadata returned from the processing at data submission time."
       local_directory_rel_path:
         # Example: protected/<TMC>/<uuid>
@@ -687,10 +698,9 @@ ENTITIES:
       - lab_dataset_id
       - sources:
           - lab_source_id
-      - ingest_metadata:
-          - metadata:
-              - lab_id
-              - slide_id
+      - metadata:
+          - lab_id
+          - slide_id
       - cedar_mapped_metadata:
           - Lab ID
           - Slide ID
@@ -1147,13 +1157,19 @@ ENTITIES:
         immutable: true
         description: "The list of all ancestor ids for Sample Sections. This is utilized by the HRA EUI and returns just uuids."
         on_index_trigger: get_sample_section_ancestor_ids
+      contains_data:
+        type: boolean
+        generated: true
+        immutable: true
+        description: "A boolean indicating if the Sample contains any Datasets in its descendants."
+        on_index_trigger: get_contains_data
 
   ############################################# Upload #############################################
   # Eventually we might allow folks to bulk register Samples or Sources through the same mechanism.
   Upload:
     # Only allowed applications can create new Upload via POST
     before_entity_create_validator: validate_application_header_before_entity_create
-    # Upload requires an ancestor of Lab, and and has no allowed decesndents
+    # Upload requires an ancestor of Lab, and and has no allowed descendants
     derivation:
       source: false
       target: false # Set to false since the schema doesn't handle Lab currently
@@ -1169,7 +1185,6 @@ ENTITIES:
         description: "Title of the datasets, a sentence or less"
       status:
         before_property_update_validators:
-          - validate_application_header_before_property_update
           - validate_upload_status_value
         type: string
         generated: true

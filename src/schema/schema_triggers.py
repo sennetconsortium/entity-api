@@ -3,7 +3,6 @@ import json
 import urllib.parse
 from typing import List, Optional
 
-import yaml
 import logging
 from datetime import datetime, timezone
 import requests
@@ -1325,9 +1324,8 @@ def get_has_metadata(property_key, normalized_type, user_token, existing_data_di
         raise KeyError(msg)
 
     if equals(Ontology.ops().entities().DATASET, existing_data_dict['entity_type']):
-        ingest_metadata = existing_data_dict.get('ingest_metadata', {})
-        has_metadata = 'metadata' in ingest_metadata
-        return property_key, str(has_metadata)
+        metadata = existing_data_dict.get('metadata')
+        return property_key, str(metadata is not None)
 
     SpecimenCategories = Ontology.ops().specimen_categories()
     if (
@@ -1436,19 +1434,11 @@ def get_cedar_mapped_metadata(property_key, normalized_type, user_token, existin
     if equals(Ontology.ops().source_types().HUMAN, existing_data_dict.get('source_type')):
         return property_key, None
 
-    if equals(Ontology.ops().entities().DATASET, normalized_type):
-        # For datasets
-        if 'ingest_metadata' not in existing_data_dict:
-            return property_key, None
-        ingest_metadata = ast.literal_eval(existing_data_dict['ingest_metadata'])
-        if 'metadata' not in ingest_metadata:
-            return property_key, None
-        metadata = ingest_metadata['metadata']
-    else:
-        # For mouse sources, samples
-        if 'metadata' not in existing_data_dict:
-            return property_key, None
-        metadata = ast.literal_eval(existing_data_dict['metadata'])
+    # For mouse sources, all samples, and all datasets
+    if 'metadata' not in existing_data_dict:
+        return property_key, None
+
+    metadata = ast.literal_eval(existing_data_dict['metadata'])
 
     mapped_metadata = {}
     for k, v in metadata.items():
@@ -1878,9 +1868,9 @@ def get_pipeline_message_reduced(property_key, normalized_type, user_token, exis
     """
     pipeline_message = None
     if normalized_type in ["Dataset", "Publication"]:
-        # Reduce pipeline_message when it exceeds 32766 bytes
+        # Reduce pipeline_message when it exceeds 10000 (32766 bytes is the max for Elasticsearch for a single property)
         if "pipeline_message" in existing_data_dict:
-            max_bytes = 32766
+            max_bytes = 10000
             msg_byte_array = bytearray(existing_data_dict["pipeline_message"], "utf-8")
             if len(msg_byte_array) > max_bytes:
                 max_bytes_msg = msg_byte_array[: (max_bytes - 1)]
@@ -3814,3 +3804,43 @@ def get_has_all_published_datasets(property_key, normalized_type, user_token, ex
                                                                        query_filter=f'{published_filter}')
 
     return property_key, str(len(datasets_primary_list) == len(datasets_primary_list_published)) if len(datasets_primary_list) > 0 else "False"
+
+
+def get_contains_data(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method that determines if a sample has any descendant datasets.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key of the value to be generated
+    normalized_type : str
+        One of the types defined in the schema yaml: Sample
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, str]
+        str: The target property key
+        str: "True" or "False" if the sample has any descendant datasets
+    """
+    if 'uuid' not in existing_data_dict:
+        msg = create_trigger_error_msg(
+            "Missing 'uuid' key in 'existing_data_dict' during calling 'get_contains_data()' trigger method.",
+            existing_data_dict, new_data_dict
+        )
+        raise KeyError(msg)
+
+    if not equals(Ontology.ops().entities().SAMPLE, existing_data_dict['entity_type']):
+        return property_key, None
+
+    datasets = app_neo4j_queries.get_descendants_by_type(neo4j_driver=schema_manager.get_neo4j_driver_instance(),
+                                                         uuid=existing_data_dict['uuid'],
+                                                         descendant_type=Ontology.ops().entities().DATASET,
+                                                         property_keys=['uuid'])
+
+    return property_key, str(len(datasets) > 0)
