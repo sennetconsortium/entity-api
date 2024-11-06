@@ -5704,7 +5704,6 @@ def _get_metadata_by_id(entity_id: str = None, metadata_scope: MetadataScopeEnum
     # We need to exclude `antibodies` for now as it conflicts with some dynamic templates in the Search API
     # We need to include `protocol_url` as those are needed in the Portal
     final_result = schema_manager.normalize_document_result_for_response(entity_dict=metadata_dict,
-                                                                         properties_to_exclude=['antibodies'],
                                                                          properties_to_include=['protocol_url'])
 
     # Result filtering based on query string
