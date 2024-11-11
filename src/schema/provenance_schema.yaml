@@ -1264,3 +1264,14 @@ ENTITIES:
         type: boolean
         description: 'Determines if the datasets of an upload are all published.'
         on_index_trigger: get_has_all_published_datasets
+
+  ############################################# EPICollection #############################################
+  Epicollection:
+    # This superclass property is optional
+    superclass: Collection
+    # EPICollection can not be derivation source but not target
+    derivation:
+      source: false
+      target: false
+    properties:
+      <<: *shared_collection_properties
