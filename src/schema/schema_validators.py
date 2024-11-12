@@ -64,6 +64,71 @@ def validate_no_duplicates_in_list(property_key, normalized_entity_type, request
 
 
 """
+Validate every entity exists and (optionally) is a Dataset
+
+Parameters
+----------
+property_key : str
+    The target property key
+normalized_type : str
+    Submission
+request: Flask request object
+    The instance of Flask request passed in from application request
+existing_data_dict : dict
+    A dictionary that contains all existing entity properties
+new_data_dict : dict
+    The json data in request body, already after the regular validations
+"""
+def collection_entities_are_existing_entities(property_key, normalized_entity_type, request, existing_data_dict, new_data_dict):
+    # `entity_uuids` is required for creating a Collection
+    # Verify each UUID specified exists in the uuid-api, exists in Neo4j, and (optionally) is for a Dataset before
+    # proceeding with creation of Collection.
+    bad_entities_uuids = []
+    for entity_uuid in new_data_dict['entity_uuids']:
+        try:
+            # The following code duplicates some functionality existing in app.py, in
+            # query_target_entity(), which also deals with caching. In the future, the
+            # validation logic shared by this file and app.py should become a utility
+            # module, shared by validators as well as app.py.  But for now, the code
+            # is repeated for the following.
+
+            # Get cached ids if exist otherwise retrieve from UUID-API. Expect an
+            # Exception to be raised if not found.
+            entity_detail = schema_manager.get_sennet_ids(id=entity_uuid)
+            entity_uuid = entity_detail['uuid']
+
+            # If the uuid exists per the uuid-api, make sure it also exists as a Neo4j entity.
+            entity_dict = schema_neo4j_queries.get_entity(schema_manager.get_neo4j_driver_instance(), entity_uuid)
+
+            # If dataset_uuid is not found in Neo4j fail the validation.
+            if not entity_dict:
+                logger.info(f"Request for {entity_uuid} inclusion in Collection, "
+                            "but not found in Neo4j.")
+                bad_entities_uuids.append(entity_uuid)
+                continue
+
+            # Collections can have other entity types besides Dataset, so skip the Dataset check
+            if normalized_entity_type == 'Collection':
+                continue
+
+            if entity_dict['entity_type'] != 'Dataset':
+                logger.info(f"Request for {entity_uuid} inclusion in Collection, "
+                            f"but entity_type={entity_dict['entity_type']}, not Dataset.")
+                bad_entities_uuids.append(entity_uuid)
+        except Exception:
+            # If the entity_uuid is not found, fail the validation.
+            logger.info(f"Request for {entity_uuid} inclusion in Collection "
+                        "failed uuid-api retrieval.")
+            bad_entities_uuids.append(entity_uuid)
+
+    # If any uuids in the request entities_uuids are not for an existing Dataset entity which
+    # exists in uuid-api and Neo4j, raise an Exception so the validation fails and the
+    # operation can be rejected.
+    if bad_entities_uuids:
+        raise ValueError(f"Unable to find Datasets for {bad_entities_uuids}.")
+
+
+"""
 If an entity has a DOI, do not allow it to be updated 
 """
 
