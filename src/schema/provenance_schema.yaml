@@ -262,7 +262,7 @@ ENTITIES:
       source: false
       target: false
     # Collection doesn't actually need data_access_level property
-    properties:
+    properties: &shared_collection_properties
       <<: *shared_properties
       <<: *shared_entity_properties
       # Because Collection-specific validation is needed for some
