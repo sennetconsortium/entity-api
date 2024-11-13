@@ -562,7 +562,7 @@ def validate_creation_action(property_key, normalized_entity_type, request, exis
     if creation_action == '':
         raise ValueError(f"The property {property_key} cannot be empty, when specified.")
 
-    if creation_action == 'external process':
+    if creation_action.lower() == 'external process':
         direct_ancestor_uuids = new_data_dict.get('direct_ancestor_uuids')
         entity_types_dict = schema_neo4j_queries.filter_ancestors_by_type(schema_manager.get_neo4j_driver_instance(), direct_ancestor_uuids, "dataset")
         if entity_types_dict:
