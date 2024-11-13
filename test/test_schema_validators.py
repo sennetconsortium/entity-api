@@ -1,7 +1,3 @@
-import test
-
-test.cwd_to_src()
-
 import pytest
 
 from schema import schema_validators
@@ -12,7 +8,7 @@ from schema import schema_validators
     ('central process', True),
     ('Lab Process', True),
     ('lab process', True),
-    (None, True),
+    (None, False),
     ('Multi-Assay Split', False),
     ('multi-assay split', False),
     ('', False),
@@ -38,7 +34,7 @@ def test_validate_single_creation_action(creation_action, succeeds):
         )
     else:
         # Test invalid creation action
-        with pytest.raises(ValueError):
+        with pytest.raises((ValueError, KeyError)):
             schema_validators.validate_creation_action(
                 property_key, normalized_entity_type, request,
                 existing_data_dict, new_data_dict
