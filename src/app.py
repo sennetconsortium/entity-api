@@ -1153,7 +1153,7 @@ def create_entity(entity_type: str, user_token: str, json_data_dict: dict):
             'next_revision_uuids',
             'previous_revision_uuids'
         ]
-    elif normalized_entity_type in ['Upload', 'Collection']:
+    elif normalized_entity_type in ['Upload', 'Collection', 'Epicollection']:
         properties_to_skip = [
             'datasets',
             'entities'
@@ -1542,7 +1542,7 @@ def update_entity(id: str, user_token: str, json_data_dict: dict):
             'next_revision_uuids',
             'previous_revision_uuids'
         ]
-    elif normalized_entity_type in ['Upload', 'Collection']:
+    elif normalized_entity_type in ['Upload', 'Collection', 'Epicollection']:
         properties_to_skip = [
             'datasets',
             'entities'
@@ -2441,7 +2441,7 @@ def doi_redirect(id):
     entity_type = entity_dict['entity_type']
 
     # Only for collection
-    if entity_type not in ['Collection', 'Dataset', 'Publication']:
+    if entity_type not in ['Collection', 'Epicollection', 'Dataset', 'Publication']:
         abort_bad_req("The target entity of the specified id must be a Collection or Dataset or Publication")
 
     uuid = entity_dict['uuid']

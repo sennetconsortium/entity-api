@@ -23,7 +23,7 @@ class SchemaConstants(object):
 
     DOI_BASE_URL = 'https://doi.org/'
 
-    ALLOWED_SINGLE_CREATION_ACTIONS = ['central process', 'lab process']
+    ALLOWED_SINGLE_CREATION_ACTIONS = ['central process', 'lab process', 'external process']
     ALLOWED_MULTI_CREATION_ACTIONS = ['multi-assay split']
 
     ALLOWED_DATASET_STATUSES = ['new', 'processing', 'published', 'qa', 'error', 'hold', 'invalid', 'submitted', 'incomplete']
