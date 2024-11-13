@@ -927,6 +927,11 @@ def link_collection_to_entities(property_key, normalized_type, user_token, exist
         schema_neo4j_queries.link_collection_to_entities(neo4j_driver=schema_manager.get_neo4j_driver_instance(),
                                                          collection_uuid=existing_data_dict['uuid'],
                                                          entities_uuid_list=entity_uuids)
+
+        # Delete the cache of each associated dataset and the collection itself if any cache exists
+        # Because the `Dataset.collecctions` field and `Collection.datasets` field
+        uuids_list = [existing_data_dict['uuid']] + entity_uuids
+        schema_manager.delete_memcached_cache(uuids_list)
     except TransactionError:
         # No need to log
         raise

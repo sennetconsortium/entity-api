@@ -1403,7 +1403,7 @@ uuid : str
 
 
 def _delete_collection_linkages_tx(tx, uuid):
-    query = (f"MATCH (d:Dataset)-[in:IN_COLLECTION]->(c:Collection)"
+    query = (f"MATCH (e:Entity)-[in:IN_COLLECTION]->(c:Collection)"
              f" WHERE c.uuid = '{uuid}' "
              f" DELETE in")
 
