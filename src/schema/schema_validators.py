@@ -555,18 +555,19 @@ new_data_dict : dict
 
 
 def validate_creation_action(property_key, normalized_entity_type, request, existing_data_dict, new_data_dict):
-    accepted_creation_action_values = SchemaConstants.ALLOWED_SINGLE_CREATION_ACTIONS
-    creation_action = new_data_dict.get(property_key)
-    if creation_action and creation_action.lower() not in accepted_creation_action_values:
-        raise ValueError("Invalid {} value. Accepted values are: {}".format(property_key, ", ".join(accepted_creation_action_values)))
+    creation_action = new_data_dict[property_key].lower()  # raise key error if not found
     if creation_action == '':
         raise ValueError(f"The property {property_key} cannot be empty, when specified.")
 
-    if creation_action.lower() == 'external process':
+    accepted_creation_action_values = SchemaConstants.ALLOWED_SINGLE_CREATION_ACTIONS
+    if creation_action not in accepted_creation_action_values:
+        raise ValueError("Invalid {} value. Accepted values are: {}".format(property_key, ", ".join(accepted_creation_action_values)))
+
+    if creation_action == 'external process':
         direct_ancestor_uuids = new_data_dict.get('direct_ancestor_uuids')
         entity_types_dict = schema_neo4j_queries.filter_ancestors_by_type(schema_manager.get_neo4j_driver_instance(), direct_ancestor_uuids, "dataset")
         if entity_types_dict:
-            raise ValueError("If 'creation_action' field is given, all ancestor uuids must belong to datasets. "
+            raise ValueError("If 'creation_action' field is given and is 'external process', all ancestor uuids must belong to datasets. "
                              f"The following entities belong to non-dataset entities: {entity_types_dict}")
 
 
