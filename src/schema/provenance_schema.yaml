@@ -514,7 +514,7 @@ ENTITIES:
           - validate_application_header_before_property_update
         before_property_update_validators:
           - validate_application_header_before_property_update
-        description: "The metadata returned from the processing at data submission time."
+        description: "Metadata associated with the ingested experimental data"
       files:
         type: list
         before_property_create_validators:
@@ -535,7 +535,7 @@ ENTITIES:
           - validate_application_header_before_property_update
         before_property_update_validators:
           - validate_application_header_before_property_update
-        description: "The metadata returned from the processing at data submission time."
+        description: "Information associated with running the ingest and processing pipelines"
       local_directory_rel_path:
         # Example: protected/<TMC>/<uuid>
         type: string
