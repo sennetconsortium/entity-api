@@ -181,7 +181,7 @@ You can reverse the order and the `response.description` will give you valid anc
 ```
 
 ### Getting the descendants given a particular ancestor:
-Remove the `match` param from the request url:e
+Remove the `match` param from the request url:
 #### Request 2a:
 `/constraints`
 ```
