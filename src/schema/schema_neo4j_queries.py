@@ -1996,7 +1996,8 @@ def get_tuplets(neo4j_driver, uuid, property_key=None):
 
 
 """
-Get all collections by uuid
+Get all collections by for a given entity uuid
+
 Parameters
 ----------
 neo4j_driver : neo4j.Driver object
@@ -2005,6 +2006,7 @@ uuid : str
     The uuid of target entity 
 property_key : str
     A target property key for result filtering
+
 Returns
 -------
 list
@@ -2014,14 +2016,14 @@ def get_collections(neo4j_driver, uuid, property_key = None):
     results = []
 
     if property_key:
-        query = (f"MATCH (c:Collection)<-[:IN_COLLECTION]-(ds:Dataset) "
-                 f"WHERE ds.uuid='{uuid}' "
+        query = (f"MATCH (c:Collection)<-[:IN_COLLECTION]-(e:Entity) "
+                 f"WHERE e.uuid='{uuid}' "
                  # COLLECT() returns a list
                  # apoc.coll.toSet() reruns a set containing unique nodes
                  f"RETURN apoc.coll.toSet(COLLECT(c.{property_key})) AS {record_field_name}")
     else:
-        query = (f"MATCH (c:Collection)<-[:IN_COLLECTION]-(ds:Dataset) "
-                 f"WHERE ds.uuid='{uuid}' "
+        query = (f"MATCH (c:Collection)<-[:IN_COLLECTION]-(e:Entity) "
+                 f"WHERE e.uuid='{uuid}' "
                  # COLLECT() returns a list
                  # apoc.coll.toSet() reruns a set containing unique nodes
                  f"RETURN apoc.coll.toSet(COLLECT(c)) AS {record_field_name}")
