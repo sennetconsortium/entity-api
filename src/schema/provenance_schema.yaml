@@ -262,7 +262,7 @@ ENTITIES:
       source: false
       target: false
     # Collection doesn't actually need data_access_level property
-    properties:
+    properties: &shared_collection_properties
       <<: *shared_properties
       <<: *shared_entity_properties
       # Because Collection-specific validation is needed for some
@@ -510,10 +510,6 @@ ENTITIES:
         on_index_trigger: get_has_pipeline_or_validation_message
       metadata:
         type: json_string # dict
-        before_property_create_validators:
-          - validate_application_header_before_property_update
-        before_property_update_validators:
-          - validate_application_header_before_property_update
         description: "The metadata returned from the processing at data submission time."
       files:
         type: list
@@ -1283,3 +1279,14 @@ ENTITIES:
         type: boolean
         description: 'Determines if the datasets of an upload are all published.'
         on_index_trigger: get_has_all_published_datasets
+
+  ############################################# EPICollection #############################################
+  Epicollection:
+    # This superclass property is optional
+    superclass: Collection
+    # EPICollection can not be derivation source but not target
+    derivation:
+      source: false
+      target: false
+    properties:
+      <<: *shared_collection_properties

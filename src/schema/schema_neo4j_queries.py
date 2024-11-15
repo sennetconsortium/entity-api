@@ -107,6 +107,39 @@ def get_dataset_direct_descendants(neo4j_driver, uuid, property_key=None, match_
 
     return results
 
+
+"""
+Get the uuids for each entity in a list that doesn't belong to a certain entity type. Uuids are ordered by type
+
+Parameters
+----------
+neo4j_driver : neo4j.Driver object
+    The neo4j database connection pool
+direct_ancestor_uuids : list
+    List of the uuids to be filtered
+entity_type : string
+    The entity to be excluded
+
+Returns
+-------
+dict
+    A dictionary of entity uuids that don't pass the filter, grouped by entity_type
+"""
+
+
+def filter_ancestors_by_type(neo4j_driver, direct_ancestor_uuids, entity_type):
+    query = (f"MATCH (e:Entity) "
+             f"WHERE e.uuid in {direct_ancestor_uuids} AND toLower(e.entity_type) <> '{entity_type.lower()}' "
+             f"RETURN e.entity_type AS entity_type, collect(e.uuid) AS uuids")
+    logger.info("======filter_ancestors_by_type======")
+    logger.info(query)
+
+    with neo4j_driver.session() as session:
+        records = session.run(query).data()
+
+    return records if records else None
+
+
 """
 Get the origin (organ) sample ancestor of a given entity by uuid
 
@@ -1370,7 +1403,7 @@ uuid : str
 
 
 def _delete_collection_linkages_tx(tx, uuid):
-    query = (f"MATCH (d:Dataset)-[in:IN_COLLECTION]->(c:Collection)"
+    query = (f"MATCH (e:Entity)-[in:IN_COLLECTION]->(c:Collection)"
              f" WHERE c.uuid = '{uuid}' "
              f" DELETE in")
 
@@ -1996,7 +2029,8 @@ def get_tuplets(neo4j_driver, uuid, property_key=None):
 
 
 """
-Get all collections by uuid
+Get all collections by for a given entity uuid
+
 Parameters
 ----------
 neo4j_driver : neo4j.Driver object
@@ -2005,6 +2039,7 @@ uuid : str
     The uuid of target entity 
 property_key : str
     A target property key for result filtering
+
 Returns
 -------
 list
@@ -2014,14 +2049,14 @@ def get_collections(neo4j_driver, uuid, property_key = None):
     results = []
 
     if property_key:
-        query = (f"MATCH (c:Collection)<-[:IN_COLLECTION]-(ds:Dataset) "
-                 f"WHERE ds.uuid='{uuid}' "
+        query = (f"MATCH (c:Collection)<-[:IN_COLLECTION]-(e:Entity) "
+                 f"WHERE e.uuid='{uuid}' "
                  # COLLECT() returns a list
                  # apoc.coll.toSet() reruns a set containing unique nodes
                  f"RETURN apoc.coll.toSet(COLLECT(c.{property_key})) AS {record_field_name}")
     else:
-        query = (f"MATCH (c:Collection)<-[:IN_COLLECTION]-(ds:Dataset) "
-                 f"WHERE ds.uuid='{uuid}' "
+        query = (f"MATCH (c:Collection)<-[:IN_COLLECTION]-(e:Entity) "
+                 f"WHERE e.uuid='{uuid}' "
                  # COLLECT() returns a list
                  # apoc.coll.toSet() reruns a set containing unique nodes
                  f"RETURN apoc.coll.toSet(COLLECT(c)) AS {record_field_name}")
