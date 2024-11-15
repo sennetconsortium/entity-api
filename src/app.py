@@ -4624,7 +4624,7 @@ def get_collections(id):
     entity_scope = _get_entity_visibility(normalized_entity_type=entity_dict['entity_type'],
                                           entity_dict=entity_dict)
 
-    if entity_scope == DataVisibilityEnum.NON_PUBLIC:
+    if entity_scope == DataVisibilityEnum.NONPUBLIC:
         # Token is required and the user must belong to HuBMAP-READ group
         token = get_user_token(request, non_public_access_required=True)
         public_entity = False
