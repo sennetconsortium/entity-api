@@ -1504,7 +1504,7 @@ def update_entity(id: str, user_token: str, json_data_dict: dict):
         if has_dataset_uuids_to_link or has_updated_status:
             after_update(normalized_entity_type, user_token, merged_updated_dict)
 
-    elif normalized_entity_type == 'Collection':
+    elif schema_manager.entity_type_instanceof(normalized_entity_type, 'Collection'):
         entity_visibility = _get_entity_visibility(normalized_entity_type=normalized_entity_type, entity_dict=entity_dict)
 
         # Prohibit update of an existing Collection if it meets criteria of being visible to public e.g. has DOI.
