@@ -662,14 +662,14 @@ def get_next_revision_uuid(neo4j_driver, uuid):
 
 
 """
-Get a list of associated collection uuids for a given dataset
+Get a list of associated collection uuids for a given entity
 
 Parameters
 ----------
 neo4j_driver : neo4j.Driver object
     The neo4j database connection pool
 uuid : str
-    The uuid of dataset
+    The uuid of entity
 property_key : str
     A target property key for result filtering
 
@@ -680,7 +680,7 @@ list
 """
 
 
-def get_dataset_collections(neo4j_driver, uuid, property_key=None):
+def get_entity_collections(neo4j_driver, uuid, property_key=None):
     results = []
 
     if property_key:
@@ -692,7 +692,7 @@ def get_dataset_collections(neo4j_driver, uuid, property_key=None):
                  f"WHERE e.uuid = '{uuid}' "
                  f"RETURN apoc.coll.toSet(COLLECT(c)) AS {record_field_name}")
 
-    logger.info("======get_dataset_collections() query======")
+    logger.info("======get_entity_collections() query======")
     logger.info(query)
 
     with neo4j_driver.session() as session:

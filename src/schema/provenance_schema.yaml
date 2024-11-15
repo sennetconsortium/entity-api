@@ -444,8 +444,8 @@ ENTITIES:
         transient: true
         generated: true
         description: "A list of collections that this dataset belongs to. Will be returned in response"
-        on_read_trigger: get_dataset_collections
-        on_index_trigger: get_dataset_collections
+        on_read_trigger: get_entity_collections
+        on_index_trigger: get_entity_collections
         # No on_index_trigger to include collections in the OpenSearch document for a Dataset (from HM, we might need this for SN)
       upload:
         type: json_string # dict
@@ -888,6 +888,13 @@ ENTITIES:
         type: string
         required_on_create: true
         description: "A high level description of where this source originates from."
+      collections:
+        type: list
+        transient: true
+        generated: true
+        description: "A list of collections that this source belongs to. Will be returned in response"
+        on_read_trigger: get_entity_collections
+        on_index_trigger: get_entity_collections
 
 
   ############################################# Sample #############################################
@@ -1149,6 +1156,13 @@ ENTITIES:
         immutable: true
         description: "A boolean indicating if the Sample contains any Datasets in its descendants."
         on_index_trigger: get_contains_data
+      collections:
+        type: list
+        transient: true
+        generated: true
+        description: "A list of collections that this sample belongs to. Will be returned in response"
+        on_read_trigger: get_entity_collections
+        on_index_trigger: get_entity_collections
 
   ############################################# Upload #############################################
   # Eventually we might allow folks to bulk register Samples or Sources through the same mechanism.
