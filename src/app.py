@@ -4922,7 +4922,8 @@ def get_entities_for_collection(id: str):
     # Verify that the entity is a collection
     entity_dict = query_target_entity(id)
     entity_type = entity_dict["entity_type"]
-    if not equals(entity_type, "Collection"):
+
+    if not schema_manager.entity_type_instanceof(entity_type, "Collection"):
         abort_bad_req(f"{entity_type.title()} with id {id} is not a collection")
 
     # Determine if the entity is publicly visible base on its data, only.
