@@ -1153,7 +1153,7 @@ def create_entity(entity_type: str, user_token: str, json_data_dict: dict):
             'next_revision_uuids',
             'previous_revision_uuids'
         ]
-    elif normalized_entity_type in ['Upload', 'Collection']:
+    elif normalized_entity_type in ['Upload', 'Collection', 'Epicollection']:
         properties_to_skip = [
             'datasets',
             'entities'
@@ -1504,7 +1504,7 @@ def update_entity(id: str, user_token: str, json_data_dict: dict):
         if has_dataset_uuids_to_link or has_updated_status:
             after_update(normalized_entity_type, user_token, merged_updated_dict)
 
-    elif normalized_entity_type == 'Collection':
+    elif schema_manager.entity_type_instanceof(normalized_entity_type, 'Collection'):
         entity_visibility = _get_entity_visibility(normalized_entity_type=normalized_entity_type, entity_dict=entity_dict)
 
         # Prohibit update of an existing Collection if it meets criteria of being visible to public e.g. has DOI.
@@ -1542,7 +1542,7 @@ def update_entity(id: str, user_token: str, json_data_dict: dict):
             'next_revision_uuids',
             'previous_revision_uuids'
         ]
-    elif normalized_entity_type in ['Upload', 'Collection']:
+    elif normalized_entity_type in ['Upload', 'Collection', 'Epicollection']:
         properties_to_skip = [
             'datasets',
             'entities'
@@ -2441,7 +2441,7 @@ def doi_redirect(id):
     entity_type = entity_dict['entity_type']
 
     # Only for collection
-    if entity_type not in ['Collection', 'Dataset', 'Publication']:
+    if entity_type not in ['Collection', 'Epicollection', 'Dataset', 'Publication']:
         abort_bad_req("The target entity of the specified id must be a Collection or Dataset or Publication")
 
     uuid = entity_dict['uuid']
@@ -4618,14 +4618,13 @@ def get_collections(id):
     # Get the entity dict from cache if exists
     # Otherwise query against uuid-api and neo4j to get the entity dict if the id exists
     entity_dict = query_target_entity(id)
-    normalized_entity_type = entity_dict['entity_type']
     uuid = entity_dict['uuid']
     public_entity = True
 
-    if not schema_manager.entity_type_instanceof(normalized_entity_type, 'Dataset'):
-        abort_bad_req(f"Unsupported entity type of id {id}: {normalized_entity_type}")
+    entity_scope = _get_entity_visibility(normalized_entity_type=entity_dict['entity_type'],
+                                          entity_dict=entity_dict)
 
-    if entity_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
+    if entity_scope == DataVisibilityEnum.NONPUBLIC:
         # Token is required and the user must belong to HuBMAP-READ group
         token = get_user_token(request, non_public_access_required=True)
         public_entity = False
@@ -4922,7 +4921,8 @@ def get_entities_for_collection(id: str):
     # Verify that the entity is a collection
     entity_dict = query_target_entity(id)
     entity_type = entity_dict["entity_type"]
-    if not equals(entity_type, "Collection"):
+
+    if not schema_manager.entity_type_instanceof(entity_type, "Collection"):
         abort_bad_req(f"{entity_type.title()} with id {id} is not a collection")
 
     # Determine if the entity is publicly visible base on its data, only.
@@ -5605,7 +5605,7 @@ def delete_cache(id):
         upload_dataset_uuids = schema_neo4j_queries.get_upload_datasets(neo4j_driver_instance, entity_uuid , 'uuid')
 
         # If the target entity is Datasets/Publication, delete the associated Collections cache, Upload cache
-        collection_uuids = schema_neo4j_queries.get_dataset_collections(neo4j_driver_instance, entity_uuid , 'uuid')
+        collection_uuids = schema_neo4j_queries.get_entity_collections(neo4j_driver_instance, entity_uuid , 'uuid')
         collection_dict = schema_neo4j_queries.get_publication_associated_collection(neo4j_driver_instance, entity_uuid)
         upload_dict = schema_neo4j_queries.get_dataset_upload(neo4j_driver_instance, entity_uuid)
 
