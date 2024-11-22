@@ -3460,6 +3460,7 @@ def source_metadata_group(key: str) -> str:
         'mechanism_of_injury': 'Donation Information',
         'medical_history': 'History',
         'race': 'Demographics',
+        'rh_blood_group': 'Demographics',
         'sex': 'Demographics',
         'social_history': 'History',
         'weight': 'Vitals'
