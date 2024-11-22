@@ -3806,7 +3806,7 @@ def sankey_data():
     # String constants
     HEADER_DATASET_GROUP_NAME = 'dataset_group_name'
     HEADER_ORGAN_TYPE = 'organ_type'
-    HEADER_DATASET_DATASET_TYPE = 'dataset_type'
+    HEADER_DATASET_DATASET_TYPE = 'dataset_dataset_type'
     HEADER_DATASET_STATUS = 'dataset_status'
     ORGAN_TYPES = Ontology.ops(as_data_dict=True, data_as_val=True, val_key='rui_code').organ_types()
     with open('sankey_mapping.json') as f:
