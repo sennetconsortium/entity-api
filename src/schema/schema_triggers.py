@@ -799,7 +799,7 @@ def set_dataset_status_new(property_key, normalized_type, user_token, existing_d
     return property_key, 'New'
 
 
-def get_dataset_collections(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+def get_entity_collections(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     """Trigger event method of getting a list of collections for this new Dataset.
 
     Parameters
@@ -825,15 +825,15 @@ def get_dataset_collections(property_key, normalized_type, user_token, existing_
 
     if 'uuid' not in existing_data_dict:
         msg = create_trigger_error_msg(
-            "Missing 'uuid' key in 'existing_data_dict' during calling 'get_dataset_collections()' trigger method.",
+            "Missing 'uuid' key in 'existing_data_dict' during calling 'get_entity_collections()' trigger method.",
             existing_data_dict, new_data_dict
         )
         raise KeyError(msg)
 
     # No property key needs to filter the result
     # Get back the list of collection dicts
-    collections_list = schema_neo4j_queries.get_dataset_collections(schema_manager.get_neo4j_driver_instance(),
-                                                                    existing_data_dict['uuid'])
+    collections_list = schema_neo4j_queries.get_entity_collections(schema_manager.get_neo4j_driver_instance(),
+                                                                   existing_data_dict['uuid'])
     if collections_list:
         # Exclude datasets from each resulting collection
         # We don't want to show too much nested information
@@ -3451,6 +3451,7 @@ def source_metadata_group(key: str) -> str:
         'mechanism_of_injury': 'Donation Information',
         'medical_history': 'History',
         'race': 'Demographics',
+        'rh_blood_group': 'Demographics',
         'sex': 'Demographics',
         'social_history': 'History',
         'weight': 'Vitals'

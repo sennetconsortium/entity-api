@@ -1898,7 +1898,7 @@ def get_sankey_info(neo4j_driver):
                 record_contents.append(item)
             record_dict['dataset_group_name'] = record_contents[0]
             record_dict['organ_type'] = record_contents[1]
-            record_dict['dataset_type'] = record_contents[2]
+            record_dict['dataset_dataset_type'] = record_contents[2]
             record_dict['dataset_status'] = record_contents[3]
             list_of_dictionaries.append(record_dict)
         return list_of_dictionaries

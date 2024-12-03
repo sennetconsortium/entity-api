@@ -1504,7 +1504,7 @@ def update_entity(id: str, user_token: str, json_data_dict: dict):
         if has_dataset_uuids_to_link or has_updated_status:
             after_update(normalized_entity_type, user_token, merged_updated_dict)
 
-    elif normalized_entity_type == 'Collection':
+    elif schema_manager.entity_type_instanceof(normalized_entity_type, 'Collection'):
         entity_visibility = _get_entity_visibility(normalized_entity_type=normalized_entity_type, entity_dict=entity_dict)
 
         # Prohibit update of an existing Collection if it meets criteria of being visible to public e.g. has DOI.
@@ -3806,7 +3806,7 @@ def sankey_data():
     # String constants
     HEADER_DATASET_GROUP_NAME = 'dataset_group_name'
     HEADER_ORGAN_TYPE = 'organ_type'
-    HEADER_DATASET_DATASET_TYPE = 'dataset_type'
+    HEADER_DATASET_DATASET_TYPE = 'dataset_dataset_type'
     HEADER_DATASET_STATUS = 'dataset_status'
     ORGAN_TYPES = Ontology.ops(as_data_dict=True, data_as_val=True, val_key='rui_code').organ_types()
     with open('sankey_mapping.json') as f:
@@ -4925,7 +4925,8 @@ def get_entities_for_collection(id: str):
     # Verify that the entity is a collection
     entity_dict = query_target_entity(id)
     entity_type = entity_dict["entity_type"]
-    if not equals(entity_type, "Collection"):
+
+    if not schema_manager.entity_type_instanceof(entity_type, "Collection"):
         abort_bad_req(f"{entity_type.title()} with id {id} is not a collection")
 
     # Determine if the entity is publicly visible base on its data, only.
@@ -5608,7 +5609,7 @@ def delete_cache(id):
         upload_dataset_uuids = schema_neo4j_queries.get_upload_datasets(neo4j_driver_instance, entity_uuid , 'uuid')
 
         # If the target entity is Datasets/Publication, delete the associated Collections cache, Upload cache
-        collection_uuids = schema_neo4j_queries.get_dataset_collections(neo4j_driver_instance, entity_uuid , 'uuid')
+        collection_uuids = schema_neo4j_queries.get_entity_collections(neo4j_driver_instance, entity_uuid , 'uuid')
         collection_dict = schema_neo4j_queries.get_publication_associated_collection(neo4j_driver_instance, entity_uuid)
         upload_dict = schema_neo4j_queries.get_dataset_upload(neo4j_driver_instance, entity_uuid)
 
