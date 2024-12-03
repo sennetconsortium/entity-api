@@ -5482,6 +5482,12 @@ def verify_ubkg_properties(json_data_dict):
         if ancillary.search(json_data_dict['dataset_type']) is None:
             compare_property_against_ubkg(DATASET_TYPE, {'dataset_type': json_data_dict['dataset_type']}, 'dataset_type')
 
+    # For new fields in Uploads
+    if 'intended_dataset_type' in json_data_dict:
+        compare_property_against_ubkg(DATASET_TYPE, {'intended_dataset_type': json_data_dict['intended_dataset_type']}, 'intended_dataset_type')
+
+    if 'intended_organ' in json_data_dict:
+        compare_property_against_ubkg(ORGAN_TYPES, json_data_dict, 'intended_organ')
 
 def compare_property_list_against_ubkg(ubkg_dict, json_data_dict, field):
     good_fields = []

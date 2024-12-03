@@ -1293,6 +1293,14 @@ ENTITIES:
         type: boolean
         description: 'Determines if the datasets of an upload are all published.'
         on_index_trigger: get_has_all_published_datasets
+      intended_dataset_type:
+        type: string
+        description: 'The dataset type of the intended datasets that will be uploaded as part of the Upload.'
+        required_on_create: true
+      intended_organ:
+        type: string
+        description: 'The organ code representing the organ type that the data contained in the upload will be registered/associated with.'
+        required_on_create: true
 
   ############################################# EPICollection #############################################
   Epicollection:
