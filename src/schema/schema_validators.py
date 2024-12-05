@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime
+from urllib.parse import urlparse
 
 # Local modules
 from schema import schema_manager
@@ -784,6 +785,33 @@ def validate_source_types_match(property_key, normalized_entity_type, request, e
                 raise ValueError(f"Cannot have a {existing_data_dict['entity_type']} that is sourced "
                                  f"from ancestors with unmatched source types. "
                                  f"Found both {first_source_type} ({sources[0].get('sennet_id')}) and {current_source_type} ({source.get('sennet_id')})")
+
+
+def validate_url(property_key, normalized_entity_type, request, existing_data_dict, new_data_dict):
+    """
+    Validate that the provided field is a valid URL
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key
+    normalized_type : str
+        Submission
+    request: Flask request object
+        The instance of Flask request passed in from application request
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        The json data in request body, already after the regular validations
+    """
+    try:
+        result = urlparse(new_data_dict[property_key])
+        if not all([result.scheme, result.netloc]):
+            raise ValueError(f"Invalid {property_key} format, must be a valid URL")
+        if result.scheme not in ['http', 'https']:
+            raise ValueError(f"Invalid {property_key} format, must be a valid URL")
+    except AttributeError:
+        raise ValueError(f"Invalid {property_key} format, must be a valid URL")
 
 
 ####################################################################################################
