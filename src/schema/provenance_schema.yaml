@@ -730,6 +730,10 @@ ENTITIES:
         type: string
         description: 'The URL at the publishers server for print/pre-print (http(s)://[alpha-numeric-string].[alpha-numeric-string].[...])'
         required_on_create: true # Only required for create via POST, not update via PUT
+        before_property_create_validators:
+          - validate_url
+        before_property_update_validators:
+          - validate_url
       publication_venue:
         type: string
         description: 'The venue of the publication, journal, conference, preprint server, etc...'
