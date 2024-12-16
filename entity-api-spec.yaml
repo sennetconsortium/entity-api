@@ -515,47 +515,18 @@ components:
             - WGS
             - 3D Imaging Mass Cytometry
           description: The data or assay type contained in this dataset.
-        data_types:
-          type: array
-          items:
-            type: string
-            enum:
-              - 10x-multiome
-              - bulk-RNA
-              - CITE-Seq
-              - CODEX
-              - codex_cytokit
-              - codex_cytokit_v1
-              - CosMX (RNA)
-              - DBiT-seq
-              - FACS - Fluorescence-activated Cell Sorting
-              - GeoMX (RNA) 
-              - image_pyramid
-              - LC-MS
-              - Lightsheet
-              - MIBI
-              - mibi_deepcell
-              - Mint-ChIP
-              - publication
-              - publication_ancillary
-              - salmon_rnaseq_10x
-              - salmon_rnaseq_bulk
-              - salmon_sn_rnaseq_10x
-              - SASP
-              - scRNA-seq
-              - sn_atac_seq
-              - snATAC-seq
-              - snRNA-seq
-              - snRNAseq-10xGenomics-v3
-              - Stained Slides
-              - Visium
-          description: The data or assay types contained in this dataset as a json array of strings. Each is an assay code from [assay types](https://ontology.api.hubmapconsortium.org/datasets?application_context=Sennet).
         collections:
           readOnly: true
           type: array
           items:
             $ref: '#/components/schemas/Collection'
           description: A list of collections that this dataset belongs to.
+        upload:
+          readOnly: true
+          type: array
+          items:
+            $ref: '#/components/schemas/Upload'
+          description: "The Data Upload that this dataset is associated with."
         contributors:
           readOnly: true
           type: array
@@ -620,6 +591,15 @@ components:
           type: string
           format: file_uuid
           description: 'The thumbnail image file previously uploaded to delete. Provide as a string of the file_uuid like: "c35002f9c3d49f8b77e1e2cd4a01803d"'
+        creation_action:
+          type: string
+          description: 'The associated action that represents the creation of that dataset'
+        intended_dataset_type:
+          type: string
+          description: 'The dataset type of the intended datasets that will be uploaded as part of the Upload.'
+        intended_organ:
+          type: string
+          description: 'The organ code representing the organ type that the data contained in the upload will be registered/associated with.'
 
     Upload:
       type: object
