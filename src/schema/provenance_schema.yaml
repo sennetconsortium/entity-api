@@ -234,10 +234,6 @@ shared_entity_properties: &shared_entity_properties
     before_create_trigger: set_entity_type
   metadata:
     type: json_string # dict
-    before_property_create_validators:
-      - validate_application_header_before_property_update
-    before_property_update_validators:
-      - validate_application_header_before_property_update
     description: "The metadata returned from the processing at data submission time."
   has_metadata:
     type: string
@@ -510,31 +506,15 @@ ENTITIES:
         on_index_trigger: get_pipeline_message_reduced
       metadata:
         type: json_string # dict
-        before_property_create_validators:
-          - validate_application_header_before_property_update
-        before_property_update_validators:
-          - validate_application_header_before_property_update
         description: "Metadata associated with the ingested experimental data"
       files:
         type: list
-        before_property_create_validators:
-          - validate_application_header_before_property_update
-        before_property_update_validators:
-          - validate_application_header_before_property_update
         description: "A list of files associated with the dataset." 
       calculated_metadata:
         type: json_string # dict
-        before_property_create_validators:
-          - validate_application_header_before_property_update
-        before_property_update_validators:
-          - validate_application_header_before_property_update
         description: "Calculated metadata outputted from the processing pipeline." 
       ingest_metadata:
         type: json_string # dict
-        before_property_create_validators:
-          - validate_application_header_before_property_update
-        before_property_update_validators:
-          - validate_application_header_before_property_update
         description: "Information associated with running the ingest and processing pipelines"
       local_directory_rel_path:
         # Example: protected/<TMC>/<uuid>
