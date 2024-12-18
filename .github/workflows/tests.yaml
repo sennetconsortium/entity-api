@@ -16,6 +16,9 @@ jobs:
     environment: test
     steps:
       - uses: actions/checkout@v3
+      - name: Create docker network
+        run: |
+          docker network create docker_default
       - name: Run tests in docker
         env:
           UBKG_SERVER: ${{ secrets.UBKG_SERVER }}
