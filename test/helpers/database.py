@@ -6,7 +6,7 @@ from neo4j import GraphDatabase
 from . import GROUP
 
 
-def wait_for_neo4j(uri, user, password, timeout=60):
+def wait_for_neo4j(uri, user, password, timeout=180):
     """Wait for Neo4j to be ready
 
     Parameters
