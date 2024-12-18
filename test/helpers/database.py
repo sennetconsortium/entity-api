@@ -6,7 +6,7 @@ from neo4j import GraphDatabase
 from . import GROUP
 
 
-def wait_for_neo4j(uri, user, password, timeout=180):
+def wait_for_neo4j(uri, user, password, timeout=30):
     """Wait for Neo4j to be ready
 
     Parameters
@@ -52,7 +52,7 @@ def db_session():
     session : neo4j.Session
         Neo4j session object. Fixture takes care of closing the session.
     """
-    neo4j_uri = "bolt://neo4j-test:7687"
+    neo4j_uri = "bolt://localhost:7687"
     neo4j_username = "neo4j"
     neo4j_password = None
 

@@ -35,7 +35,6 @@ services:
       - _JAVA_OPTIONS=-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0
     # Avoid accidentally creating zombie processes
     init: true
-    # Specifying a restart policy to avoid downtime
     ports:
       - "7474:7474"
       - "7687:7687"
