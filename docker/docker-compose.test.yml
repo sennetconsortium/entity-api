@@ -8,7 +8,6 @@ services:
         - TEST=true
         - COMMONS_BRANCH=${COMMONS_BRANCH:-main}
     container_name: entity-api-test
-    network_mode: host
     environment:
       - HOST_GID=${HOST_GID:-1002}
       - HOST_UID=${HOST_UID:-1002}
@@ -21,7 +20,8 @@ services:
       - "../test:/usr/src/app/test"
       - "../pytest.ini:/usr/src/app/pytest.ini"
     depends_on:
-      - neo4j-test
+      neo4j-test:
+        condition: service_healthy
 
   neo4j-test:
     image: sennet/neo4j:5.20.0
@@ -42,3 +42,9 @@ services:
     volumes:
       # Mount the neo4j configuration file to container
       - "./test/neo4j/neo4j.conf:/usr/src/app/neo4j/conf/neo4j.conf"
+    healthcheck:
+      test: wget http://localhost:7474 || exit 1
+      interval: 1s
+      timeout: 10s
+      retries: 20
+      start_period: 3s
