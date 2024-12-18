@@ -4939,9 +4939,14 @@ def get_datasets_for_upload(id: str):
         "ingest_metadata",
         "ingest_task",
         "pipeline_message",
-        "status_history"
+        "status_history",
+        "direct_ancestors",
+        "metadata",
+        "sources",
+        "upload"
     ]
-    datasets = schema_triggers.get_normalized_upload_datasets(entity_dict["uuid"], properties_to_exclude)
+    token = get_internal_token()
+    datasets = schema_triggers.get_normalized_upload_datasets(entity_dict["uuid"], token, properties_to_exclude)
     return jsonify(datasets)
 
 
