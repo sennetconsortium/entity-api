@@ -37,7 +37,7 @@ def wait_for_neo4j(uri, user, password, timeout=30):
             if time.time() - start_time > timeout:
                 print("Timeout waiting for Neo4j to be ready")
                 raise e
-            print("Waiting for Neo4j to be ready...")
+            print("Waiting for Neo4j to be ready on %s" % uri)
             time.sleep(1)
 
     return driver

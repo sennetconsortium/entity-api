@@ -27,7 +27,6 @@ services:
     image: sennet/neo4j:5.20.0
     container_name: neo4j-test
     hostname: neo4j-test
-    network_mode: host
     # Allow the JVM to read cgroup limits
     # -XX:+UseContainerSupport is enabled by default on linux machines, 
     # this feature was introduced in java10 then backported to Java-8u191, the base image comes with OpenJDK(build 1.8.0_232-b09)

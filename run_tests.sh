@@ -40,7 +40,7 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     sed -i "" "s|UBKG_ENDPOINT_VALUESET =|UBKG_ENDPOINT_VALUESET = '${UBKG_ENDPOINT_VALUESET}'|g" src/instance/app.cfg
     sed -i "" "s|UBKG_CODES =|UBKG_CODES = '${UBKG_CODES}'|g" src/instance/app.cfg
 elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
-    sed -i "s|NEO4J_URI = 'bolt://hubmap-neo4j-localhost:7687'|NEO4J_URI = 'bolt://neo4j-test:7687'|g" src/instance/app.cfg
+    sed -i "s|NEO4J_URI = 'bolt://hubmap-neo4j-localhost:7687'|NEO4J_URI = 'bolt://localhost:7687'|g" src/instance/app.cfg
     sed -i "s|NEO4J_PASSWORD = '123'|NEO4J_PASSWORD = None|g" src/instance/app.cfg
 
     # search src/instance/app.cfg for the lines that start with MEMCACHED_MODE and replace with false
