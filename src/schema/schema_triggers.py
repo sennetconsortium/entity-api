@@ -2972,6 +2972,8 @@ def get_normalized_upload_datasets(uuid: str, token, properties_to_exclude: List
     ----------
     uuid : str
         The UUID of the Upload entity
+    token: str
+        Either the user's globus nexus token or the internal token
     properties_to_exclude : List[str]
         A list of property keys to exclude from the normalized results
 
