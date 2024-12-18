@@ -1,0 +1,44 @@
+version: "3.7"
+
+services:
+  entity-api-test:
+    build: 
+      context: ./entity-api
+      args:
+        - TEST=true
+        - COMMONS_BRANCH=${COMMONS_BRANCH:-main}
+    container_name: entity-api-test
+    environment:
+      - HOST_GID=${HOST_GID:-1002}
+      - HOST_UID=${HOST_UID:-1002}
+    volumes:  
+      # Mount the VERSION file and BUILD file 
+      - "../VERSION:/usr/src/app/VERSION" 
+      - "../BUILD:/usr/src/app/BUILD" 
+      # # Mount the source and test code to container  
+      - "../src:/usr/src/app/src"
+      - "../test:/usr/src/app/test"
+      - "../pytest.ini:/usr/src/app/pytest.ini"
+    depends_on:
+      - neo4j-test
+
+  neo4j-test:
+    image: sennet/neo4j:5.20.0
+    container_name: neo4j-test
+    hostname: neo4j-test
+    # Allow the JVM to read cgroup limits
+    # -XX:+UseContainerSupport is enabled by default on linux machines, 
+    # this feature was introduced in java10 then backported to Java-8u191, the base image comes with OpenJDK(build 1.8.0_232-b09)
+    # -XX:MaxRAMPercentage (double) is depending on the max memory limit assigned to the contaienr
+    # When the container has > 1G memory, set -XX:MaxRAMPercentage=75.0 is good (doesn't waste too many resources)
+    environment:
+      - _JAVA_OPTIONS=-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0
+    # Avoid accidentally creating zombie processes
+    init: true
+    # Specifying a restart policy to avoid downtime
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    volumes:
+      # Mount the neo4j configuration file to container
+      - "./test/neo4j/neo4j.conf:/usr/src/app/neo4j/conf/neo4j.conf"

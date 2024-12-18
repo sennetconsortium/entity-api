@@ -6,6 +6,7 @@ LABEL description="SenNet Entity API Service"
 # The commons branch to be used in requirements.txt during image build
 # Default is master branch specified in docker-compose.yml if not set before the build
 ARG COMMONS_BRANCH
+ARG TEST=false
 
 # Change to directory that contains the Dockerfile
 WORKDIR /usr/src/app
@@ -41,6 +42,9 @@ RUN yum install -y yum-utils && \
     mv nginx/nginx.conf /etc/nginx/nginx.conf && \
     rm -rf nginx && \
     pip install --upgrade pip -r src/requirements.txt && \
+    if [ $TEST = "true" ]; \
+        then pip install -r src/requirements.dev.txt; \
+    fi && \
     chmod +x start.sh && \
     yum clean all 
 
