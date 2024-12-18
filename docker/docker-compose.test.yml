@@ -19,9 +19,10 @@ services:
       - "../src:/usr/src/app/src"
       - "../test:/usr/src/app/test"
       - "../pytest.ini:/usr/src/app/pytest.ini"
+    networks:
+      - docker_default
     depends_on:
-      neo4j-test:
-        condition: service_healthy
+      - neo4j-test
 
   neo4j-test:
     image: sennet/neo4j:5.20.0
@@ -42,9 +43,9 @@ services:
     volumes:
       # Mount the neo4j configuration file to container
       - "./test/neo4j/neo4j.conf:/usr/src/app/neo4j/conf/neo4j.conf"
-    healthcheck:
-      test: wget http://localhost:7474 || exit 1
-      interval: 1s
-      timeout: 10s
-      retries: 20
-      start_period: 3s
+    networks:
+      - docker_default
+
+networks:
+  docker_default:
+    external: true
