@@ -1,409 +1,331 @@
-import json
-import os
-import random
-import test.utils as test_utils
+from test.helpers import GROUP
+from test.helpers.auth import USER
 from unittest.mock import MagicMock, patch
 
 import pytest
-from flask import Response
 
-import app as app_module
 
-test_data_dir = os.path.join(os.path.dirname(__file__), 'data')
+def mock_response(status_code=200, json_data=None):
+    res = MagicMock()
+    res.status_code = status_code
+    if json_data:
+        res.json.return_value = json_data
+    return res
 
 
 @pytest.fixture()
-def app():
-    a = app_module.app
-    a.config.update({'TESTING': True})
+def app(auth):
+    import app as app_module
+
+    app_module.app.config.update({"TESTING": True})
+    app_module.auth_helper_instance = auth
+    app_module.schema_manager._auth_helper = auth
     # other setup
-    yield a
+    yield app_module.app
     # clean up
 
 
-@pytest.fixture(scope='session', autouse=True)
-def ontology_mock():
-    """Automatically add ontology mock functions to all tests"""
-    with (patch('atlas_consortia_commons.ubkg.ubkg_sdk.UbkgSDK', new=test_utils.MockOntology)):
-        yield
+TEST_ENTITIES = {
+    "source": {
+        "uuid": "ec55f7bcbb7343f199dcf50666c5e8a6",
+        "sennet_id": "SNT123.ABCD.451",
+        "base_id": "123ABCD451",
+    },
+    "organ": {
+        "uuid": "bb889cd3edad4d65b6190b6529eeab89",
+        "sennet_id": "SNT123.ABCD.453",
+        "base_id": "123ABCD453",
+    },
+    "block": {
+        "uuid": "ab8d641cd27e4fce8c52df13376082dd",
+        "sennet_id": "SNT123.ABCD.455",
+        "base_id": "123ABCD455",
+    },
+    "section": {
+        "uuid": "b34d99d9a4c34cba993b55a17925559e",
+        "sennet_id": "SNT123.ABCD.457",
+        "base_id": "123ABCD457",
+    },
+    "dataset": {
+        "uuid": "6c1e4cef787849c3a228fe6882d5926d",
+        "sennet_id": "SNT123.ABCD.459",
+        "base_id": "123ABCD459",
+    },
+}
 
-
-@pytest.fixture(scope='session', autouse=True)
-def auth_helper_mock():
-    auth_mock = MagicMock()
-    auth_mock.getUserTokenFromRequest.return_value = 'test_token'
-    auth_mock.getUserInfo.return_value = {
-        'sub': '8cb9cda5-1930-493a-8cb9-df6742e0fb42',
-        'email': 'TESTUSER@example.com',
-        'hmgroupids': ['60b692ac-8f6d-485f-b965-36886ecc5a26'],
-    }
-
-    # auth_helper_instance gets created (from 'import app') before fixture is called
-    app_module.auth_helper_instance = auth_mock
-    with (
-        patch('hubmap_commons.hm_auth.AuthHelper.configured_instance', return_value=auth_mock),
-        patch('hubmap_commons.hm_auth.AuthHelper.create', return_value=auth_mock),
-        patch('hubmap_commons.hm_auth.AuthHelper.instance', return_value=auth_mock),
-    ):
-        yield
-
-
-# Index
 
 def test_index(app):
     """Test that the index page is working"""
 
     with app.test_client() as client:
-        res = client.get('/')
+        res = client.get("/")
         assert res.status_code == 200
-        assert res.text == 'Hello! This is SenNet Entity API service :)'
+        assert res.text == "Hello! This is SenNet Entity API service :)"
 
 
-# Get Entity by ID
+@pytest.mark.usefixtures("lab")
+def test_create_source(app):
+    entities = [
+        TEST_ENTITIES["source"],
+        {
+            "uuid": "014cf93c2f7c41b080a3d3c59eb71cdc",  # activity
+            "sennet_id": "SNT123.ABCD.450",
+            "base_id": "123ABCD450",
+        },
+    ]
+    post_uuid_res = [mock_response(200, [u]) for u in entities]
+    put_search_res = mock_response(202)
 
-@pytest.mark.parametrize('entity_type', [
-    ('source'),
-    ('sample'),
-    ('dataset'),
-])
-def test_get_entity_by_id_success(app, entity_type):
-    """Test that the get entity by id endpoint returns the correct entity"""
+    with (
+        app.test_client() as client,
+        patch("requests.post", side_effect=post_uuid_res),
+        patch("requests.put", return_value=put_search_res),
+    ):
+        data = {
+            "description": "Testing lab notes",
+            "group_uuid": GROUP["uuid"],
+            "lab_source_id": "test_lab_source_id",
+            "protocol_url": "dx.doi.org/10.17504/protocols.io.3byl4j398lo5/v1",
+            "source_type": "Human",
+        }
 
-    with open(os.path.join(test_data_dir, f'get_entity_by_id_success_{entity_type}.json'), 'r') as f:
-        test_data = json.load(f)
-    entity_id = test_data['uuid']
-
-    with (app.test_client() as client,
-          patch('app.auth_helper_instance.getUserInfo', return_value=test_data['getUserInfo']),
-          patch('app.auth_helper_instance.has_read_privs', return_value=test_data['has_read_privs']),
-          patch('app.schema_manager.get_sennet_ids', return_value=test_data['get_sennet_ids']),
-          patch('app.app_neo4j_queries.get_entity', return_value=test_data['get_entity']),
-          patch('app.schema_triggers.set_dataset_sources', side_effect=test_data.get('get_associated_sources')),
-          patch('app.schema_neo4j_queries.get_sources_associated_entity', side_effect=test_data.get('get_associated_sources')),
-          patch('app.schema_manager.get_complete_entity_result', return_value=test_data['get_complete_entity_result'])):
-
-        res = client.get(f'/entities/{entity_id}',
-                         headers=test_data['headers'])
-
-        assert res.status_code == 200
-        assert res.json == test_data['response']
-
-
-@pytest.mark.parametrize('entity_type, query_key, query_value, status_code', [
-    ('source', 'property', 'data_access_level', 200),
-    ('source', 'property', 'status', 400),
-    ('sample', 'property', 'data_access_level', 200),
-    ('sample', 'property', 'status', 400),
-    ('dataset', 'property', 'data_access_level', 200),
-    ('dataset', 'property', 'status', 200),
-    ('source', 'invalid_key', 'status', 400),
-    ('source', 'property', 'invalid_value', 400),
-])
-def test_get_entity_by_id_query(app, entity_type, query_key, query_value, status_code):
-    """Test that the get entity by id endpoint can handle specific query parameters"""
-
-    with open(os.path.join(test_data_dir, f'get_entity_by_id_success_{entity_type}.json'), 'r') as f:
-        test_data = json.load(f)
-    entity_id = test_data['uuid']
-    expected_response = test_data['response']
-
-    with (app.test_client() as client,
-          patch('app.auth_helper_instance.getUserInfo', return_value=test_data['getUserInfo']),
-          patch('app.auth_helper_instance.has_read_privs', return_value=test_data['has_read_privs']),
-          patch('app.schema_manager.get_sennet_ids', return_value=test_data['get_sennet_ids']),
-          patch('app.app_neo4j_queries.get_entity', return_value=test_data['get_entity']),
-          patch('app.schema_manager.get_complete_entity_result', return_value=test_data['get_complete_entity_result'])):
-
-        res = client.get(f'/entities/{entity_id}?{query_key}={query_value}',
-                         headers=test_data['headers'])
-
-        assert res.status_code == status_code
-        if status_code == 200:
-            assert res.text == expected_response[query_value]
-
-
-# Get Entity by Type
-
-@pytest.mark.parametrize('entity_type', [
-    'source',
-    'sample',
-    'dataset',
-])
-def test_get_entities_by_type_success(app, entity_type):
-    """Test that the get entity by type endpoint calls neo4j and returns the
-       correct entities"""
-
-    with open(os.path.join(test_data_dir, f'get_entity_by_type_success_{entity_type}.json'), 'r') as f:
-        test_data = json.load(f)
-
-    with (app.test_client() as client,
-          patch('app.app_neo4j_queries.get_entities_by_type', return_value=test_data['get_entities_by_type']),
-          patch('app.schema_neo4j_queries.get_entity_creation_action_activity', return_value=test_data.get('get_entity_creation_action_activity')),
-          patch('app.schema_neo4j_queries.get_sources_associated_entity', return_value=test_data['get_sources_associated_entity'])):
-
-        res = client.get(f'/{entity_type}/entities')
+        res = client.post(
+            "/entities/source?return_all_properties=true",
+            json=data,
+            headers={"Authorization": "Bearer test_token"},
+        )
 
         assert res.status_code == 200
-        assert res.json == test_data['response']
+        assert res.json["uuid"] == TEST_ENTITIES["source"]["uuid"]
+        assert res.json["sennet_id"] == TEST_ENTITIES["source"]["sennet_id"]
+        assert res.json["description"] == data["description"]
+        assert res.json["lab_source_id"] == data["lab_source_id"]
+        assert res.json["source_type"] == data["source_type"]
+
+        assert res.json["group_uuid"] == GROUP["uuid"]
+        assert res.json["group_name"] == GROUP["displayname"]
+        assert res.json["created_by_user_displayname"] == USER["name"]
+        assert res.json["created_by_user_email"] == USER["email"]
+        assert res.json["created_by_user_sub"] == USER["sub"]
+        assert res.json["data_access_level"] == "consortium"
 
 
-@pytest.mark.parametrize('entity_type', [
-    ('invalid_type'),
-])
-def test_get_entities_by_type_invalid_type(app, entity_type):
-    """Test that the get entity by type endpoint returns a 400 for an invalid
-       entity type"""
+def test_create_organ_sample(app):
+    entities = [
+        TEST_ENTITIES["organ"],
+        {
+            "uuid": "f3976f0da50c4b6286cccd6d4f1d9835",  # activity
+            "sennet_id": "SNT123.ABCD.452",
+            "base_id": "123ABCD452",
+        },
+        TEST_ENTITIES["source"],
+    ]
+    get_uuid_res = mock_response(200, entities[2])
+    post_uuid_res = [mock_response(200, [u]) for u in entities[:2]]
+    put_search_res = mock_response(202)
 
-    with (app.test_client() as client):
+    with (
+        app.test_client() as client,
+        patch("requests.get", return_value=get_uuid_res),
+        patch("requests.post", side_effect=post_uuid_res),
+        patch("requests.put", return_value=put_search_res),
+    ):
+        data = {
+            "sample_category": "Organ",
+            "organ": "LV",
+            "lab_tissue_sample_id": "test_lab_tissue_organ_id",
+            "direct_ancestor_uuid": TEST_ENTITIES["source"]["uuid"],  # source from previous test
+        }
 
-        res = client.get(f'/{entity_type}/entities')
-
-        assert res.status_code == 400
-
-
-@pytest.mark.parametrize('entity_type, query_key, query_value, status_code', [
-    ('source', 'property', 'uuid', 200),
-    ('sample', 'property', 'uuid', 200),
-    ('dataset', 'property', 'uuid', 200),
-    ('source', 'invalid_key', 'status', 400),
-    ('source', 'property', 'invalid_value', 400),
-])
-def test_get_entities_by_type_query(app, entity_type, query_key, query_value, status_code):
-    """Test that the get entities by type endpoint can handle specific query parameters"""
-
-    with open(os.path.join(test_data_dir, f'get_entity_by_type_success_{entity_type}.json'), 'r') as f:
-        test_data = json.load(f)
-
-    expected_neo4j_query = test_data['get_entities_by_type']
-    if status_code == 200:
-        expected_neo4j_query = [entity[query_value] for entity in test_data['get_entities_by_type']]
-        expected_response = [entity[query_value] for entity in test_data['response']]
-
-    with (app.test_client() as client,
-          patch('app.app_neo4j_queries.get_entities_by_type', return_value=expected_neo4j_query)):
-
-        res = client.get(f'/{entity_type}/entities?{query_key}={query_value}')
-
-        assert res.status_code == status_code
-        if status_code == 200:
-            assert res.json == expected_response
-
-
-# Create Entity
-
-@pytest.mark.parametrize('entity_type', [
-    'source',
-    'sample',
-    'dataset',
-])
-def test_create_entity_success(app, entity_type):
-    """Test that the create entity endpoint calls neo4j and returns the correct
-        response"""
-
-    with open(os.path.join(test_data_dir, f'create_entity_success_{entity_type}.json'), 'r') as f:
-        test_data = json.load(f)
-
-    with (app.test_client() as client,
-          patch('app.schema_manager.create_sennet_ids', return_value=test_data['create_sennet_ids']),
-          patch('app.schema_manager.get_user_info', return_value=test_data['get_user_info']),
-          patch('app.schema_manager.generate_triggered_data', return_value=test_data['generate_triggered_data']),
-          patch('app.app_neo4j_queries.create_entity', return_value=test_data['create_entity']),
-          patch('app.schema_manager.get_sennet_ids', return_value=test_data['get_sennet_ids']),
-          patch('app.app_neo4j_queries.get_entity', return_value=test_data['get_entity']),
-          patch('app.app_neo4j_queries.get_source_organ_count', return_value=0),
-          patch('app.schema_neo4j_queries.get_sources_associated_entity', return_value=test_data.get('get_sources')),
-          patch('requests.put', return_value=Response(status=202))):
-
-        res = client.post(f'/entities/{entity_type}',
-                          json=test_data['request'],
-                          headers=test_data['headers'])
+        res = client.post(
+            "/entities/sample?return_all_properties=true",
+            json=data,
+            headers={"Authorization": "Bearer test_token"},
+        )
 
         assert res.status_code == 200
-        assert res.json == test_data['response']
+        assert res.json["uuid"] == TEST_ENTITIES["organ"]["uuid"]
+        assert res.json["sennet_id"] == TEST_ENTITIES["organ"]["sennet_id"]
+        assert res.json["entity_type"] == "Sample"
+
+        assert res.json["sample_category"] == data["sample_category"]
+        assert res.json["organ"] == data["organ"]
+        assert res.json["lab_tissue_sample_id"] == data["lab_tissue_sample_id"]
+        assert res.json["direct_ancestor"]["uuid"] == TEST_ENTITIES["source"]["uuid"]
+
+        assert res.json["organ_hierarchy"] == "Liver"
+        assert res.json["source"]["uuid"] == TEST_ENTITIES["source"]["uuid"]
+
+        assert res.json["group_uuid"] == GROUP["uuid"]
+        assert res.json["group_name"] == GROUP["displayname"]
+        assert res.json["created_by_user_displayname"] == USER["name"]
+        assert res.json["created_by_user_email"] == USER["email"]
+        assert res.json["created_by_user_sub"] == USER["sub"]
+        assert res.json["data_access_level"] == "consortium"
 
 
-@pytest.mark.parametrize('entity_type', [
-    'source',
-    'sample',
-    'dataset',
-])
-def test_create_entity_invalid(app, entity_type):
-    """Test that the create entity endpoint returns a 400 for an invalid
-       request schema"""
+def test_create_block_sample(app):
+    entities = [
+        TEST_ENTITIES["block"],
+        {
+            "uuid": "cd0fb0bf0ceb4463be63fb60c9e0bf97",  # activity
+            "sennet_id": "SNT123.ABCD.454",
+            "base_id": "123ABCD454",
+        },
+        TEST_ENTITIES["organ"],
+    ]
+    get_uuid_res = mock_response(200, entities[2])
+    post_uuid_res = [mock_response(200, [u]) for u in entities[:2]]
+    put_search_res = mock_response(202)
 
-    # purposedly load the wrong entity data to use in the request body
-    wrong_entity_type = random.choice([i for i in ['source', 'sample', 'dataset'] if i != entity_type])
-    with open(os.path.join(test_data_dir, f'create_entity_success_{wrong_entity_type}.json'), 'r') as f:
-        wrong_data = json.load(f)
+    with (
+        app.test_client() as client,
+        patch("requests.get", return_value=get_uuid_res),
+        patch("requests.post", side_effect=post_uuid_res),
+        patch("requests.put", return_value=put_search_res),
+    ):
+        data = {
+            "sample_category": "Block",
+            "lab_tissue_sample_id": "test_lab_tissue_block_id",
+            "direct_ancestor_uuid": TEST_ENTITIES["organ"]["uuid"],  # organ from previous test
+        }
 
-    with open(os.path.join(test_data_dir, f'create_entity_success_{entity_type}.json'), 'r') as f:
-        test_data = json.load(f)
-
-    with app.test_client() as client:
-
-        res = client.post(f'/entities/{entity_type}',
-                          json=wrong_data['request'],
-                          headers=test_data['headers'])
-
-        assert res.status_code == 400
-
-
-# Update Entity
-
-@pytest.mark.parametrize('entity_type', [
-    'source',
-    'sample',
-    'dataset',
-])
-def test_update_entity_success(app, entity_type):
-    """Test that the update entity endpoint returns the correct entity"""
-
-    with open(os.path.join(test_data_dir, f'update_entity_success_{entity_type}.json'), 'r') as f:
-        test_data = json.load(f)
-    entity_id = test_data['uuid']
-
-    with (app.test_client() as client,
-          patch('app.schema_manager.get_sennet_ids', side_effect=test_data['get_sennet_ids']),
-          patch('app.app_neo4j_queries.get_entity', side_effect=test_data['get_entity']),
-
-          patch('app.schema_manager.get_user_info', return_value=test_data['get_user_info']),
-          patch('app.schema_manager.generate_triggered_data', side_effect=test_data['generate_triggered_data']),
-          patch('app.app_neo4j_queries.update_entity', side_effect=test_data['update_entity']),
-          patch('app.schema_manager.get_complete_entity_result', side_effect=test_data['get_complete_entity_result']),
-          patch('app.app_neo4j_queries.get_activity_was_generated_by', return_value=test_data['get_activity_was_generated_by']),
-          patch('app.app_neo4j_queries.get_activity', return_value=test_data['get_activity']),
-          patch('app.app_neo4j_queries.get_source_organ_count', return_value=0),
-          patch('app.schema_neo4j_queries.get_entity_creation_action_activity', return_value='lab process'),
-          patch('app.schema_neo4j_queries.get_sources_associated_entity', return_value=test_data.get('get_sources')),
-          patch('requests.put', return_value=Response(status=202))):
-
-        res = client.put(f'/entities/{entity_id}?return_dict=true',
-                         json=test_data['request'],
-                         headers=test_data['headers'])
+        res = client.post(
+            "/entities/sample?return_all_properties=true",
+            json=data,
+            headers={"Authorization": "Bearer test_token"},
+        )
 
         assert res.status_code == 200
-        assert res.json == test_data['response']
+        assert res.json["uuid"] == TEST_ENTITIES["block"]["uuid"]
+        assert res.json["sennet_id"] == TEST_ENTITIES["block"]["sennet_id"]
+        assert res.json["entity_type"] == "Sample"
+
+        assert res.json["sample_category"] == data["sample_category"]
+        assert res.json["lab_tissue_sample_id"] == data["lab_tissue_sample_id"]
+        assert res.json["direct_ancestor"]["uuid"] == TEST_ENTITIES["organ"]["uuid"]
+
+        assert res.json["source"]["uuid"] == TEST_ENTITIES["source"]["uuid"]
+        assert len(res.json["origin_samples"]) == 1
+        assert res.json["origin_samples"][0]["uuid"] == TEST_ENTITIES["organ"]["uuid"]
+
+        assert res.json["group_uuid"] == GROUP["uuid"]
+        assert res.json["group_name"] == GROUP["displayname"]
+        assert res.json["created_by_user_displayname"] == USER["name"]
+        assert res.json["created_by_user_email"] == USER["email"]
+        assert res.json["created_by_user_sub"] == USER["sub"]
+        assert res.json["data_access_level"] == "consortium"
 
 
-@pytest.mark.parametrize('entity_type', [
-    'source',
-    'sample',
-    'dataset',
-])
-def test_update_entity_invalid(app, entity_type):
-    """Test that the update entity endpoint returns a 400 for an invalid
-       request schema"""
+def test_create_section_sample(app):
+    entities = [
+        TEST_ENTITIES["section"],
+        {
+            "uuid": "5a3e7ac21849416894f018b58d428a64",  # activity
+            "sennet_id": "SNT123.ABCD.456",
+            "base_id": "123ABCD456",
+        },
+        TEST_ENTITIES["block"],
+    ]
+    get_uuid_res = mock_response(200, entities[2])
+    post_uuid_res = [mock_response(200, [u]) for u in entities[:2]]
+    put_search_res = mock_response(202)
 
-    # purposedly load the wrong entity data to use in the request body
-    wrong_entity_type = random.choice([i for i in ['source', 'sample', 'dataset'] if i != entity_type])
-    with open(os.path.join(test_data_dir, f'create_entity_success_{wrong_entity_type}.json'), 'r') as f:
-        wrong_data = json.load(f)
+    with (
+        app.test_client() as client,
+        patch("requests.get", return_value=get_uuid_res),
+        patch("requests.post", side_effect=post_uuid_res),
+        patch("requests.put", return_value=put_search_res),
+    ):
+        data = {
+            "sample_category": "Section",
+            "lab_tissue_sample_id": "test_lab_tissue_section_id",
+            "direct_ancestor_uuid": TEST_ENTITIES["block"]["uuid"],  # block from previous test
+        }
 
-    with open(os.path.join(test_data_dir, f'update_entity_success_{entity_type}.json'), 'r') as f:
-        test_data = json.load(f)
-    entity_id = test_data['uuid']
-
-    with (app.test_client() as client,
-          patch('app.schema_manager.get_sennet_ids', side_effect=test_data['get_sennet_ids']),
-          patch('app.app_neo4j_queries.get_entity', side_effect=test_data['get_entity'])):
-
-        res = client.put(f'/entities/{entity_id}?return_dict=true',
-                         json=wrong_data['request'],
-                         headers=test_data['headers'])
-
-        assert res.status_code == 400
-
-
-# Get Ancestors
-
-@pytest.mark.parametrize('entity_type', [
-    'source',
-    'sample',
-    'dataset',
-])
-def test_get_ancestors_success(app, entity_type):
-    """Test that the get ancestors endpoint returns the correct entity"""
-
-    with open(os.path.join(test_data_dir, f'get_ancestors_success_{entity_type}.json'), 'r') as f:
-        test_data = json.load(f)
-    entity_id = test_data['uuid']
-
-    with (app.test_client() as client,
-          patch('app.auth_helper_instance.getUserInfo', return_value=test_data['getUserInfo']),
-          patch('app.auth_helper_instance.has_read_privs', return_value=test_data['has_read_privs']),
-          patch('app.schema_manager.get_sennet_ids', return_value=test_data['get_sennet_ids']),
-          patch('app.app_neo4j_queries.get_entity', return_value=test_data['get_entity']),
-          patch('app.app_neo4j_queries.get_ancestors', return_value=test_data['get_ancestors']),
-          patch('app.schema_neo4j_queries.get_sources_associated_entity', return_value=test_data['get_sources_associated_entity'])):
-
-        res = client.get(f'/ancestors/{entity_id}',
-                         headers=test_data['headers'])
+        res = client.post(
+            "/entities/sample?return_all_properties=true",
+            json=data,
+            headers={"Authorization": "Bearer test_token"},
+        )
 
         assert res.status_code == 200
-        assert res.json == test_data['response']
+        assert res.json["uuid"] == TEST_ENTITIES["section"]["uuid"]
+        assert res.json["sennet_id"] == entities[0]["sennet_id"]
+        assert res.json["entity_type"] == "Sample"
+
+        assert res.json["sample_category"] == data["sample_category"]
+        assert res.json["lab_tissue_sample_id"] == data["lab_tissue_sample_id"]
+        assert res.json["direct_ancestor"]["uuid"] == TEST_ENTITIES["block"]["uuid"]
+
+        assert res.json["source"]["uuid"] == TEST_ENTITIES["source"]["uuid"]
+        assert len(res.json["origin_samples"]) == 1
+        assert res.json["origin_samples"][0]["uuid"] == TEST_ENTITIES["organ"]["uuid"]
+
+        assert res.json["group_uuid"] == GROUP["uuid"]
+        assert res.json["group_name"] == GROUP["displayname"]
+        assert res.json["created_by_user_displayname"] == USER["name"]
+        assert res.json["created_by_user_email"] == USER["email"]
+        assert res.json["created_by_user_sub"] == USER["sub"]
+        assert res.json["data_access_level"] == "consortium"
 
 
-# Get Descendants
+def test_create_dataset(app):
+    entities = [
+        TEST_ENTITIES["dataset"],
+        {
+            "uuid": "130d460fa6104d8b99c32bea689704b7",  # activity
+            "sennet_id": "SNT123.ABCD.458",
+            "base_id": "123ABCD458",
+        },
+        TEST_ENTITIES["section"],
+    ]
+    get_uuid_res = mock_response(200, entities[2])
+    post_uuid_res = [mock_response(200, [u]) for u in entities[:2]]
+    put_search_res = mock_response(202)
 
-@pytest.mark.parametrize('entity_type', [
-    'source',
-    'sample',
-    'dataset',
-])
-def test_get_descendants_success(app, entity_type):
-    """Test that the get descendants endpoint returns the correct entity"""
+    with (
+        app.test_client() as client,
+        patch("requests.get", return_value=get_uuid_res),
+        patch("requests.post", side_effect=post_uuid_res),
+        patch("requests.put", return_value=put_search_res),
+    ):
+        data = {
+            "contains_human_genetic_sequences": False,
+            "dataset_type": "RNAseq",
+            "direct_ancestor_uuids": [
+                TEST_ENTITIES["section"]["uuid"]  # section from previous test
+            ],
+        }
 
-    with open(os.path.join(test_data_dir, f'get_descendants_success_{entity_type}.json'), 'r') as f:
-        test_data = json.load(f)
-    entity_id = test_data['uuid']
-
-    with (app.test_client() as client,
-          patch('app.auth_helper_instance.getUserInfo', return_value=test_data['getUserInfo']),
-          patch('app.auth_helper_instance.has_read_privs', return_value=test_data['has_read_privs']),
-          patch('app.schema_manager.get_sennet_ids', return_value=test_data['get_sennet_ids']),
-          patch('app.app_neo4j_queries.get_entity', return_value=test_data['get_entity']),
-          patch('app.app_neo4j_queries.get_descendants', return_value=test_data['get_descendants']),
-          patch('app.schema_neo4j_queries.get_entity_creation_action_activity', side_effect=test_data.get('get_entity_creation_action_activity')),
-          patch('app.schema_neo4j_queries.get_sources_associated_entity', return_value=test_data['get_sources_associated_entity'])):
-
-        res = client.get(f'/descendants/{entity_id}',
-                         headers=test_data['headers'])
-
-        assert res.status_code == 200
-        assert res.json == test_data['response']
-
-
-# Validate constraints
-
-@pytest.mark.parametrize('test_name', [
-    'source',
-    'sample_organ',
-    'sample_organ_blood',
-    'sample_block',
-    'sample_section',
-    'sample_suspension',
-    'dataset',
-])
-def test_validate_constraints_new(app, test_name):
-    """Test that the validate constraints endpoint returns the correct constraints"""
-
-    with open(os.path.join(test_data_dir, f'validate_constraints_{test_name}.json'), 'r') as f:
-        test_data = json.load(f)
-
-    def mock_func(func_name):
-        data = test_data[func_name]
-        if data and data.get('code'):
-            # code being tested uses a StatusCode enum instead of an int
-            data['code'] = app_module.StatusCodes(data['code'])
-        return data
-
-    with (app.test_client() as client,
-          patch('app.get_constraints_by_ancestor', return_value=mock_func('get_constraints_by_ancestor')),
-          patch('app.get_constraints_by_descendant', return_value=mock_func('get_constraints_by_descendant'))):
-
-        res = client.post('/constraints' + test_data['query_string'],
-                          headers={'Authorization': 'Bearer test_token'},
-                          json=test_data['request'])
+        res = client.post(
+            "/entities/dataset?return_all_properties=true",
+            json=data,
+            headers={
+                "Authorization": "Bearer test_token",
+                "X-SenNet-Application": "portal-ui",
+            },
+        )
 
         assert res.status_code == 200
-        assert res.json == test_data['response']
+        assert res.json["uuid"] == TEST_ENTITIES["dataset"]["uuid"]
+        assert res.json["sennet_id"] == TEST_ENTITIES["dataset"]["sennet_id"]
+        assert res.json["entity_type"] == "Dataset"
+        assert res.json["status"] == "New"
+
+        assert res.json["contains_human_genetic_sequences"] == data["contains_human_genetic_sequences"]
+        assert res.json["dataset_type"] == data["dataset_type"]
+        assert len(res.json["direct_ancestors"]) == 1
+        assert res.json["direct_ancestors"][0]["uuid"] == TEST_ENTITIES["section"]["uuid"]
+
+        assert len(res.json["sources"]) == 1
+        assert res.json["sources"][0]["uuid"] == TEST_ENTITIES["source"]["uuid"]
+        assert len(res.json["origin_samples"]) == 1
+        assert res.json["origin_samples"][0]["uuid"] == TEST_ENTITIES["organ"]["uuid"]
+
+        assert res.json["group_uuid"] == GROUP["uuid"]
+        assert res.json["group_name"] == GROUP["displayname"]
+        assert res.json["created_by_user_displayname"] == USER["name"]
+        assert res.json["created_by_user_email"] == USER["email"]
+        assert res.json["created_by_user_sub"] == USER["sub"]
+        assert res.json["data_access_level"] == "consortium"
