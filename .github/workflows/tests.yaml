@@ -12,7 +12,7 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # Docker preinstalled
     environment: test
     steps:
       - uses: actions/checkout@v3
@@ -23,8 +23,3 @@ jobs:
           UBKG_CODES: ${{ secrets.UBKG_CODES }}
         run: |
           ./run_tests.sh
-
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.python-version }}
