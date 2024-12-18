@@ -1,7 +1,7 @@
 # Check if there's a entity-api-test container running, if found, tear it down and start fresh
 if [ "$(docker ps -q -f name=entity-api-test)" ]; then
     echo "Tearing down the existing entity-api-test container"
-    docker-compose -f docker/docker-compose.test.yml down
+    docker compose -f docker/docker-compose.test.yml down
 fi
 
 # check if there's a src/instance/app.cfg file, if found, rename it to app.cfg.bak
@@ -57,9 +57,9 @@ fi
 
 cp -r src/ docker/entity-api/src/
 
-docker-compose -f docker/docker-compose.test.yml run --rm entity-api-test sh -c "pytest --disable-warnings"
+docker compose -f docker/docker-compose.test.yml run --rm entity-api-test sh -c "pytest --disable-warnings"
 # tear down the test containers
-docker-compose -f docker/docker-compose.test.yml down
+docker compose -f docker/docker-compose.test.yml down
 
 # if there's a src/instance/app.cfg.bak file, revert it to src/instance/app.cfg
 if [ -f src/instance/app.cfg.bak ]; then
