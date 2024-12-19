@@ -1,5 +1,6 @@
 from test.helpers import GROUP
 from test.helpers.auth import USER
+from test.helpers.database import create_provenance, generate_entity
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -25,35 +26,6 @@ def app(auth):
     # clean up
 
 
-TEST_ENTITIES = {
-    "source": {
-        "uuid": "ec55f7bcbb7343f199dcf50666c5e8a6",
-        "sennet_id": "SNT123.ABCD.451",
-        "base_id": "123ABCD451",
-    },
-    "organ": {
-        "uuid": "bb889cd3edad4d65b6190b6529eeab89",
-        "sennet_id": "SNT123.ABCD.453",
-        "base_id": "123ABCD453",
-    },
-    "block": {
-        "uuid": "ab8d641cd27e4fce8c52df13376082dd",
-        "sennet_id": "SNT123.ABCD.455",
-        "base_id": "123ABCD455",
-    },
-    "section": {
-        "uuid": "b34d99d9a4c34cba993b55a17925559e",
-        "sennet_id": "SNT123.ABCD.457",
-        "base_id": "123ABCD457",
-    },
-    "dataset": {
-        "uuid": "6c1e4cef787849c3a228fe6882d5926d",
-        "sennet_id": "SNT123.ABCD.459",
-        "base_id": "123ABCD459",
-    },
-}
-
-
 def test_index(app):
     """Test that the index page is working"""
 
@@ -66,13 +38,11 @@ def test_index(app):
 @pytest.mark.usefixtures("lab")
 def test_create_source(app):
     entities = [
-        TEST_ENTITIES["source"],
-        {
-            "uuid": "014cf93c2f7c41b080a3d3c59eb71cdc",  # activity
-            "sennet_id": "SNT123.ABCD.450",
-            "base_id": "123ABCD450",
-        },
+        generate_entity(),  # source
+        generate_entity(),  # activity
     ]
+
+    # UUID api mock responses
     post_uuid_res = [mock_response(200, [u]) for u in entities]
     put_search_res = mock_response(202)
 
@@ -96,8 +66,8 @@ def test_create_source(app):
         )
 
         assert res.status_code == 200
-        assert res.json["uuid"] == TEST_ENTITIES["source"]["uuid"]
-        assert res.json["sennet_id"] == TEST_ENTITIES["source"]["sennet_id"]
+        assert res.json["uuid"] == entities[0]["uuid"]
+        assert res.json["sennet_id"] == entities[0]["sennet_id"]
         assert res.json["description"] == data["description"]
         assert res.json["lab_source_id"] == data["lab_source_id"]
         assert res.json["source_type"] == data["source_type"]
@@ -110,16 +80,17 @@ def test_create_source(app):
         assert res.json["data_access_level"] == "consortium"
 
 
-def test_create_organ_sample(app):
+@pytest.mark.usefixtures("lab")
+def test_create_organ_sample(db_session, app):
+    # Create provenance in test database
+    test_entities = create_provenance(db_session, ["source"])
     entities = [
-        TEST_ENTITIES["organ"],
-        {
-            "uuid": "f3976f0da50c4b6286cccd6d4f1d9835",  # activity
-            "sennet_id": "SNT123.ABCD.452",
-            "base_id": "123ABCD452",
-        },
-        TEST_ENTITIES["source"],
+        generate_entity(),  # organ
+        generate_entity(),  # activity
+        test_entities["source"],  # source
     ]
+
+    # UUID api mock responses
     get_uuid_res = mock_response(200, entities[2])
     post_uuid_res = [mock_response(200, [u]) for u in entities[:2]]
     put_search_res = mock_response(202)
@@ -134,7 +105,7 @@ def test_create_organ_sample(app):
             "sample_category": "Organ",
             "organ": "LV",
             "lab_tissue_sample_id": "test_lab_tissue_organ_id",
-            "direct_ancestor_uuid": TEST_ENTITIES["source"]["uuid"],  # source from previous test
+            "direct_ancestor_uuid": test_entities["source"]["uuid"],  # source to link to
         }
 
         res = client.post(
@@ -144,17 +115,17 @@ def test_create_organ_sample(app):
         )
 
         assert res.status_code == 200
-        assert res.json["uuid"] == TEST_ENTITIES["organ"]["uuid"]
-        assert res.json["sennet_id"] == TEST_ENTITIES["organ"]["sennet_id"]
+        assert res.json["uuid"] == entities[0]["uuid"]
+        assert res.json["sennet_id"] == entities[0]["sennet_id"]
         assert res.json["entity_type"] == "Sample"
 
         assert res.json["sample_category"] == data["sample_category"]
         assert res.json["organ"] == data["organ"]
         assert res.json["lab_tissue_sample_id"] == data["lab_tissue_sample_id"]
-        assert res.json["direct_ancestor"]["uuid"] == TEST_ENTITIES["source"]["uuid"]
+        assert res.json["direct_ancestor"]["uuid"] == test_entities["source"]["uuid"]
 
         assert res.json["organ_hierarchy"] == "Liver"
-        assert res.json["source"]["uuid"] == TEST_ENTITIES["source"]["uuid"]
+        assert res.json["source"]["uuid"] == test_entities["source"]["uuid"]
 
         assert res.json["group_uuid"] == GROUP["uuid"]
         assert res.json["group_name"] == GROUP["displayname"]
@@ -164,16 +135,17 @@ def test_create_organ_sample(app):
         assert res.json["data_access_level"] == "consortium"
 
 
-def test_create_block_sample(app):
+@pytest.mark.usefixtures("lab")
+def test_create_block_sample(db_session, app):
+    # Create provenance in test database
+    test_entities = create_provenance(db_session, ["source", "organ"])
     entities = [
-        TEST_ENTITIES["block"],
-        {
-            "uuid": "cd0fb0bf0ceb4463be63fb60c9e0bf97",  # activity
-            "sennet_id": "SNT123.ABCD.454",
-            "base_id": "123ABCD454",
-        },
-        TEST_ENTITIES["organ"],
+        generate_entity(),  # block
+        generate_entity(),  # activity
+        test_entities["organ"],  # organ
     ]
+
+    # UUID api mock responses
     get_uuid_res = mock_response(200, entities[2])
     post_uuid_res = [mock_response(200, [u]) for u in entities[:2]]
     put_search_res = mock_response(202)
@@ -187,7 +159,7 @@ def test_create_block_sample(app):
         data = {
             "sample_category": "Block",
             "lab_tissue_sample_id": "test_lab_tissue_block_id",
-            "direct_ancestor_uuid": TEST_ENTITIES["organ"]["uuid"],  # organ from previous test
+            "direct_ancestor_uuid": test_entities["organ"]["uuid"],  # organ to link to
         }
 
         res = client.post(
@@ -197,17 +169,17 @@ def test_create_block_sample(app):
         )
 
         assert res.status_code == 200
-        assert res.json["uuid"] == TEST_ENTITIES["block"]["uuid"]
-        assert res.json["sennet_id"] == TEST_ENTITIES["block"]["sennet_id"]
+        assert res.json["uuid"] == entities[0]["uuid"]
+        assert res.json["sennet_id"] == entities[0]["sennet_id"]
         assert res.json["entity_type"] == "Sample"
 
         assert res.json["sample_category"] == data["sample_category"]
         assert res.json["lab_tissue_sample_id"] == data["lab_tissue_sample_id"]
-        assert res.json["direct_ancestor"]["uuid"] == TEST_ENTITIES["organ"]["uuid"]
+        assert res.json["direct_ancestor"]["uuid"] == test_entities["organ"]["uuid"]
 
-        assert res.json["source"]["uuid"] == TEST_ENTITIES["source"]["uuid"]
+        assert res.json["source"]["uuid"] == test_entities["source"]["uuid"]
         assert len(res.json["origin_samples"]) == 1
-        assert res.json["origin_samples"][0]["uuid"] == TEST_ENTITIES["organ"]["uuid"]
+        assert res.json["origin_samples"][0]["uuid"] == test_entities["organ"]["uuid"]
 
         assert res.json["group_uuid"] == GROUP["uuid"]
         assert res.json["group_name"] == GROUP["displayname"]
@@ -217,16 +189,18 @@ def test_create_block_sample(app):
         assert res.json["data_access_level"] == "consortium"
 
 
-def test_create_section_sample(app):
+@pytest.mark.usefixtures("lab")
+def test_create_section_sample(db_session, app):
+    # Create provenance in test database
+    test_entities = create_provenance(db_session, ["source", "organ", "block"])
+
     entities = [
-        TEST_ENTITIES["section"],
-        {
-            "uuid": "5a3e7ac21849416894f018b58d428a64",  # activity
-            "sennet_id": "SNT123.ABCD.456",
-            "base_id": "123ABCD456",
-        },
-        TEST_ENTITIES["block"],
+        generate_entity(),  # section
+        generate_entity(),  # activity
+        test_entities["block"],  # block
     ]
+
+    # UUID api mock responses
     get_uuid_res = mock_response(200, entities[2])
     post_uuid_res = [mock_response(200, [u]) for u in entities[:2]]
     put_search_res = mock_response(202)
@@ -240,7 +214,7 @@ def test_create_section_sample(app):
         data = {
             "sample_category": "Section",
             "lab_tissue_sample_id": "test_lab_tissue_section_id",
-            "direct_ancestor_uuid": TEST_ENTITIES["block"]["uuid"],  # block from previous test
+            "direct_ancestor_uuid": test_entities["block"]["uuid"],  # block to link to
         }
 
         res = client.post(
@@ -250,17 +224,17 @@ def test_create_section_sample(app):
         )
 
         assert res.status_code == 200
-        assert res.json["uuid"] == TEST_ENTITIES["section"]["uuid"]
+        assert res.json["uuid"] == entities[0]["uuid"]
         assert res.json["sennet_id"] == entities[0]["sennet_id"]
         assert res.json["entity_type"] == "Sample"
 
         assert res.json["sample_category"] == data["sample_category"]
         assert res.json["lab_tissue_sample_id"] == data["lab_tissue_sample_id"]
-        assert res.json["direct_ancestor"]["uuid"] == TEST_ENTITIES["block"]["uuid"]
+        assert res.json["direct_ancestor"]["uuid"] == test_entities["block"]["uuid"]
 
-        assert res.json["source"]["uuid"] == TEST_ENTITIES["source"]["uuid"]
+        assert res.json["source"]["uuid"] == test_entities["source"]["uuid"]
         assert len(res.json["origin_samples"]) == 1
-        assert res.json["origin_samples"][0]["uuid"] == TEST_ENTITIES["organ"]["uuid"]
+        assert res.json["origin_samples"][0]["uuid"] == test_entities["organ"]["uuid"]
 
         assert res.json["group_uuid"] == GROUP["uuid"]
         assert res.json["group_name"] == GROUP["displayname"]
@@ -270,16 +244,18 @@ def test_create_section_sample(app):
         assert res.json["data_access_level"] == "consortium"
 
 
-def test_create_dataset(app):
+@pytest.mark.usefixtures("lab")
+def test_create_dataset(db_session, app):
+    # Create provenance in test database
+    test_entities = create_provenance(db_session, ["source", "organ", "block", "section"])
+
     entities = [
-        TEST_ENTITIES["dataset"],
-        {
-            "uuid": "130d460fa6104d8b99c32bea689704b7",  # activity
-            "sennet_id": "SNT123.ABCD.458",
-            "base_id": "123ABCD458",
-        },
-        TEST_ENTITIES["section"],
+        generate_entity(),  # dataset
+        generate_entity(),  # activity
+        test_entities["section"],  # section
     ]
+
+    # UUID api mock responses
     get_uuid_res = mock_response(200, entities[2])
     post_uuid_res = [mock_response(200, [u]) for u in entities[:2]]
     put_search_res = mock_response(202)
@@ -293,9 +269,7 @@ def test_create_dataset(app):
         data = {
             "contains_human_genetic_sequences": False,
             "dataset_type": "RNAseq",
-            "direct_ancestor_uuids": [
-                TEST_ENTITIES["section"]["uuid"]  # section from previous test
-            ],
+            "direct_ancestor_uuids": [test_entities["section"]["uuid"]],  # section to link to
         }
 
         res = client.post(
@@ -308,20 +282,20 @@ def test_create_dataset(app):
         )
 
         assert res.status_code == 200
-        assert res.json["uuid"] == TEST_ENTITIES["dataset"]["uuid"]
-        assert res.json["sennet_id"] == TEST_ENTITIES["dataset"]["sennet_id"]
+        assert res.json["uuid"] == entities[0]["uuid"]
+        assert res.json["sennet_id"] == entities[0]["sennet_id"]
         assert res.json["entity_type"] == "Dataset"
         assert res.json["status"] == "New"
 
         assert res.json["contains_human_genetic_sequences"] == data["contains_human_genetic_sequences"]
         assert res.json["dataset_type"] == data["dataset_type"]
         assert len(res.json["direct_ancestors"]) == 1
-        assert res.json["direct_ancestors"][0]["uuid"] == TEST_ENTITIES["section"]["uuid"]
+        assert res.json["direct_ancestors"][0]["uuid"] == test_entities["section"]["uuid"]
 
         assert len(res.json["sources"]) == 1
-        assert res.json["sources"][0]["uuid"] == TEST_ENTITIES["source"]["uuid"]
+        assert res.json["sources"][0]["uuid"] == test_entities["source"]["uuid"]
         assert len(res.json["origin_samples"]) == 1
-        assert res.json["origin_samples"][0]["uuid"] == TEST_ENTITIES["organ"]["uuid"]
+        assert res.json["origin_samples"][0]["uuid"] == test_entities["organ"]["uuid"]
 
         assert res.json["group_uuid"] == GROUP["uuid"]
         assert res.json["group_name"] == GROUP["displayname"]

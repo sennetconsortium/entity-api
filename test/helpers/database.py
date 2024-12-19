@@ -1,9 +1,12 @@
+import random
+import string
 import time
+import uuid
+from test.helpers import GROUP
+from test.helpers.auth import USER
 
 import pytest
 from neo4j import GraphDatabase
-
-from . import GROUP
 
 
 def wait_for_neo4j(uri, user, password, timeout=60):
@@ -103,3 +106,155 @@ def lab(db_session):
         db_session.run(query, **lab)
 
     yield lab
+
+
+def generate_entity():
+    snt_first = random.randint(100, 999)
+    snt_second = "".join(random.choices(string.ascii_uppercase, k=4))
+    snt_third = random.randint(100, 999)
+    sennet_id = f"SNT{snt_first}.{snt_second}.{snt_third}"
+
+    return {
+        "uuid": str(uuid.uuid4()).replace("-", ""),
+        "sennet_id": sennet_id,
+        "base_id": sennet_id.replace("SNT", "").replace(".", ""),
+    }
+
+
+def create_provenance(db_session, provenance):
+    created_entities = {}
+
+    previous_uuid = None
+    timestamp = int(time.time() * 1000)
+    for entity_type in provenance:
+        activity = generate_entity()
+        activity_data = {
+            "uuid": activity["uuid"],
+            "sennet_id": activity["sennet_id"],
+            "created_by_user_displayname": USER["name"],
+            "created_by_user_email": USER["email"],
+            "created_by_user_sub": USER["sub"],
+            "created_timestamp": timestamp,
+            "creation_action": f"Create {entity_type.title()} Activity",
+            "ended_at_time": timestamp,
+            "protocol_url": "https://dx.doi.org/tests",
+            "started_at_time": timestamp,
+        }
+
+        entity_type = entity_type.lower()
+        entity = generate_entity()
+        data = {
+            "uuid": entity["uuid"],
+            "sennet_id": entity["sennet_id"],
+            "created_by_user_displayname": USER["name"],
+            "created_by_user_email": USER["email"],
+            "created_by_user_sub": USER["sub"],
+            "created_timestamp": timestamp,
+            "data_access_level": "consortium",
+            "group_uuid": GROUP["uuid"],
+            "group_name": GROUP["displayname"],
+            "last_modified_timestamp": timestamp,
+            "last_modified_user_displayname": USER["name"],
+            "last_modified_user_email": USER["email"],
+            "last_modified_user_sub": USER["sub"],
+        }
+
+        if entity_type == "source":
+            data.update(
+                {
+                    "description": "Test source description.",
+                    "entity_type": "Source",
+                    "lab_source_id": "test_label_source_id",
+                    "source_type": "Human",
+                }
+            )
+        elif entity_type == "organ":
+            data.update(
+                {
+                    "description": "Test organ description.",
+                    "entity_type": "Sample",
+                    "lab_tissue_sample_id": "test_label_organ_sample_id",
+                    "organ": "LI",
+                    "sample_category": "Organ",
+                }
+            )
+        elif entity_type == "block":
+            data.update(
+                {
+                    "description": "Test block description.",
+                    "entity_type": "Sample",
+                    "lab_tissue_sample_id": "test_label_block_sample_id",
+                    "sample_category": "Block",
+                }
+            )
+        elif entity_type == "section":
+            data.update(
+                {
+                    "description": "Test sample description.",
+                    "entity_type": "Sample",
+                    "lab_tissue_sample_id": "test_label_section_sample_id",
+                    "sample_category": "Section",
+                }
+            )
+        elif entity_type == "dataset":
+            data.update(
+                {
+                    "contains_human_genetic_sequences": False,
+                    "data_types": "['Visium']",
+                    "dataset_type": "Visium (no probes)",
+                    "entity_type": "Dataset",
+                    "lab_dataset_id": "test_lab_dataset_id",
+                    "method": "Test dataset method.",
+                    "purpose": "Test dataset purpose.",
+                    "result": "Test dataset result.",
+                    "status": "New",
+                }
+            )
+        else:
+            raise ValueError(f"Unknown entity type: {entity_type}")
+
+        if previous_uuid is None:
+            # connect directly to lab, this is a source
+            db_session.run(
+                f"CREATE (:Entity:{data['entity_type']} {{ {', '.join(f'{k}: ${k}' for k in data)} }})",
+                **data,
+            )
+            db_session.run(
+                "MATCH (l:Lab {uuid: $lab_uuid}), (e:Source {uuid: $source_uuid}) MERGE (l)<-[:WAS_ATTRIBUTED_TO]-(e)",
+                lab_uuid=GROUP["uuid"],
+                source_uuid=entity["uuid"],
+            )
+
+        else:
+            # Create and link activity
+            db_session.run(
+                f"CREATE (:Activity {{ {', '.join(f'{k}: ${k}' for k in activity_data)} }})",
+                **activity_data,
+            )
+            db_session.run(
+                "MATCH (p:Entity {uuid: $previous_uuid}), (a:Activity {uuid: $activity_uuid}) MERGE (p)<-[:USED]-(a)",
+                previous_uuid=previous_uuid,
+                activity_uuid=activity["uuid"],
+            )
+            # Create and link the entity
+            db_session.run(
+                f"CREATE (:Entity:{data['entity_type']} {{ {', '.join(f'{k}: ${k}' for k in data)} }})",
+                **data,
+            )
+            db_session.run(
+                "MATCH (a:Activity {uuid: $activity_uuid}), (e:Entity {uuid: $entity_uuid}) MERGE (a)<-[:WAS_GENERATED_BY]-(e)",
+                activity_uuid=activity["uuid"],
+                entity_uuid=entity["uuid"],
+            )
+
+        previous_uuid = entity["uuid"]
+
+        if entity_type in created_entities:
+            if isinstance(created_entities[entity_type], list):
+                created_entities[entity_type].append(entity)
+            else:
+                created_entities[entity_type] = [created_entities[entity_type], entity]
+        else:
+            created_entities[entity_type] = entity
+
+    return created_entities
