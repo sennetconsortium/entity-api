@@ -35,6 +35,9 @@ def test_index(app):
         assert res.text == "Hello! This is SenNet Entity API service :)"
 
 
+# Create Entity Tests
+
+
 @pytest.mark.usefixtures("lab")
 def test_create_source(app):
     entities = [
@@ -296,6 +299,75 @@ def test_create_dataset(db_session, app):
         assert res.json["sources"][0]["uuid"] == test_entities["source"]["uuid"]
         assert len(res.json["origin_samples"]) == 1
         assert res.json["origin_samples"][0]["uuid"] == test_entities["organ"]["uuid"]
+
+        assert res.json["group_uuid"] == GROUP["uuid"]
+        assert res.json["group_name"] == GROUP["displayname"]
+        assert res.json["created_by_user_displayname"] == USER["name"]
+        assert res.json["created_by_user_email"] == USER["email"]
+        assert res.json["created_by_user_sub"] == USER["sub"]
+        assert res.json["data_access_level"] == "consortium"
+
+
+# Get Entity Tests
+
+
+@pytest.mark.usefixtures("lab")
+def test_get_source_by_uuid(db_session, app):
+    # Create provenance in test database
+    test_entities = create_provenance(db_session, ["source"])
+    test_source = test_entities["source"]
+
+    # UUID api mock responses
+    get_uuid_res = mock_response(200, {k: test_source[k] for k in ["uuid", "sennet_id", "base_id"]})
+
+    with (
+        app.test_client() as client,
+        patch("requests.get", return_value=get_uuid_res),
+    ):
+        res = client.get(
+            f"/entities/{test_source['uuid']}",
+            headers={"Authorization": "Bearer test_token"},
+        )
+
+        assert res.status_code == 200
+        assert res.json["uuid"] == test_source["uuid"]
+        assert res.json["sennet_id"] == test_source["sennet_id"]
+        assert res.json["description"] == test_source["description"]
+        assert res.json["lab_source_id"] == test_source["lab_source_id"]
+        assert res.json["source_type"] == test_source["source_type"]
+
+        assert res.json["group_uuid"] == GROUP["uuid"]
+        assert res.json["group_name"] == GROUP["displayname"]
+        assert res.json["created_by_user_displayname"] == USER["name"]
+        assert res.json["created_by_user_email"] == USER["email"]
+        assert res.json["created_by_user_sub"] == USER["sub"]
+        assert res.json["data_access_level"] == "consortium"
+
+
+@pytest.mark.usefixtures("lab")
+def test_get_source_by_sennet_id(db_session, app):
+    # Create provenance in test database
+    test_entities = create_provenance(db_session, ["source"])
+    test_source = test_entities["source"]
+
+    # UUID api mock responses
+    get_uuid_res = mock_response(200, {k: test_source[k] for k in ["uuid", "sennet_id", "base_id"]})
+
+    with (
+        app.test_client() as client,
+        patch("requests.get", return_value=get_uuid_res),
+    ):
+        res = client.get(
+            f"/entities/{test_source['sennet_id']}",
+            headers={"Authorization": "Bearer test_token"},
+        )
+
+        assert res.status_code == 200
+        assert res.json["uuid"] == test_source["uuid"]
+        assert res.json["sennet_id"] == test_source["sennet_id"]
+        assert res.json["description"] == test_source["description"]
+        assert res.json["lab_source_id"] == test_source["lab_source_id"]
+        assert res.json["source_type"] == test_source["source_type"]
 
         assert res.json["group_uuid"] == GROUP["uuid"]
         assert res.json["group_name"] == GROUP["displayname"]
