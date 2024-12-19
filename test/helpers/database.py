@@ -249,12 +249,13 @@ def create_provenance(db_session, provenance):
 
         previous_uuid = entity["uuid"]
 
+        entity_data = {**data, "base_id": entity["base_id"]}
         if entity_type in created_entities:
             if isinstance(created_entities[entity_type], list):
-                created_entities[entity_type].append(entity)
+                created_entities[entity_type].append(entity_data)
             else:
-                created_entities[entity_type] = [created_entities[entity_type], entity]
+                created_entities[entity_type] = [created_entities[entity_type], entity_data]
         else:
-            created_entities[entity_type] = entity
+            created_entities[entity_type] = entity_data
 
     return created_entities

@@ -87,7 +87,7 @@ def test_create_organ_sample(db_session, app):
     entities = [
         generate_entity(),  # organ
         generate_entity(),  # activity
-        test_entities["source"],  # source
+        {k: test_entities["source"][k] for k in ["uuid", "sennet_id", "base_id"]},  # source
     ]
 
     # UUID api mock responses
@@ -142,7 +142,7 @@ def test_create_block_sample(db_session, app):
     entities = [
         generate_entity(),  # block
         generate_entity(),  # activity
-        test_entities["organ"],  # organ
+        {k: test_entities["organ"][k] for k in ["uuid", "sennet_id", "base_id"]},  # organ
     ]
 
     # UUID api mock responses
@@ -197,7 +197,7 @@ def test_create_section_sample(db_session, app):
     entities = [
         generate_entity(),  # section
         generate_entity(),  # activity
-        test_entities["block"],  # block
+        {k: test_entities["block"][k] for k in ["uuid", "sennet_id", "base_id"]},  # block
     ]
 
     # UUID api mock responses
@@ -252,7 +252,7 @@ def test_create_dataset(db_session, app):
     entities = [
         generate_entity(),  # dataset
         generate_entity(),  # activity
-        test_entities["section"],  # section
+        {k: test_entities["section"][k] for k in ["uuid", "sennet_id", "base_id"]},  # section
     ]
 
     # UUID api mock responses
