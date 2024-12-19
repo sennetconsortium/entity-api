@@ -375,3 +375,81 @@ def test_get_source_by_sennet_id(db_session, app):
         assert res.json["created_by_user_email"] == USER["email"]
         assert res.json["created_by_user_sub"] == USER["sub"]
         assert res.json["data_access_level"] == "consortium"
+
+
+@pytest.mark.usefixtures("lab")
+def test_get_organ_sample_by_uuid(db_session, app):
+    # Create provenance in test database
+    test_entities = create_provenance(db_session, ["source", "organ"])
+    test_organ = test_entities["organ"]
+
+    # UUID api mock responses
+    get_uuid_res = mock_response(200, {k: test_organ[k] for k in ["uuid", "sennet_id", "base_id"]})
+
+    with (
+        app.test_client() as client,
+        patch("requests.get", return_value=get_uuid_res),
+    ):
+        res = client.get(
+            f"/entities/{test_organ['uuid']}",
+            headers={"Authorization": "Bearer test_token"},
+        )
+
+        assert res.status_code == 200
+        assert res.json["uuid"] == test_organ["uuid"]
+        assert res.json["sennet_id"] == test_organ["sennet_id"]
+        assert res.json["entity_type"] == "Sample"
+
+        assert res.json["sample_category"] == test_organ["sample_category"]
+        assert res.json["organ"] == test_organ["organ"]
+        assert res.json["lab_tissue_sample_id"] == test_organ["lab_tissue_sample_id"]
+        assert res.json["direct_ancestor"]["uuid"] == test_entities["source"]["uuid"]
+
+        assert res.json["organ_hierarchy"] == "Large Intestine"
+        assert res.json["source"]["uuid"] == test_entities["source"]["uuid"]
+
+        assert res.json["group_uuid"] == GROUP["uuid"]
+        assert res.json["group_name"] == GROUP["displayname"]
+        assert res.json["created_by_user_displayname"] == USER["name"]
+        assert res.json["created_by_user_email"] == USER["email"]
+        assert res.json["created_by_user_sub"] == USER["sub"]
+        assert res.json["data_access_level"] == "consortium"
+
+
+@pytest.mark.usefixtures("lab")
+def test_get_organ_sample_by_sennet_id(db_session, app):
+    # Create provenance in test database
+    test_entities = create_provenance(db_session, ["source", "organ"])
+    test_organ = test_entities["organ"]
+
+    # UUID api mock responses
+    get_uuid_res = mock_response(200, {k: test_organ[k] for k in ["uuid", "sennet_id", "base_id"]})
+
+    with (
+        app.test_client() as client,
+        patch("requests.get", return_value=get_uuid_res),
+    ):
+        res = client.get(
+            f"/entities/{test_organ['sennet_id']}",
+            headers={"Authorization": "Bearer test_token"},
+        )
+
+        assert res.status_code == 200
+        assert res.json["uuid"] == test_organ["uuid"]
+        assert res.json["sennet_id"] == test_organ["sennet_id"]
+        assert res.json["entity_type"] == "Sample"
+
+        assert res.json["sample_category"] == test_organ["sample_category"]
+        assert res.json["organ"] == test_organ["organ"]
+        assert res.json["lab_tissue_sample_id"] == test_organ["lab_tissue_sample_id"]
+        assert res.json["direct_ancestor"]["uuid"] == test_entities["source"]["uuid"]
+
+        assert res.json["organ_hierarchy"] == "Large Intestine"
+        assert res.json["source"]["uuid"] == test_entities["source"]["uuid"]
+
+        assert res.json["group_uuid"] == GROUP["uuid"]
+        assert res.json["group_name"] == GROUP["displayname"]
+        assert res.json["created_by_user_displayname"] == USER["name"]
+        assert res.json["created_by_user_email"] == USER["email"]
+        assert res.json["created_by_user_sub"] == USER["sub"]
+        assert res.json["data_access_level"] == "consortium"
