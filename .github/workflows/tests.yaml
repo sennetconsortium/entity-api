@@ -19,12 +19,13 @@ jobs:
 
     services:
       neo4j:
-        image: sennet/neo4j:5.20.0
+        image: neo4j:5.20.0-ubi8
         ports:
           - 7474:7474
           - 7687:7687
-        volumes:
-          - ${{ github.workspace }}/docker/test/neo4j/neo4j.conf:/usr/src/app/neo4j/conf/neo4j.conf
+        env:
+          NEO4J_AUTH: none
+          NEO4JLABS_PLUGINS: '["apoc"]'
 
     steps:
       - uses: actions/checkout@v3
