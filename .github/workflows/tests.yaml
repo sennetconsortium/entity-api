@@ -24,7 +24,7 @@ jobs:
           - 7474:7474
           - 7687:7687
         volumes:
-          - ${GITHUB_WORKSPACE}/docker/test/neo4j/neo4j.conf:/usr/src/app/neo4j/conf/neo4j.conf
+          - ${{ github.workspace }}/docker/test/neo4j/neo4j.conf:/usr/src/app/neo4j/conf/neo4j.conf
 
     steps:
       - uses: actions/checkout@v3
