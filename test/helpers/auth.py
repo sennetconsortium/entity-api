@@ -1,17 +1,7 @@
+from test.helpers import GROUP, GROUP_ID, USER
 from unittest.mock import MagicMock, patch
 
 import pytest
-
-from . import GROUP, GROUP_ID
-
-USER = {
-    "username": "testuser@example.com",
-    "name": "Test User",
-    "email": "TESTUSER@example.com",
-    "sub": "8cb9cda5-1930-493a-8cb9-df6742e0fb42",
-    "hmgroupids": [GROUP_ID],
-    "group_membership_ids": [GROUP_ID],
-}
 
 
 @pytest.fixture(scope="session")

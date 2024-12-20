@@ -1,5 +1,4 @@
-from test.helpers import GROUP
-from test.helpers.auth import USER
+from test.helpers import GROUP, USER
 from test.helpers.database import create_provenance, generate_entity
 from test.helpers.response import mock_response
 

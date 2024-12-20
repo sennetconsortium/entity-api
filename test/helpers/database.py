@@ -2,8 +2,7 @@ import random
 import string
 import time
 import uuid
-from test.helpers import GROUP
-from test.helpers.auth import USER
+from test.helpers import GROUP, USER
 
 import pytest
 from neo4j import GraphDatabase
