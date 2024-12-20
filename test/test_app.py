@@ -1,7 +1,7 @@
 from test.helpers import GROUP
 from test.helpers.auth import USER
 from test.helpers.database import create_provenance, generate_entity
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -39,21 +39,20 @@ def test_index(app):
 
 
 @pytest.mark.usefixtures("lab")
-def test_create_source(app):
+def test_create_source(app, requests):
     entities = [
         generate_entity(),  # source
         generate_entity(),  # activity
     ]
 
-    # UUID api mock responses
-    post_uuid_res = [mock_response(200, [u]) for u in entities]
-    put_search_res = mock_response(202)
+    # uuid and search api mock responses
+    uuid_api_url = app.config["UUID_API_URL"]
+    search_api_url = app.config["SEARCH_API_URL"]
+    requests.add_response(f"{uuid_api_url}/uuid", "post", mock_response(200, [entities[0]]))
+    requests.add_response(f"{uuid_api_url}/uuid", "post", mock_response(200, [entities[1]]))
+    requests.add_response(f"{search_api_url}/reindex/{entities[0]['uuid']}", "put", mock_response(202))
 
-    with (
-        app.test_client() as client,
-        patch("requests.post", side_effect=post_uuid_res),
-        patch("requests.put", return_value=put_search_res),
-    ):
+    with app.test_client() as client:
         data = {
             "description": "Testing lab notes",
             "group_uuid": GROUP["uuid"],
@@ -84,7 +83,7 @@ def test_create_source(app):
 
 
 @pytest.mark.usefixtures("lab")
-def test_create_organ_sample(db_session, app):
+def test_create_organ_sample(db_session, app, requests):
     # Create provenance in test database
     test_entities = create_provenance(db_session, ["source"])
     entities = [
@@ -93,17 +92,15 @@ def test_create_organ_sample(db_session, app):
         {k: test_entities["source"][k] for k in ["uuid", "sennet_id", "base_id"]},  # source
     ]
 
-    # UUID api mock responses
-    get_uuid_res = mock_response(200, entities[2])
-    post_uuid_res = [mock_response(200, [u]) for u in entities[:2]]
-    put_search_res = mock_response(202)
+    # uuid and search api mock responses
+    uuid_api_url = app.config["UUID_API_URL"]
+    search_api_url = app.config["SEARCH_API_URL"]
+    requests.add_response(f"{uuid_api_url}/uuid/{entities[2]['uuid']}", "get", mock_response(200, entities[2]))
+    requests.add_response(f"{uuid_api_url}/uuid", "post", mock_response(200, [entities[0]]))
+    requests.add_response(f"{uuid_api_url}/uuid", "post", mock_response(200, [entities[1]]))
+    requests.add_response(f"{search_api_url}/reindex/{entities[0]['uuid']}", "put", mock_response(202))
 
-    with (
-        app.test_client() as client,
-        patch("requests.get", return_value=get_uuid_res),
-        patch("requests.post", side_effect=post_uuid_res),
-        patch("requests.put", return_value=put_search_res),
-    ):
+    with app.test_client() as client:
         data = {
             "sample_category": "Organ",
             "organ": "LV",
@@ -139,7 +136,7 @@ def test_create_organ_sample(db_session, app):
 
 
 @pytest.mark.usefixtures("lab")
-def test_create_block_sample(db_session, app):
+def test_create_block_sample(db_session, app, requests):
     # Create provenance in test database
     test_entities = create_provenance(db_session, ["source", "organ"])
     entities = [
@@ -148,17 +145,15 @@ def test_create_block_sample(db_session, app):
         {k: test_entities["organ"][k] for k in ["uuid", "sennet_id", "base_id"]},  # organ
     ]
 
-    # UUID api mock responses
-    get_uuid_res = mock_response(200, entities[2])
-    post_uuid_res = [mock_response(200, [u]) for u in entities[:2]]
-    put_search_res = mock_response(202)
+    # uuid and search api mock responses
+    uuid_api_url = app.config["UUID_API_URL"]
+    search_api_url = app.config["SEARCH_API_URL"]
+    requests.add_response(f"{uuid_api_url}/uuid/{entities[2]['uuid']}", "get", mock_response(200, entities[2]))
+    requests.add_response(f"{uuid_api_url}/uuid", "post", mock_response(200, [entities[0]]))
+    requests.add_response(f"{uuid_api_url}/uuid", "post", mock_response(200, [entities[1]]))
+    requests.add_response(f"{search_api_url}/reindex/{entities[0]['uuid']}", "put", mock_response(202))
 
-    with (
-        app.test_client() as client,
-        patch("requests.get", return_value=get_uuid_res),
-        patch("requests.post", side_effect=post_uuid_res),
-        patch("requests.put", return_value=put_search_res),
-    ):
+    with app.test_client() as client:
         data = {
             "sample_category": "Block",
             "lab_tissue_sample_id": "test_lab_tissue_block_id",
@@ -193,7 +188,7 @@ def test_create_block_sample(db_session, app):
 
 
 @pytest.mark.usefixtures("lab")
-def test_create_section_sample(db_session, app):
+def test_create_section_sample(db_session, app, requests):
     # Create provenance in test database
     test_entities = create_provenance(db_session, ["source", "organ", "block"])
 
@@ -203,17 +198,15 @@ def test_create_section_sample(db_session, app):
         {k: test_entities["block"][k] for k in ["uuid", "sennet_id", "base_id"]},  # block
     ]
 
-    # UUID api mock responses
-    get_uuid_res = mock_response(200, entities[2])
-    post_uuid_res = [mock_response(200, [u]) for u in entities[:2]]
-    put_search_res = mock_response(202)
+    # uuid and search api mock responses
+    uuid_api_url = app.config["UUID_API_URL"]
+    search_api_url = app.config["SEARCH_API_URL"]
+    requests.add_response(f"{uuid_api_url}/uuid/{entities[2]['uuid']}", "get", mock_response(200, entities[2]))
+    requests.add_response(f"{uuid_api_url}/uuid", "post", mock_response(200, [entities[0]]))
+    requests.add_response(f"{uuid_api_url}/uuid", "post", mock_response(200, [entities[1]]))
+    requests.add_response(f"{search_api_url}/reindex/{entities[0]['uuid']}", "put", mock_response(202))
 
-    with (
-        app.test_client() as client,
-        patch("requests.get", return_value=get_uuid_res),
-        patch("requests.post", side_effect=post_uuid_res),
-        patch("requests.put", return_value=put_search_res),
-    ):
+    with app.test_client() as client:
         data = {
             "sample_category": "Section",
             "lab_tissue_sample_id": "test_lab_tissue_section_id",
@@ -248,7 +241,7 @@ def test_create_section_sample(db_session, app):
 
 
 @pytest.mark.usefixtures("lab")
-def test_create_dataset(db_session, app):
+def test_create_dataset(db_session, app, requests):
     # Create provenance in test database
     test_entities = create_provenance(db_session, ["source", "organ", "block", "section"])
 
@@ -258,17 +251,15 @@ def test_create_dataset(db_session, app):
         {k: test_entities["section"][k] for k in ["uuid", "sennet_id", "base_id"]},  # section
     ]
 
-    # UUID api mock responses
-    get_uuid_res = mock_response(200, entities[2])
-    post_uuid_res = [mock_response(200, [u]) for u in entities[:2]]
-    put_search_res = mock_response(202)
+    # uuid and search api mock responses
+    uuid_api_url = app.config["UUID_API_URL"]
+    search_api_url = app.config["SEARCH_API_URL"]
+    requests.add_response(f"{uuid_api_url}/uuid/{entities[2]['uuid']}", "get", mock_response(200, entities[2]))
+    requests.add_response(f"{uuid_api_url}/uuid", "post", mock_response(200, [entities[0]]))
+    requests.add_response(f"{uuid_api_url}/uuid", "post", mock_response(200, [entities[1]]))
+    requests.add_response(f"{search_api_url}/reindex/{entities[0]['uuid']}", "put", mock_response(202))
 
-    with (
-        app.test_client() as client,
-        patch("requests.get", return_value=get_uuid_res),
-        patch("requests.post", side_effect=post_uuid_res),
-        patch("requests.put", return_value=put_search_res),
-    ):
+    with app.test_client() as client:
         data = {
             "contains_human_genetic_sequences": False,
             "dataset_type": "RNAseq",
@@ -312,18 +303,20 @@ def test_create_dataset(db_session, app):
 
 
 @pytest.mark.usefixtures("lab")
-def test_get_source_by_uuid(db_session, app):
+def test_get_source_by_uuid(db_session, app, requests):
     # Create provenance in test database
     test_entities = create_provenance(db_session, ["source"])
     test_source = test_entities["source"]
 
-    # UUID api mock responses
-    get_uuid_res = mock_response(200, {k: test_source[k] for k in ["uuid", "sennet_id", "base_id"]})
+    # uuid mock responses
+    uuid_api_url = app.config["UUID_API_URL"]
+    requests.add_response(
+        f"{uuid_api_url}/uuid/{test_source['uuid']}",
+        "get",
+        mock_response(200, {k: test_source[k] for k in ["uuid", "sennet_id", "base_id"]}),
+    )
 
-    with (
-        app.test_client() as client,
-        patch("requests.get", return_value=get_uuid_res),
-    ):
+    with app.test_client() as client:
         res = client.get(
             f"/entities/{test_source['uuid']}",
             headers={"Authorization": "Bearer test_token"},
@@ -345,18 +338,20 @@ def test_get_source_by_uuid(db_session, app):
 
 
 @pytest.mark.usefixtures("lab")
-def test_get_source_by_sennet_id(db_session, app):
+def test_get_source_by_sennet_id(db_session, app, requests):
     # Create provenance in test database
     test_entities = create_provenance(db_session, ["source"])
     test_source = test_entities["source"]
 
-    # UUID api mock responses
-    get_uuid_res = mock_response(200, {k: test_source[k] for k in ["uuid", "sennet_id", "base_id"]})
+    # uuid mock responses
+    uuid_api_url = app.config["UUID_API_URL"]
+    requests.add_response(
+        f"{uuid_api_url}/uuid/{test_source['sennet_id']}",
+        "get",
+        mock_response(200, {k: test_source[k] for k in ["uuid", "sennet_id", "base_id"]}),
+    )
 
-    with (
-        app.test_client() as client,
-        patch("requests.get", return_value=get_uuid_res),
-    ):
+    with app.test_client() as client:
         res = client.get(
             f"/entities/{test_source['sennet_id']}",
             headers={"Authorization": "Bearer test_token"},
@@ -378,18 +373,20 @@ def test_get_source_by_sennet_id(db_session, app):
 
 
 @pytest.mark.usefixtures("lab")
-def test_get_organ_sample_by_uuid(db_session, app):
+def test_get_organ_sample_by_uuid(db_session, app, requests):
     # Create provenance in test database
     test_entities = create_provenance(db_session, ["source", "organ"])
     test_organ = test_entities["organ"]
 
-    # UUID api mock responses
-    get_uuid_res = mock_response(200, {k: test_organ[k] for k in ["uuid", "sennet_id", "base_id"]})
+    # uuid mock responses
+    uuid_api_url = app.config["UUID_API_URL"]
+    requests.add_response(
+        f"{uuid_api_url}/uuid/{test_organ['uuid']}",
+        "get",
+        mock_response(200, {k: test_organ[k] for k in ["uuid", "sennet_id", "base_id"]}),
+    )
 
-    with (
-        app.test_client() as client,
-        patch("requests.get", return_value=get_uuid_res),
-    ):
+    with app.test_client() as client:
         res = client.get(
             f"/entities/{test_organ['uuid']}",
             headers={"Authorization": "Bearer test_token"},
@@ -417,18 +414,20 @@ def test_get_organ_sample_by_uuid(db_session, app):
 
 
 @pytest.mark.usefixtures("lab")
-def test_get_organ_sample_by_sennet_id(db_session, app):
+def test_get_organ_sample_by_sennet_id(db_session, app, requests):
     # Create provenance in test database
     test_entities = create_provenance(db_session, ["source", "organ"])
     test_organ = test_entities["organ"]
 
-    # UUID api mock responses
-    get_uuid_res = mock_response(200, {k: test_organ[k] for k in ["uuid", "sennet_id", "base_id"]})
+    # uuid mock responses
+    uuid_api_url = app.config["UUID_API_URL"]
+    requests.add_response(
+        f"{uuid_api_url}/uuid/{test_organ['sennet_id']}",
+        "get",
+        mock_response(200, {k: test_organ[k] for k in ["uuid", "sennet_id", "base_id"]}),
+    )
 
-    with (
-        app.test_client() as client,
-        patch("requests.get", return_value=get_uuid_res),
-    ):
+    with app.test_client() as client:
         res = client.get(
             f"/entities/{test_organ['sennet_id']}",
             headers={"Authorization": "Bearer test_token"},

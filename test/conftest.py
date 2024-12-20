@@ -1,1 +1,1 @@
-pytest_plugins = ["test.helpers.auth", "test.helpers.database"]
+pytest_plugins = ["test.helpers.auth", "test.helpers.database", "test.helpers.requests"]
