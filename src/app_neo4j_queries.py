@@ -1864,6 +1864,15 @@ def get_individual_prov_info(neo4j_driver, dataset_uuid):
             for entry in record_contents[16]:
                 node_dict = _node_to_dict(entry)
                 content_sixteen.append(node_dict)
+
+            # Sort the derived datasets by status and last_modified_timestamp
+            content_sixteen = sorted(content_sixteen, key=lambda d: d['last_modified_timestamp'], reverse=True)
+
+            published_processed_dataset_location = next((i for i, item in enumerate(content_sixteen) if item["status"] == "Published"), None)
+            if published_processed_dataset_location and published_processed_dataset_location != 0:
+                published_processed_dataset = content_sixteen.pop(published_processed_dataset_location)
+                content_sixteen.insert(0, published_processed_dataset)
+
             record_dict['processed_dataset'] = content_sixteen
     return record_dict
 
