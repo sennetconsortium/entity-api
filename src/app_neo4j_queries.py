@@ -714,7 +714,7 @@ def get_descendants(neo4j_driver, uuid, data_access_level=None, property_key=Non
 
                 # If asked for the descendants of a Dataset then sort by last_modified_timestamp and place the published dataset at the top
                 if equals(entity_type,  Ontology.ops().entities().DATASET):
-                    sorted(results, key=lambda d: d['last_modified_timestamp'], reverse=True)
+                    results = sorted(results, key=lambda d: d['last_modified_timestamp'], reverse=True)
 
                     published_processed_dataset_location = next(
                         (i for i, item in enumerate(results) if item["status"] == "Published"), None)
