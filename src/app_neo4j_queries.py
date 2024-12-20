@@ -1,6 +1,7 @@
 import logging
 
 from atlas_consortia_commons.object import enum_val
+from atlas_consortia_commons.string import equals
 from neo4j.exceptions import TransactionError
 
 from lib.ontology import Ontology
@@ -657,7 +658,7 @@ def get_ancestors(neo4j_driver, uuid, data_access_level=None, property_key=None)
     return results
 
 
-def get_descendants(neo4j_driver, uuid, data_access_level=None, property_key=None):
+def get_descendants(neo4j_driver, uuid, data_access_level=None, property_key=None, entity_type=None):
     """ Get all descendants by uuid
 
     Parameters
@@ -710,6 +711,16 @@ def get_descendants(neo4j_driver, uuid, data_access_level=None, property_key=Non
             else:
                 # Convert the list of nodes to a list of dicts
                 results = _nodes_to_dicts(record[record_field_name])
+
+                # If asked for the descendants of a Dataset then sort by last_modified_timestamp and place the published dataset at the top
+                if equals(entity_type,  Ontology.ops().entities().DATASET):
+                    sorted(results, key=lambda d: d['last_modified_timestamp'], reverse=True)
+
+                    published_processed_dataset_location = next(
+                        (i for i, item in enumerate(results) if item["status"] == "Published"), None)
+                    if published_processed_dataset_location and published_processed_dataset_location != 0:
+                        published_processed_dataset = results.pop(published_processed_dataset_location)
+                        results.insert(0, published_processed_dataset)
 
                 for result in results:
                     protocol_url = get_activity_protocol(neo4j_driver, result['uuid'])
