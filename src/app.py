@@ -1773,7 +1773,8 @@ def get_descendants(id):
                 abort_bad_req(f"Only the following property keys are supported in the query string: {COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}")
 
             # Only return a list of the filtered property value of each entity
-            property_list = app_neo4j_queries.get_descendants(neo4j_driver_instance, uuid, data_access_level, property_key)
+            property_list = app_neo4j_queries.get_descendants(neo4j_driver_instance, uuid, data_access_level,
+                                                              property_key, entity_type=entity_dict['entity_type'])
 
             # Final result
             final_result = property_list
@@ -1781,7 +1782,8 @@ def get_descendants(id):
             abort_bad_req("The specified query string is not supported. Use '?property=<key>' to filter the result")
     # Return all the details if no property filtering
     else:
-        descendants_list = app_neo4j_queries.get_descendants(neo4j_driver_instance, uuid, data_access_level)
+        descendants_list = app_neo4j_queries.get_descendants(neo4j_driver_instance, uuid, data_access_level,
+                                                             entity_type=entity_dict['entity_type'])
 
         # Generate trigger data and merge into a big dict
         # and skip some of the properties that are time-consuming to generate via triggers
