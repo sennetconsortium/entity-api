@@ -40,4 +40,4 @@ mv src/instance/app.cfg.bak src/instance/app.cfg
 
 echo "Stopping and removing the neo4j-test container"
 docker stop neo4j-test > /dev/null
-docker rm neo4j-test > /dev/null
+docker rm --volumes neo4j-test > /dev/null
