@@ -120,6 +120,12 @@ def generate_entity():
     }
 
 
+def get_entity(uuid, db_session):
+    query = "MATCH (e:Entity {uuid: $uuid}) RETURN e"
+    result = db_session.run(query, uuid=uuid)
+    return result.single()["e"]
+
+
 def create_provenance(db_session, provenance):
     created_entities = {}
 

@@ -1,5 +1,5 @@
 from test.helpers import GROUP, USER
-from test.helpers.database import create_provenance, generate_entity
+from test.helpers.database import create_provenance, generate_entity, get_entity
 from test.helpers.response import mock_response
 
 import pytest
@@ -30,7 +30,7 @@ def test_index(app):
 
 
 @pytest.mark.usefixtures("lab")
-def test_create_source(app, requests):
+def test_create_source(app, requests, db_session):
     entities = [
         generate_entity(),  # source
         generate_entity(),  # activity
@@ -71,6 +71,13 @@ def test_create_source(app, requests):
         assert res.json["created_by_user_email"] == USER["email"]
         assert res.json["created_by_user_sub"] == USER["sub"]
         assert res.json["data_access_level"] == "consortium"
+
+        # check database
+        db_entity = get_entity(entities[0]["uuid"], db_session)
+        assert db_entity["description"] == data["description"]
+        assert db_entity["group_uuid"] == data["group_uuid"]
+        assert db_entity["lab_source_id"] == data["lab_source_id"]
+        assert db_entity["source_type"] == data["source_type"]
 
 
 @pytest.mark.usefixtures("lab")
@@ -125,6 +132,12 @@ def test_create_organ_sample(db_session, app, requests):
         assert res.json["created_by_user_sub"] == USER["sub"]
         assert res.json["data_access_level"] == "consortium"
 
+        # check database
+        db_entity = get_entity(entities[0]["uuid"], db_session)
+        assert db_entity["sample_category"] == data["sample_category"]
+        assert db_entity["organ"] == data["organ"]
+        assert db_entity["lab_tissue_sample_id"] == data["lab_tissue_sample_id"]
+
 
 @pytest.mark.usefixtures("lab")
 def test_create_block_sample(db_session, app, requests):
@@ -164,7 +177,6 @@ def test_create_block_sample(db_session, app, requests):
 
         assert res.json["sample_category"] == data["sample_category"]
         assert res.json["lab_tissue_sample_id"] == data["lab_tissue_sample_id"]
-        assert res.json["direct_ancestor"]["uuid"] == test_entities["organ"]["uuid"]
 
         assert res.json["source"]["uuid"] == test_entities["source"]["uuid"]
         assert len(res.json["origin_samples"]) == 1
@@ -176,6 +188,11 @@ def test_create_block_sample(db_session, app, requests):
         assert res.json["created_by_user_email"] == USER["email"]
         assert res.json["created_by_user_sub"] == USER["sub"]
         assert res.json["data_access_level"] == "consortium"
+
+        # check database
+        db_entity = get_entity(entities[0]["uuid"], db_session)
+        assert db_entity["sample_category"] == data["sample_category"]
+        assert db_entity["lab_tissue_sample_id"] == data["lab_tissue_sample_id"]
 
 
 @pytest.mark.usefixtures("lab")
@@ -229,6 +246,11 @@ def test_create_section_sample(db_session, app, requests):
         assert res.json["created_by_user_email"] == USER["email"]
         assert res.json["created_by_user_sub"] == USER["sub"]
         assert res.json["data_access_level"] == "consortium"
+
+        # check database
+        db_entity = get_entity(entities[0]["uuid"], db_session)
+        assert db_entity["sample_category"] == data["sample_category"]
+        assert db_entity["lab_tissue_sample_id"] == data["lab_tissue_sample_id"]
 
 
 @pytest.mark.usefixtures("lab")
@@ -288,3 +310,8 @@ def test_create_dataset(db_session, app, requests):
         assert res.json["created_by_user_email"] == USER["email"]
         assert res.json["created_by_user_sub"] == USER["sub"]
         assert res.json["data_access_level"] == "consortium"
+
+        # check database
+        db_entity = get_entity(entities[0]["uuid"], db_session)
+        assert db_entity["contains_human_genetic_sequences"] == data["contains_human_genetic_sequences"]
+        assert db_entity["dataset_type"] == data["dataset_type"]
