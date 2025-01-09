@@ -5517,6 +5517,9 @@ def verify_ubkg_properties(json_data_dict):
     if 'intended_organ' in json_data_dict:
         compare_property_against_ubkg(ORGAN_TYPES, json_data_dict, 'intended_organ')
 
+    if 'intended_source_type' in json_data_dict:
+        compare_property_against_ubkg(SOURCE_TYPES, json_data_dict, 'intended_source_type')
+
 def compare_property_list_against_ubkg(ubkg_dict, json_data_dict, field):
     good_fields = []
     passes_ubkg_validation = True
