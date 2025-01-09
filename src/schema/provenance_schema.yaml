@@ -355,6 +355,12 @@ ENTITIES:
     before_entity_create_validator: validate_application_header_before_entity_create
     excluded_properties_from_public_response:
       - lab_dataset_id
+      - direct_ancestors:
+          - lab_tissue_sample_id
+          - source:
+              - lab_source_id
+          - origin_samples:
+              - lab_tissue_sample_id
       - sources:
           - lab_source_id
       - metadata:
@@ -508,18 +514,9 @@ ENTITIES:
         type: boolean
         description: "Whether this dataset has a pipeline message."
         on_index_trigger: get_has_pipeline_or_validation_message
-      metadata:
-        type: json_string # dict
-        description: "Metadata associated with the ingested experimental data"
-      files:
-        type: list
-        description: "A list of files associated with the dataset."
-      calculated_metadata:
-        type: json_string # dict
-        description: "Calculated metadata outputted from the processing pipeline."
       ingest_metadata:
         type: json_string # dict
-        description: "Information associated with running the ingest and processing pipelines"
+        description: "The metadata returned from the processing at data submission time."
       local_directory_rel_path:
         # Example: protected/<TMC>/<uuid>
         type: string
@@ -691,9 +688,10 @@ ENTITIES:
       - lab_dataset_id
       - sources:
           - lab_source_id
-      - metadata:
-          - lab_id
-          - slide_id
+      - ingest_metadata:
+          - metadata:
+              - lab_id
+              - slide_id
       - cedar_mapped_metadata:
           - Lab ID
           - Slide ID
@@ -1297,11 +1295,6 @@ ENTITIES:
         type: string
         description: 'The organ code representing the organ type that the data contained in the upload will be registered/associated with.'
         required_on_create: true
-      intended_source_type:
-        type: string
-        description: 'The source type that the data contained in the upload will be registered/associated with.'
-        required_on_create: true
-
 
   ############################################# EPICollection #############################################
   Epicollection:
