@@ -1773,7 +1773,8 @@ def get_descendants(id):
                 abort_bad_req(f"Only the following property keys are supported in the query string: {COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}")
 
             # Only return a list of the filtered property value of each entity
-            property_list = app_neo4j_queries.get_descendants(neo4j_driver_instance, uuid, data_access_level, property_key)
+            property_list = app_neo4j_queries.get_descendants(neo4j_driver_instance, uuid, data_access_level,
+                                                              property_key, entity_type=entity_dict['entity_type'])
 
             # Final result
             final_result = property_list
@@ -1781,7 +1782,8 @@ def get_descendants(id):
             abort_bad_req("The specified query string is not supported. Use '?property=<key>' to filter the result")
     # Return all the details if no property filtering
     else:
-        descendants_list = app_neo4j_queries.get_descendants(neo4j_driver_instance, uuid, data_access_level)
+        descendants_list = app_neo4j_queries.get_descendants(neo4j_driver_instance, uuid, data_access_level,
+                                                             entity_type=entity_dict['entity_type'])
 
         # Generate trigger data and merge into a big dict
         # and skip some of the properties that are time-consuming to generate via triggers
@@ -4939,9 +4941,14 @@ def get_datasets_for_upload(id: str):
         "ingest_metadata",
         "ingest_task",
         "pipeline_message",
-        "status_history"
+        "status_history",
+        "direct_ancestors",
+        "metadata",
+        "sources",
+        "upload"
     ]
-    datasets = schema_triggers.get_normalized_upload_datasets(entity_dict["uuid"], properties_to_exclude)
+    token = get_internal_token()
+    datasets = schema_triggers.get_normalized_upload_datasets(entity_dict["uuid"], token, properties_to_exclude)
     return jsonify(datasets)
 
 
@@ -5513,6 +5520,9 @@ def verify_ubkg_properties(json_data_dict):
 
     if 'intended_organ' in json_data_dict:
         compare_property_against_ubkg(ORGAN_TYPES, json_data_dict, 'intended_organ')
+
+    if 'intended_source_type' in json_data_dict:
+        compare_property_against_ubkg(SOURCE_TYPES, json_data_dict, 'intended_source_type')
 
 def compare_property_list_against_ubkg(ubkg_dict, json_data_dict, field):
     good_fields = []
