@@ -12,10 +12,21 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         python-version: [3.9]
+
+    services:
+      neo4j:
+        image: neo4j:5.20.0-ubi8
+        ports:
+          - 7474:7474
+          - 7687:7687
+        env:
+          NEO4J_AUTH: none
+          NEO4JLABS_PLUGINS: '["apoc"]'
+
     steps:
       - uses: actions/checkout@v3
       - name: Set up Python ${{ matrix.python-version }}
@@ -29,7 +40,11 @@ jobs:
           pip install -r src/requirements.dev.txt
       - name: Setup test config file
         run: |
-          cp test/config/app.cfg src/instance/app.cfg
+          cp test/config/app.test.cfg src/instance/app.cfg
       - name: Test with pytest
+        env:
+          UBKG_SERVER: ${{ secrets.UBKG_SERVER }}
+          UBKG_ENDPOINT_VALUESET: ${{ secrets.UBKG_ENDPOINT_VALUESET }}
+          UBKG_CODES: ${{ secrets.UBKG_CODES }}
         run: |
           pytest -W ignore::DeprecationWarning 
