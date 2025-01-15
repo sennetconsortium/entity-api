@@ -1295,6 +1295,10 @@ ENTITIES:
         type: string
         description: 'The organ code representing the organ type that the data contained in the upload will be registered/associated with.'
         required_on_create: true
+      intended_source_type:
+        type: string
+        description: 'The source type that the data contained in the upload will be registered/associated with.'
+        required_on_create: true
 
   ############################################# EPICollection #############################################
   Epicollection:
