@@ -2978,7 +2978,7 @@ def get_normalized_upload_datasets(uuid: str, token, properties_to_exclude: List
 
     complete_list = []
     for dataset in datasets_list:
-        complete_dict = schema_manager.get_complete_entity_result(token, dataset)
+        complete_dict = schema_manager.get_complete_entity_result(token, dataset, properties_to_skip=properties_to_exclude)
         complete_list.append(complete_dict)
 
     # Get rid of the entity node properties that are not defined in the yaml schema

@@ -4947,6 +4947,22 @@ def get_datasets_for_upload(id: str):
         "sources",
         "upload"
     ]
+
+    if bool(request.args):
+        lite_key = request.args.get('lite')
+        if lite_key is not None and lite_key.lower() in ['true', '1']:
+            more_properties_to_exclude = [
+                "cedar_mapped_metadata",
+                "collections",
+                "creation_action",
+                "next_revision_uuid",
+                "origin_samples",
+                "previous_revision_uuid",
+                "title"
+            ]
+
+            properties_to_exclude = properties_to_exclude + more_properties_to_exclude
+
     token = get_internal_token()
     datasets = schema_triggers.get_normalized_upload_datasets(entity_dict["uuid"], token, properties_to_exclude)
     return jsonify(datasets)
