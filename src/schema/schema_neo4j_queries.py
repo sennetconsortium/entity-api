@@ -166,7 +166,7 @@ def get_origin_samples(neo4j_driver, uuid):
              f"WHERE e.uuid='{uuid}' and s.sample_category='Organ' "
              f"return apoc.coll.toSet(COLLECT(s)) AS {record_field_name}")
 
-    logger.info("======get_origin_sample() query======")
+    logger.info("======get_origin_samples() query======")
     logger.info(query)
 
     with neo4j_driver.session() as session:
