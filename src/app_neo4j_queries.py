@@ -596,7 +596,7 @@ def update_entity(neo4j_driver, entity_type, entity_data_dict, uuid):
         raise TransactionError(msg)
 
 
-def get_ancestors(neo4j_driver, uuid, data_access_level=None, property_key=None):
+def get_ancestors(neo4j_driver, uuid, data_access_level=None, property_key=None, properties = [], is_include_action = False):
     """Get all ancestors by uuid.
 
     Parameters
@@ -621,13 +621,26 @@ def get_ancestors(neo4j_driver, uuid, data_access_level=None, property_key=None)
     if data_access_level:
         predicate = f"AND ancestor.data_access_level = '{data_access_level}' "
 
-    if property_key:
-        query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(ancestor:Entity) "
-                 # Filter out the Lab entities
-                 f"WHERE e.uuid='{uuid}' AND ancestor.entity_type <> 'Lab' {predicate}"
-                 # COLLECT() returns a list
-                 # apoc.coll.toSet() reruns a set containing unique nodes
-                 f"RETURN apoc.coll.toSet(COLLECT(ancestor.{property_key})) AS {record_field_name}")
+    if len(properties) > 0:
+        action = 'NOT'
+        if is_include_action is True:
+            action = ''
+        query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(a:Entity) "
+                 f"WHERE e.uuid = '{uuid}' AND a.entity_type <> 'Lab' {predicate} "
+                 "WITH keys(a) as k1, a unwind k1 as k2 "
+                 f"WITH a, k2 where {action} k2 IN {properties} "
+                 f"WITH a, apoc.map.fromPairs([[k2, a[k2]], ['uuid', a.uuid]]) AS dict "
+                 f"WITH collect(dict) as list with apoc.map.groupByMulti(list, 'uuid') AS groups "
+                 f"WITH groups unwind keys(groups) as uuids "
+                 f"WITH apoc.map.mergeList(groups[uuids]) AS list "
+                 f"RETURN collect(list) AS {record_field_name}")
+
+        # query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(ancestor:Entity) "
+        #          # Filter out the Lab entities
+        #          f"WHERE e.uuid='{uuid}' AND ancestor.entity_type <> 'Lab' {predicate}"
+        #          # COLLECT() returns a list
+        #          # apoc.coll.toSet() reruns a set containing unique nodes
+        #          f"RETURN apoc.coll.toSet(COLLECT(ancestor.{property_key})) AS {record_field_name}")
     else:
         query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(ancestor:Entity) "
                  # Filter out the Lab entities
@@ -644,6 +657,9 @@ def get_ancestors(neo4j_driver, uuid, data_access_level=None, property_key=None)
 
         if record and record[record_field_name]:
             if property_key:
+                # Just return the list of property values from each entity node
+                results = record[record_field_name]
+            if len(properties) > 0:
                 # Just return the list of property values from each entity node
                 results = record[record_field_name]
             else:

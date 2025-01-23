@@ -1110,7 +1110,7 @@ def get_sample_section_ancestor_ids(property_key, normalized_type, user_token, e
         if equals(Ontology.ops().specimen_categories().SECTION, existing_data_dict['sample_category']):
             driver = schema_manager.get_neo4j_driver_instance()
             uuid = existing_data_dict['uuid']
-            ancestor_ids = app_neo4j_queries.get_ancestors(driver, uuid, 'uuid')
+            ancestor_ids = app_neo4j_queries.get_ancestors(driver, uuid, properties=['uuid'], is_include_action=True)
             if len(ancestor_ids) > 0:
                 return property_key, ancestor_ids
 
