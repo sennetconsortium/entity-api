@@ -2196,7 +2196,8 @@ def exclude_include_query_part(properties, is_include_action = True):
     if is_include_action and not 'entity_type' in properties:
         properties.append('entity_type')
     else:
-        properties.remove('entity_type')
+        if 'entity_type' in properties:
+            properties.remove('entity_type')
 
     query_part = (f"WITH keys(t) as k1, t unwind k1 as k2 "
                   f"WITH t, k2 where {action} k2 IN {properties} "
