@@ -1674,7 +1674,8 @@ def get_ancestors(id):
         filtering_dict = request.json
         if 'filter_properties' in filtering_dict:
             properties_action = filtering_dict.get('is_include')
-            property_list = app_neo4j_queries.get_ancestors(neo4j_driver_instance, uuid, data_access_level, properties=filtering_dict['filter_properties'], is_include_action=properties_action)
+            segregated_properties = schema_manager.break_properties_list('All', filtering_dict['filter_properties'])
+            property_list = app_neo4j_queries.get_ancestors(neo4j_driver_instance, uuid, data_access_level, properties=segregated_properties[0], is_include_action=properties_action)
             # Final result
             final_result = property_list
 
