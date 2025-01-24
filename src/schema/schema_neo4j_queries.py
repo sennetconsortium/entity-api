@@ -2199,12 +2199,18 @@ def exclude_include_query_part(properties, is_include_action = True):
         if 'entity_type' in properties:
             properties.remove('entity_type')
 
-    query_part = (f"WITH keys(t) as k1, t unwind k1 as k2 "
+    query_part = (f"WITH keys(t) AS k1, t unwind k1 AS k2 "
+                  # filter by a list of properties
                   f"WITH t, k2 where {action} k2 IN {properties} "
+                  # everything is unwinded as separate rows, so let's build it back up by uuid: {prop: val, uuid:uuidVal}
                   f"WITH t, apoc.map.fromPairs([[k2, t[k2]], ['uuid', t.uuid]]) AS dict "
-                  f"WITH collect(dict) as list with apoc.map.groupByMulti(list, 'uuid') AS groups "
-                  f"WITH groups unwind keys(groups) as uuids "
+                  # collect all these individual dicts as a list, and then group them by uuids: {uuidVal: [{prop: val, uuid:uuidVal}, {prop2: val2, uuid:uuidVal}]}
+                  f"WITH collect(dict) as list WITH apoc.map.groupByMulti(list, 'uuid') AS groups "
+                  # use the keys of this groups map, and unwind to get as a list[]
+                  f"WITH groups unwind keys(groups) AS uuids "
+                  # now merge these individual dicts
                   f"WITH apoc.map.mergeList(groups[uuids]) AS list "
+                  # collect each row to form a list and return
                   f"RETURN collect(list) AS {record_field_name}")
 
     return query_part
