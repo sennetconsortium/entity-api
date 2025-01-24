@@ -321,6 +321,38 @@ def get_fields_to_exclude(normalized_class=None):
     return excluded_fields
 
 
+def break_properties_list(normalized_class=None, properties=[]):
+    """ Seperates neo4j properties from transient ones
+
+    Parameters
+    ----------
+    normalized_class : Optional[str]
+        the normalized entity type of the entity
+
+    Returns
+    -------
+    list[str]
+        A list of strings where each entry is a field to be excluded
+    """
+    # Determine the schema section based on class
+    global _schema
+
+    neo4j_fields = []
+    trigger_fields = []
+    schema_section = {}
+    if normalized_class == 'All':
+        for entity in _schema['ENTITIES']:
+            schema_section.update(_schema['ENTITIES'][entity].get('properties', {}))
+    else:
+        schema_section = _schema['ENTITIES'][normalized_class].get('properties', {})
+    for property in properties:
+        if property in schema_section:
+            if 'transient' in schema_section[property] and schema_section[property]['transient'] is True:
+                trigger_fields.append(property)
+            else:
+                neo4j_fields.append(property)
+    return neo4j_fields, trigger_fields
+
 def exclude_properties_from_response(excluded_fields, output_dict):
     """Removes specified fields from an existing dictionary.
 

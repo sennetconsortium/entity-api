@@ -596,7 +596,7 @@ def update_entity(neo4j_driver, entity_type, entity_data_dict, uuid):
         raise TransactionError(msg)
 
 
-def get_ancestors(neo4j_driver, uuid, data_access_level=None, property_key=None, properties = [], is_include_action = False):
+def get_ancestors(neo4j_driver, uuid, data_access_level=None, property_key=None, properties = [], is_include_action = True):
     """Get all ancestors by uuid.
 
     Parameters
@@ -622,18 +622,10 @@ def get_ancestors(neo4j_driver, uuid, data_access_level=None, property_key=None,
         predicate = f"AND ancestor.data_access_level = '{data_access_level}' "
 
     if len(properties) > 0:
-        action = 'NOT'
-        if is_include_action is True:
-            action = ''
-        query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(a:Entity) "
-                 f"WHERE e.uuid = '{uuid}' AND a.entity_type <> 'Lab' {predicate} "
-                 "WITH keys(a) as k1, a unwind k1 as k2 "
-                 f"WITH a, k2 where {action} k2 IN {properties} "
-                 f"WITH a, apoc.map.fromPairs([[k2, a[k2]], ['uuid', a.uuid]]) AS dict "
-                 f"WITH collect(dict) as list with apoc.map.groupByMulti(list, 'uuid') AS groups "
-                 f"WITH groups unwind keys(groups) as uuids "
-                 f"WITH apoc.map.mergeList(groups[uuids]) AS list "
-                 f"RETURN collect(list) AS {record_field_name}")
+
+        query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(t:Entity) "
+                 f"WHERE e.uuid = '{uuid}' AND t.entity_type <> 'Lab' {predicate} "
+                 f"{schema_neo4j_queries.exclude_include_query_part(properties, is_include_action)}")
 
         # query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(ancestor:Entity) "
         #          # Filter out the Lab entities

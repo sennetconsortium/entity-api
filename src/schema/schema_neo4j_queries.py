@@ -2,6 +2,7 @@ import ast
 
 from neo4j.exceptions import TransactionError
 import logging
+from typing import List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -798,12 +799,13 @@ list
 """
 
 
-def get_collection_entities(neo4j_driver, uuid):
+def get_collection_entities(neo4j_driver, uuid, properties: List[str] = [], is_include_action: bool = True):
     results = []
 
-    query = (f"MATCH (e:Entity)-[:IN_COLLECTION]->(c:Collection|Epicollection) "
+    query = (f"MATCH (t:Entity)-[:IN_COLLECTION]->(c:Collection|Epicollection) "
              f"WHERE c.uuid = '{uuid}' "
-             f"RETURN apoc.coll.toSet(COLLECT(e)) AS {record_field_name}")
+             f"{exclude_include_query_part(properties, is_include_action)}")
+             #f"RETURN apoc.coll.toSet(COLLECT(e)) AS {record_field_name}")
 
     logger.info("======get_collection_entities() query======")
     logger.info(query)
@@ -812,8 +814,11 @@ def get_collection_entities(neo4j_driver, uuid):
         record = session.read_transaction(_execute_readonly_tx, query)
 
         if record and record[record_field_name]:
-            # Convert the list of nodes to a list of dicts
-            results = _nodes_to_dicts(record[record_field_name])
+            if len(properties) > 0:
+                results = record[record_field_name]
+            else:
+                # Convert the list of nodes to a list of dicts
+                results = _nodes_to_dicts(record[record_field_name])
 
     return results
 
@@ -1017,15 +1022,13 @@ list
 """
 
 
-def get_upload_datasets(neo4j_driver, uuid, property_key=None, query_filter=''):
+def get_upload_datasets(neo4j_driver, uuid, property_key=None, query_filter='', properties = [], is_include_action = True):
     results = []
 
-    if property_key:
-        query = (f"MATCH (e:Dataset)-[:IN_UPLOAD]->(s:Upload) "
+    if len(properties) > 0:
+        query = (f"MATCH (t:Dataset)-[:IN_UPLOAD]->(s:Upload) "
                  f"WHERE s.uuid = '{uuid}' {query_filter} "
-                 # COLLECT() returns a list
-                 # apoc.coll.toSet() reruns a set containing unique nodes
-                 f"RETURN apoc.coll.toSet(COLLECT(e.{property_key})) AS {record_field_name}")
+                 f"{exclude_include_query_part(properties, is_include_action)}")
     else:
         query = (f"MATCH (e:Dataset)-[:IN_UPLOAD]->(s:Upload) "
                  f"WHERE s.uuid = '{uuid}' {query_filter} "
@@ -1038,7 +1041,7 @@ def get_upload_datasets(neo4j_driver, uuid, property_key=None, query_filter=''):
         record = session.read_transaction(execute_readonly_tx, query)
 
         if record and record[record_field_name]:
-            if property_key:
+            if len(properties) > 0:
                 # Just return the list of property values from each entity node
                 results = record[record_field_name]
             else:
@@ -2183,3 +2186,24 @@ def get_sources_associated_entity(neo4j_driver, uuid, filter_out = None):
                 result.pop('metadata', None)
 
     return results
+
+
+def exclude_include_query_part(properties, is_include_action = True):
+    action = ''
+    if is_include_action is False:
+        action = 'NOT'
+
+    if is_include_action and not 'entity_type' in properties:
+        properties.append('entity_type')
+    else:
+        properties.remove('entity_type')
+
+    query_part = (f"WITH keys(t) as k1, t unwind k1 as k2 "
+                  f"WITH t, k2 where {action} k2 IN {properties} "
+                  f"WITH t, apoc.map.fromPairs([[k2, t[k2]], ['uuid', t.uuid]]) AS dict "
+                  f"WITH collect(dict) as list with apoc.map.groupByMulti(list, 'uuid') AS groups "
+                  f"WITH groups unwind keys(groups) as uuids "
+                  f"WITH apoc.map.mergeList(groups[uuids]) AS list "
+                  f"RETURN collect(list) AS {record_field_name}")
+
+    return query_part

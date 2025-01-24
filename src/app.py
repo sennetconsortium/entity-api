@@ -1608,7 +1608,7 @@ Returns
 json
     A list of all the ancestors of the target entity
 """
-@app.route('/ancestors/<id>', methods=['GET'])
+@app.route('/ancestors/<id>', methods=['GET', 'POST'])
 def get_ancestors(id):
     final_result = []
 
@@ -1670,6 +1670,14 @@ def get_ancestors(id):
             final_result = property_list
         else:
             abort_bad_req("The specified query string is not supported. Use '?property=<key>' to filter the result")
+    elif request.is_json and request.json != {}:
+        filtering_dict = request.json
+        if 'filter_properties' in filtering_dict:
+            properties_action = filtering_dict.get('is_include')
+            property_list = app_neo4j_queries.get_ancestors(neo4j_driver_instance, uuid, data_access_level, properties=filtering_dict['filter_properties'], is_include_action=properties_action)
+            # Final result
+            final_result = property_list
+
     # Return all the details if no property filtering
     else:
         ancestors_list = app_neo4j_queries.get_ancestors(neo4j_driver_instance, uuid, data_access_level)
@@ -4921,7 +4929,7 @@ def create_multiple_component_details(request, normalized_entity_type, user_toke
     return created_datasets
 
 
-@app.route("/uploads/<id>/datasets", methods=["GET"])
+@app.route("/uploads/<id>/datasets", methods=["GET", "POST"])
 @require_valid_token()
 def get_datasets_for_upload(id: str):
     # Verify that the entity is an upload
@@ -4944,27 +4952,23 @@ def get_datasets_for_upload(id: str):
         "upload"
     ]
 
-    if bool(request.args):
-        lite_key = request.args.get('lite')
-        if lite_key is not None and lite_key.lower() in ['true', '1']:
-            more_properties_to_exclude = [
-                "cedar_mapped_metadata",
-                "collections",
-                "creation_action",
-                "next_revision_uuid",
-                "origin_samples",
-                "previous_revision_uuid",
-                "title"
-            ]
-
-            properties_to_exclude = properties_to_exclude + more_properties_to_exclude
+    properties_action = None
+    neo4j_properties_to_filter = []
+    if request.is_json and request.json != {}:
+        filtering_dict = request.json
+        if 'filter_properties' in filtering_dict:
+            properties_to_filter = filtering_dict['filter_properties']
+            normalized_properties = schema_manager.break_properties_list(Ontology.ops().entities().DATASET, properties_to_filter)
+            neo4j_properties_to_filter = normalized_properties[0]
+            properties_action = filtering_dict.get('is_include')
+            properties_to_exclude = properties_to_exclude + normalized_properties[1]
 
     token = get_internal_token()
-    datasets = schema_triggers.get_normalized_upload_datasets(entity_dict["uuid"], token, properties_to_exclude)
+    datasets = schema_triggers.get_normalized_upload_datasets(entity_dict["uuid"], token, properties_to_exclude, properties=neo4j_properties_to_filter, is_include_action=properties_action)
     return jsonify(datasets)
 
 
-@app.route("/collections/<id>/entities", methods=["GET"])
+@app.route("/collections/<id>/entities", methods=["GET", "POST"])
 def get_entities_for_collection(id: str):
     # Verify that the entity is a collection
     entity_dict = query_target_entity(id)
@@ -4990,7 +4994,7 @@ def get_entities_for_collection(id: str):
     if not isinstance(token, str):
         token = get_internal_token()
 
-    properties_to_exclude = [
+    properties_to_filter = [
         "contains_human_genetic_sequences",
         "created_timestamp",
         "created_by_user_displayname",
@@ -5007,12 +5011,20 @@ def get_entities_for_collection(id: str):
         "last_modified_user_sub",
     ]
 
+    is_include_action=False
+    if request.is_json and request.json != {}:
+        filtering_dict = request.json
+        if 'filter_properties' in filtering_dict:
+            properties_to_filter = filtering_dict['filter_properties']
+            is_include_action= filtering_dict.get('is_include', False)
+
     # Get the entities associated with the collection
     entities = schema_triggers.get_normalized_collection_entities(
         entity_dict["uuid"],
         token,
-        properties_to_exclude,
-        skip_completion=True
+        skip_completion=True,
+        properties=properties_to_filter,
+        is_include_action=is_include_action
     )
 
     return jsonify(entities)
@@ -5228,7 +5240,7 @@ Returns
 dict
     A dictionary of entity details returned from neo4j
 """
-def query_target_entity(id: str):
+def query_target_entity(id: str, properties_to_exclude: List[str] = [], properties_to_include: List[str] = []):
     entity_dict = None
     current_datetime = datetime.now()
 
@@ -5659,7 +5671,7 @@ def delete_cache(id):
         collection_dataset_uuids = schema_neo4j_queries.get_collection_associated_datasets(neo4j_driver_instance, entity_uuid , 'uuid')
 
         # If the target entity is Upload, delete the cache for each of its associated Datasets (via [:IN_UPLOAD] relationship)
-        upload_dataset_uuids = schema_neo4j_queries.get_upload_datasets(neo4j_driver_instance, entity_uuid , 'uuid')
+        upload_dataset_uuids = schema_neo4j_queries.get_upload_datasets(neo4j_driver_instance, entity_uuid , properties=['uuid'])
 
         # If the target entity is Datasets/Publication, delete the associated Collections cache, Upload cache
         collection_uuids = schema_neo4j_queries.get_entity_collections(neo4j_driver_instance, entity_uuid , 'uuid')
