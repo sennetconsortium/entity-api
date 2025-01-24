@@ -351,6 +351,8 @@ def group_verify_properties_list(normalized_class=None, properties=[]):
         if property in schema_section:
             if 'transient' in schema_section[property] and schema_section[property]['transient'] is True:
                 trigger_fields.append(property)
+            elif 'generated' in schema_section[property] and schema_section[property]['generated'] is True:
+                trigger_fields.append(property)
             else:
                 neo4j_fields.append(property)
     return neo4j_fields, trigger_fields
