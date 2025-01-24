@@ -321,8 +321,8 @@ def get_fields_to_exclude(normalized_class=None):
     return excluded_fields
 
 
-def break_properties_list(normalized_class=None, properties=[]):
-    """ Seperates neo4j properties from transient ones
+def group_verify_properties_list(normalized_class=None, properties=[]):
+    """ Separates neo4j properties from transient ones. Also filters out any unknown properties.
 
     Parameters
     ----------
