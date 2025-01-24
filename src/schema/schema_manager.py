@@ -328,11 +328,13 @@ def group_verify_properties_list(normalized_class=None, properties=[]):
     ----------
     normalized_class : Optional[str]
         the normalized entity type of the entity
+    properties : List[str]
+        A list of property keys to filter in or out from the normalized results, default is []
 
     Returns
     -------
-    list[str]
-        A list of strings where each entry is a field to be excluded
+    tuple
+        A partitioned tuple with neo4j and trigger properties respectively
     """
     # Determine the schema section based on class
     global _schema

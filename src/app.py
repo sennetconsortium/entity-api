@@ -1664,7 +1664,7 @@ def get_ancestors(id):
                 abort_bad_req(f"Only the following property keys are supported in the query string: {COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}")
 
             # Only return a list of the filtered property value of each entity
-            property_list = app_neo4j_queries.get_ancestors(neo4j_driver_instance, uuid, data_access_level, property_key)
+            property_list = app_neo4j_queries.get_ancestors(neo4j_driver_instance, uuid, data_access_level, properties=[uuid])
 
             # Final result
             final_result = property_list
@@ -4959,10 +4959,10 @@ def get_datasets_for_upload(id: str):
         filtering_dict = request.json
         if 'filter_properties' in filtering_dict:
             properties_to_filter = filtering_dict['filter_properties']
-            normalized_properties = schema_manager.group_verify_properties_list(Ontology.ops().entities().DATASET, properties_to_filter)
-            neo4j_properties_to_filter = normalized_properties[0]
+            segregated_properties = schema_manager.group_verify_properties_list(Ontology.ops().entities().DATASET, properties_to_filter)
+            neo4j_properties_to_filter = segregated_properties[0]
             properties_action = filtering_dict.get('is_include')
-            properties_to_exclude = properties_to_exclude + normalized_properties[1]
+            properties_to_exclude = properties_to_exclude + segregated_properties[1]
 
     token = get_internal_token()
     datasets = schema_triggers.get_normalized_upload_datasets(entity_dict["uuid"], token, properties_to_exclude, properties=neo4j_properties_to_filter, is_include_action=properties_action)

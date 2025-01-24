@@ -656,10 +656,12 @@ def get_normalized_collection_entities(uuid: str, token: str, skip_completion: b
         The UUID of the Collection entity
     token: str
         The user's globus nexus token or internal token
-    properties_to_exclude : List[str]
-        A list of property keys to exclude from the normalized results, default is []
     skip_completion : bool
         Skip the call to get_complete_entities_list, default is False
+    properties : List[str]
+        A list of property keys to filter in or out from the normalized results, default is []
+    is_include_action : bool
+        Whether to include or exclude the listed properties
 
     Returns
     -------
