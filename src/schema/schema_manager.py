@@ -328,11 +328,13 @@ def group_verify_properties_list(normalized_class=None, properties=[]):
     ----------
     normalized_class : Optional[str]
         the normalized entity type of the entity
+    properties : List[str]
+        A list of property keys to filter in or out from the normalized results, default is []
 
     Returns
     -------
-    list[str]
-        A list of strings where each entry is a field to be excluded
+    tuple
+        A partitioned tuple with neo4j and trigger properties respectively
     """
     # Determine the schema section based on class
     global _schema
@@ -348,6 +350,8 @@ def group_verify_properties_list(normalized_class=None, properties=[]):
     for property in properties:
         if property in schema_section:
             if 'transient' in schema_section[property] and schema_section[property]['transient'] is True:
+                trigger_fields.append(property)
+            elif 'generated' in schema_section[property] and schema_section[property]['generated'] is True:
                 trigger_fields.append(property)
             else:
                 neo4j_fields.append(property)

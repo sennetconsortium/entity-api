@@ -6,6 +6,7 @@ from neo4j.exceptions import TransactionError
 
 from lib.ontology import Ontology
 from schema import schema_neo4j_queries
+from typing import List
 
 logger = logging.getLogger(__name__)
 
@@ -596,7 +597,7 @@ def update_entity(neo4j_driver, entity_type, entity_data_dict, uuid):
         raise TransactionError(msg)
 
 
-def get_ancestors(neo4j_driver, uuid, data_access_level=None, property_key=None, properties = [], is_include_action = True):
+def get_ancestors(neo4j_driver, uuid, data_access_level=None, properties: List[str] = [], is_include_action: bool = True):
     """Get all ancestors by uuid.
 
     Parameters
@@ -607,8 +608,10 @@ def get_ancestors(neo4j_driver, uuid, data_access_level=None, property_key=None,
         The uuid of target entity
     data_access_level : Optional[str]
         The data access level of the ancestor entities (public or consortium). None returns all ancestors.
-    property_key : str
-        A target property key for result filtering
+    properties : List[str]
+        A list of property keys to filter in or out from the normalized results, default is []
+    is_include_action : bool
+        Whether to include or exclude the listed properties
 
     Returns
     -------
@@ -622,17 +625,9 @@ def get_ancestors(neo4j_driver, uuid, data_access_level=None, property_key=None,
         predicate = f"AND ancestor.data_access_level = '{data_access_level}' "
 
     if len(properties) > 0:
-
         query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(t:Entity) "
                  f"WHERE e.uuid = '{uuid}' AND t.entity_type <> 'Lab' {predicate} "
                  f"{schema_neo4j_queries.exclude_include_query_part(properties, is_include_action)}")
-
-        # query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(ancestor:Entity) "
-        #          # Filter out the Lab entities
-        #          f"WHERE e.uuid='{uuid}' AND ancestor.entity_type <> 'Lab' {predicate}"
-        #          # COLLECT() returns a list
-        #          # apoc.coll.toSet() reruns a set containing unique nodes
-        #          f"RETURN apoc.coll.toSet(COLLECT(ancestor.{property_key})) AS {record_field_name}")
     else:
         query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(ancestor:Entity) "
                  # Filter out the Lab entities
@@ -648,9 +643,6 @@ def get_ancestors(neo4j_driver, uuid, data_access_level=None, property_key=None,
         record = session.read_transaction(_execute_readonly_tx, query)
 
         if record and record[record_field_name]:
-            if property_key:
-                # Just return the list of property values from each entity node
-                results = record[record_field_name]
             if len(properties) > 0:
                 # Just return the list of property values from each entity node
                 results = record[record_field_name]
