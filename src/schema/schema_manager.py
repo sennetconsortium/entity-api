@@ -321,12 +321,12 @@ def get_fields_to_exclude(normalized_class=None):
     return excluded_fields
 
 
-def group_verify_properties_list(normalized_class=None, properties=[]):
+def group_verify_properties_list(normalized_class='All', properties=[]):
     """ Separates neo4j properties from transient ones. Also filters out any unknown properties.
 
     Parameters
     ----------
-    normalized_class : Optional[str]
+    normalized_class : str
         the normalized entity type of the entity
     properties : List[str]
         A list of property keys to filter in or out from the normalized results, default is []

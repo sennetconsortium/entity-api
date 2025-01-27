@@ -2188,7 +2188,16 @@ def get_sources_associated_entity(neo4j_driver, uuid, filter_out = None):
     return results
 
 
-def exclude_include_query_part(properties, is_include_action = True, target_entity_type = 'Any'):
+def exclude_include_query_part(properties:List[str], is_include_action = True, target_entity_type = 'Any'):
+    """
+    Builds a cypher query part that can be used to include or exclude certain properties.
+    The preceding MATCH query part should have a label 't'. E.g. MATCH (t:Entity)-[*]->(s:Source)
+
+    properties : list - the properties to be filtered
+    is_include_action : bool - whether to include or exclude the listed properties
+    target_entity_type : str - the entity type that's the target being filtered by properties
+    :return:
+    """
     action = ''
     if is_include_action is False:
         action = 'NOT'
