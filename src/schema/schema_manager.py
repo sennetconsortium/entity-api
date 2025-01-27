@@ -416,36 +416,35 @@ def exclude_properties_from_response(excluded_fields, output_dict):
     return output_dict
 
 
-"""
-Generating triggered data based on the target events and methods
-
-Parameters
-----------
-trigger_type : str
-    One of the trigger types: on_create_trigger, on_update_trigger, on_read_trigger
-normalized_class : str
-    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
-user_token: str
-    The user's globus nexus token, 'on_read_trigger' doesn't really need this
-existing_data_dict : dict
-    A dictionary that contains existing entity data
-new_data_dict : dict
-    A dictionary that contains incoming entity data
-properties_to_skip : list
-    Any properties to skip running triggers. 
-    This now ideally should be called properties_to_filter because of new introduced is_include_action.
-is_include_action : bool
-    Whether to include or exclude the properties listed in properties_to_skip
-
-Returns
--------
-dict
-    A dictionary of trigger event methods generated data
-"""
-
-
 def generate_triggered_data(trigger_type: TriggerTypeEnum, normalized_class, user_token, existing_data_dict
                             , new_data_dict, properties_to_skip = [], is_include_action = False):
+    """
+    Generating triggered data based on the target events and methods
+
+    Parameters
+    ----------
+    trigger_type : str
+        One of the trigger types: on_create_trigger, on_update_trigger, on_read_trigger
+    normalized_class : str
+        One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+    user_token: str
+        The user's globus nexus token, 'on_read_trigger' doesn't really need this
+    existing_data_dict : dict
+        A dictionary that contains existing entity data
+    new_data_dict : dict
+        A dictionary that contains incoming entity data
+    properties_to_skip : list
+        Any properties to skip running triggers.
+        This now ideally should be called properties_to_filter because of newly introduced is_include_action.
+    is_include_action : bool
+        Whether to include or exclude the properties listed in properties_to_skip
+
+    Returns
+    -------
+    dict
+        A dictionary of trigger event methods generated data
+    """
+
     global _schema
 
     schema_section = None
