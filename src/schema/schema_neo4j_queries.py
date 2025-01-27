@@ -1028,7 +1028,7 @@ def get_upload_datasets(neo4j_driver, uuid, property_key=None, query_filter='', 
     if len(properties) > 0:
         query = (f"MATCH (t:Dataset)-[:IN_UPLOAD]->(s:Upload) "
                  f"WHERE s.uuid = '{uuid}' {query_filter} "
-                 f"{exclude_include_query_part(properties, is_include_action)}")
+                 f"{exclude_include_query_part(properties, is_include_action, target_entity_type = 'Dataset')}")
     else:
         query = (f"MATCH (e:Dataset)-[:IN_UPLOAD]->(s:Upload) "
                  f"WHERE s.uuid = '{uuid}' {query_filter} "
@@ -2188,16 +2188,36 @@ def get_sources_associated_entity(neo4j_driver, uuid, filter_out = None):
     return results
 
 
-def exclude_include_query_part(properties, is_include_action = True):
+def exclude_include_query_part(properties, is_include_action = True, target_entity_type = 'Any'):
     action = ''
     if is_include_action is False:
         action = 'NOT'
 
-    if is_include_action and not 'entity_type' in properties:
-        properties.append('entity_type')
+    property_defaults = {
+        'Any': ['data_access_level',
+                'group_name',
+                'group_uuid',
+                'sennet_id',
+                'entity_type',
+                'uuid'],
+        'Source': ['source_type'],
+        'Sample': ['sample_category', 'organ'],
+        'Dataset': ['dataset_type', 'contains_human_genetic_sequences', 'status']
+    }
+    defaults = []
+    if target_entity_type in property_defaults:
+        defaults = property_defaults[target_entity_type]
+    if target_entity_type == 'Any':
+        defaults = defaults + property_defaults['Source'] + property_defaults['Sample'] + property_defaults['Dataset']
     else:
-        if 'entity_type' in properties:
-            properties.remove('entity_type')
+        defaults = defaults + property_defaults['Any']
+
+    for d in defaults:
+        if is_include_action and not d in properties:
+            properties.append(d)
+        else:
+            if d in properties:
+                properties.remove(d)
 
                    # unwind the keys of the results from target/t
     query_part = (f"WITH keys(t) AS k1, t unwind k1 AS k2 "

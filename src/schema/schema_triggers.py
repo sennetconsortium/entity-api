@@ -671,14 +671,15 @@ def get_normalized_collection_entities(uuid: str, token: str, skip_completion: b
     """
     db = schema_manager.get_neo4j_driver_instance()
     segregated_properties = schema_manager.group_verify_properties_list('All', properties)
-    entities_list = schema_neo4j_queries.get_collection_entities(db, uuid, properties=segregated_properties[0], is_include_action=is_include_action)
+    entities_list = schema_neo4j_queries.get_collection_entities(db, uuid, properties=segregated_properties[0] + segregated_properties[2], is_include_action=is_include_action)
 
     if skip_completion:
         complete_entities_list = entities_list
     else:
         complete_entities_list = schema_manager.get_complete_entities_list(token=token,
                                                                            entities_list=entities_list,
-                                                                           properties_to_skip=[] if is_include_action else properties)
+                                                                           properties_to_skip=properties,
+                                                                           is_include_action=is_include_action)
 
     return schema_manager.normalize_entities_list_for_response(entities_list=complete_entities_list,
                                                                properties_to_exclude=[] if is_include_action else properties)
@@ -2990,7 +2991,7 @@ def get_normalized_upload_datasets(uuid: str, token, properties_to_exclude: List
 
     complete_list = []
     for dataset in datasets_list:
-        complete_dict = schema_manager.get_complete_entity_result(token, dataset, properties_to_skip=properties_to_exclude)
+        complete_dict = schema_manager.get_complete_entity_result(token, dataset, properties_to_skip=properties_to_exclude, is_include_action=is_include_action)
         complete_list.append(complete_dict)
 
     # Get rid of the entity node properties that are not defined in the yaml schema

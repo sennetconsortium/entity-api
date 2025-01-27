@@ -5048,7 +5048,7 @@ def get_entities_for_collection(id: str):
     entities = schema_triggers.get_normalized_collection_entities(
         entity_dict["uuid"],
         token,
-        skip_completion=True,
+        skip_completion=False,
         properties=properties_to_filter,
         is_include_action=is_include_action
     )

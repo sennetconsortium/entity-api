@@ -342,11 +342,17 @@ def group_verify_properties_list(normalized_class=None, properties=[]):
     neo4j_fields = []
     trigger_fields = []
     schema_section = {}
+    dependencies = set()
     if normalized_class == 'All':
         for entity in _schema['ENTITIES']:
-            schema_section.update(_schema['ENTITIES'][entity].get('properties', {}))
+            entity_properties = _schema['ENTITIES'][entity].get('properties', {})
+            for property in properties:
+                if property in entity_properties:
+                    dependencies.update(entity_properties[property].get('dependency_properties', []))
+            schema_section.update(entity_properties)
     else:
         schema_section = _schema['ENTITIES'][normalized_class].get('properties', {})
+
     for property in properties:
         if property in schema_section:
             if 'transient' in schema_section[property] and schema_section[property]['transient'] is True:
@@ -355,7 +361,8 @@ def group_verify_properties_list(normalized_class=None, properties=[]):
                 trigger_fields.append(property)
             else:
                 neo4j_fields.append(property)
-    return neo4j_fields, trigger_fields
+
+    return neo4j_fields, trigger_fields, list(dependencies)
 
 def exclude_properties_from_response(excluded_fields, output_dict):
     """Removes specified fields from an existing dictionary.
@@ -425,7 +432,10 @@ existing_data_dict : dict
 new_data_dict : dict
     A dictionary that contains incoming entity data
 properties_to_skip : list
-    Any properties to skip running triggers
+    Any properties to skip running triggers. 
+    This now ideally should be called properties_to_filter because of new introduced is_include_action.
+is_include_action : bool
+    Whether to include or exclude the properties listed in properties_to_skip
 
 Returns
 -------
@@ -435,7 +445,7 @@ dict
 
 
 def generate_triggered_data(trigger_type: TriggerTypeEnum, normalized_class, user_token, existing_data_dict
-                            , new_data_dict, properties_to_skip = []):
+                            , new_data_dict, properties_to_skip = [], is_include_action = False):
     global _schema
 
     schema_section = None
@@ -465,7 +475,8 @@ def generate_triggered_data(trigger_type: TriggerTypeEnum, normalized_class, use
     for key in properties:
         # Among those properties that have the target trigger type,
         # we can skip the ones specified in the `properties_to_skip` by not running their triggers
-        if (trigger_type.value in properties[key]) and (key not in properties_to_skip):
+        if (trigger_type.value in properties[key]) and ((key not in properties_to_skip and is_include_action is False)
+                                                        or (key in properties_to_skip and is_include_action)):
             # 'after_create_trigger' and 'after_update_trigger' don't generate property values
             # E.g., create relationships between nodes in neo4j
             # So just return the empty trigger_generated_data_dict
@@ -716,7 +727,7 @@ dict
 """
 
 
-def get_complete_entity_result(token, entity_dict, properties_to_skip=[]):
+def get_complete_entity_result(token, entity_dict, properties_to_skip=[], is_include_action=False):
     global _memcached_client
     global _memcached_prefix
 
@@ -750,7 +761,8 @@ def get_complete_entity_result(token, entity_dict, properties_to_skip=[]):
                                                                           , user_token=token
                                                                           , existing_data_dict=entity_dict
                                                                           , new_data_dict={}
-                                                                          , properties_to_skip=properties_to_skip)
+                                                                          , properties_to_skip=properties_to_skip
+                                                                          , is_include_action=is_include_action)
 
             # Merge the entity info and the generated on read data into one dictionary
             complete_entity_dict = {**entity_dict, **generated_on_read_trigger_data_dict}
@@ -936,11 +948,11 @@ list
 """
 
 
-def get_complete_entities_list(token, entities_list, properties_to_skip=[]):
+def get_complete_entities_list(token, entities_list, properties_to_skip=[], is_include_action=False):
     complete_entities_list = []
 
     for entity_dict in entities_list:
-        complete_entity_dict = get_complete_entity_result(token, entity_dict, properties_to_skip)
+        complete_entity_dict = get_complete_entity_result(token, entity_dict, properties_to_skip, is_include_action=is_include_action)
         complete_entities_list.append(complete_entity_dict)
 
     return complete_entities_list
