@@ -4,6 +4,8 @@ from neo4j.exceptions import TransactionError
 import logging
 from typing import List, Optional
 
+import schema.schema_manager
+
 logger = logging.getLogger(__name__)
 
 # The filed name of the single result record
@@ -799,7 +801,7 @@ list
 """
 
 
-def get_collection_entities(neo4j_driver, uuid, properties: List[str] = [], is_include_action: bool = True):
+def get_collection_entities(neo4j_driver, uuid, properties: List[str] = None, is_include_action: bool = True):
     results = []
 
     query = (f"MATCH (t:Entity)-[:IN_COLLECTION]->(c:Collection|Epicollection) "
@@ -814,7 +816,7 @@ def get_collection_entities(neo4j_driver, uuid, properties: List[str] = [], is_i
         record = session.read_transaction(_execute_readonly_tx, query)
 
         if record and record[record_field_name]:
-            if len(properties) > 0:
+            if isinstance(properties, list):
                 results = record[record_field_name]
             else:
                 # Convert the list of nodes to a list of dicts
@@ -1022,7 +1024,23 @@ list
 """
 
 
-def get_upload_datasets(neo4j_driver, uuid, property_key=None, query_filter='', properties = [], is_include_action = True):
+def get_upload_datasets(neo4j_driver, uuid, query_filter='', properties: List[str] = None, is_include_action: bool = True):
+    """
+
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    uuid : str
+        The uuid of target entity
+    query_filter: str
+        An additional filter against the cypher match
+    properties : List[str]
+        A list of property keys to filter in or out from the normalized results, default is []
+    is_include_action : bool
+        Whether to include or exclude the listed properties
+    :return:
+    """
     results = []
 
     if len(properties) > 0:
@@ -1041,7 +1059,7 @@ def get_upload_datasets(neo4j_driver, uuid, property_key=None, query_filter='', 
         record = session.read_transaction(execute_readonly_tx, query)
 
         if record and record[record_field_name]:
-            if len(properties) > 0:
+            if isinstance(properties, list):
                 # Just return the list of property values from each entity node
                 results = record[record_field_name]
             else:
@@ -2198,35 +2216,16 @@ def exclude_include_query_part(properties:List[str], is_include_action = True, t
     target_entity_type : str - the entity type that's the target being filtered by properties
     :return:
     """
+
+    if is_include_action and len(properties) == 1 and properties[0] in ['uuid']:
+        return f"RETURN apoc.coll.toSet(COLLECT(t.{properties[0]})) AS {record_field_name}"
+
     action = ''
     if is_include_action is False:
         action = 'NOT'
 
-    property_defaults = {
-        'Any': ['data_access_level',
-                'group_name',
-                'group_uuid',
-                'sennet_id',
-                'entity_type',
-                'uuid'],
-        'Source': ['source_type'],
-        'Sample': ['sample_category', 'organ'],
-        'Dataset': ['dataset_type', 'contains_human_genetic_sequences', 'status']
-    }
-    defaults = []
-    if target_entity_type in property_defaults:
-        defaults = property_defaults[target_entity_type]
-    if target_entity_type == 'Any':
-        defaults = defaults + property_defaults['Source'] + property_defaults['Sample'] + property_defaults['Dataset']
-    else:
-        defaults = defaults + property_defaults['Any']
-
-    for d in defaults:
-        if is_include_action and not d in properties:
-            properties.append(d)
-        else:
-            if d in properties:
-                properties.remove(d)
+    if len(properties) > 1:
+        schema.schema_manager.get_schema_defaults(properties, is_include_action, target_entity_type)
 
                    # unwind the keys of the results from target/t
     query_part = (f"WITH keys(t) AS k1, t unwind k1 AS k2 "

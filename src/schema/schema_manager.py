@@ -321,6 +321,36 @@ def get_fields_to_exclude(normalized_class=None):
     return excluded_fields
 
 
+def get_schema_defaults(properties, is_include_action = True, target_entity_type = 'Any'):
+    property_defaults = {
+        'Any': ['data_access_level',
+                'group_name',
+                'group_uuid',
+                'sennet_id',
+                'entity_type',
+                'uuid'],
+        'Source': ['source_type'],
+        'Sample': ['sample_category', 'organ'],
+        'Dataset': ['dataset_type', 'contains_human_genetic_sequences', 'status']
+    }
+    defaults = []
+    if target_entity_type in property_defaults:
+        defaults = property_defaults[target_entity_type]
+    if target_entity_type == 'Any':
+        defaults = defaults + property_defaults['Source'] + property_defaults['Sample'] + property_defaults['Dataset']
+    else:
+        defaults = defaults + property_defaults['Any']
+
+    for d in defaults:
+        if is_include_action and not d in properties:
+            properties.append(d)
+        else:
+            if d in properties:
+                properties.remove(d)
+
+
+    return defaults
+
 def group_verify_properties_list(normalized_class='All', properties=[]):
     """ Separates neo4j properties from transient ones. Also filters out any unknown properties.
 
@@ -338,6 +368,11 @@ def group_verify_properties_list(normalized_class='All', properties=[]):
     """
     # Determine the schema section based on class
     global _schema
+
+    defaults = get_schema_defaults([])
+
+    if len(properties) == 1 and properties[0] in defaults:
+        return properties, [], []
 
     neo4j_fields = []
     trigger_fields = []
