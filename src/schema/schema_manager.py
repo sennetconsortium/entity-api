@@ -345,7 +345,7 @@ def get_schema_defaults(properties, is_include_action = True, target_entity_type
         if is_include_action and not d in properties:
             properties.append(d)
         else:
-            if d in properties:
+            if is_include_action is False and d in properties:
                 properties.remove(d)
 
 
