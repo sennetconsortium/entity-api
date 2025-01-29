@@ -1661,10 +1661,10 @@ def get_ancestors(id):
 
             # Validate the target property
             if property_key not in result_filtering_accepted_property_keys:
-                abort_bad_req(f"Only the following property keys are supported in the query string: {COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}")
+                abort_bad_req(_property_key_filtering_notice(result_filtering_accepted_property_keys))
 
             # Only return a list of the filtered property value of each entity
-            property_list = app_neo4j_queries.get_ancestors(neo4j_driver_instance, uuid, data_access_level, properties=[uuid])
+            property_list = app_neo4j_queries.get_ancestors(neo4j_driver_instance, uuid, data_access_level, properties=result_filtering_accepted_property_keys)
 
             # Final result
             final_result = property_list
@@ -1673,7 +1673,7 @@ def get_ancestors(id):
     elif request.is_json and request.json != {}:
         filtering_dict = request.json
         if 'filter_properties' in filtering_dict:
-            properties_action = filtering_dict.get('is_include')
+            properties_action = filtering_dict.get('is_include', True)
             segregated_properties = schema_manager.group_verify_properties_list('All', filtering_dict['filter_properties'])
             property_list = app_neo4j_queries.get_ancestors(neo4j_driver_instance, uuid, data_access_level, properties=segregated_properties[0], is_include_action=properties_action)
             # Final result
@@ -1734,7 +1734,7 @@ Returns
 json
     A list of all the descendants of the target entity
 """
-@app.route('/descendants/<id>', methods=['GET'])
+@app.route('/descendants/<id>', methods=['GET', 'POST'])
 def get_descendants(id):
     final_result = []
 
@@ -1779,16 +1779,24 @@ def get_descendants(id):
 
             # Validate the target property
             if property_key not in result_filtering_accepted_property_keys:
-                abort_bad_req(f"Only the following property keys are supported in the query string: {COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}")
+                abort_bad_req(_property_key_filtering_notice(result_filtering_accepted_property_keys))
 
             # Only return a list of the filtered property value of each entity
             property_list = app_neo4j_queries.get_descendants(neo4j_driver_instance, uuid, data_access_level,
-                                                              property_key, entity_type=entity_dict['entity_type'])
+                                                              properties=result_filtering_accepted_property_keys, entity_type=entity_dict['entity_type'])
 
             # Final result
             final_result = property_list
         else:
             abort_bad_req("The specified query string is not supported. Use '?property=<key>' to filter the result")
+    elif request.is_json and request.json != {}:
+        filtering_dict = request.json
+        if 'filter_properties' in filtering_dict:
+            properties_action = filtering_dict.get('is_include', True)
+            segregated_properties = schema_manager.group_verify_properties_list('All', filtering_dict['filter_properties'])
+            property_list = app_neo4j_queries.get_descendants(neo4j_driver_instance, uuid, data_access_level, properties=segregated_properties[0], is_include_action=properties_action)
+            # Final result
+            final_result = property_list
     # Return all the details if no property filtering
     else:
         descendants_list = app_neo4j_queries.get_descendants(neo4j_driver_instance, uuid, data_access_level,
@@ -1846,7 +1854,7 @@ Returns
 json
     A list of all the parents of the target entity
 """
-@app.route('/parents/<id>', methods=['GET'])
+@app.route('/parents/<id>', methods=['GET', 'POST'])
 def get_parents(id):
     final_result = []
 
@@ -1896,15 +1904,24 @@ def get_parents(id):
 
             # Validate the target property
             if property_key not in result_filtering_accepted_property_keys:
-                abort_bad_req(f"Only the following property keys are supported in the query string: {COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}")
+                abort_bad_req(_property_key_filtering_notice(result_filtering_accepted_property_keys))
 
             # Only return a list of the filtered property value of each entity
-            property_list = app_neo4j_queries.get_parents(neo4j_driver_instance, uuid, property_key)
+            property_list = app_neo4j_queries.get_parents(neo4j_driver_instance, uuid, properties=result_filtering_accepted_property_keys)
 
             # Final result
             final_result = property_list
         else:
             abort_bad_req("The specified query string is not supported. Use '?property=<key>' to filter the result")
+
+    elif request.is_json and request.json != {}:
+        filtering_dict = request.json
+        if 'filter_properties' in filtering_dict:
+            properties_action = filtering_dict.get('is_include', True)
+            segregated_properties = schema_manager.group_verify_properties_list('All', filtering_dict['filter_properties'])
+            property_list = app_neo4j_queries.get_parents(neo4j_driver_instance, uuid, properties=segregated_properties[0], is_include_action=properties_action)
+            # Final result
+            final_result = property_list
     # Return all the details if no property filtering
     else:
         parents_list = app_neo4j_queries.get_parents(neo4j_driver_instance, uuid)
@@ -1947,7 +1964,7 @@ def get_parents(id):
 
 
 """
-Get all chilren of the given entity
+Get all children of the given entity
 Result filtering based on query string
 For example: /children/<id>?property=uuid
 
@@ -1961,7 +1978,7 @@ Returns
 json
     A list of all the children of the target entity
 """
-@app.route('/children/<id>', methods=['GET'])
+@app.route('/children/<id>', methods=['GET', 'POST'])
 def get_children(id):
     final_result = []
 
@@ -1985,15 +2002,23 @@ def get_children(id):
 
             # Validate the target property
             if property_key not in result_filtering_accepted_property_keys:
-                abort_bad_req(f"Only the following property keys are supported in the query string: {COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}")
+                abort_bad_req(_property_key_filtering_notice(result_filtering_accepted_property_keys))
 
             # Only return a list of the filtered property value of each entity
-            property_list = app_neo4j_queries.get_children(neo4j_driver_instance, uuid, property_key)
+            property_list = app_neo4j_queries.get_children(neo4j_driver_instance, uuid, properties=result_filtering_accepted_property_keys)
 
             # Final result
             final_result = property_list
         else:
             abort_bad_req("The specified query string is not supported. Use '?property=<key>' to filter the result")
+    elif request.is_json and request.json != {}:
+        filtering_dict = request.json
+        if 'filter_properties' in filtering_dict:
+            properties_action = filtering_dict.get('is_include', True, True)
+            segregated_properties = schema_manager.group_verify_properties_list('All', filtering_dict['filter_properties'])
+            property_list = app_neo4j_queries.get_children(neo4j_driver_instance, uuid, properties=segregated_properties[0], is_include_action=properties_action)
+            # Final result
+            final_result = property_list
     # Return all the details if no property filtering
     else:
         children_list = app_neo4j_queries.get_children(neo4j_driver_instance, uuid)
@@ -4961,7 +4986,7 @@ def get_datasets_for_upload(id: str):
             properties_to_filter = filtering_dict['filter_properties']
             segregated_properties = schema_manager.group_verify_properties_list(Ontology.ops().entities().DATASET, properties_to_filter)
             neo4j_properties_to_filter = segregated_properties[0]
-            properties_action = filtering_dict.get('is_include')
+            properties_action = filtering_dict.get('is_include', True)
             properties_to_exclude = properties_to_exclude + segregated_properties[1]
 
     token = get_internal_token()
@@ -5017,13 +5042,13 @@ def get_entities_for_collection(id: str):
         filtering_dict = request.json
         if 'filter_properties' in filtering_dict:
             properties_to_filter = filtering_dict['filter_properties']
-            is_include_action= filtering_dict.get('is_include', False)
+            is_include_action= filtering_dict.get('is_include', False) # default to false because endpoint is originally skip filter
 
     # Get the entities associated with the collection
     entities = schema_triggers.get_normalized_collection_entities(
         entity_dict["uuid"],
         token,
-        skip_completion=True,
+        skip_completion=False,
         properties=properties_to_filter,
         is_include_action=is_include_action
     )
@@ -5807,6 +5832,9 @@ def _get_metadata_by_id(entity_id: str = None, metadata_scope: MetadataScopeEnum
         # Response with the dict
         return final_result
 
+
+def _property_key_filtering_notice(result_filtering_accepted_property_keys):
+    return f"Only the following property keys are supported in the query string: {COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}. To use additional, send a POST request with a list of 'properties', specifying whether to include or exclude the properties via is_include: bool option. {{properties:[str], is_include:bool}}"
 
 """
 Check if the user with token is in the HuBMAP-READ group
