@@ -6,6 +6,7 @@ from neo4j.exceptions import TransactionError
 
 from lib.ontology import Ontology
 from schema import schema_neo4j_queries
+from typing import List
 
 logger = logging.getLogger(__name__)
 
@@ -596,7 +597,7 @@ def update_entity(neo4j_driver, entity_type, entity_data_dict, uuid):
         raise TransactionError(msg)
 
 
-def get_ancestors(neo4j_driver, uuid, data_access_level=None, property_key=None):
+def get_ancestors(neo4j_driver, uuid, data_access_level=None, properties: List[str] = None, is_include_action: bool = True):
     """Get all ancestors by uuid.
 
     Parameters
@@ -607,8 +608,10 @@ def get_ancestors(neo4j_driver, uuid, data_access_level=None, property_key=None)
         The uuid of target entity
     data_access_level : Optional[str]
         The data access level of the ancestor entities (public or consortium). None returns all ancestors.
-    property_key : str
-        A target property key for result filtering
+    properties : List[str]
+        A list of property keys to filter in or out from the normalized results, default is []
+    is_include_action : bool
+        Whether to include or exclude the listed properties
 
     Returns
     -------
@@ -621,13 +624,10 @@ def get_ancestors(neo4j_driver, uuid, data_access_level=None, property_key=None)
     if data_access_level:
         predicate = f"AND ancestor.data_access_level = '{data_access_level}' "
 
-    if property_key:
-        query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(ancestor:Entity) "
-                 # Filter out the Lab entities
-                 f"WHERE e.uuid='{uuid}' AND ancestor.entity_type <> 'Lab' {predicate}"
-                 # COLLECT() returns a list
-                 # apoc.coll.toSet() reruns a set containing unique nodes
-                 f"RETURN apoc.coll.toSet(COLLECT(ancestor.{property_key})) AS {record_field_name}")
+    if isinstance(properties, list):
+        query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(t:Entity) "
+                 f"WHERE e.uuid = '{uuid}' AND t.entity_type <> 'Lab' {predicate} "
+                 f"{schema_neo4j_queries.exclude_include_query_part(properties, is_include_action)}")
     else:
         query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(ancestor:Entity) "
                  # Filter out the Lab entities
@@ -643,7 +643,7 @@ def get_ancestors(neo4j_driver, uuid, data_access_level=None, property_key=None)
         record = session.read_transaction(_execute_readonly_tx, query)
 
         if record and record[record_field_name]:
-            if property_key:
+            if isinstance(properties, list):
                 # Just return the list of property values from each entity node
                 results = record[record_field_name]
             else:
@@ -658,7 +658,7 @@ def get_ancestors(neo4j_driver, uuid, data_access_level=None, property_key=None)
     return results
 
 
-def get_descendants(neo4j_driver, uuid, data_access_level=None, property_key=None, entity_type=None):
+def get_descendants(neo4j_driver, uuid, data_access_level=None, entity_type=None, properties: List[str] = None, is_include_action: bool = True):
     """ Get all descendants by uuid
 
     Parameters
@@ -669,13 +669,17 @@ def get_descendants(neo4j_driver, uuid, data_access_level=None, property_key=Non
         The uuid of target entity
     data_access_level : Optional[str]
         The data access level of the descendant entities (public or consortium). None returns all descendants.
-    property_key : str
-        A target property key for result filtering
+    entity_type : str
+        A target entity type for result filtering
+    properties : List[str]
+        A list of property keys to filter in or out from the normalized results, default is []
+    is_include_action : bool
+        Whether to include or exclude the listed properties
 
     Returns
     -------
     dict
-        A list of unique desendant dictionaries returned from the Cypher query
+        A list of unique descendant dictionaries returned from the Cypher query
     """
     results = []
 
@@ -683,13 +687,11 @@ def get_descendants(neo4j_driver, uuid, data_access_level=None, property_key=Non
     if data_access_level:
         predicate = f"AND descendant.data_access_level = '{data_access_level}' "
 
-    if property_key:
-        query = (f"MATCH (e:Entity)<-[:USED|WAS_GENERATED_BY*]-(descendant:Entity) "
+    if isinstance(properties, list):
+        query = (f"MATCH (e:Entity)<-[:USED|WAS_GENERATED_BY*]-(t:Entity) "
                  # The target entity can't be a Lab
                  f"WHERE e.uuid=$uuid AND e.entity_type <> 'Lab' {predicate}"
-                 # COLLECT() returns a list
-                 # apoc.coll.toSet() reruns a set containing unique nodes
-                 f"RETURN apoc.coll.toSet(COLLECT(descendant.{property_key})) AS {record_field_name}")
+                 f"{schema_neo4j_queries.exclude_include_query_part(properties, is_include_action)}")
     else:
         query = (f"MATCH (e:Entity)<-[:USED|WAS_GENERATED_BY*]-(descendant:Entity) "
                  # The target entity can't be a Lab
@@ -705,7 +707,7 @@ def get_descendants(neo4j_driver, uuid, data_access_level=None, property_key=Non
         record = session.read_transaction(_execute_readonly_tx, query, uuid=uuid)
 
         if record and record[record_field_name]:
-            if property_key:
+            if isinstance(properties, list):
                 # Just return the list of property values from each entity node
                 results = record[record_field_name]
             else:
@@ -913,35 +915,35 @@ def get_source_samples(neo4j_driver, uuid, property_keys=None):
     return []
 
 
-"""
-Get all parents by uuid
 
-Parameters
-----------
-neo4j_driver : neo4j.Driver object
-    The neo4j database connection pool
-uuid : str
-    The uuid of target entity
-property_key : str
-    A target property key for result filtering
+def get_parents(neo4j_driver, uuid, properties: List[str] = None, is_include_action: bool = True):
+    """
+    Get all parents by uuid
 
-Returns
--------
-dict
-    A list of unique parent dictionaries returned from the Cypher query
-"""
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    uuid : str
+        The uuid of target entity
+    properties : List[str]
+        A list of property keys to filter in or out from the normalized results, default is []
+    is_include_action : bool
+        Whether to include or exclude the listed properties
 
+    Returns
+    -------
+    dict
+        A list of unique parent dictionaries returned from the Cypher query
+    """
 
-def get_parents(neo4j_driver, uuid, property_key=None):
     results = []
 
-    if property_key:
-        query = (f"MATCH (e:Entity)-[:WAS_GENERATED_BY]->(:Activity)-[:USED]->(parent:Entity) "
+    if isinstance(properties, list):
+        query = (f"MATCH (e:Entity)-[:WAS_GENERATED_BY]->(:Activity)-[:USED]->(t:Entity) "
                  # Filter out the Lab entities
-                 f"WHERE e.uuid='{uuid}' AND parent.entity_type <> 'Lab' "
-                 # COLLECT() returns a list
-                 # apoc.coll.toSet() reruns a set containing unique nodes
-                 f"RETURN apoc.coll.toSet(COLLECT(parent.{property_key})) AS {record_field_name}")
+                 f"WHERE e.uuid='{uuid}' AND t.entity_type <> 'Lab' "
+                 f"{schema_neo4j_queries.exclude_include_query_part(properties, is_include_action)}")
     else:
         query = (f"MATCH (e:Entity)-[:WAS_GENERATED_BY]->(:Activity)-[:USED]->(parent:Entity) "
                  # Filter out the Lab entities
@@ -957,7 +959,7 @@ def get_parents(neo4j_driver, uuid, property_key=None):
         record = session.read_transaction(_execute_readonly_tx, query)
 
         if record and record[record_field_name]:
-            if property_key:
+            if isinstance(properties, list):
                 # Just return the list of property values from each entity node
                 results = record[record_field_name]
             else:
@@ -967,35 +969,34 @@ def get_parents(neo4j_driver, uuid, property_key=None):
     return results
 
 
-"""
-Get all children by uuid
 
-Parameters
-----------
-neo4j_driver : neo4j.Driver object
-    The neo4j database connection pool
-uuid : str
-    The uuid of target entity
-property_key : str
-    A target property key for result filtering
+def get_children(neo4j_driver, uuid, properties: List[str] = None, is_include_action: bool = True):
+    """
+    Get all children by uuid
 
-Returns
--------
-dict
-    A list of unique child dictionaries returned from the Cypher query
-"""
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    uuid : str
+        The uuid of target entity
+    properties : List[str]
+        A list of property keys to filter in or out from the normalized results, default is []
+    is_include_action : bool
+        Whether to include or exclude the listed properties
 
-
-def get_children(neo4j_driver, uuid, property_key=None):
+    Returns
+    -------
+    dict
+        A list of unique child dictionaries returned from the Cypher query
+    """
     results = []
 
-    if property_key:
-        query = (f"MATCH (e:Entity)<-[:USED]-(:Activity)<-[:WAS_GENERATED_BY]-(child:Entity) "
+    if isinstance(properties, list):
+        query = (f"MATCH (e:Entity)<-[:USED]-(:Activity)<-[:WAS_GENERATED_BY]-(t:Entity) "
                  # The target entity can't be a Lab
                  f"WHERE e.uuid='{uuid}' AND e.entity_type <> 'Lab' "
-                 # COLLECT() returns a list
-                 # apoc.coll.toSet() reruns a set containing unique nodes
-                 f"RETURN apoc.coll.toSet(COLLECT(child.{property_key})) AS {record_field_name}")
+                 f"{schema_neo4j_queries.exclude_include_query_part(properties, is_include_action)}")
     else:
         query = (f"MATCH (e:Entity)<-[:USED]-(:Activity)<-[:WAS_GENERATED_BY]-(child:Entity) "
                  # The target entity can't be a Lab
@@ -1011,7 +1012,7 @@ def get_children(neo4j_driver, uuid, property_key=None):
         record = session.read_transaction(_execute_readonly_tx, query)
 
         if record and record[record_field_name]:
-            if property_key:
+            if isinstance(properties, list):
                 # Just return the list of property values from each entity node
                 results = record[record_field_name]
             else:

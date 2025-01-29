@@ -643,11 +643,11 @@ def get_collection_entities(property_key: str, normalized_type: str, user_token:
         "title",
         "upload",
     ]
-    collection_entities = get_normalized_collection_entities(existing_data_dict["uuid"], user_token, properties_to_skip)
+    collection_entities = get_normalized_collection_entities(existing_data_dict["uuid"], user_token, properties=properties_to_skip)
     return property_key, collection_entities
 
 
-def get_normalized_collection_entities(uuid: str, token: str, properties_to_exclude: List[str] = [], skip_completion: bool = False):
+def get_normalized_collection_entities(uuid: str, token: str, skip_completion: bool = False, properties: List[str] = [], is_include_action: bool = True):
     """Query the Neo4j database to get the associated entities for a given Collection UUID and normalize the results.
 
     Parameters
@@ -656,10 +656,12 @@ def get_normalized_collection_entities(uuid: str, token: str, properties_to_excl
         The UUID of the Collection entity
     token: str
         The user's globus nexus token or internal token
-    properties_to_exclude : List[str]
-        A list of property keys to exclude from the normalized results, default is []
     skip_completion : bool
         Skip the call to get_complete_entities_list, default is False
+    properties : List[str]
+        A list of property keys to filter in or out from the normalized results, default is []
+    is_include_action : bool
+        Whether to include or exclude the listed properties
 
     Returns
     -------
@@ -668,17 +670,19 @@ def get_normalized_collection_entities(uuid: str, token: str, properties_to_excl
         list: A list of associated entity dicts with all the normalized information
     """
     db = schema_manager.get_neo4j_driver_instance()
-    entities_list = schema_neo4j_queries.get_collection_entities(db, uuid)
+    segregated_properties = schema_manager.group_verify_properties_list('All', properties)
+    entities_list = schema_neo4j_queries.get_collection_entities(db, uuid, properties=segregated_properties[0] + segregated_properties[2], is_include_action=is_include_action)
 
     if skip_completion:
         complete_entities_list = entities_list
     else:
         complete_entities_list = schema_manager.get_complete_entities_list(token=token,
                                                                            entities_list=entities_list,
-                                                                           properties_to_skip=properties_to_exclude)
+                                                                           properties_to_skip=properties,
+                                                                           is_include_action=is_include_action)
 
     return schema_manager.normalize_entities_list_for_response(entities_list=complete_entities_list,
-                                                               properties_to_exclude=properties_to_exclude)
+                                                               properties_to_exclude=[] if is_include_action else properties)
 
 
 def get_publication_associated_collection(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
@@ -1110,7 +1114,7 @@ def get_sample_section_ancestor_ids(property_key, normalized_type, user_token, e
         if equals(Ontology.ops().specimen_categories().SECTION, existing_data_dict['sample_category']):
             driver = schema_manager.get_neo4j_driver_instance()
             uuid = existing_data_dict['uuid']
-            ancestor_ids = app_neo4j_queries.get_ancestors(driver, uuid, 'uuid')
+            ancestor_ids = app_neo4j_queries.get_ancestors(driver, uuid, properties=['uuid'], is_include_action=True)
             if len(ancestor_ids) > 0:
                 return property_key, ancestor_ids
 
@@ -2956,7 +2960,7 @@ def get_upload_datasets(property_key: str, normalized_type: str, user_token: str
     return property_key, upload_datasets
 
 
-def get_normalized_upload_datasets(uuid: str, token, properties_to_exclude: List[str] = []):
+def get_normalized_upload_datasets(uuid: str, token, properties_to_exclude: List[str] = [], properties = [], is_include_action = False):
     """Query the Neo4j database to get the associated datasets for a given Upload UUID and normalize the results.
 
     Parameters
@@ -2973,12 +2977,12 @@ def get_normalized_upload_datasets(uuid: str, token, properties_to_exclude: List
     list: A list of associated dataset dicts with all the normalized information
     """
     db = schema_manager.get_neo4j_driver_instance()
-    datasets_list = schema_neo4j_queries.get_upload_datasets(db, uuid)
+    datasets_list = schema_neo4j_queries.get_upload_datasets(db, uuid, properties=properties, is_include_action=is_include_action)
 
 
     complete_list = []
     for dataset in datasets_list:
-        complete_dict = schema_manager.get_complete_entity_result(token, dataset, properties_to_skip=properties_to_exclude)
+        complete_dict = schema_manager.get_complete_entity_result(token, dataset, properties_to_skip=properties_to_exclude, is_include_action=is_include_action)
         complete_list.append(complete_dict)
 
     # Get rid of the entity node properties that are not defined in the yaml schema
@@ -3811,8 +3815,8 @@ def get_has_all_published_datasets(property_key, normalized_type, user_token, ex
     db = schema_manager.get_neo4j_driver_instance()
 
     published_filter = 'AND e.status = "Published"'
-    datasets_primary_list = schema_neo4j_queries.get_upload_datasets(db, existing_data_dict['uuid'], 'uuid')
-    datasets_primary_list_published = schema_neo4j_queries.get_upload_datasets(db, existing_data_dict['uuid'], 'uuid',
+    datasets_primary_list = schema_neo4j_queries.get_upload_datasets(db, existing_data_dict['uuid'], properties=['uuid'])
+    datasets_primary_list_published = schema_neo4j_queries.get_upload_datasets(db, existing_data_dict['uuid'], properties=['uuid'],
                                                                        query_filter=f'{published_filter}')
 
     return property_key, str(len(datasets_primary_list) == len(datasets_primary_list_published)) if len(datasets_primary_list) > 0 else "False"

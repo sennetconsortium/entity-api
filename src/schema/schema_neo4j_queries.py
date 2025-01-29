@@ -2,6 +2,9 @@ import ast
 
 from neo4j.exceptions import TransactionError
 import logging
+from typing import List, Optional
+
+import schema.schema_manager
 
 logger = logging.getLogger(__name__)
 
@@ -798,12 +801,13 @@ list
 """
 
 
-def get_collection_entities(neo4j_driver, uuid):
+def get_collection_entities(neo4j_driver, uuid, properties: List[str] = None, is_include_action: bool = True):
     results = []
 
-    query = (f"MATCH (e:Entity)-[:IN_COLLECTION]->(c:Collection|Epicollection) "
+    query = (f"MATCH (t:Entity)-[:IN_COLLECTION]->(c:Collection|Epicollection) "
              f"WHERE c.uuid = '{uuid}' "
-             f"RETURN apoc.coll.toSet(COLLECT(e)) AS {record_field_name}")
+             f"{exclude_include_query_part(properties, is_include_action)}")
+             #f"RETURN apoc.coll.toSet(COLLECT(e)) AS {record_field_name}")
 
     logger.info("======get_collection_entities() query======")
     logger.info(query)
@@ -812,8 +816,11 @@ def get_collection_entities(neo4j_driver, uuid):
         record = session.read_transaction(_execute_readonly_tx, query)
 
         if record and record[record_field_name]:
-            # Convert the list of nodes to a list of dicts
-            results = _nodes_to_dicts(record[record_field_name])
+            if isinstance(properties, list):
+                results = record[record_field_name]
+            else:
+                # Convert the list of nodes to a list of dicts
+                results = _nodes_to_dicts(record[record_field_name])
 
     return results
 
@@ -1017,15 +1024,29 @@ list
 """
 
 
-def get_upload_datasets(neo4j_driver, uuid, property_key=None, query_filter=''):
+def get_upload_datasets(neo4j_driver, uuid, query_filter='', properties: List[str] = None, is_include_action: bool = True):
+    """
+
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    uuid : str
+        The uuid of target entity
+    query_filter: str
+        An additional filter against the cypher match
+    properties : List[str]
+        A list of property keys to filter in or out from the normalized results, default is []
+    is_include_action : bool
+        Whether to include or exclude the listed properties
+    :return:
+    """
     results = []
 
-    if property_key:
-        query = (f"MATCH (e:Dataset)-[:IN_UPLOAD]->(s:Upload) "
+    if len(properties) > 0:
+        query = (f"MATCH (t:Dataset)-[:IN_UPLOAD]->(s:Upload) "
                  f"WHERE s.uuid = '{uuid}' {query_filter} "
-                 # COLLECT() returns a list
-                 # apoc.coll.toSet() reruns a set containing unique nodes
-                 f"RETURN apoc.coll.toSet(COLLECT(e.{property_key})) AS {record_field_name}")
+                 f"{exclude_include_query_part(properties, is_include_action, target_entity_type = 'Dataset')}")
     else:
         query = (f"MATCH (e:Dataset)-[:IN_UPLOAD]->(s:Upload) "
                  f"WHERE s.uuid = '{uuid}' {query_filter} "
@@ -1038,7 +1059,7 @@ def get_upload_datasets(neo4j_driver, uuid, property_key=None, query_filter=''):
         record = session.read_transaction(execute_readonly_tx, query)
 
         if record and record[record_field_name]:
-            if property_key:
+            if isinstance(properties, list):
                 # Just return the list of property values from each entity node
                 results = record[record_field_name]
             else:
@@ -2183,3 +2204,44 @@ def get_sources_associated_entity(neo4j_driver, uuid, filter_out = None):
                 result.pop('metadata', None)
 
     return results
+
+
+def exclude_include_query_part(properties:List[str], is_include_action = True, target_entity_type = 'Any'):
+    """
+    Builds a cypher query part that can be used to include or exclude certain properties.
+    The preceding MATCH query part should have a label 't'. E.g. MATCH (t:Entity)-[*]->(s:Source)
+
+    properties : list - the properties to be filtered
+    is_include_action : bool - whether to include or exclude the listed properties
+    target_entity_type : str - the entity type that's the target being filtered by properties
+    :return:
+    """
+
+    if is_include_action and len(properties) == 1 and properties[0] in ['uuid']:
+        return f"RETURN apoc.coll.toSet(COLLECT(t.{properties[0]})) AS {record_field_name}"
+
+    action = ''
+    if is_include_action is False:
+        action = 'NOT'
+
+    if len(properties) > 1:
+        schema.schema_manager.get_schema_defaults(properties, is_include_action, target_entity_type)
+
+                   # unwind the keys of the results from target/t
+    query_part = (f"WITH keys(t) AS k1, t unwind k1 AS k2 "
+                  # filter by a list[] of properties
+                  f"WITH t, k2 WHERE {action} k2 IN {properties} "
+                  # everything is unwinded as separate rows, so let's build it back up by uuid to form: {prop: val, uuid:uuidVal}
+                  f"WITH t, apoc.map.fromPairs([[k2, t[k2]], ['uuid', t.uuid]]) AS dict "
+                  # collect all these individual dicts as a list[], and then group them by uuids, 
+                  # which forms a dict with uuid as keys and list of dicts as values: 
+                  # {uuidVal: [{prop: val, uuid:uuidVal}, {prop2: val2, uuid:uuidVal}, ... {propN: valN, uuid:uuidVal}], uuidVal2: [...]}
+                  f"WITH collect(dict) as list WITH apoc.map.groupByMulti(list, 'uuid') AS groups "
+                  # use the keys of groups dict, and unwind to get uuids as individual rows
+                  f"unwind keys(groups) AS uuids "
+                  # now merge these individual dicts under their respective uuid
+                  f"WITH apoc.map.mergeList(groups[uuids]) AS rows "
+                  # collect each row to form a list[] and return
+                  f"RETURN collect(rows) AS {record_field_name}")
+
+    return query_part
