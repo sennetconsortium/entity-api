@@ -1672,6 +1672,8 @@ def get_ancestors(id):
             abort_bad_req("The specified query string is not supported. Use '?property=<key>' to filter the result")
     elif request.is_json and request.json != {}:
         filtering_dict = request.json
+        if len(filtering_dict.keys()) > 0 and 'filter_properties' not in filtering_dict:
+            abort_bad_req("Missing required key: filter_properties")
         if 'filter_properties' in filtering_dict:
             properties_action = filtering_dict.get('is_include', True)
             segregated_properties = schema_manager.group_verify_properties_list('All', filtering_dict['filter_properties'])
@@ -1791,6 +1793,8 @@ def get_descendants(id):
             abort_bad_req("The specified query string is not supported. Use '?property=<key>' to filter the result")
     elif request.is_json and request.json != {}:
         filtering_dict = request.json
+        if len(filtering_dict.keys()) > 0 and 'filter_properties' not in filtering_dict:
+            abort_bad_req("Missing required key: filter_properties")
         if 'filter_properties' in filtering_dict:
             properties_action = filtering_dict.get('is_include', True)
             segregated_properties = schema_manager.group_verify_properties_list('All', filtering_dict['filter_properties'])
@@ -1916,6 +1920,8 @@ def get_parents(id):
 
     elif request.is_json and request.json != {}:
         filtering_dict = request.json
+        if len(filtering_dict.keys()) > 0 and 'filter_properties' not in filtering_dict:
+            abort_bad_req("Missing required key: filter_properties")
         if 'filter_properties' in filtering_dict:
             properties_action = filtering_dict.get('is_include', True)
             segregated_properties = schema_manager.group_verify_properties_list('All', filtering_dict['filter_properties'])
@@ -2013,6 +2019,8 @@ def get_children(id):
             abort_bad_req("The specified query string is not supported. Use '?property=<key>' to filter the result")
     elif request.is_json and request.json != {}:
         filtering_dict = request.json
+        if len(filtering_dict.keys()) > 0 and 'filter_properties' not in filtering_dict:
+            abort_bad_req("Missing required key: filter_properties")
         if 'filter_properties' in filtering_dict:
             properties_action = filtering_dict.get('is_include', True, True)
             segregated_properties = schema_manager.group_verify_properties_list('All', filtering_dict['filter_properties'])
@@ -4986,6 +4994,8 @@ def get_datasets_for_upload(id: str):
     neo4j_properties_to_filter = []
     if request.is_json and request.json != {}:
         filtering_dict = request.json
+        if len(filtering_dict.keys()) > 0 and 'filter_properties' not in filtering_dict:
+            abort_bad_req("Missing required key: filter_properties")
         if 'filter_properties' in filtering_dict:
             properties_to_filter = filtering_dict['filter_properties']
             segregated_properties = schema_manager.group_verify_properties_list(Ontology.ops().entities().DATASET, properties_to_filter)
@@ -5044,6 +5054,8 @@ def get_entities_for_collection(id: str):
     is_include_action=False
     if request.is_json and request.json != {}:
         filtering_dict = request.json
+        if len(filtering_dict.keys()) > 0 and 'filter_properties' not in filtering_dict:
+            abort_bad_req("Missing required key: filter_properties")
         if 'filter_properties' in filtering_dict:
             properties_to_filter = filtering_dict['filter_properties']
             is_include_action= filtering_dict.get('is_include', False) # default to false because endpoint is originally skip filter
