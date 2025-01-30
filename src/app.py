@@ -2029,7 +2029,7 @@ def get_children(id):
             if len(filtering_dict.keys()) > 0 and 'filter_properties' not in filtering_dict:
                 abort_bad_req("Missing required key: filter_properties")
             if 'filter_properties' in filtering_dict:
-                properties_action = filtering_dict.get('is_include', True, True)
+                properties_action = filtering_dict.get('is_include', True)
                 segregated_properties = schema_manager.group_verify_properties_list('All', filtering_dict['filter_properties'])
                 property_list = app_neo4j_queries.get_children(neo4j_driver_instance, uuid, properties=segregated_properties[0], is_include_action=properties_action)
                 complete_entities_list = schema_manager.get_complete_entities_list(user_token, property_list, segregated_properties[1], is_include_action=properties_action)
