@@ -4996,6 +4996,8 @@ def get_datasets_for_upload(id: str):
 
     properties_action = None
     neo4j_properties_to_filter = []
+
+    should_normalize = True
     if request.method == 'POST':
         if request.is_json and request.json != {}:
             filtering_dict = request.json
@@ -5006,10 +5008,12 @@ def get_datasets_for_upload(id: str):
                 segregated_properties = schema_manager.group_verify_properties_list(Ontology.ops().entities().DATASET, properties_to_filter)
                 neo4j_properties_to_filter = segregated_properties[0]
                 properties_action = filtering_dict.get('is_include', True)
-                properties_to_exclude = properties_to_exclude + segregated_properties[1]
+                properties_to_exclude = properties_to_exclude + segregated_properties[1] if properties_action is False else segregated_properties[1]
+                should_normalize = False
 
     token = get_internal_token()
-    datasets = schema_triggers.get_normalized_upload_datasets(entity_dict["uuid"], token, properties_to_exclude, properties=neo4j_properties_to_filter, is_include_action=properties_action)
+    datasets = schema_triggers.get_normalized_upload_datasets(entity_dict["uuid"], token, properties_to_exclude, properties=neo4j_properties_to_filter,
+                                                              is_include_action=properties_action, should_normalize=should_normalize)
     return jsonify(datasets)
 
 

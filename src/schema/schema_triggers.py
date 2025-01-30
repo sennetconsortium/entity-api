@@ -2969,7 +2969,7 @@ def get_upload_datasets(property_key: str, normalized_type: str, user_token: str
     return property_key, upload_datasets
 
 
-def get_normalized_upload_datasets(uuid: str, token, properties_to_exclude: List[str] = [], properties = [], is_include_action = False):
+def get_normalized_upload_datasets(uuid: str, token, properties_to_exclude: List[str] = [], properties = [], is_include_action = False, should_normalize = True):
     """Query the Neo4j database to get the associated datasets for a given Upload UUID and normalize the results.
 
     Parameters
@@ -2989,15 +2989,15 @@ def get_normalized_upload_datasets(uuid: str, token, properties_to_exclude: List
     datasets_list = schema_neo4j_queries.get_upload_datasets(db, uuid, properties=properties, is_include_action=is_include_action)
 
 
-    complete_list = []
-    for dataset in datasets_list:
-        complete_dict = schema_manager.get_complete_entity_result(token, dataset, properties_to_skip=properties_to_exclude, is_include_action=is_include_action)
-        complete_list.append(complete_dict)
+    complete_list = schema_manager.get_complete_entities_list(token, datasets_list, properties_to_exclude, is_include_action=is_include_action)
 
     # Get rid of the entity node properties that are not defined in the yaml schema
     # as well as the ones defined as `exposed: false` in the yaml schema
-    return schema_manager.normalize_entities_list_for_response(complete_list,
-                                                               properties_to_exclude=properties_to_exclude)
+    if should_normalize:
+        return schema_manager.normalize_entities_list_for_response(complete_list,
+                                                                   properties_to_exclude=properties_to_exclude)
+    else:
+        return complete_list
 
 
 ####################################################################################################
