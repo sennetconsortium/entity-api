@@ -1679,8 +1679,9 @@ def get_ancestors(id):
                 properties_action = filtering_dict.get('is_include', True)
                 segregated_properties = schema_manager.group_verify_properties_list('All', filtering_dict['filter_properties'])
                 property_list = app_neo4j_queries.get_ancestors(neo4j_driver_instance, uuid, data_access_level, properties=segregated_properties[0], is_include_action=properties_action)
+                complete_entities_list = schema_manager.get_complete_entities_list(token, property_list, segregated_properties[1], is_include_action=properties_action)
                 # Final result
-                final_result = property_list
+                final_result = complete_entities_list
 
     # Return all the details if no property filtering
     else:
@@ -1801,8 +1802,9 @@ def get_descendants(id):
                 properties_action = filtering_dict.get('is_include', True)
                 segregated_properties = schema_manager.group_verify_properties_list('All', filtering_dict['filter_properties'])
                 property_list = app_neo4j_queries.get_descendants(neo4j_driver_instance, uuid, data_access_level, properties=segregated_properties[0], is_include_action=properties_action)
+                complete_entities_list = schema_manager.get_complete_entities_list(token, property_list, segregated_properties[1], is_include_action=properties_action)
                 # Final result
-                final_result = property_list
+                final_result = complete_entities_list
     # Return all the details if no property filtering
     else:
         descendants_list = app_neo4j_queries.get_descendants(neo4j_driver_instance, uuid, data_access_level,
@@ -1929,8 +1931,9 @@ def get_parents(id):
                 properties_action = filtering_dict.get('is_include', True)
                 segregated_properties = schema_manager.group_verify_properties_list('All', filtering_dict['filter_properties'])
                 property_list = app_neo4j_queries.get_parents(neo4j_driver_instance, uuid, properties=segregated_properties[0], is_include_action=properties_action)
+                complete_entities_list = schema_manager.get_complete_entities_list(token, property_list, segregated_properties[1], is_include_action=properties_action)
                 # Final result
-                final_result = property_list
+                final_result = complete_entities_list
     # Return all the details if no property filtering
     else:
         parents_list = app_neo4j_queries.get_parents(neo4j_driver_instance, uuid)
@@ -2026,11 +2029,12 @@ def get_children(id):
             if len(filtering_dict.keys()) > 0 and 'filter_properties' not in filtering_dict:
                 abort_bad_req("Missing required key: filter_properties")
             if 'filter_properties' in filtering_dict:
-                properties_action = filtering_dict.get('is_include', True, True)
+                properties_action = filtering_dict.get('is_include', True)
                 segregated_properties = schema_manager.group_verify_properties_list('All', filtering_dict['filter_properties'])
                 property_list = app_neo4j_queries.get_children(neo4j_driver_instance, uuid, properties=segregated_properties[0], is_include_action=properties_action)
+                complete_entities_list = schema_manager.get_complete_entities_list(user_token, property_list, segregated_properties[1], is_include_action=properties_action)
                 # Final result
-                final_result = property_list
+                final_result = complete_entities_list
     # Return all the details if no property filtering
     else:
         children_list = app_neo4j_queries.get_children(neo4j_driver_instance, uuid)
@@ -4996,6 +5000,8 @@ def get_datasets_for_upload(id: str):
 
     properties_action = None
     neo4j_properties_to_filter = []
+
+    should_normalize = True
     if request.method == 'POST':
         if request.is_json and request.json != {}:
             filtering_dict = request.json
@@ -5006,10 +5012,12 @@ def get_datasets_for_upload(id: str):
                 segregated_properties = schema_manager.group_verify_properties_list(Ontology.ops().entities().DATASET, properties_to_filter)
                 neo4j_properties_to_filter = segregated_properties[0]
                 properties_action = filtering_dict.get('is_include', True)
-                properties_to_exclude = properties_to_exclude + segregated_properties[1]
+                properties_to_exclude = properties_to_exclude + segregated_properties[1] if properties_action is False else segregated_properties[1]
+                should_normalize = False
 
     token = get_internal_token()
-    datasets = schema_triggers.get_normalized_upload_datasets(entity_dict["uuid"], token, properties_to_exclude, properties=neo4j_properties_to_filter, is_include_action=properties_action)
+    datasets = schema_triggers.get_normalized_upload_datasets(entity_dict["uuid"], token, properties_to_exclude, properties=neo4j_properties_to_filter,
+                                                              is_include_action=properties_action, should_normalize=should_normalize)
     return jsonify(datasets)
 
 
