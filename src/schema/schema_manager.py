@@ -364,7 +364,7 @@ def group_verify_properties_list(normalized_class='All', properties=[]):
     Returns
     -------
     tuple
-        A partitioned tuple with neo4j and trigger properties respectively
+        A partitioned tuple with neo4j, trigger and dependency properties respectively
     """
     # Determine the schema section based on class
     global _schema

@@ -2980,6 +2980,8 @@ def get_normalized_upload_datasets(uuid: str, token, properties_to_exclude: List
         Either the user's globus nexus token or the internal token
     properties_to_exclude : List[str]
         A list of property keys to exclude from the normalized results
+    should_normalize : bool
+        Whether to get rid of the entity node properties that are not defined in the yaml schema
 
     Returns
     -------
