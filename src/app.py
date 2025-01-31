@@ -53,7 +53,6 @@ from atlas_consortia_commons.string import equals
 from atlas_consortia_commons.ubkg.ubkg_sdk import init_ontology
 from atlas_consortia_commons.decorator import require_data_admin, require_json, require_valid_token
 from lib.ontology import Ontology
-
 # Root logger configuration
 global logger
 

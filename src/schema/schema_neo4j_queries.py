@@ -2213,7 +2213,7 @@ def exclude_include_query_part(properties:List[str], is_include_action = True, t
 
     Parameters
     ----------
-    properties : list
+    properties : List[str]
         the properties to be filtered
     is_include_action : bool
         whether to include or exclude the listed properties
@@ -2233,7 +2233,7 @@ def exclude_include_query_part(properties:List[str], is_include_action = True, t
     if is_include_action is False:
         action = 'NOT'
 
-    if len(properties) > 1:
+    if not len(properties) == 1:
         schema.schema_manager.get_schema_defaults(properties, is_include_action, target_entity_type)
 
                    # unwind the keys of the results from target/t
