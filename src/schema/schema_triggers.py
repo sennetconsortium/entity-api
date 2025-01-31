@@ -670,7 +670,7 @@ def get_normalized_collection_entities(uuid: str, token: str, skip_completion: b
         list: A list of associated entity dicts with all the normalized information
     """
     db = schema_manager.get_neo4j_driver_instance()
-    segregated_properties = schema_manager.group_verify_properties_list('All', properties)
+    segregated_properties = schema_manager.group_verify_properties_list(properties=properties)
     entities_list = schema_neo4j_queries.get_collection_entities(db, uuid, properties=segregated_properties[0] + segregated_properties[2], is_include_action=is_include_action)
 
     if skip_completion:

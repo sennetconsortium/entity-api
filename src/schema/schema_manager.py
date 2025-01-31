@@ -369,7 +369,8 @@ def get_schema_defaults(properties, is_include_action = True, target_entity_type
     return defaults
 
 def group_verify_properties_list(normalized_class='All', properties=[]):
-    """ Separates neo4j properties from transient ones. Also filters out any unknown properties.
+    """ Separates neo4j properties from transient ones. Will also gather specific property dependencies via a
+    `dependency_properties` list setting in the schema yaml. Also filters out any unknown properties.
 
     Parameters
     ----------
@@ -407,9 +408,7 @@ def group_verify_properties_list(normalized_class='All', properties=[]):
 
     for p in properties:
         if p in schema_section:
-            if 'transient' in schema_section[p] and schema_section[p]['transient'] is True:
-                trigger_fields.append(p)
-            elif 'on_read_trigger' in schema_section[p]:
+            if 'on_read_trigger' in schema_section[p]:
                 trigger_fields.append(p)
             else:
                 neo4j_fields.append(p)
