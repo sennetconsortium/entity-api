@@ -305,7 +305,7 @@ def get_fields_to_exclude(normalized_class=None):
     Parameters
     ----------
     normalized_class : Optional[str]
-        the normalized entity type of the entity who's fields are to be removed
+        the normalized entity type of the entity whose fields are to be removed
 
     Returns
     -------
@@ -322,6 +322,23 @@ def get_fields_to_exclude(normalized_class=None):
 
 
 def get_schema_defaults(properties, is_include_action = True, target_entity_type = 'Any'):
+    """
+    Adds entity defaults to list
+
+    Parameters
+    ----------
+    properties : list
+        the properties to be filtered
+    is_include_action : bool
+        whether to include or exclude the listed properties
+    target_entity_type : str
+        the entity type that's the target being filtered
+
+    Returns
+    -------
+    List[str]
+        list of defaults based on entity type
+    """
     property_defaults = {
         'Any': ['data_access_level',
                 'group_name',
@@ -352,7 +369,8 @@ def get_schema_defaults(properties, is_include_action = True, target_entity_type
     return defaults
 
 def group_verify_properties_list(normalized_class='All', properties=[]):
-    """ Separates neo4j properties from transient ones. Also filters out any unknown properties.
+    """ Separates neo4j properties from transient ones. Will also gather specific property dependencies via a
+    `dependency_properties` list setting in the schema yaml. Also filters out any unknown properties.
 
     Parameters
     ----------
@@ -364,7 +382,7 @@ def group_verify_properties_list(normalized_class='All', properties=[]):
     Returns
     -------
     tuple
-        A partitioned tuple with neo4j and trigger properties respectively
+        A partitioned tuple with neo4j, trigger and dependency properties respectively
     """
     # Determine the schema section based on class
     global _schema
@@ -381,21 +399,19 @@ def group_verify_properties_list(normalized_class='All', properties=[]):
     if normalized_class == 'All':
         for entity in _schema['ENTITIES']:
             entity_properties = _schema['ENTITIES'][entity].get('properties', {})
-            for property in properties:
-                if property in entity_properties:
-                    dependencies.update(entity_properties[property].get('dependency_properties', []))
+            for p in properties:
+                if p in entity_properties:
+                    dependencies.update(entity_properties[p].get('dependency_properties', []))
             schema_section.update(entity_properties)
     else:
         schema_section = _schema['ENTITIES'][normalized_class].get('properties', {})
 
-    for property in properties:
-        if property in schema_section:
-            if 'transient' in schema_section[property] and schema_section[property]['transient'] is True:
-                trigger_fields.append(property)
-            elif 'on_read_trigger' in schema_section[property]:
-                trigger_fields.append(property)
+    for p in properties:
+        if p in schema_section:
+            if 'on_read_trigger' in schema_section[p]:
+                trigger_fields.append(p)
             else:
-                neo4j_fields.append(property)
+                neo4j_fields.append(p)
 
     return neo4j_fields, trigger_fields, list(dependencies)
 
