@@ -671,7 +671,11 @@ def get_normalized_collection_entities(uuid: str, token: str, skip_completion: b
     """
     db = schema_manager.get_neo4j_driver_instance()
     segregated_properties = schema_manager.group_verify_properties_list(properties=properties)
-    entities_list = schema_neo4j_queries.get_collection_entities(db, uuid, properties=segregated_properties[0] + segregated_properties[2], is_include_action=is_include_action)
+    neo4j_properties = segregated_properties[0] + segregated_properties[2]
+    entities_list = schema_neo4j_queries.get_collection_entities(db, uuid, properties=neo4j_properties, is_include_action=is_include_action)
+
+    if len(neo4j_properties) == 1 and neo4j_properties[0] == 'uuid':
+        return entities_list
 
     if skip_completion:
         complete_entities_list = entities_list
@@ -2960,7 +2964,7 @@ def get_upload_datasets(property_key: str, normalized_type: str, user_token: str
     return property_key, upload_datasets
 
 
-def get_normalized_upload_datasets(uuid: str, token, properties_to_exclude: List[str] = [], properties = [], is_include_action = False, should_normalize = True):
+def get_normalized_upload_datasets(uuid: str, token, properties_to_exclude: List[str] = [], properties: List[str] = [], is_include_action: bool = False, should_normalize: bool = True):
     """Query the Neo4j database to get the associated datasets for a given Upload UUID and normalize the results.
 
     Parameters
@@ -2971,6 +2975,10 @@ def get_normalized_upload_datasets(uuid: str, token, properties_to_exclude: List
         Either the user's globus nexus token or the internal token
     properties_to_exclude : List[str]
         A list of property keys to exclude from the normalized results
+    properties : List[str]
+        the properties to be filtered
+    is_include_action : bool
+        Whether to include or exclude the listed properties
     should_normalize : bool
         Whether to get rid of the entity node properties that are not defined in the yaml schema
 
@@ -2981,6 +2989,8 @@ def get_normalized_upload_datasets(uuid: str, token, properties_to_exclude: List
     db = schema_manager.get_neo4j_driver_instance()
     datasets_list = schema_neo4j_queries.get_upload_datasets(db, uuid, properties=properties, is_include_action=is_include_action)
 
+    if len(properties) == 1 and properties[0] == 'uuid':
+        return datasets_list
 
     complete_list = schema_manager.get_complete_entities_list(token, datasets_list, properties_to_exclude, is_include_action=is_include_action)
 

@@ -413,6 +413,9 @@ def group_verify_properties_list(normalized_class='All', properties=[]):
             else:
                 neo4j_fields.append(p)
 
+    if 'entity_type' not in neo4j_fields and len(trigger_fields) > 0:
+        neo4j_fields.append('entity_type')
+
     return neo4j_fields, trigger_fields, list(dependencies)
 
 def exclude_properties_from_response(excluded_fields, output_dict):
