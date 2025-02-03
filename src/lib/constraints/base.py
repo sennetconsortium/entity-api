@@ -1,4 +1,7 @@
-def build_constraint(ancestor: dict, descendants: list[dict]) -> dict:
+from typing import Union
+
+
+def build_constraint(ancestor: Union[dict, list], descendants: list[dict]) -> dict:
     return {
         'ancestors': ancestor,
         'descendants': descendants
