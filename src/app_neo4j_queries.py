@@ -622,19 +622,19 @@ def get_ancestors(neo4j_driver, uuid, data_access_level=None, properties: List[s
 
     predicate = ''
     if data_access_level:
-        predicate = f"AND ancestor.data_access_level = '{data_access_level}' "
+        predicate = f"AND t.data_access_level = '{data_access_level}' "
 
     if isinstance(properties, list):
         query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(t:Entity) "
                  f"WHERE e.uuid = '{uuid}' AND t.entity_type <> 'Lab' {predicate} "
                  f"{schema_neo4j_queries.exclude_include_query_part(properties, is_include_action)}")
     else:
-        query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(ancestor:Entity) "
+        query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(t:Entity) "
                  # Filter out the Lab entities
-                 f"WHERE e.uuid='{uuid}' AND ancestor.entity_type <> 'Lab' {predicate}"
+                 f"WHERE e.uuid='{uuid}' AND t.entity_type <> 'Lab' {predicate}"
                  # COLLECT() returns a list
                  # apoc.coll.toSet() reruns a set containing unique nodes
-                 f"RETURN apoc.coll.toSet(COLLECT(ancestor)) AS {record_field_name}")
+                 f"RETURN apoc.coll.toSet(COLLECT(t)) AS {record_field_name}")
 
     logger.info("======get_ancestors() query======")
     logger.info(query)
@@ -685,7 +685,7 @@ def get_descendants(neo4j_driver, uuid, data_access_level=None, entity_type=None
 
     predicate = ''
     if data_access_level:
-        predicate = f"AND descendant.data_access_level = '{data_access_level}' "
+        predicate = f"AND t.data_access_level = '{data_access_level}' "
 
     if isinstance(properties, list):
         query = (f"MATCH (e:Entity)<-[:USED|WAS_GENERATED_BY*]-(t:Entity) "
@@ -693,12 +693,12 @@ def get_descendants(neo4j_driver, uuid, data_access_level=None, entity_type=None
                  f"WHERE e.uuid=$uuid AND e.entity_type <> 'Lab' {predicate}"
                  f"{schema_neo4j_queries.exclude_include_query_part(properties, is_include_action)}")
     else:
-        query = (f"MATCH (e:Entity)<-[:USED|WAS_GENERATED_BY*]-(descendant:Entity) "
+        query = (f"MATCH (e:Entity)<-[:USED|WAS_GENERATED_BY*]-(t:Entity) "
                  # The target entity can't be a Lab
                  f"WHERE e.uuid=$uuid AND e.entity_type <> 'Lab' {predicate}"
                  # COLLECT() returns a list
                  # apoc.coll.toSet() reruns a set containing unique nodes
-                 f"RETURN apoc.coll.toSet(COLLECT(descendant)) AS {record_field_name}")
+                 f"RETURN apoc.coll.toSet(COLLECT(t)) AS {record_field_name}")
 
     logger.info("======get_descendants() query======")
     logger.info(query)
