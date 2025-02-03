@@ -3835,7 +3835,7 @@ def get_has_all_published_datasets(property_key, normalized_type, user_token, ex
 
     db = schema_manager.get_neo4j_driver_instance()
 
-    published_filter = 'AND e.status = "Published"'
+    published_filter = 'AND t.status = "Published"'
     datasets_primary_list = schema_neo4j_queries.get_upload_datasets(db, existing_data_dict['uuid'], properties=['uuid'])
     datasets_primary_list_published = schema_neo4j_queries.get_upload_datasets(db, existing_data_dict['uuid'], properties=['uuid'],
                                                                        query_filter=f'{published_filter}')
