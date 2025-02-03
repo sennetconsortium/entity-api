@@ -396,15 +396,21 @@ def group_verify_properties_list(normalized_class='All', properties=[]):
     trigger_fields = []
     schema_section = {}
     dependencies = set()
+
+    def check_dependencies(_entity_properties):
+        for _p in properties:
+            if _p in _entity_properties:
+                dependencies.update(_entity_properties[_p].get('dependency_properties', []))
+
     if normalized_class == 'All':
         for entity in _schema['ENTITIES']:
             entity_properties = _schema['ENTITIES'][entity].get('properties', {})
-            for p in properties:
-                if p in entity_properties:
-                    dependencies.update(entity_properties[p].get('dependency_properties', []))
+            check_dependencies(entity_properties)
             schema_section.update(entity_properties)
     else:
-        schema_section = _schema['ENTITIES'][normalized_class].get('properties', {})
+        entity_properties = _schema['ENTITIES'][normalized_class].get('properties', {})
+        check_dependencies(entity_properties)
+        schema_section = entity_properties
 
     for p in properties:
         if p in schema_section:
