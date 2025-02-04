@@ -622,7 +622,7 @@ def get_ancestors(neo4j_driver, uuid, data_access_level=None, properties: List[s
 
     predicate = ''
     if data_access_level:
-        predicate = f"AND t.data_access_level = '{data_access_level}' "
+        predicate = f"AND (t.status='Published' OR t.data_access_level = '{data_access_level}') "
 
     if isinstance(properties, list):
         query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(t:Entity) "
@@ -685,7 +685,7 @@ def get_descendants(neo4j_driver, uuid, data_access_level=None, entity_type=None
 
     predicate = ''
     if data_access_level:
-        predicate = f"AND t.data_access_level = '{data_access_level}' "
+        predicate = f"AND (t.status='Published' OR t.data_access_level = '{data_access_level}') "
 
     if isinstance(properties, list):
         query = (f"MATCH (e:Entity)<-[:USED|WAS_GENERATED_BY*]-(t:Entity) "
