@@ -897,6 +897,55 @@ paths:
           description: The target entity could not be found
         '500':
           description: Internal error
+    post:
+      tags:
+        - ancestors
+      summary: Get the ancestor list for an Entity. The ancestors are the nodes connected "upstream" from the current node. This list traverses all the levels in the graph.
+      parameters:
+        - name: id
+          in: path
+          description: The unique identifier of entity. This identifier can be either an SenNet ID (e.g. SNT123.ABCD.456) or UUID
+          required: true
+          schema:
+            type: string
+      requestBody:
+        description: A json body with "filter_properties" (a list of properties to include or exclude) and "is_include"
+          (a boolean value for if the list provided is inclusion or exclusion).
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                filter_properties:
+                  type: array
+                  items:
+                    type: string
+                  description: A list of properties to include or exclude
+                is_include:
+                  type: boolean
+                  description: Used to determine if the list provided is inclusion or exclusion
+      responses:
+        '200':
+          description: An array of ancestors is returned
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  anyOf:
+                    - $ref: '#/components/schemas/Source'
+                    - $ref: '#/components/schemas/Sample'
+                    - $ref: '#/components/schemas/Dataset'
+        '400':
+          description: Invalid or misformatted entity identifier
+        '401':
+          description: The user's token has expired or the user did not supply a valid token
+        '403':
+          description: The user is not authorized to access the entity
+        '404':
+          description: The target entity could not be found
+        '500':
+          description: Internal error
 
   /descendants/{id}:
     get:
@@ -927,6 +976,54 @@ paths:
           description: The user's token has expired or the user did not supply a valid token
         '403':
           description: The user is not authorized to access the entity.
+        '404':
+          description: The target entity could not be found
+        '500':
+          description: Internal error
+    post:
+      tags:
+        - descendants
+      summary: Get the descendant list for an Entity. The descendants are the nodes "downstream" from the current node.  This list traverses all the levels in the graph. Returns all descendants as an array of Entities.
+      parameters:
+        - name: id
+          in: path
+          description: The unique identifier of entity. This identifier can be either an SenNet ID (e.g. SNT123.ABCD.456) or UUID
+          required: true
+          schema:
+            type: string
+      requestBody:
+        description: A json body with "filter_properties" (a list of properties to include or exclude) and "is_include"
+          (a boolean value for if the list provided is inclusion or exclusion).
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                filter_properties:
+                  type: array
+                  items:
+                    type: string
+                  description: A list of properties to include or exclude
+                is_include:
+                  type: boolean
+                  description: Used to determine if the list provided is inclusion or exclusion
+      responses:
+        '200':
+          description: An array of ancestors is returned
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  anyOf:
+                    - $ref: '#/components/schemas/Sample'
+                    - $ref: '#/components/schemas/Dataset'
+        '400':
+          description: Invalid or misformatted entity identifier
+        '401':
+          description: The user's token has expired or the user did not supply a valid token
+        '403':
+          description: The user is not authorized to access the entity
         '404':
           description: The target entity could not be found
         '500':
@@ -966,6 +1063,55 @@ paths:
           description: The target entity could not be found
         '500':
           description: Internal error
+    post:
+      tags:
+        - parents
+      summary: Get the immediate parent list for an Entity. The parents are the nodes connected one level "upstream" from the current node.  This list only goes to the next higher level in the graph.
+      parameters:
+        - name: id
+          in: path
+          description: The unique identifier of entity. This identifier can be either an SenNet ID (e.g. SNT123.ABCD.456) or UUID
+          required: true
+          schema:
+            type: string
+      requestBody:
+        description: A json body with "filter_properties" (a list of properties to include or exclude) and "is_include"
+          (a boolean value for if the list provided is inclusion or exclusion).
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                filter_properties:
+                  type: array
+                  items:
+                    type: string
+                  description: A list of properties to include or exclude
+                is_include:
+                  type: boolean
+                  description: Used to determine if the list provided is inclusion or exclusion
+      responses:
+        '200':
+          description: An array of ancestors is returned
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  anyOf:
+                    - $ref: '#/components/schemas/Source'
+                    - $ref: '#/components/schemas/Sample'
+                    - $ref: '#/components/schemas/Dataset'
+        '400':
+          description: Invalid or misformatted entity identifier
+        '401':
+          description: The user's token has expired or the user did not supply a valid token
+        '403':
+          description: The user is not authorized to access the entity
+        '404':
+          description: The target entity could not be found
+        '500':
+          description: Internal error
 
   /children/{id}:
     get:
@@ -982,6 +1128,54 @@ paths:
       responses:
         '200':
           description: An array of children entities is returned
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  anyOf:
+                    - $ref: '#/components/schemas/Sample'
+                    - $ref: '#/components/schemas/Dataset'
+        '400':
+          description: Invalid or misformatted entity identifier
+        '401':
+          description: The user's token has expired or the user did not supply a valid token
+        '403':
+          description: The user is not authorized to access the entity
+        '404':
+          description: The target entity could not be found
+        '500':
+          description: Internal error
+    post:
+      tags:
+        - children
+      summary: Get the list of children directly connected to an Entity. The children are the nodes one level below the current node. This list only returns the items one level below in the graph.
+      parameters:
+        - name: id
+          in: path
+          description: The unique identifier of entity. This identifier can be either an SenNet ID (e.g. SNT123.ABCD.456) or UUID
+          required: true
+          schema:
+            type: string
+      requestBody:
+        description: A json body with "filter_properties" (a list of properties to include or exclude) and "is_include"
+          (a boolean value for if the list provided is inclusion or exclusion).
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                filter_properties:
+                  type: array
+                  items:
+                    type: string
+                  description: A list of properties to include or exclude
+                is_include:
+                  type: boolean
+                  description: Used to determine if the list provided is inclusion or exclusion
+      responses:
+        '200':
+          description: An array of ancestors is returned
           content:
             application/json:
               schema:
@@ -1113,80 +1307,7 @@ paths:
           description: The target entity could not be found
         '500':
           description: Internal error
-  /entities/{id}/collections:
-    get:
-      summary: Get the list of all collections the Entity belongs to.
-      parameters:
-        - name: id
-          in: path
-          description: The unique identifier of entity.  This identifier can be either an SenNet ID (e.g. HBM123.ABCD.456) or UUID
-          required: true
-          schema:
-            type: string
-        - name: property
-          in: query
-          description: A case insensitive string. Any value besides 'uuid' will raise an error. If property=uuid is provided, rather than entire dictionary representations of each node, only the list of matching uuid's will be returned
-          required: false
-          schema:
-            type: string
-            enum: [ 'uuid' ]
-      responses:
-        '200':
-          description: An array of collection entities is returned
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  anyOf:
-                    - $ref: '#/components/schemas/Collection'
-        '400':
-          description: Invalid or misformatted entity identifier
-        '401':
-          description: The user's token has expired or the user did not supply a valid token
-        '403':
-          description: The user is not authorized to access the entity.
-        '404':
-          description: The target entity could not be found
-        '500':
-          description: Internal error
-  /entities/{id}/uploads:
-    get:
-      summary: Get the list of all uploads the Entity belongs to.
-      parameters:
-        - name: id
-          in: path
-          description: The unique identifier of entity.  This identifier can be either an SenNet ID (e.g. SNT123.ABCD.456) or UUID
-          required: true
-          schema:
-            type: string
-        - name: property
-          in: query
-          description: A case insensitive string. Any value besides 'uuid' will raise an error. If property=uuid is provided, rather than entire dictionary representations of each node, only the list of matching uuid's will be returned
-          required: false
-          schema:
-            type: string
-            enum: [ 'uuid' ]
-      responses:
-        '200':
-          description: An array of upload entities is returned
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  anyOf:
-                    - $ref: '#/components/schemas/Upload'
-        '400':
-          description: Invalid or misformatted entity identifier
-        '401':
-          description: The user's token has expired or the user did not supply a valid token
-        '403':
-          description: The user is not authorized to access the entity.
-        '404':
-          description: The target entity could not be found
-        '500':
-          description: Internal error
+
   /entities/{id}/provenance:
     get:
       tags:
@@ -2217,6 +2338,127 @@ paths:
           description: The target dataset could not be found
         '500':
           description: Internal error
+
+  /entities/{id}/uploads:
+    get:
+      tags:
+        - uploads
+      summary: Get the list of all uploads the Entity belongs to.
+      parameters:
+        - name: id
+          in: path
+          description: The unique identifier of entity.  This identifier can be either an SenNet ID (e.g. SNT123.ABCD.456) or UUID
+          required: true
+          schema:
+            type: string
+        - name: property
+          in: query
+          description: A case insensitive string. Any value besides 'uuid' will raise an error. If property=uuid is provided, rather than entire dictionary representations of each node, only the list of matching uuid's will be returned
+          required: false
+          schema:
+            type: string
+            enum: [ 'uuid' ]
+      responses:
+        '200':
+          description: An array of upload entities is returned
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  anyOf:
+                    - $ref: '#/components/schemas/Upload'
+        '400':
+          description: Invalid or misformatted entity identifier
+        '401':
+          description: The user's token has expired or the user did not supply a valid token
+        '403':
+          description: The user is not authorized to access the entity.
+        '404':
+          description: The target entity could not be found
+        '500':
+          description: Internal error
+
+  /uploads/{id}/datasets:
+    get:
+      tags:
+        - uploads
+      summary: Retrieve a list of all of the datasets that are associated with the upload id
+      parameters:
+        - name: id
+          in: path
+          description: The unique identifier of entity.  This identifier can be either an SenNet ID (e.g. SNT123.ABCD.456) or UUID
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A list of entity_type == Dataset that are associated with the upload id
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Dataset'
+        '400':
+          description: Invalid or misformatted entity identifier, or the given entity is not a Dataset
+        '401':
+          description: The user's token has expired or the user did not supply a valid token
+        '403':
+          description: The user is not authorized to query the revision number of the given dataset.
+        '404':
+          description: The target dataset could not be found
+        '500':
+          description: Internal error
+    post:
+      tags:
+        - uploads
+      summary: Retrieve a list of all of the datasets that are associated with the upload id
+      parameters:
+        - name: id
+          in: path
+          description: The unique identifier of entity. This identifier can be either an SenNet ID (e.g. SNT123.ABCD.456) or UUID
+          required: true
+          schema:
+            type: string
+      requestBody:
+        description: A json body with "filter_properties" (a list of properties to include or exclude) and "is_include"
+          (a boolean value for if the list provided is inclusion or exclusion).
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                filter_properties:
+                  type: array
+                  items:
+                    type: string
+                  description: A list of properties to include or exclude
+                is_include:
+                  type: boolean
+                  description: Used to determine if the list provided is inclusion or exclusion
+      responses:
+        '200':
+          description: An array of ancestors is returned
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Dataset'
+
+        '400':
+          description: Invalid or misformatted entity identifier
+        '401':
+          description: The user's token has expired or the user did not supply a valid token
+        '403':
+          description: The user is not authorized to access the entity
+        '404':
+          description: The target entity could not be found
+        '500':
+          description: Internal error
+
+
   /entities/dashboard/{entity_type}:
     put:
       tags:
@@ -2258,3 +2500,134 @@ paths:
           description: The target entity could not be found.
         '500':
           description: An unexpected error occurred.
+
+  /entities/{id}/collections:
+    get:
+      tags:
+        - collections
+      summary: Get the list of all collections the Entity belongs to.
+      parameters:
+        - name: id
+          in: path
+          description: The unique identifier of entity.  This identifier can be either an SenNet ID (e.g. HBM123.ABCD.456) or UUID
+          required: true
+          schema:
+            type: string
+        - name: property
+          in: query
+          description: A case insensitive string. Any value besides 'uuid' will raise an error. If property=uuid is provided, rather than entire dictionary representations of each node, only the list of matching uuid's will be returned
+          required: false
+          schema:
+            type: string
+            enum: [ 'uuid' ]
+      responses:
+        '200':
+          description: An array of collection entities is returned
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  anyOf:
+                    - $ref: '#/components/schemas/Collection'
+        '400':
+          description: Invalid or misformatted entity identifier
+        '401':
+          description: The user's token has expired or the user did not supply a valid token
+        '403':
+          description: The user is not authorized to access the entity.
+        '404':
+          description: The target entity could not be found
+        '500':
+          description: Internal error
+
+  /collections/{id}/entities:
+    get:
+      tags:
+        - collections
+      summary: Get the list of all entities the Collection contains.
+      parameters:
+        - name: id
+          in: path
+          description: The unique identifier of entity.  This identifier can be either an SenNet ID (e.g. HBM123.ABCD.456) or UUID
+          required: true
+          schema:
+            type: string
+        - name: property
+          in: query
+          description: A case insensitive string. Any value besides 'uuid' will raise an error. If property=uuid is provided, rather than entire dictionary representations of each node, only the list of matching uuid's will be returned
+          required: false
+          schema:
+            type: string
+            enum: [ 'uuid' ]
+      responses:
+        '200':
+          description: An array of collection entities is returned
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  anyOf:
+                    - $ref: '#/components/schemas/Source'
+                    - $ref: '#/components/schemas/Sample'
+                    - $ref: '#/components/schemas/Dataset'
+        '400':
+          description: Invalid or misformatted entity identifier
+        '401':
+          description: The user's token has expired or the user did not supply a valid token
+        '403':
+          description: The user is not authorized to access the entity.
+        '404':
+          description: The target entity could not be found
+        '500':
+          description: Internal error
+    post:
+      tags:
+        - collections
+      summary: Get the list of all entities the Collection contains.
+      parameters:
+        - name: id
+          in: path
+          description: The unique identifier of entity. This identifier can be either an SenNet ID (e.g. SNT123.ABCD.456) or UUID
+          required: true
+          schema:
+            type: string
+      requestBody:
+        description: A json body with "filter_properties" (a list of properties to include or exclude) and "is_include"
+          (a boolean value for if the list provided is inclusion or exclusion).
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                filter_properties:
+                  type: array
+                  items:
+                    type: string
+                  description: A list of properties to include or exclude
+                is_include:
+                  type: boolean
+                  description: Used to determine if the list provided is inclusion or exclusion
+      responses:
+        '200':
+          description: An array of ancestors is returned
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  anyOf:
+                    - $ref: '#/components/schemas/Source'
+                    - $ref: '#/components/schemas/Sample'
+                    - $ref: '#/components/schemas/Dataset'
+        '400':
+          description: Invalid or misformatted entity identifier
+        '401':
+          description: The user's token has expired or the user did not supply a valid token
+        '403':
+          description: The user is not authorized to access the entity
+        '404':
+          description: The target entity could not be found
+        '500':
+          description: Internal error
