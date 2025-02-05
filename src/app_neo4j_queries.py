@@ -1,7 +1,6 @@
 import logging
 
 from atlas_consortia_commons.object import enum_val
-from atlas_consortia_commons.string import equals
 from neo4j.exceptions import TransactionError
 
 from lib.ontology import Ontology
@@ -9,7 +8,7 @@ from lib.property_groups import PropertyGroups
 from schema import schema_neo4j_queries
 from typing import List, Union
 
-from schema.schema_neo4j_queries import activity_query_part
+import schema.schema_manager
 
 logger = logging.getLogger(__name__)
 
@@ -129,44 +128,6 @@ def get_activity(neo4j_driver, uuid):
 
 
 """
-Get the protocol_url from a related activity node
-
-Parameters
-----------
-neo4j_driver : neo4j.Driver object
-    The neo4j database connection pool
-uuid : str
-    The uuid of entity that connects to the activity that contains the protocol_url
-
-Returns
--------
-str
-    The protocol_url property
-"""
-
-
-def get_activity_protocol(neo4j_driver, uuid):
-    result = {}
-
-    query = (f"MATCH (e:Entity)-[:WAS_GENERATED_BY]->(a:Activity)"
-             f"WHERE e.uuid = '{uuid}' "
-             f"RETURN a.protocol_url AS protocol_url")
-
-    logger.debug("======get_activity() query======")
-    logger.debug(query)
-
-    with neo4j_driver.session() as session:
-        record = session.read_transaction(_execute_readonly_tx, query)
-
-        if record is not None:
-            if record[0] is not None:
-                if record:
-                    result = record[0]
-
-    return result
-
-
-"""
 Get target entity dict
 
 Parameters
@@ -186,9 +147,10 @@ dict
 def get_entity(neo4j_driver, uuid):
     result = {}
 
-    query = (f"MATCH (e:Entity) "
-             f"WHERE e.uuid = '{uuid}' "
-             f"RETURN e AS {record_field_name}")
+    _activity_query_part = schema_neo4j_queries.activity_query_part(for_all_match=True)
+    query = (f"MATCH (t:Entity) "
+             f"WHERE t.uuid = '{uuid}' "
+             f"{_activity_query_part} {record_field_name}")
 
     logger.info("======get_entity() query======")
     logger.info(query)
@@ -196,13 +158,10 @@ def get_entity(neo4j_driver, uuid):
     with neo4j_driver.session() as session:
         record = session.read_transaction(_execute_readonly_tx, query)
 
-        if record and record[record_field_name]:
+        if record and record[record_field_name] and len(record[record_field_name]) > 0:
             # Convert the neo4j node into Python dict
-            result = _node_to_dict(record[record_field_name])
+            result = record[record_field_name][0]
 
-            protocol_url = get_activity_protocol(neo4j_driver, result['uuid'])
-            if protocol_url != {}:
-                result['protocol_url'] = protocol_url
 
     return result
 
@@ -272,10 +231,9 @@ def get_entities_by_type(neo4j_driver, entity_type, property_key=None):
                  # apoc.coll.toSet() reruns a set containing unique nodes
                  f"RETURN apoc.coll.toSet(COLLECT(e.{property_key})) AS {record_field_name}")
     else:
-        query = (f"MATCH (e:{entity_type}) "
-                 # COLLECT() returns a list
-                 # apoc.coll.toSet() reruns a set containing unique nodes
-                 f"RETURN apoc.coll.toSet(COLLECT(e)) AS {record_field_name}")
+        _activity_query_part = schema_neo4j_queries.activity_query_part(for_all_match=True)
+        query = (f"MATCH (t:{entity_type}) "
+                 f"{_activity_query_part} {record_field_name}")
 
     logger.info("======get_entities_by_type() query======")
     logger.info(query)
@@ -284,18 +242,7 @@ def get_entities_by_type(neo4j_driver, entity_type, property_key=None):
         record = session.read_transaction(_execute_readonly_tx, query)
 
         if record and record[record_field_name]:
-            if property_key:
-                # Just return the list of property values from each entity node
-                results = record[record_field_name]
-            else:
-                # Convert the list of nodes to a list of dicts
-                results = _nodes_to_dicts(record[record_field_name])
-
-    if not property_key:
-        for result in results:
-            protocol_url = get_activity_protocol(neo4j_driver, result['uuid'])
-            if protocol_url != {}:
-                result['protocol_url'] = protocol_url
+            results = record[record_field_name]
 
     return results
 
@@ -600,7 +547,7 @@ def update_entity(neo4j_driver, entity_type, entity_data_dict, uuid):
         raise TransactionError(msg)
 
 
-def get_ancestors(neo4j_driver, uuid, data_access_level=None, properties: Union[PropertyGroups, List[str]] = None, is_include_action: bool = True, include_protocol = False):
+def get_ancestors(neo4j_driver, uuid, data_access_level=None, properties: Union[PropertyGroups, List[str]] = None, is_include_action: bool = True):
     """Get all ancestors by uuid.
 
     Parameters
@@ -634,12 +581,11 @@ def get_ancestors(neo4j_driver, uuid, data_access_level=None, properties: Union[
                  f"WHERE e.uuid = '{uuid}' AND t.entity_type <> 'Lab' {predicate} {_activity_query_part[0]} "
                  f"{schema_neo4j_queries.exclude_include_query_part(properties, is_include_action, more_to_grab_query_part=_activity_query_part)}")
     else:
+        _activity_query_part = schema_neo4j_queries.activity_query_part(for_all_match=True)
         query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(t:Entity) "
                  # Filter out the Lab entities
                  f"WHERE e.uuid='{uuid}' AND t.entity_type <> 'Lab' {predicate}"
-                 # COLLECT() returns a list
-                 # apoc.coll.toSet() reruns a set containing unique nodes
-                 f"RETURN apoc.coll.toSet(COLLECT(t)) AS {record_field_name}")
+                 f"{_activity_query_part} {record_field_name}")
 
     logger.info("======get_ancestors() query======")
     logger.info(query)
@@ -648,27 +594,12 @@ def get_ancestors(neo4j_driver, uuid, data_access_level=None, properties: Union[
         record = session.read_transaction(_execute_readonly_tx, query)
 
         if record and record[record_field_name]:
-            if is_filtered:
-                # Just return the list of property values from each entity node
-                results = record[record_field_name]
-                if include_protocol:
-                    for result in results:
-                        protocol_url = get_activity_protocol(neo4j_driver, result['uuid'])
-                        if protocol_url != {}:
-                            result['protocol_url'] = protocol_url
-            else:
-                # Convert the list of nodes to a list of dicts
-                results = _nodes_to_dicts(record[record_field_name])
-
-                for result in results:
-                    protocol_url = get_activity_protocol(neo4j_driver, result['uuid'])
-                    if protocol_url != {}:
-                        result['protocol_url'] = protocol_url
+            results = record[record_field_name]
 
     return results
 
 
-def get_descendants(neo4j_driver, uuid, data_access_level=None, entity_type=None, properties: Union[PropertyGroups, List[str]] = None, is_include_action: bool = True, include_protocol = False):
+def get_descendants(neo4j_driver, uuid, data_access_level=None, entity_type=None, properties: Union[PropertyGroups, List[str]] = None, is_include_action: bool = True):
     """ Get all descendants by uuid
 
     Parameters
@@ -697,20 +628,19 @@ def get_descendants(neo4j_driver, uuid, data_access_level=None, entity_type=None
     if data_access_level:
         predicate = f"AND (t.status='Published' OR t.data_access_level = '{data_access_level}') "
 
-    is_filtered = isinstance(properties, PropertyGroups) or  isinstance(properties, list)
+    is_filtered = isinstance(properties, PropertyGroups) or isinstance(properties, list)
     if is_filtered:
         _activity_query_part = schema_neo4j_queries.activity_query_part(properties)
         query = (f"MATCH (e:Entity)<-[:USED|WAS_GENERATED_BY*]-(t:Entity) "
                  # The target entity can't be a Lab
                  f"WHERE e.uuid=$uuid AND e.entity_type <> 'Lab' {predicate} {_activity_query_part[0]} "
-                 f"{schema_neo4j_queries.exclude_include_query_part(properties.neo4j + properties.dependency, is_include_action, more_to_grab_query_part=_activity_query_part)}")
+                 f"{schema_neo4j_queries.exclude_include_query_part(properties, is_include_action, more_to_grab_query_part=_activity_query_part)}")
     else:
+        _activity_query_part = schema_neo4j_queries.activity_query_part(for_all_match=True)
         query = (f"MATCH (e:Entity)<-[:USED|WAS_GENERATED_BY*]-(t:Entity) "
                  # The target entity can't be a Lab
                  f"WHERE e.uuid=$uuid AND e.entity_type <> 'Lab' {predicate}"
-                 # COLLECT() returns a list
-                 # apoc.coll.toSet() reruns a set containing unique nodes
-                 f"RETURN apoc.coll.toSet(COLLECT(t)) AS {record_field_name}")
+                 f"{_activity_query_part} {record_field_name}")
 
     logger.info("======get_descendants() query======")
     logger.info(query)
@@ -719,32 +649,10 @@ def get_descendants(neo4j_driver, uuid, data_access_level=None, entity_type=None
         record = session.read_transaction(_execute_readonly_tx, query, uuid=uuid)
 
         if record and record[record_field_name]:
-            if is_filtered:
-                # Just return the list of property values from each entity node
-                results = record[record_field_name]
-                if include_protocol:
-                    for result in results:
-                        protocol_url = get_activity_protocol(neo4j_driver, result['uuid'])
-                        if protocol_url != {}:
-                            result['protocol_url'] = protocol_url
-            else:
-                # Convert the list of nodes to a list of dicts
-                results = _nodes_to_dicts(record[record_field_name])
+            results = record[record_field_name]
 
-                # If asked for the descendants of a Dataset then sort by last_modified_timestamp and place the published dataset at the top
-                if equals(entity_type,  Ontology.ops().entities().DATASET):
-                    results = sorted(results, key=lambda d: d['last_modified_timestamp'], reverse=True)
+            schema.schema_manager.rearrange_datasets(results, entity_type)
 
-                    published_processed_dataset_location = next(
-                        (i for i, item in enumerate(results) if item["status"] == "Published"), None)
-                    if published_processed_dataset_location and published_processed_dataset_location != 0:
-                        published_processed_dataset = results.pop(published_processed_dataset_location)
-                        results.insert(0, published_processed_dataset)
-
-                for result in results:
-                    protocol_url = get_activity_protocol(neo4j_driver, result['uuid'])
-                    if protocol_url != {}:
-                        result['protocol_url'] = protocol_url
 
     return results
 
@@ -776,12 +684,11 @@ def get_descendant_datasets(neo4j_driver, uuid, property_key=None):
                  # apoc.coll.toSet() reruns a set containing unique nodes
                  f"RETURN apoc.coll.toSet(COLLECT(descendant.{property_key})) AS {record_field_name}")
     else:
-        query = (f"MATCH (e:Entity)<-[:USED|WAS_GENERATED_BY*]-(descendant:Dataset) "
+        _activity_query_part = schema_neo4j_queries.activity_query_part(for_all_match=True)
+        query = (f"MATCH (e:Entity)<-[:USED|WAS_GENERATED_BY*]-(t:Dataset) "
                  # The target entity can't be a Lab
                  f"WHERE e.uuid=$uuid AND e.entity_type <> 'Lab' "
-                 # COLLECT() returns a list
-                 # apoc.coll.toSet() reruns a set containing unique nodes
-                 f"RETURN apoc.coll.toSet(COLLECT(descendant)) AS {record_field_name}")
+                 f"{_activity_query_part} {record_field_name}")
 
     logger.info("======get_descendant_datasets() query======")
     logger.info(query)
@@ -790,17 +697,8 @@ def get_descendant_datasets(neo4j_driver, uuid, property_key=None):
         record = session.read_transaction(_execute_readonly_tx, query, uuid=uuid)
 
         if record and record[record_field_name]:
-            if property_key:
-                # Just return the list of property values from each entity node
-                results = record[record_field_name]
-            else:
-                # Convert the list of nodes to a list of dicts
-                results = _nodes_to_dicts(record[record_field_name])
-
-                for result in results:
-                    protocol_url = get_activity_protocol(neo4j_driver, result['uuid'])
-                    if protocol_url != {}:
-                        result['protocol_url'] = protocol_url
+            results = record[record_field_name]
+            schema.schema_manager.rearrange_datasets(results)
 
     return results
 
@@ -958,18 +856,17 @@ def get_parents(neo4j_driver, uuid, properties: Union[PropertyGroups, List[str]]
 
     is_filtered = isinstance(properties, PropertyGroups) or  isinstance(properties, list)
     if is_filtered:
-        _activity_query_part = schema_neo4j_queries.activity_query_part(properties)
+        _activity_query_part = schema_neo4j_queries.activity_query_part(properties if is_include_action else None)
         query = (f"MATCH (e:Entity)-[:WAS_GENERATED_BY]->(:Activity)-[:USED]->(t:Entity) "
                  # Filter out the Lab entities
                  f"WHERE e.uuid='{uuid}' AND t.entity_type <> 'Lab' {_activity_query_part[0]} "
                  f"{schema_neo4j_queries.exclude_include_query_part(properties, is_include_action, more_to_grab_query_part=_activity_query_part)}")
     else:
-        query = (f"MATCH (e:Entity)-[:WAS_GENERATED_BY]->(:Activity)-[:USED]->(parent:Entity) "
+        _activity_query_part = schema_neo4j_queries.activity_query_part(for_all_match=True)
+        query = (f"MATCH (e:Entity)-[:WAS_GENERATED_BY]->(:Activity)-[:USED]->(t:Entity) "
                  # Filter out the Lab entities
-                 f"WHERE e.uuid='{uuid}' AND parent.entity_type <> 'Lab' "
-                 # COLLECT() returns a list
-                 # apoc.coll.toSet() reruns a set containing unique nodes
-                 f"RETURN apoc.coll.toSet(COLLECT(parent)) AS {record_field_name}")
+                 f"WHERE e.uuid='{uuid}' AND t.entity_type <> 'Lab' "
+                 f"{_activity_query_part} {record_field_name}")
 
     logger.info("======get_parents() query======")
     logger.info(query)
@@ -978,12 +875,7 @@ def get_parents(neo4j_driver, uuid, properties: Union[PropertyGroups, List[str]]
         record = session.read_transaction(_execute_readonly_tx, query)
 
         if record and record[record_field_name]:
-            if is_filtered:
-                # Just return the list of property values from each entity node
-                results = record[record_field_name]
-            else:
-                # Convert the list of nodes to a list of dicts
-                results = _nodes_to_dicts(record[record_field_name])
+            results = record[record_field_name]
 
     return results
 
@@ -1013,18 +905,17 @@ def get_children(neo4j_driver, uuid, properties: Union[PropertyGroups, List[str]
 
     is_filtered = isinstance(properties, PropertyGroups) or  isinstance(properties, list)
     if is_filtered:
-        _activity_query_part = schema_neo4j_queries.activity_query_part(properties)
+        _activity_query_part = schema_neo4j_queries.activity_query_part(properties if is_include_action else None)
         query = (f"MATCH (e:Entity)<-[:USED]-(:Activity)<-[:WAS_GENERATED_BY]-(t:Entity) "
                  # The target entity can't be a Lab
                  f"WHERE e.uuid='{uuid}' AND e.entity_type <> 'Lab' {_activity_query_part[0]}"
                  f"{schema_neo4j_queries.exclude_include_query_part(properties, is_include_action, more_to_grab_query_part=_activity_query_part)}")
     else:
-        query = (f"MATCH (e:Entity)<-[:USED]-(:Activity)<-[:WAS_GENERATED_BY]-(child:Entity) "
+        _activity_query_part = schema_neo4j_queries.activity_query_part(for_all_match=True)
+        query = (f"MATCH (e:Entity)<-[:USED]-(:Activity)<-[:WAS_GENERATED_BY]-(t:Entity) "
                  # The target entity can't be a Lab
                  f"WHERE e.uuid='{uuid}' AND e.entity_type <> 'Lab' "
-                 # COLLECT() returns a list
-                 # apoc.coll.toSet() reruns a set containing unique nodes
-                 f"RETURN apoc.coll.toSet(COLLECT(child)) AS {record_field_name}")
+                 f"{_activity_query_part} {record_field_name}")
 
     logger.info("======get_children() query======")
     logger.info(query)
@@ -1033,12 +924,7 @@ def get_children(neo4j_driver, uuid, properties: Union[PropertyGroups, List[str]
         record = session.read_transaction(_execute_readonly_tx, query)
 
         if record and record[record_field_name]:
-            if is_filtered:
-                # Just return the list of property values from each entity node
-                results = record[record_field_name]
-            else:
-                # Convert the list of nodes to a list of dicts
-                results = _nodes_to_dicts(record[record_field_name])
+            results = record[record_field_name]
 
     return results
 

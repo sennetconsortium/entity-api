@@ -962,9 +962,6 @@ def get_entities_by_type(entity_type):
             abort_bad_req("The specified query string is not supported. Use '?property=<key>' to filter the result")
     # Return all the details if no property filtering
     else:
-        # Get back a list of entity dicts for the given entity type
-        entities_list = app_neo4j_queries.get_entities_by_type(neo4j_driver_instance, normalized_entity_type)
-
         # We'll return all the properties but skip these time-consuming ones
         # Source doesn't need to skip any
         # Collection is not handled by this call
@@ -1677,19 +1674,11 @@ def get_ancestors(id):
                 abort_bad_req("Missing required key: filter_properties")
             if 'filter_properties' in filtering_dict:
                 properties_action = filtering_dict.get('is_include', True)
-
-                # Need to manually check for protocol_url
-                include_protocol = False
-                protocol_properties = []
-                if 'protocol_url' in filtering_dict['filter_properties'] and properties_action:
-                    include_protocol = True
-                    protocol_properties = ['protocol_url']
-
                 segregated_properties = schema_manager.group_verify_properties_list(properties=filtering_dict['filter_properties'])
-                property_list = app_neo4j_queries.get_ancestors(neo4j_driver_instance, uuid, data_access_level, properties=segregated_properties, is_include_action=properties_action, include_protocol=include_protocol)
+                property_list = app_neo4j_queries.get_ancestors(neo4j_driver_instance, uuid, data_access_level, properties=segregated_properties, is_include_action=properties_action)
                 complete_entities_list = schema_manager.get_complete_entities_list(token, property_list, segregated_properties.trigger, is_include_action=properties_action)
                 # Final result
-                final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list, properties_to_include=protocol_properties)
+                final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list, properties_to_include=segregated_properties.activity)
 
     # Return all the details if no property filtering
     else:
@@ -1809,19 +1798,11 @@ def get_descendants(id):
                 abort_bad_req("Missing required key: filter_properties")
             if 'filter_properties' in filtering_dict:
                 properties_action = filtering_dict.get('is_include', True)
-
-                # Need to manually check for protocol_url
-                include_protocol = False
-                protocol_properties = []
-                if 'protocol_url' in filtering_dict['filter_properties'] and properties_action:
-                    include_protocol = True
-                    protocol_properties = ['protocol_url']
-
                 segregated_properties = schema_manager.group_verify_properties_list(properties=filtering_dict['filter_properties'])
-                property_list = app_neo4j_queries.get_descendants(neo4j_driver_instance, uuid, data_access_level, properties=segregated_properties, is_include_action=properties_action,  include_protocol=include_protocol)
+                property_list = app_neo4j_queries.get_descendants(neo4j_driver_instance, uuid, data_access_level, properties=segregated_properties, is_include_action=properties_action)
                 complete_entities_list = schema_manager.get_complete_entities_list(token, property_list, segregated_properties.trigger, is_include_action=properties_action)
                 # Final result
-                final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list, properties_to_include=protocol_properties)
+                final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list, properties_to_include=segregated_properties.activity)
     # Return all the details if no property filtering
     else:
         descendants_list = app_neo4j_queries.get_descendants(neo4j_driver_instance, uuid, data_access_level,

@@ -21,6 +21,10 @@ from schema import schema_neo4j_queries
 
 # Atlas Consortia commons
 from atlas_consortia_commons.rest import abort_bad_req
+from atlas_consortia_commons.string import equals
+from typing import List
+
+from lib.ontology import Ontology
 
 logger = logging.getLogger(__name__)
 
@@ -369,6 +373,24 @@ def get_schema_defaults(properties, is_include_action = True, target_entity_type
 
     return defaults
 
+def rearrange_datasets(results, entity_type = 'Dataset'):
+    """
+    If asked for the descendants of a Dataset then sort by last_modified_timestamp and place the published dataset at the top
+
+    :param results : List[dict]
+    :param entity_type : str
+    :return:
+    """
+    if isinstance(results[0], str) is False and equals(entity_type,  Ontology.ops().entities().DATASET):
+        results = sorted(results, key=lambda d: d['last_modified_timestamp'], reverse=True)
+
+        published_processed_dataset_location = next(
+            (i for i, item in enumerate(results) if item["status"] == "Published"), None)
+        if published_processed_dataset_location and published_processed_dataset_location != 0:
+            published_processed_dataset = results.pop(published_processed_dataset_location)
+            results.insert(0, published_processed_dataset)
+
+
 def group_verify_properties_list(normalized_class='All', properties=[]):
     """ Separates neo4j properties from transient ones. Will also gather specific property dependencies via a
     `dependency_properties` list setting in the schema yaml. Also filters out any unknown properties.
@@ -391,7 +413,7 @@ def group_verify_properties_list(normalized_class='All', properties=[]):
     defaults = get_schema_defaults([])
 
     if len(properties) == 1 and properties[0] in defaults:
-        return properties, [], []
+       return PropertyGroups(properties, [], [], [])
 
     neo4j_fields = []
     trigger_fields = []
@@ -1152,7 +1174,13 @@ list
 """
 
 
-def normalize_entities_list_for_response(entities_list, properties_to_exclude=[], properties_to_include=[]):
+def normalize_entities_list_for_response(entities_list:List, properties_to_exclude=[], properties_to_include=[]):
+    if len(entities_list) <= 0:
+        return []
+
+    if isinstance(entities_list[0], str):
+        return entities_list
+
     normalized_entities_list = []
 
     for entity_dict in entities_list:
