@@ -1718,15 +1718,16 @@ def get_ancestors(id):
         # Final result after normalization
         final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list, properties_to_include=['protocol_url'])
 
-        if public_entity and not user_in_sennet_read_group(request):
-            filtered_final_result = []
-            for ancestor in final_result:
-                ancestor_entity_type = ancestor.get('entity_type')
-                fields_to_exclude = schema_manager.get_fields_to_exclude(ancestor_entity_type)
-                filtered_ancestor = schema_manager.exclude_properties_from_response(fields_to_exclude, ancestor)
-                filtered_final_result.append(filtered_ancestor)
+    # Filter any non-public fields from the result
+    if public_entity and not user_in_sennet_read_group(request):
+        filtered_final_result = []
+        for ancestor in final_result:
+            ancestor_entity_type = ancestor.get('entity_type')
+            fields_to_exclude = schema_manager.get_fields_to_exclude(ancestor_entity_type)
+            filtered_ancestor = schema_manager.exclude_properties_from_response(fields_to_exclude, ancestor)
+            filtered_final_result.append(filtered_ancestor)
 
-            final_result = filtered_final_result
+        final_result = filtered_final_result
 
     return jsonify(final_result)
 
@@ -1848,15 +1849,16 @@ def get_descendants(id):
         # Final result after normalization
         final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list, properties_to_include=['protocol_url'])
 
-        if public_entity and not authorized:
-            filtered_final_result = []
-            for ancestor in final_result:
-                ancestor_entity_type = ancestor.get('entity_type')
-                fields_to_exclude = schema_manager.get_fields_to_exclude(ancestor_entity_type)
-                filtered_ancestor = schema_manager.exclude_properties_from_response(fields_to_exclude, ancestor)
-                filtered_final_result.append(filtered_ancestor)
+    # Filter any non-public fields from the result
+    if public_entity and not authorized:
+        filtered_final_result = []
+        for ancestor in final_result:
+            ancestor_entity_type = ancestor.get('entity_type')
+            fields_to_exclude = schema_manager.get_fields_to_exclude(ancestor_entity_type)
+            filtered_ancestor = schema_manager.exclude_properties_from_response(fields_to_exclude, ancestor)
+            filtered_final_result.append(filtered_ancestor)
 
-            final_result = filtered_final_result
+        final_result = filtered_final_result
 
     return jsonify(final_result)
 
