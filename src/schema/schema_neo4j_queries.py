@@ -2262,14 +2262,15 @@ def exclude_include_query_part(properties:Union[PropertyGroups, List[str]], is_i
         action = 'NOT'
 
     schema.schema_manager.get_schema_defaults(_properties, is_include_action, target_entity_type)
-    a = more_to_grab_query_part[2]
+    a = more_to_grab_query_part[2] if isinstance(more_to_grab_query_part, tuple) else ''
+    map_pairs_part = more_to_grab_query_part[1] if isinstance(more_to_grab_query_part, tuple) else ''
 
                    # unwind the keys of the results from target/t
     query_part = (f"WITH keys(t) AS k1, t{a} unwind k1 AS k2 "
                   # filter by a list[] of properties
                   f"WITH t{a}, k2 WHERE {action} k2 IN {_properties} "
                   # everything is unwinded as separate rows, so let's build it back up by uuid to form: {prop: val, uuid:uuidVal}
-                  f"WITH t{a}, apoc.map.fromPairs([[k2, t[k2]], ['uuid', t.uuid]{more_to_grab_query_part[1]}]) AS dict "
+                  f"WITH t{a}, apoc.map.fromPairs([[k2, t[k2]], ['uuid', t.uuid]{map_pairs_part}]) AS dict "
                   # collect all these individual dicts as a list[], and then group them by uuids, 
                   # which forms a dict with uuid as keys and list of dicts as values: 
                   # {uuidVal: [{prop: val, uuid:uuidVal}, {prop2: val2, uuid:uuidVal}, ... {propN: valN, uuid:uuidVal}], uuidVal2: [...]}
