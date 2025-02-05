@@ -1932,7 +1932,7 @@ def get_parents(id):
                 property_list = app_neo4j_queries.get_parents(neo4j_driver_instance, uuid, properties=segregated_properties, is_include_action=properties_action)
                 complete_entities_list = schema_manager.get_complete_entities_list(token, property_list, segregated_properties.trigger, is_include_action=properties_action)
                 # Final result
-                final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list)
+                final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list, properties_to_include=segregated_properties.activity)
     # Return all the details if no property filtering
     else:
         parents_list = app_neo4j_queries.get_parents(neo4j_driver_instance, uuid)
@@ -2034,7 +2034,7 @@ def get_children(id):
                 property_list = app_neo4j_queries.get_children(neo4j_driver_instance, uuid, properties=segregated_properties, is_include_action=properties_action)
                 complete_entities_list = schema_manager.get_complete_entities_list(user_token, property_list, segregated_properties.trigger, is_include_action=properties_action)
                 # Final result
-                final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list)
+                final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list, properties_to_include=segregated_properties.activity)
     # Return all the details if no property filtering
     else:
         children_list = app_neo4j_queries.get_children(neo4j_driver_instance, uuid)

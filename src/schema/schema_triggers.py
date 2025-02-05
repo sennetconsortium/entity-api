@@ -686,7 +686,7 @@ def get_normalized_collection_entities(uuid: str, token: str, skip_completion: b
                                                                            is_include_action=is_include_action)
 
     return schema_manager.normalize_entities_list_for_response(entities_list=complete_entities_list,
-                                                               properties_to_exclude=[] if is_include_action else properties)
+                                                               properties_to_exclude=[] if is_include_action else properties, properties_to_include=segregated_properties.activity)
 
 
 def get_publication_associated_collection(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):

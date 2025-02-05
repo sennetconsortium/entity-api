@@ -1041,7 +1041,7 @@ def get_upload_datasets(neo4j_driver, uuid, query_filter='', properties: List[st
     """
     results = []
 
-    if len(properties) > 0:
+    if isinstance(properties, list):
         query = (f"MATCH (t:Dataset)-[:IN_UPLOAD]->(s:Upload) "
                  f"WHERE s.uuid = '{uuid}' {query_filter} "
                  f"{exclude_include_query_part(properties, is_include_action, target_entity_type = 'Dataset')}")
