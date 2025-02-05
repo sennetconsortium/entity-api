@@ -2,9 +2,10 @@ import ast
 
 from neo4j.exceptions import TransactionError
 import logging
-from typing import List, Optional
+from typing import List, Union
 
 import schema.schema_manager
+from lib.property_groups import PropertyGroups
 
 logger = logging.getLogger(__name__)
 
@@ -801,12 +802,13 @@ list
 """
 
 
-def get_collection_entities(neo4j_driver, uuid, properties: List[str] = None, is_include_action: bool = True):
+def get_collection_entities(neo4j_driver, uuid, properties: Union[PropertyGroups, List[str]] = None, is_include_action: bool = True):
     results = []
 
+    _activity_query_part = activity_query_part(properties)
     query = (f"MATCH (t:Entity)-[:IN_COLLECTION]->(c:Collection|Epicollection) "
-             f"WHERE c.uuid = '{uuid}' "
-             f"{exclude_include_query_part(properties, is_include_action)}")
+             f"WHERE c.uuid = '{uuid}' {_activity_query_part[0]} "
+             f"{exclude_include_query_part(properties, is_include_action, more_to_grab_query_part=_activity_query_part)}")
              #f"RETURN apoc.coll.toSet(COLLECT(e)) AS {record_field_name}")
 
     logger.info("======get_collection_entities() query======")
@@ -2206,7 +2208,21 @@ def get_sources_associated_entity(neo4j_driver, uuid, filter_out = None):
     return results
 
 
-def exclude_include_query_part(properties:List[str], is_include_action = True, target_entity_type = 'Any'):
+def activity_query_part(properties):
+    if isinstance(properties, PropertyGroups) and len(properties.activity) > 0:
+
+        query_match_part = (f"MATCH (e2:Entity)-[:WAS_GENERATED_BY]->(a:Activity) WHERE e2.uuid = t.uuid")
+
+        query_grab_part = ''
+        for p in properties.activity:
+            query_grab_part = query_grab_part + f", ['{p}', a.{p}]"
+
+        return query_match_part, query_grab_part, ', a'
+    else:
+        return '', '', ''
+
+
+def exclude_include_query_part(properties:List[str], is_include_action = True, target_entity_type = 'Any', more_to_grab_query_part=None):
     """
     Builds a cypher query part that can be used to include or exclude certain properties.
     The preceding MATCH query part should have a label 't'. E.g. MATCH (t:Entity)-[*]->(s:Source)
@@ -2219,6 +2235,8 @@ def exclude_include_query_part(properties:List[str], is_include_action = True, t
         whether to include or exclude the listed properties
     target_entity_type : str
         the entity type that's the target being filtered
+    more_to_grab_query_part : tuple
+        Tuple containing strings of query parts match, map building and variable name respectively
 
     Returns
     -------
@@ -2234,13 +2252,14 @@ def exclude_include_query_part(properties:List[str], is_include_action = True, t
         action = 'NOT'
 
     schema.schema_manager.get_schema_defaults(properties, is_include_action, target_entity_type)
+    a = more_to_grab_query_part[2]
 
                    # unwind the keys of the results from target/t
-    query_part = (f"WITH keys(t) AS k1, t unwind k1 AS k2 "
+    query_part = (f"WITH keys(t) AS k1, t{a} unwind k1 AS k2 "
                   # filter by a list[] of properties
-                  f"WITH t, k2 WHERE {action} k2 IN {properties} "
+                  f"WITH t{a}, k2 WHERE {action} k2 IN {properties} "
                   # everything is unwinded as separate rows, so let's build it back up by uuid to form: {prop: val, uuid:uuidVal}
-                  f"WITH t, apoc.map.fromPairs([[k2, t[k2]], ['uuid', t.uuid]]) AS dict "
+                  f"WITH t{a}, apoc.map.fromPairs([[k2, t[k2]], ['uuid', t.uuid]{more_to_grab_query_part[1]}]) AS dict "
                   # collect all these individual dicts as a list[], and then group them by uuids, 
                   # which forms a dict with uuid as keys and list of dicts as values: 
                   # {uuidVal: [{prop: val, uuid:uuidVal}, {prop2: val2, uuid:uuidVal}, ... {propN: valN, uuid:uuidVal}], uuidVal2: [...]}

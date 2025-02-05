@@ -5,8 +5,11 @@ from atlas_consortia_commons.string import equals
 from neo4j.exceptions import TransactionError
 
 from lib.ontology import Ontology
+from lib.property_groups import PropertyGroups
 from schema import schema_neo4j_queries
-from typing import List
+from typing import List, Union
+
+from schema.schema_neo4j_queries import activity_query_part
 
 logger = logging.getLogger(__name__)
 
@@ -597,7 +600,7 @@ def update_entity(neo4j_driver, entity_type, entity_data_dict, uuid):
         raise TransactionError(msg)
 
 
-def get_ancestors(neo4j_driver, uuid, data_access_level=None, properties: List[str] = None, is_include_action: bool = True, include_protocol = False):
+def get_ancestors(neo4j_driver, uuid, data_access_level=None, properties: Union[PropertyGroups, List[str]] = None, is_include_action: bool = True, include_protocol = False):
     """Get all ancestors by uuid.
 
     Parameters
@@ -624,10 +627,12 @@ def get_ancestors(neo4j_driver, uuid, data_access_level=None, properties: List[s
     if data_access_level:
         predicate = f"AND (t.status='Published' OR t.data_access_level = '{data_access_level}') "
 
-    if isinstance(properties, list):
+    is_filtered = isinstance(properties, PropertyGroups) or  isinstance(properties, list)
+    if is_filtered:
+        _activity_query_part = schema_neo4j_queries.activity_query_part(properties)
         query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(t:Entity) "
-                 f"WHERE e.uuid = '{uuid}' AND t.entity_type <> 'Lab' {predicate} "
-                 f"{schema_neo4j_queries.exclude_include_query_part(properties, is_include_action)}")
+                 f"WHERE e.uuid = '{uuid}' AND t.entity_type <> 'Lab' {predicate} {_activity_query_part[0]} "
+                 f"{schema_neo4j_queries.exclude_include_query_part(properties, is_include_action, more_to_grab_query_part=_activity_query_part)}")
     else:
         query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(t:Entity) "
                  # Filter out the Lab entities
@@ -643,7 +648,7 @@ def get_ancestors(neo4j_driver, uuid, data_access_level=None, properties: List[s
         record = session.read_transaction(_execute_readonly_tx, query)
 
         if record and record[record_field_name]:
-            if isinstance(properties, list):
+            if is_filtered:
                 # Just return the list of property values from each entity node
                 results = record[record_field_name]
                 if include_protocol:
@@ -663,7 +668,7 @@ def get_ancestors(neo4j_driver, uuid, data_access_level=None, properties: List[s
     return results
 
 
-def get_descendants(neo4j_driver, uuid, data_access_level=None, entity_type=None, properties: List[str] = None, is_include_action: bool = True, include_protocol = False):
+def get_descendants(neo4j_driver, uuid, data_access_level=None, entity_type=None, properties: Union[PropertyGroups, List[str]] = None, is_include_action: bool = True, include_protocol = False):
     """ Get all descendants by uuid
 
     Parameters
@@ -692,11 +697,13 @@ def get_descendants(neo4j_driver, uuid, data_access_level=None, entity_type=None
     if data_access_level:
         predicate = f"AND (t.status='Published' OR t.data_access_level = '{data_access_level}') "
 
-    if isinstance(properties, list):
+    is_filtered = isinstance(properties, PropertyGroups) or  isinstance(properties, list)
+    if is_filtered:
+        _activity_query_part = schema_neo4j_queries.activity_query_part(properties)
         query = (f"MATCH (e:Entity)<-[:USED|WAS_GENERATED_BY*]-(t:Entity) "
                  # The target entity can't be a Lab
-                 f"WHERE e.uuid=$uuid AND e.entity_type <> 'Lab' {predicate}"
-                 f"{schema_neo4j_queries.exclude_include_query_part(properties, is_include_action)}")
+                 f"WHERE e.uuid=$uuid AND e.entity_type <> 'Lab' {predicate} {_activity_query_part[0]} "
+                 f"{schema_neo4j_queries.exclude_include_query_part(properties.neo4j + properties.dependency, is_include_action, more_to_grab_query_part=_activity_query_part)}")
     else:
         query = (f"MATCH (e:Entity)<-[:USED|WAS_GENERATED_BY*]-(t:Entity) "
                  # The target entity can't be a Lab
@@ -712,7 +719,7 @@ def get_descendants(neo4j_driver, uuid, data_access_level=None, entity_type=None
         record = session.read_transaction(_execute_readonly_tx, query, uuid=uuid)
 
         if record and record[record_field_name]:
-            if isinstance(properties, list):
+            if is_filtered:
                 # Just return the list of property values from each entity node
                 results = record[record_field_name]
                 if include_protocol:
@@ -926,7 +933,7 @@ def get_source_samples(neo4j_driver, uuid, property_keys=None):
 
 
 
-def get_parents(neo4j_driver, uuid, properties: List[str] = None, is_include_action: bool = True):
+def get_parents(neo4j_driver, uuid, properties: Union[PropertyGroups, List[str]]  = None, is_include_action: bool = True):
     """
     Get all parents by uuid
 
@@ -949,11 +956,13 @@ def get_parents(neo4j_driver, uuid, properties: List[str] = None, is_include_act
 
     results = []
 
-    if isinstance(properties, list):
+    is_filtered = isinstance(properties, PropertyGroups) or  isinstance(properties, list)
+    if is_filtered:
+        _activity_query_part = schema_neo4j_queries.activity_query_part(properties)
         query = (f"MATCH (e:Entity)-[:WAS_GENERATED_BY]->(:Activity)-[:USED]->(t:Entity) "
                  # Filter out the Lab entities
-                 f"WHERE e.uuid='{uuid}' AND t.entity_type <> 'Lab' "
-                 f"{schema_neo4j_queries.exclude_include_query_part(properties, is_include_action)}")
+                 f"WHERE e.uuid='{uuid}' AND t.entity_type <> 'Lab' {_activity_query_part[0]} "
+                 f"{schema_neo4j_queries.exclude_include_query_part(properties, is_include_action, more_to_grab_query_part=_activity_query_part)}")
     else:
         query = (f"MATCH (e:Entity)-[:WAS_GENERATED_BY]->(:Activity)-[:USED]->(parent:Entity) "
                  # Filter out the Lab entities
@@ -969,7 +978,7 @@ def get_parents(neo4j_driver, uuid, properties: List[str] = None, is_include_act
         record = session.read_transaction(_execute_readonly_tx, query)
 
         if record and record[record_field_name]:
-            if isinstance(properties, list):
+            if is_filtered:
                 # Just return the list of property values from each entity node
                 results = record[record_field_name]
             else:
@@ -980,7 +989,7 @@ def get_parents(neo4j_driver, uuid, properties: List[str] = None, is_include_act
 
 
 
-def get_children(neo4j_driver, uuid, properties: List[str] = None, is_include_action: bool = True):
+def get_children(neo4j_driver, uuid, properties: Union[PropertyGroups, List[str]]  = None, is_include_action: bool = True):
     """
     Get all children by uuid
 
@@ -1002,11 +1011,13 @@ def get_children(neo4j_driver, uuid, properties: List[str] = None, is_include_ac
     """
     results = []
 
-    if isinstance(properties, list):
+    is_filtered = isinstance(properties, PropertyGroups) or  isinstance(properties, list)
+    if is_filtered:
+        _activity_query_part = schema_neo4j_queries.activity_query_part(properties)
         query = (f"MATCH (e:Entity)<-[:USED]-(:Activity)<-[:WAS_GENERATED_BY]-(t:Entity) "
                  # The target entity can't be a Lab
-                 f"WHERE e.uuid='{uuid}' AND e.entity_type <> 'Lab' "
-                 f"{schema_neo4j_queries.exclude_include_query_part(properties, is_include_action)}")
+                 f"WHERE e.uuid='{uuid}' AND e.entity_type <> 'Lab' {_activity_query_part[0]}"
+                 f"{schema_neo4j_queries.exclude_include_query_part(properties, is_include_action, more_to_grab_query_part=_activity_query_part)}")
     else:
         query = (f"MATCH (e:Entity)<-[:USED]-(:Activity)<-[:WAS_GENERATED_BY]-(child:Entity) "
                  # The target entity can't be a Lab
@@ -1022,7 +1033,7 @@ def get_children(neo4j_driver, uuid, properties: List[str] = None, is_include_ac
         record = session.read_transaction(_execute_readonly_tx, query)
 
         if record and record[record_field_name]:
-            if isinstance(properties, list):
+            if is_filtered:
                 # Just return the list of property values from each entity node
                 results = record[record_field_name]
             else:

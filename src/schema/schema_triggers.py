@@ -671,8 +671,8 @@ def get_normalized_collection_entities(uuid: str, token: str, skip_completion: b
     """
     db = schema_manager.get_neo4j_driver_instance()
     segregated_properties = schema_manager.group_verify_properties_list(properties=properties)
-    neo4j_properties = segregated_properties[0] + segregated_properties[2]
-    entities_list = schema_neo4j_queries.get_collection_entities(db, uuid, properties=neo4j_properties, is_include_action=is_include_action)
+    neo4j_properties = segregated_properties.neo4j + segregated_properties.dependency
+    entities_list = schema_neo4j_queries.get_collection_entities(db, uuid, properties=segregated_properties, is_include_action=is_include_action)
 
     if len(neo4j_properties) == 1 and neo4j_properties[0] == 'uuid':
         return entities_list

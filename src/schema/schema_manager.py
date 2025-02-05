@@ -11,6 +11,7 @@ from hubmap_commons.string_helper import convert_str_literal
 # Don't confuse urllib (Python native library) with urllib3 (3rd-party library, requests also uses urllib3)
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
+from lib.property_groups import PropertyGroups
 # Local modules
 from schema import schema_errors
 from schema import schema_triggers
@@ -381,8 +382,8 @@ def group_verify_properties_list(normalized_class='All', properties=[]):
 
     Returns
     -------
-    tuple
-        A partitioned tuple with neo4j, trigger and dependency properties respectively
+    PropertyGroups
+        An instance of simple class PropertyGroups containing neo4j, trigger, activity and dependency properties
     """
     # Determine the schema section based on class
     global _schema
@@ -394,13 +395,19 @@ def group_verify_properties_list(normalized_class='All', properties=[]):
 
     neo4j_fields = []
     trigger_fields = []
+    activity_fields = []
     schema_section = {}
+    activities_schema_section = {}
     dependencies = set()
 
     def check_dependencies(_entity_properties):
         for _p in properties:
             if _p in _entity_properties:
                 dependencies.update(_entity_properties[_p].get('dependency_properties', []))
+
+    activity_properties = _schema['ACTIVITIES']['Activity'].get('properties', {})
+    check_dependencies(activity_properties)
+    activities_schema_section.update(activity_properties)
 
     if normalized_class == 'All':
         for entity in _schema['ENTITIES']:
@@ -418,11 +425,13 @@ def group_verify_properties_list(normalized_class='All', properties=[]):
                 trigger_fields.append(p)
             else:
                 neo4j_fields.append(p)
+        if p in activities_schema_section:
+            activity_fields.append(p)
 
     if 'entity_type' not in neo4j_fields and len(trigger_fields) > 0:
         neo4j_fields.append('entity_type')
 
-    return neo4j_fields, trigger_fields, list(dependencies)
+    return PropertyGroups(neo4j_fields, trigger_fields, activity_fields, list(dependencies))
 
 def exclude_properties_from_response(excluded_fields, output_dict):
     """Removes specified fields from an existing dictionary.
