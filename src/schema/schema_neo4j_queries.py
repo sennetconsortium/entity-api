@@ -2208,9 +2208,16 @@ def activity_query_part(properties = None, for_all_match = False):
     """
     Builds activity query part(s) for grabbing properties like protocol_url from Activity
 
-    :param properties: PropertyGroups
-    :param for_all_match: bool
-    :return: Union[str,tuple[str,str,str]]
+    Parameters
+    ----------
+    properties : PropertyGroups
+    for_all_match : bool
+
+    Returns
+    -------
+    Union[str, tuple[str,str,str]]
+        A string if using a grab all query, OR
+        tuple for exclude_include_query_part with [0] Additional MATCH, [1] map pair builds, [2] and 'a' variable to use in WITH statements
     """
     query_match_part = f"MATCH (e2:Entity)-[:WAS_GENERATED_BY]->(a:Activity) WHERE e2.uuid = t.uuid"
 
