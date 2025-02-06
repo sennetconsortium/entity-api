@@ -5018,7 +5018,7 @@ def get_datasets_for_upload(id: str):
                 datasets_list = schema_neo4j_queries.get_upload_datasets(neo4j_driver_instance, uuid=uuid, properties=segregated_properties, is_include_action=properties_action)
                 complete_list = schema_manager.get_complete_entities_list(token, datasets_list, properties_to_skip=segregated_properties.trigger, is_include_action=properties_action)
                 datasets = schema_manager.normalize_entities_list_for_response(complete_list,
-                                                                           properties_to_exclude=properties_to_exclude + properties_to_filter if properties_action is False else [])
+                                                                           properties_to_exclude=properties_to_filter if properties_action is False else [])
     else:
         datasets = schema_triggers.get_normalized_upload_datasets(uuid, token, properties_to_exclude)
     return jsonify(datasets)
@@ -5058,7 +5058,7 @@ def get_entities_for_collection(id: str):
     if not isinstance(token, str):
         token = get_internal_token()
 
-    properties_to_filter = [
+    properties_to_exclude = [
         "contains_human_genetic_sequences",
         "created_timestamp",
         "created_by_user_displayname",
@@ -5075,7 +5075,8 @@ def get_entities_for_collection(id: str):
         "last_modified_user_sub",
     ]
 
-    is_include_action=False
+    uuid = entity_dict["uuid"]
+    entities = []
     if request.method == 'POST':
         if request.is_json and request.json != {}:
             filtering_dict = request.json
@@ -5083,16 +5084,20 @@ def get_entities_for_collection(id: str):
                 abort_bad_req("Missing required key: filter_properties")
             if 'filter_properties' in filtering_dict:
                 properties_to_filter = filtering_dict['filter_properties']
-                is_include_action= filtering_dict.get('is_include', False) # default to false because endpoint is originally skip filter
-
-    # Get the entities associated with the collection
-    entities = schema_triggers.get_normalized_collection_entities(
-        entity_dict["uuid"],
-        token,
-        skip_completion=False,
-        properties=properties_to_filter,
-        is_include_action=is_include_action
-    )
+                segregated_properties = schema_manager.group_verify_properties_list(properties=properties_to_filter)
+                properties_action = filtering_dict.get('is_include', True)
+                entities_list = schema_neo4j_queries.get_collection_entities(neo4j_driver_instance, uuid=uuid, properties=segregated_properties, is_include_action=properties_action)
+                complete_list = schema_manager.get_complete_entities_list(token, entities_list, properties_to_skip=segregated_properties.trigger, is_include_action=properties_action)
+                entities = schema_manager.normalize_entities_list_for_response(complete_list,
+                                                                               properties_to_exclude=properties_to_filter if properties_action is False else segregated_properties.activity)
+    else:
+        # Get the entities associated with the collection
+        entities = schema_triggers.get_normalized_collection_entities(
+            uuid,
+            token,
+            properties_to_exclude=properties_to_exclude,
+            skip_completion=True
+        )
 
     return jsonify(entities)
 

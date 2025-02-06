@@ -643,11 +643,11 @@ def get_collection_entities(property_key: str, normalized_type: str, user_token:
         "title",
         "upload",
     ]
-    collection_entities = get_normalized_collection_entities(existing_data_dict["uuid"], user_token, properties=properties_to_skip)
+    collection_entities = get_normalized_collection_entities(existing_data_dict["uuid"], user_token, properties_to_exclude=properties_to_skip)
     return property_key, collection_entities
 
 
-def get_normalized_collection_entities(uuid: str, token: str, skip_completion: bool = False, properties: List[str] = [], is_include_action: bool = True):
+def get_normalized_collection_entities(uuid: str, token: str, skip_completion: bool = False, properties_to_exclude: List[str] = []):
     """Query the Neo4j database to get the associated entities for a given Collection UUID and normalize the results.
 
     Parameters
@@ -658,10 +658,9 @@ def get_normalized_collection_entities(uuid: str, token: str, skip_completion: b
         The user's globus nexus token or internal token
     skip_completion : bool
         Skip the call to get_complete_entities_list, default is False
-    properties : List[str]
-        A list of property keys to filter in or out from the normalized results, default is []
-    is_include_action : bool
-        Whether to include or exclude the listed properties
+    properties_to_exclude : List[str]
+        A list of property keys to exclude from the normalized results, default is []
+
 
     Returns
     -------
@@ -670,23 +669,18 @@ def get_normalized_collection_entities(uuid: str, token: str, skip_completion: b
         list: A list of associated entity dicts with all the normalized information
     """
     db = schema_manager.get_neo4j_driver_instance()
-    segregated_properties = schema_manager.group_verify_properties_list(properties=properties)
-    neo4j_properties = segregated_properties.neo4j + segregated_properties.dependency
-    entities_list = schema_neo4j_queries.get_collection_entities(db, uuid, properties=segregated_properties, is_include_action=is_include_action)
-
-    if len(neo4j_properties) == 1 and neo4j_properties[0] == 'uuid':
-        return entities_list
+    entities_list = schema_neo4j_queries.get_collection_entities(db, uuid)
 
     if skip_completion:
         complete_entities_list = entities_list
     else:
         complete_entities_list = schema_manager.get_complete_entities_list(token=token,
                                                                            entities_list=entities_list,
-                                                                           properties_to_skip=properties,
-                                                                           is_include_action=is_include_action)
+                                                                           properties_to_skip=properties_to_exclude)
 
     return schema_manager.normalize_entities_list_for_response(entities_list=complete_entities_list,
-                                                               properties_to_exclude=[] if is_include_action else properties, properties_to_include=segregated_properties.activity)
+                                                               properties_to_exclude=properties_to_exclude)
+
 
 
 def get_publication_associated_collection(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):

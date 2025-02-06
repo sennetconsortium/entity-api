@@ -807,7 +807,7 @@ def get_collection_entities(neo4j_driver, uuid, properties: Union[PropertyGroups
 
     query = (f"MATCH (t:Entity)-[:IN_COLLECTION]->(c:Collection|Epicollection) "
              f"WHERE c.uuid = '{uuid}' "
-             f"{exclude_include_query_part(properties.neo4j + properties.dependency, is_include_action)}")
+             f"{exclude_include_query_part(properties, is_include_action)}")
 
 
     logger.info("======get_collection_entities() query======")
@@ -2242,6 +2242,21 @@ def property_type_query_part(properties:PropertyGroups, is_include_action = True
     return map_parts
 
 def build_additional_query_parts(properties:PropertyGroups, is_include_action = True):
+    """
+    Builds additional query parts to be concatenated with other query
+
+    Parameters
+    ----------
+    properties : PropertyGroups
+        The properties that will be used to build additional query parts
+    is_include_action : bool
+        whether to include or exclude the listed properties
+
+    Returns
+    -------
+    tuple[str,str,str]
+        [0] Additional MATCH, [1] map pair builds, [2] and variables to use in WITH statements
+    """
     _activity_query_part = activity_query_part(properties if is_include_action else None)
     _property_type_query_part = property_type_query_part(properties, is_include_action)
 
