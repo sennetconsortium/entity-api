@@ -1464,7 +1464,7 @@ def get_cedar_mapped_metadata(property_key, normalized_type, user_token, existin
         # For mouse sources, samples
         if 'metadata' not in existing_data_dict:
             return property_key, None
-        if not isinstance(existing_data_dict['ingest_metadata'], dict):
+        if not isinstance(existing_data_dict['metadata'], dict):
             metadata = ast.literal_eval(existing_data_dict['metadata'])
         else:
             metadata = existing_data_dict['metadata']
