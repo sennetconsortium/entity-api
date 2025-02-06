@@ -1448,7 +1448,7 @@ def get_cedar_mapped_metadata(property_key, normalized_type, user_token, existin
 
     if equals(Ontology.ops().entities().DATASET, normalized_type):
         # For datasets
-        if 'ingest_metadata' not in existing_data_dict:
+        if 'ingest_metadata' not in existing_data_dict or existing_data_dict['ingest_metadata'] is None:
             return property_key, None
 
         if not isinstance(existing_data_dict['ingest_metadata'], dict):
@@ -1462,7 +1462,7 @@ def get_cedar_mapped_metadata(property_key, normalized_type, user_token, existin
         metadata = ingest_metadata['metadata']
     else:
         # For mouse sources, samples
-        if 'metadata' not in existing_data_dict:
+        if 'metadata' not in existing_data_dict or existing_data_dict['metadata'] is None:
             return property_key, None
         if not isinstance(existing_data_dict['metadata'], dict):
             metadata = ast.literal_eval(existing_data_dict['metadata'])
