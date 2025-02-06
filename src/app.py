@@ -1404,9 +1404,24 @@ def update_entity(id: str, user_token: str, json_data_dict: dict):
             ValueError) as e:
         abort_bad_req(e)
 
-    # Sample, Dataset, and Upload: additional validation, update entity, after_update_trigger
-    # Collection and Source: update entity
+    # Source, Sample, Dataset, and Upload: additional validation, update entity, after_update_trigger
+    # Collection: update entity
+    if normalized_entity_type == 'Source':
+        # Verify that the user isn't trying to alter `sample_category` or `organ`
+        if 'source_type' in json_data_dict and 'source_type' in entity_dict:
+            if json_data_dict['source_type'] != entity_dict['source_type']:
+                abort_bad_req('The field `source_type` can not be changed after the entity has been registered.')
+
     if normalized_entity_type == 'Sample':
+        # Verify that the user isn't trying to alter `sample_category` or `organ`
+        if 'sample_category' in json_data_dict and 'sample_category' in entity_dict:
+            if json_data_dict['sample_category'] != entity_dict['sample_category']:
+                abort_bad_req('The field `sample_category` can not be changed after the entity has been registered.')
+
+        if 'organ' in json_data_dict and 'organ' in entity_dict:
+            if json_data_dict['organ'] != entity_dict['organ']:
+                abort_bad_req('The field `organ` can not be changed after the entity has been registered.')
+
         # A bit more validation for updating the sample and the linkage to existing source entity
         has_direct_ancestor_uuid = False
         if ('direct_ancestor_uuid' in json_data_dict) and json_data_dict['direct_ancestor_uuid']:
