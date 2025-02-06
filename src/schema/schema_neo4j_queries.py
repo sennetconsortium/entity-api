@@ -2235,7 +2235,7 @@ def exclude_include_query_part(properties:Union[PropertyGroups, List[str]], is_i
 
     Parameters
     ----------
-    properties : List[str]
+    properties : Union[PropertyGroups, List[str]]
         the properties to be filtered
     is_include_action : bool
         whether to include or exclude the listed properties
