@@ -558,7 +558,7 @@ def get_ancestors(neo4j_driver, uuid, data_access_level=None, properties: Union[
         The uuid of target entity
     data_access_level : Optional[str]
         The data access level of the ancestor entities (public or consortium). None returns all ancestors.
-    properties : List[str]
+    properties : Union[PropertyGroups, List[str]]
         A list of property keys to filter in or out from the normalized results, default is []
     is_include_action : bool
         Whether to include or exclude the listed properties
@@ -576,10 +576,9 @@ def get_ancestors(neo4j_driver, uuid, data_access_level=None, properties: Union[
 
     is_filtered = isinstance(properties, PropertyGroups) or  isinstance(properties, list)
     if is_filtered:
-        _activity_query_part = schema_neo4j_queries.activity_query_part(properties)
         query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(t:Entity) "
-                 f"WHERE e.uuid = '{uuid}' AND t.entity_type <> 'Lab' {predicate} {_activity_query_part[0]} "
-                 f"{schema_neo4j_queries.exclude_include_query_part(properties, is_include_action, more_to_grab_query_part=_activity_query_part)}")
+                 f"WHERE e.uuid = '{uuid}' AND t.entity_type <> 'Lab' {predicate} "
+                 f"{schema_neo4j_queries.exclude_include_query_part(properties, is_include_action)}")
     else:
         _activity_query_part = schema_neo4j_queries.activity_query_part(for_all_match=True)
         query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(t:Entity) "
@@ -630,11 +629,10 @@ def get_descendants(neo4j_driver, uuid, data_access_level=None, entity_type=None
 
     is_filtered = isinstance(properties, PropertyGroups) or isinstance(properties, list)
     if is_filtered:
-        _activity_query_part = schema_neo4j_queries.activity_query_part(properties)
         query = (f"MATCH (e:Entity)<-[:USED|WAS_GENERATED_BY*]-(t:Entity) "
                  # The target entity can't be a Lab
-                 f"WHERE e.uuid=$uuid AND e.entity_type <> 'Lab' {predicate} {_activity_query_part[0]} "
-                 f"{schema_neo4j_queries.exclude_include_query_part(properties, is_include_action, more_to_grab_query_part=_activity_query_part)}")
+                 f"WHERE e.uuid=$uuid AND e.entity_type <> 'Lab' {predicate} "
+                 f"{schema_neo4j_queries.exclude_include_query_part(properties, is_include_action)}")
     else:
         _activity_query_part = schema_neo4j_queries.activity_query_part(for_all_match=True)
         query = (f"MATCH (e:Entity)<-[:USED|WAS_GENERATED_BY*]-(t:Entity) "
@@ -856,11 +854,10 @@ def get_parents(neo4j_driver, uuid, properties: Union[PropertyGroups, List[str]]
 
     is_filtered = isinstance(properties, PropertyGroups) or  isinstance(properties, list)
     if is_filtered:
-        _activity_query_part = schema_neo4j_queries.activity_query_part(properties if is_include_action else None)
         query = (f"MATCH (e:Entity)-[:WAS_GENERATED_BY]->(:Activity)-[:USED]->(t:Entity) "
                  # Filter out the Lab entities
-                 f"WHERE e.uuid='{uuid}' AND t.entity_type <> 'Lab' {_activity_query_part[0]} "
-                 f"{schema_neo4j_queries.exclude_include_query_part(properties, is_include_action, more_to_grab_query_part=_activity_query_part)}")
+                 f"WHERE e.uuid='{uuid}' AND t.entity_type <> 'Lab' "
+                 f"{schema_neo4j_queries.exclude_include_query_part(properties, is_include_action)}")
     else:
         _activity_query_part = schema_neo4j_queries.activity_query_part(for_all_match=True)
         query = (f"MATCH (e:Entity)-[:WAS_GENERATED_BY]->(:Activity)-[:USED]->(t:Entity) "
@@ -905,11 +902,10 @@ def get_children(neo4j_driver, uuid, properties: Union[PropertyGroups, List[str]
 
     is_filtered = isinstance(properties, PropertyGroups) or  isinstance(properties, list)
     if is_filtered:
-        _activity_query_part = schema_neo4j_queries.activity_query_part(properties if is_include_action else None)
         query = (f"MATCH (e:Entity)<-[:USED]-(:Activity)<-[:WAS_GENERATED_BY]-(t:Entity) "
                  # The target entity can't be a Lab
-                 f"WHERE e.uuid='{uuid}' AND e.entity_type <> 'Lab' {_activity_query_part[0]}"
-                 f"{schema_neo4j_queries.exclude_include_query_part(properties, is_include_action, more_to_grab_query_part=_activity_query_part)}")
+                 f"WHERE e.uuid='{uuid}' AND e.entity_type <> 'Lab' "
+                 f"{schema_neo4j_queries.exclude_include_query_part(properties, is_include_action)}")
     else:
         _activity_query_part = schema_neo4j_queries.activity_query_part(for_all_match=True)
         query = (f"MATCH (e:Entity)<-[:USED]-(:Activity)<-[:WAS_GENERATED_BY]-(t:Entity) "

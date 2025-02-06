@@ -1393,7 +1393,11 @@ def get_source_mapped_metadata(property_key, normalized_type, user_token, existi
         )
         raise schema_errors.InvalidPropertyRequirementsException(msg)
 
-    metadata = json.loads(existing_data_dict['metadata'].replace("'", '"'))
+    if not isinstance(existing_data_dict['metadata'], dict):
+        metadata = json.loads(existing_data_dict['metadata'].replace("'", '"'))
+    else:
+        metadata = existing_data_dict['metadata']
+
     donor_metadata = metadata.get('organ_donor_data') or metadata.get('living_donor_data') or {}
 
     mapped_metadata = {}
@@ -1452,9 +1456,15 @@ def get_cedar_mapped_metadata(property_key, normalized_type, user_token, existin
         # For datasets
         if 'ingest_metadata' not in existing_data_dict:
             return property_key, None
-        ingest_metadata = ast.literal_eval(existing_data_dict['ingest_metadata'])
+
+        if not isinstance(existing_data_dict['ingest_metadata'], dict):
+            ingest_metadata = ast.literal_eval(existing_data_dict['ingest_metadata'])
+        else:
+            ingest_metadata = existing_data_dict['ingest_metadata']
+
         if 'metadata' not in ingest_metadata:
             return property_key, None
+
         metadata = ingest_metadata['metadata']
     else:
         # For mouse sources, samples
@@ -2973,7 +2983,7 @@ def get_upload_datasets(property_key: str, normalized_type: str, user_token: str
     return property_key, upload_datasets
 
 
-def get_normalized_upload_datasets(uuid: str, token, properties_to_exclude: List[str] = [], properties: List[str] = [], is_include_action: bool = False):
+def get_normalized_upload_datasets(uuid: str, token, properties_to_exclude: List[str] = []):
     """Query the Neo4j database to get the associated datasets for a given Upload UUID and normalize the results.
 
     Parameters
@@ -2984,27 +2994,21 @@ def get_normalized_upload_datasets(uuid: str, token, properties_to_exclude: List
         Either the user's globus nexus token or the internal token
     properties_to_exclude : List[str]
         A list of property keys to exclude from the normalized results
-    properties : List[str]
-        the properties to be filtered
-    is_include_action : bool
-        Whether to include or exclude the listed properties
 
     Returns
     -------
     list: A list of associated dataset dicts with all the normalized information
     """
     db = schema_manager.get_neo4j_driver_instance()
-    datasets_list = schema_neo4j_queries.get_upload_datasets(db, uuid, properties=properties, is_include_action=is_include_action)
+    datasets_list = schema_neo4j_queries.get_upload_datasets(db, uuid)
 
-    if len(properties) == 1 and properties[0] == 'uuid':
-        return datasets_list
 
-    complete_list = schema_manager.get_complete_entities_list(token, datasets_list, properties_to_exclude, is_include_action=is_include_action)
+    complete_list = schema_manager.get_complete_entities_list(token, datasets_list, properties_to_exclude)
 
     # Get rid of the entity node properties that are not defined in the yaml schema
     # as well as the ones defined as `exposed: false` in the yaml schema
     return schema_manager.normalize_entities_list_for_response(complete_list,
-                                                               properties_to_exclude=[] if is_include_action else properties_to_exclude)
+                                                               properties_to_exclude=properties_to_exclude)
 
 
 ####################################################################################################

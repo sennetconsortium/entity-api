@@ -805,10 +805,9 @@ list
 def get_collection_entities(neo4j_driver, uuid, properties: Union[PropertyGroups, List[str]] = None, is_include_action: bool = True):
     results = []
 
-    _activity_query_part = activity_query_part(properties if is_include_action else None)
     query = (f"MATCH (t:Entity)-[:IN_COLLECTION]->(c:Collection|Epicollection) "
-             f"WHERE c.uuid = '{uuid}' {_activity_query_part[0]} "
-             f"{exclude_include_query_part(properties.neo4j + properties.dependency, is_include_action, more_to_grab_query_part=_activity_query_part)}")
+             f"WHERE c.uuid = '{uuid}' "
+             f"{exclude_include_query_part(properties.neo4j + properties.dependency, is_include_action)}")
 
 
     logger.info("======get_collection_entities() query======")
@@ -1022,7 +1021,7 @@ list
 """
 
 
-def get_upload_datasets(neo4j_driver, uuid, query_filter='', properties: List[str] = None, is_include_action: bool = True):
+def get_upload_datasets(neo4j_driver, uuid, query_filter='', properties: Union[PropertyGroups, List[str]] = None, is_include_action: bool = True):
     """
 
     Parameters
@@ -1033,7 +1032,7 @@ def get_upload_datasets(neo4j_driver, uuid, query_filter='', properties: List[st
         The uuid of target entity
     query_filter: str
         An additional filter against the cypher match
-    properties : List[str]
+    properties : Union[PropertyGroups, List[str]]
         A list of property keys to filter in or out from the normalized results, default is []
     is_include_action : bool
         Whether to include or exclude the listed properties
@@ -1041,7 +1040,8 @@ def get_upload_datasets(neo4j_driver, uuid, query_filter='', properties: List[st
     """
     results = []
 
-    if isinstance(properties, list):
+    is_filtered = isinstance(properties, PropertyGroups) or  isinstance(properties, list)
+    if is_filtered:
         query = (f"MATCH (t:Dataset)-[:IN_UPLOAD]->(s:Upload) "
                  f"WHERE s.uuid = '{uuid}' {query_filter} "
                  f"{exclude_include_query_part(properties, is_include_action, target_entity_type = 'Dataset')}")
@@ -1057,7 +1057,7 @@ def get_upload_datasets(neo4j_driver, uuid, query_filter='', properties: List[st
         record = session.read_transaction(execute_readonly_tx, query)
 
         if record and record[record_field_name]:
-            if isinstance(properties, list):
+            if is_filtered:
                 # Just return the list of property values from each entity node
                 results = record[record_field_name]
             else:
@@ -2227,8 +2227,27 @@ def activity_query_part(properties = None, for_all_match = False):
     else:
         return '', '', ''
 
+def property_type_query_part(properties:PropertyGroups, is_include_action = True):
+    if is_include_action is False:
+        return ''
 
-def exclude_include_query_part(properties:Union[PropertyGroups, List[str]], is_include_action = True, target_entity_type = 'Any', more_to_grab_query_part=None):
+    map_parts = ''
+
+    for j in properties.json:
+        map_parts = map_parts + f", ['{j}', apoc.convert.fromJsonMap(t.{j})]"
+
+    for l in properties.list:
+        map_parts = map_parts + f", ['{l}', apoc.convert.fromJsonList(t.{l})]"
+
+    return map_parts
+
+def build_additional_query_parts(properties:PropertyGroups, is_include_action = True):
+    _activity_query_part = activity_query_part(properties if is_include_action else None)
+    _property_type_query_part = property_type_query_part(properties, is_include_action)
+
+    return _activity_query_part[0], _activity_query_part[1] + _property_type_query_part, _activity_query_part[2]
+
+def exclude_include_query_part(properties:Union[PropertyGroups, List[str]], is_include_action = True, target_entity_type = 'Any'):
     """
     Builds a cypher query part that can be used to include or exclude certain properties.
     The preceding MATCH query part should have a label 't'. E.g. MATCH (t:Entity)-[*]->(s:Source)
@@ -2241,8 +2260,6 @@ def exclude_include_query_part(properties:Union[PropertyGroups, List[str]], is_i
         whether to include or exclude the listed properties
     target_entity_type : str
         the entity type that's the target being filtered
-    more_to_grab_query_part : tuple
-        Tuple containing strings of query parts match, map building and variable name respectively
 
     Returns
     -------
@@ -2262,6 +2279,7 @@ def exclude_include_query_part(properties:Union[PropertyGroups, List[str]], is_i
         action = 'NOT'
 
     schema.schema_manager.get_schema_defaults(_properties, is_include_action, target_entity_type)
+    more_to_grab_query_part = build_additional_query_parts(properties, is_include_action)
     a = more_to_grab_query_part[2] if isinstance(more_to_grab_query_part, tuple) else ''
     map_pairs_part = more_to_grab_query_part[1] if isinstance(more_to_grab_query_part, tuple) else ''
 
@@ -2282,4 +2300,4 @@ def exclude_include_query_part(properties:Union[PropertyGroups, List[str]], is_i
                   # collect each row to form a list[] and return
                   f"RETURN collect(rows) AS {record_field_name}")
 
-    return query_part
+    return f"{more_to_grab_query_part[0]} {query_part}"

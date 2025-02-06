@@ -5003,9 +5003,9 @@ def get_datasets_for_upload(id: str):
         "upload"
     ]
 
-    properties_action = None
-    neo4j_properties_to_filter = []
-
+    uuid = entity_dict['uuid']
+    token = get_internal_token()
+    datasets = []
     if request.method == 'POST':
         if request.is_json and request.json != {}:
             filtering_dict = request.json
@@ -5014,13 +5014,13 @@ def get_datasets_for_upload(id: str):
             if 'filter_properties' in filtering_dict:
                 properties_to_filter = filtering_dict['filter_properties']
                 segregated_properties = schema_manager.group_verify_properties_list(Ontology.ops().entities().DATASET, properties_to_filter)
-                neo4j_properties_to_filter = segregated_properties.neo4j + segregated_properties.dependency
                 properties_action = filtering_dict.get('is_include', True)
-                properties_to_exclude = properties_to_exclude + segregated_properties.trigger if properties_action is False else segregated_properties.trigger
-
-    token = get_internal_token()
-    datasets = schema_triggers.get_normalized_upload_datasets(entity_dict["uuid"], token, properties_to_exclude, properties=neo4j_properties_to_filter,
-                                                              is_include_action=properties_action)
+                datasets_list = schema_neo4j_queries.get_upload_datasets(neo4j_driver_instance, uuid=uuid, properties=segregated_properties, is_include_action=properties_action)
+                complete_list = schema_manager.get_complete_entities_list(token, datasets_list, properties_to_skip=segregated_properties.trigger, is_include_action=properties_action)
+                datasets = schema_manager.normalize_entities_list_for_response(complete_list,
+                                                                           properties_to_exclude=properties_to_exclude + properties_to_filter if properties_action is False else [])
+    else:
+        datasets = schema_triggers.get_normalized_upload_datasets(uuid, token, properties_to_exclude)
     return jsonify(datasets)
 
 

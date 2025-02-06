@@ -413,11 +413,13 @@ def group_verify_properties_list(normalized_class='All', properties=[]):
     defaults = get_schema_defaults([])
 
     if len(properties) == 1 and properties[0] in defaults:
-       return PropertyGroups(properties, [], [], [])
+       return PropertyGroups(properties, [], [], [], [], [])
 
     neo4j_fields = []
     trigger_fields = []
     activity_fields = []
+    json_fields = []
+    list_fields = []
     schema_section = {}
     activities_schema_section = {}
     dependencies = set()
@@ -447,13 +449,20 @@ def group_verify_properties_list(normalized_class='All', properties=[]):
                 trigger_fields.append(p)
             else:
                 neo4j_fields.append(p)
+
+                if 'type' in schema_section[p]:
+                    if schema_section[p]['type'] == 'json_string':
+                        json_fields.append(p)
+                    if schema_section[p]['type'] == 'list':
+                        list_fields.append(p)
+
         if p in activities_schema_section:
             activity_fields.append(p)
 
     if 'entity_type' not in neo4j_fields and len(trigger_fields) > 0:
         neo4j_fields.append('entity_type')
 
-    return PropertyGroups(neo4j_fields, trigger_fields, activity_fields, list(dependencies))
+    return PropertyGroups(neo4j_fields, trigger_fields, activity_fields, list(dependencies), json_fields, list_fields)
 
 def exclude_properties_from_response(excluded_fields, output_dict):
     """Removes specified fields from an existing dictionary.
