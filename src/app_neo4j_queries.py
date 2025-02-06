@@ -597,7 +597,7 @@ def update_entity(neo4j_driver, entity_type, entity_data_dict, uuid):
         raise TransactionError(msg)
 
 
-def get_ancestors(neo4j_driver, uuid, data_access_level=None, properties: List[str] = None, is_include_action: bool = True):
+def get_ancestors(neo4j_driver, uuid, data_access_level=None, properties: List[str] = None, is_include_action: bool = True, include_protocol = False):
     """Get all ancestors by uuid.
 
     Parameters
@@ -646,6 +646,11 @@ def get_ancestors(neo4j_driver, uuid, data_access_level=None, properties: List[s
             if isinstance(properties, list):
                 # Just return the list of property values from each entity node
                 results = record[record_field_name]
+                if include_protocol:
+                    for result in results:
+                        protocol_url = get_activity_protocol(neo4j_driver, result['uuid'])
+                        if protocol_url != {}:
+                            result['protocol_url'] = protocol_url
             else:
                 # Convert the list of nodes to a list of dicts
                 results = _nodes_to_dicts(record[record_field_name])
@@ -658,7 +663,7 @@ def get_ancestors(neo4j_driver, uuid, data_access_level=None, properties: List[s
     return results
 
 
-def get_descendants(neo4j_driver, uuid, data_access_level=None, entity_type=None, properties: List[str] = None, is_include_action: bool = True):
+def get_descendants(neo4j_driver, uuid, data_access_level=None, entity_type=None, properties: List[str] = None, is_include_action: bool = True, include_protocol = False):
     """ Get all descendants by uuid
 
     Parameters
@@ -710,6 +715,11 @@ def get_descendants(neo4j_driver, uuid, data_access_level=None, entity_type=None
             if isinstance(properties, list):
                 # Just return the list of property values from each entity node
                 results = record[record_field_name]
+                if include_protocol:
+                    for result in results:
+                        protocol_url = get_activity_protocol(neo4j_driver, result['uuid'])
+                        if protocol_url != {}:
+                            result['protocol_url'] = protocol_url
             else:
                 # Convert the list of nodes to a list of dicts
                 results = _nodes_to_dicts(record[record_field_name])
