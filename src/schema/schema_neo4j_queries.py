@@ -2211,13 +2211,15 @@ def activity_query_part(properties = None, for_all_match = False):
     Parameters
     ----------
     properties : PropertyGroups
+        The properties that will be used to build additional query parts
     for_all_match : bool
+        Whether to return a query part used for grabbing the entire nodes list
 
     Returns
     -------
     Union[str, tuple[str,str,str]]
         A string if using a grab all query, OR
-        tuple for exclude_include_query_part with [0] Additional MATCH, [1] map pair builds, [2] and 'a' variable to use in WITH statements
+        tuple for exclude_include_query_part with [0] Additional MATCH, [1] map pair query parts for apoc.map.fromPairs, [2] and 'a' variable to use in WITH statements
     """
     query_match_part = f"MATCH (e2:Entity)-[:WAS_GENERATED_BY]->(a:Activity) WHERE e2.uuid = t.uuid"
 
@@ -2235,6 +2237,21 @@ def activity_query_part(properties = None, for_all_match = False):
         return '', '', ''
 
 def property_type_query_part(properties:PropertyGroups, is_include_action = True):
+    """
+    Builds property type query part(s) for parsing properties of certain types
+
+    Parameters
+    ----------
+    properties : PropertyGroups
+        The properties that will be used to build additional query parts
+    is_include_action : bool
+        whether to include or exclude the listed properties
+
+    Returns
+    -------
+    str
+        The query part(s) for concatenation into apoc.map.fromPairs method
+    """
     if is_include_action is False:
         return ''
 
@@ -2262,7 +2279,7 @@ def build_additional_query_parts(properties:PropertyGroups, is_include_action = 
     Returns
     -------
     tuple[str,str,str]
-        [0] Additional MATCH, [1] map pair builds, [2] and variables to use in WITH statements
+        [0] Additional MATCH, [1] map pair query parts for apoc.map.fromPairs, [2] and variables to use in WITH statements
     """
     _activity_query_part = activity_query_part(properties if is_include_action else None)
     _property_type_query_part = property_type_query_part(properties, is_include_action)
