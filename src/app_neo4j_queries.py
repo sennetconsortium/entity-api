@@ -1485,7 +1485,7 @@ def get_provenance(neo4j_driver, uuid, depth, return_descendants=None, query_fil
         allow_nodes = ', allowlistNodes: allowlistNodes'
         predicate = ("MATCH (allowlist0:Activity) "
                      "MATCH (allowlist:Entity) "
-                     "WHERE allowlist.data_access_level IN ['public']  "
+                     "WHERE (allowlist.data_access_level IN ['public'] OR allowlist.status = 'Published')  "
                      "WITH n, collect(allowlist0)+collect(allowlist) AS allowlistNodes ")
 
     # More info on apoc.path.subgraphAll() procedure: https://neo4j.com/labs/apoc/4.0/graph-querying/expand-subgraph/
