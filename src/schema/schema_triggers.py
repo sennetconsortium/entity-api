@@ -1374,7 +1374,7 @@ def get_source_mapped_metadata(property_key, normalized_type, user_token, existi
     """
     if not equals(Ontology.ops().source_types().HUMAN, existing_data_dict['source_type']):
         return property_key, None
-    if 'metadata' not in existing_data_dict:
+    if 'metadata' not in existing_data_dict or existing_data_dict['metadata'] is None:
         return property_key, None
 
     if (
