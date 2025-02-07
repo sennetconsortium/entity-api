@@ -1483,10 +1483,9 @@ def get_provenance(neo4j_driver, uuid, depth, return_descendants=None, query_fil
     allow_nodes = ''
     if data_access_level:
         allow_nodes = ', allowlistNodes: allowlistNodes'
-        predicate = ("MATCH (allowlist0:Activity) "
-                     "MATCH (allowlist:Entity) "
-                     f"WHERE (allowlist.data_access_level = '{data_access_level}' OR allowlist.status = 'Published')  "
-                     "WITH n, collect(allowlist0)+collect(allowlist) AS allowlistNodes ")
+        predicate = ("MATCH(allowedEntity:Entity)-[:WAS_GENERATED_BY]->(allowedActivity:Activity) "
+                     f"WHERE (allowedEntity.data_access_level = '{data_access_level}' OR allowedEntity.status = 'Published')  "
+                     "WITH n, collect(allowedEntity)+collect(allowedActivity) AS allowlistNodes ")
 
     # More info on apoc.path.subgraphAll() procedure: https://neo4j.com/labs/apoc/4.0/graph-querying/expand-subgraph/
     query = (f"MATCH (n:Entity) "
