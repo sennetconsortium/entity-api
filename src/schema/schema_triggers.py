@@ -1445,29 +1445,13 @@ def get_cedar_mapped_metadata(property_key, normalized_type, user_token, existin
     if equals(Ontology.ops().source_types().HUMAN, existing_data_dict.get('source_type')):
         return property_key, None
 
-    # TODO: Remove this check for Dataset as all entity types will have metadata in "metadata"
-    if equals(Ontology.ops().entities().DATASET, normalized_type):
-        # For datasets
-        if 'ingest_metadata' not in existing_data_dict or existing_data_dict['ingest_metadata'] is None:
-            return property_key, None
-
-        if not isinstance(existing_data_dict['ingest_metadata'], dict):
-            ingest_metadata = ast.literal_eval(existing_data_dict['ingest_metadata'])
-        else:
-            ingest_metadata = existing_data_dict['ingest_metadata']
-
-        if 'metadata' not in ingest_metadata:
-            return property_key, None
-
-        metadata = ingest_metadata['metadata']
+    # For mouse sources, samples, and datasets
+    if 'metadata' not in existing_data_dict or existing_data_dict['metadata'] is None:
+        return property_key, None
+    if not isinstance(existing_data_dict['metadata'], dict):
+        metadata = ast.literal_eval(existing_data_dict['metadata'])
     else:
-        # For mouse sources, samples
-        if 'metadata' not in existing_data_dict or existing_data_dict['metadata'] is None:
-            return property_key, None
-        if not isinstance(existing_data_dict['metadata'], dict):
-            metadata = ast.literal_eval(existing_data_dict['metadata'])
-        else:
-            metadata = existing_data_dict['metadata']
+        metadata = existing_data_dict['metadata']
 
     mapped_metadata = {}
     for k, v in metadata.items():
