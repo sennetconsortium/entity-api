@@ -1943,18 +1943,8 @@ def get_parents(id):
         complete_entities_list = schema_manager.get_complete_entities_list(token, parents_list, properties_to_skip)
 
         # Final result after normalization
-        final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list)
-
-        filtered_final_result = []
-        for parent in final_result:
-            parent_entity_type = parent.get('entity_type')
-            fields_to_exclude = schema_manager.get_fields_to_exclude(parent_entity_type)
-            if public_entity and not user_in_sennet_read_group(request):
-                filtered_parent = schema_manager.exclude_properties_from_response(fields_to_exclude, parent)
-                filtered_final_result.append(filtered_parent)
-            else:
-                filtered_final_result.append(parent)
-        final_result = filtered_final_result
+        _final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list)
+        final_result = schema_manager.remove_unauthorized_fields_from_response(_final_result, unauthorized=not user_in_sennet_read_group(request))
 
     return jsonify(final_result)
 
