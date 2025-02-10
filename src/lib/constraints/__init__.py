@@ -3,6 +3,7 @@ from lib.constraints.source import *
 from lib.constraints.sample import *
 from lib.constraints.dataset import *
 from lib.constraints.publication import *
+from lib.constraints.collection import *
 from lib.constraints.epicollection import *
 from deepdiff import DeepDiff
 
@@ -27,6 +28,10 @@ def build_publication_constraints(entity) -> list:
     return build_all_publication_constraints(entity)
 
 
+def build_collection_constraints(entity) -> list:
+    return build_all_collection_constraints(entity)
+
+
 def build_epicollection_constraints(entity) -> list:
     return build_all_epicollection_constraints(entity)
 
@@ -39,6 +44,7 @@ def determine_constraint_from_entity(constraint_unit, use_case=None) -> dict:
     constraints = []
     entities = Ontology.ops(as_arr=True, cb=enum_val_lower).entities()
     # Need to manually add Epicollection
+    entities.append('collection')
     entities.append('epicollection')
     if entity_type not in entities:
         error = f"No `entity_type` found with value `{entity_type}`"

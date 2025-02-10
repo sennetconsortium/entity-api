@@ -597,7 +597,7 @@ def update_entity(neo4j_driver, entity_type, entity_data_dict, uuid):
         raise TransactionError(msg)
 
 
-def get_ancestors(neo4j_driver, uuid, data_access_level=None, properties: List[str] = None, is_include_action: bool = True):
+def get_ancestors(neo4j_driver, uuid, data_access_level=None, properties: List[str] = None, is_include_action: bool = True, include_protocol = False):
     """Get all ancestors by uuid.
 
     Parameters
@@ -622,19 +622,19 @@ def get_ancestors(neo4j_driver, uuid, data_access_level=None, properties: List[s
 
     predicate = ''
     if data_access_level:
-        predicate = f"AND ancestor.data_access_level = '{data_access_level}' "
+        predicate = f"AND (t.status='Published' OR t.data_access_level = '{data_access_level}') "
 
     if isinstance(properties, list):
         query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(t:Entity) "
                  f"WHERE e.uuid = '{uuid}' AND t.entity_type <> 'Lab' {predicate} "
                  f"{schema_neo4j_queries.exclude_include_query_part(properties, is_include_action)}")
     else:
-        query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(ancestor:Entity) "
+        query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(t:Entity) "
                  # Filter out the Lab entities
-                 f"WHERE e.uuid='{uuid}' AND ancestor.entity_type <> 'Lab' {predicate}"
+                 f"WHERE e.uuid='{uuid}' AND t.entity_type <> 'Lab' {predicate}"
                  # COLLECT() returns a list
                  # apoc.coll.toSet() reruns a set containing unique nodes
-                 f"RETURN apoc.coll.toSet(COLLECT(ancestor)) AS {record_field_name}")
+                 f"RETURN apoc.coll.toSet(COLLECT(t)) AS {record_field_name}")
 
     logger.info("======get_ancestors() query======")
     logger.info(query)
@@ -646,6 +646,11 @@ def get_ancestors(neo4j_driver, uuid, data_access_level=None, properties: List[s
             if isinstance(properties, list):
                 # Just return the list of property values from each entity node
                 results = record[record_field_name]
+                if include_protocol:
+                    for result in results:
+                        protocol_url = get_activity_protocol(neo4j_driver, result['uuid'])
+                        if protocol_url != {}:
+                            result['protocol_url'] = protocol_url
             else:
                 # Convert the list of nodes to a list of dicts
                 results = _nodes_to_dicts(record[record_field_name])
@@ -658,7 +663,7 @@ def get_ancestors(neo4j_driver, uuid, data_access_level=None, properties: List[s
     return results
 
 
-def get_descendants(neo4j_driver, uuid, data_access_level=None, entity_type=None, properties: List[str] = None, is_include_action: bool = True):
+def get_descendants(neo4j_driver, uuid, data_access_level=None, entity_type=None, properties: List[str] = None, is_include_action: bool = True, include_protocol = False):
     """ Get all descendants by uuid
 
     Parameters
@@ -685,7 +690,7 @@ def get_descendants(neo4j_driver, uuid, data_access_level=None, entity_type=None
 
     predicate = ''
     if data_access_level:
-        predicate = f"AND descendant.data_access_level = '{data_access_level}' "
+        predicate = f"AND (t.status='Published' OR t.data_access_level = '{data_access_level}') "
 
     if isinstance(properties, list):
         query = (f"MATCH (e:Entity)<-[:USED|WAS_GENERATED_BY*]-(t:Entity) "
@@ -693,12 +698,12 @@ def get_descendants(neo4j_driver, uuid, data_access_level=None, entity_type=None
                  f"WHERE e.uuid=$uuid AND e.entity_type <> 'Lab' {predicate}"
                  f"{schema_neo4j_queries.exclude_include_query_part(properties, is_include_action)}")
     else:
-        query = (f"MATCH (e:Entity)<-[:USED|WAS_GENERATED_BY*]-(descendant:Entity) "
+        query = (f"MATCH (e:Entity)<-[:USED|WAS_GENERATED_BY*]-(t:Entity) "
                  # The target entity can't be a Lab
                  f"WHERE e.uuid=$uuid AND e.entity_type <> 'Lab' {predicate}"
                  # COLLECT() returns a list
                  # apoc.coll.toSet() reruns a set containing unique nodes
-                 f"RETURN apoc.coll.toSet(COLLECT(descendant)) AS {record_field_name}")
+                 f"RETURN apoc.coll.toSet(COLLECT(t)) AS {record_field_name}")
 
     logger.info("======get_descendants() query======")
     logger.info(query)
@@ -710,6 +715,11 @@ def get_descendants(neo4j_driver, uuid, data_access_level=None, entity_type=None
             if isinstance(properties, list):
                 # Just return the list of property values from each entity node
                 results = record[record_field_name]
+                if include_protocol:
+                    for result in results:
+                        protocol_url = get_activity_protocol(neo4j_driver, result['uuid'])
+                        if protocol_url != {}:
+                            result['protocol_url'] = protocol_url
             else:
                 # Convert the list of nodes to a list of dicts
                 results = _nodes_to_dicts(record[record_field_name])
@@ -1455,7 +1465,7 @@ depth : int
 """
 
 
-def get_provenance(neo4j_driver, uuid, depth, return_descendants=None, query_filter=None):
+def get_provenance(neo4j_driver, uuid, depth, return_descendants=None, data_access_level=None):
     # max_level_str is the string used to put a limit on the number of levels to traverse
     max_level_str = ''
     if depth is not None and len(str(depth)) > 0:
@@ -1465,14 +1475,18 @@ def get_provenance(neo4j_driver, uuid, depth, return_descendants=None, query_fil
     if return_descendants:
         relationship_filter = '<USED|<WAS_GENERATED_BY'
 
-    label_filter = ''
-    if query_filter is not None and len(query_filter) > 0:
-        label_filter = f", labelFilter:'{query_filter}'"
+    predicate = ''
+    allow_nodes = ''
+    if data_access_level:
+        allow_nodes = ', allowlistNodes: allowlistNodes'
+        predicate = ("MATCH(allowedEntity:Entity)-[:WAS_GENERATED_BY]->(allowedActivity:Activity) "
+                     f"WHERE (allowedEntity.data_access_level = '{data_access_level}' OR allowedEntity.status = 'Published')  "
+                     "WITH n, collect(allowedEntity)+collect(allowedActivity) AS allowlistNodes ")
 
     # More info on apoc.path.subgraphAll() procedure: https://neo4j.com/labs/apoc/4.0/graph-querying/expand-subgraph/
     query = (f"MATCH (n:Entity) "
-             f"WHERE n.uuid = '{uuid}' "
-             f"CALL apoc.path.subgraphAll(n, {{ {max_level_str} relationshipFilter:'{relationship_filter}' {label_filter} }}) "
+             f"WHERE n.uuid = '{uuid}' {predicate} "
+             f"CALL apoc.path.subgraphAll(n, {{ {max_level_str} relationshipFilter:'{relationship_filter}' {allow_nodes} }}) "
              f"YIELD nodes, relationships "
              f"WITH [node in nodes | node {{ .*, label:labels(node)[0] }} ] as nodes, "
              f"[rel in relationships | rel {{ .*, fromNode: {{ label:labels(startNode(rel))[0], uuid:startNode(rel).uuid }}, toNode: {{ label:labels(endNode(rel))[0], uuid:endNode(rel).uuid }}, rel_data: {{ type: type(rel) }} }} ] as rels "

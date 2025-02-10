@@ -807,8 +807,11 @@ def get_entity_provenance(id):
     if 'depth' in request.args:
         depth = int(request.args.get('depth'))
 
+    authorized = user_in_sennet_read_group(request)
+    data_access_level = 'public' if authorized is False else None
+
     # Convert neo4j json to dict
-    neo4j_result = app_neo4j_queries.get_provenance(neo4j_driver_instance, uuid, depth)
+    neo4j_result = app_neo4j_queries.get_provenance(neo4j_driver_instance, uuid, depth, data_access_level=data_access_level)
     raw_provenance_dict = dict(neo4j_result['json'])
 
     raw_descendants_dict = None
@@ -816,14 +819,9 @@ def get_entity_provenance(id):
         # The parsed query string value is a string 'true'
         return_descendants = request.args.get('return_descendants')
 
-        # The value should be in a format expected by the apoc.path.subgraphAll.labelFilter config param
-        label_filter = request.args.get('filter', '')
-        allowable_filter_chars = "[a-zA-Z+/>\-|]"
-        label_filter = ''.join(re.findall(allowable_filter_chars, label_filter))
-
         if (return_descendants is not None) and (return_descendants.lower() == 'true'):
             neo4j_result_descendants = app_neo4j_queries.get_provenance(neo4j_driver_instance, uuid, depth, True,
-                                                                        label_filter)
+                                                                         data_access_level=data_access_level)
             raw_descendants_dict = dict(neo4j_result_descendants['json'])
 
     # Normalize the raw provenance nodes based on the yaml schema
@@ -1404,9 +1402,24 @@ def update_entity(id: str, user_token: str, json_data_dict: dict):
             ValueError) as e:
         abort_bad_req(e)
 
-    # Sample, Dataset, and Upload: additional validation, update entity, after_update_trigger
-    # Collection and Source: update entity
+    # Source, Sample, Dataset, and Upload: additional validation, update entity, after_update_trigger
+    # Collection: update entity
+    if normalized_entity_type == 'Source':
+        # Verify that the user isn't trying to alter `sample_category` or `organ`
+        if 'source_type' in json_data_dict and 'source_type' in entity_dict:
+            if json_data_dict['source_type'] != entity_dict['source_type']:
+                abort_bad_req('The field `source_type` can not be changed after the entity has been registered.')
+
     if normalized_entity_type == 'Sample':
+        # Verify that the user isn't trying to alter `sample_category` or `organ`
+        if 'sample_category' in json_data_dict and 'sample_category' in entity_dict:
+            if json_data_dict['sample_category'] != entity_dict['sample_category']:
+                abort_bad_req('The field `sample_category` can not be changed after the entity has been registered.')
+
+        if 'organ' in json_data_dict and 'organ' in entity_dict:
+            if json_data_dict['organ'] != entity_dict['organ']:
+                abort_bad_req('The field `organ` can not be changed after the entity has been registered.')
+
         # A bit more validation for updating the sample and the linkage to existing source entity
         has_direct_ancestor_uuid = False
         if ('direct_ancestor_uuid' in json_data_dict) and json_data_dict['direct_ancestor_uuid']:
@@ -1677,11 +1690,19 @@ def get_ancestors(id):
                 abort_bad_req("Missing required key: filter_properties")
             if 'filter_properties' in filtering_dict:
                 properties_action = filtering_dict.get('is_include', True)
+
+                # Need to manually check for protocol_url
+                include_protocol = False
+                protocol_properties = []
+                if 'protocol_url' in filtering_dict['filter_properties'] and properties_action:
+                    include_protocol = True
+                    protocol_properties = ['protocol_url']
+
                 segregated_properties = schema_manager.group_verify_properties_list(properties=filtering_dict['filter_properties'])
-                property_list = app_neo4j_queries.get_ancestors(neo4j_driver_instance, uuid, data_access_level, properties=segregated_properties[0] + segregated_properties[2], is_include_action=properties_action)
+                property_list = app_neo4j_queries.get_ancestors(neo4j_driver_instance, uuid, data_access_level, properties=segregated_properties[0] + segregated_properties[2], is_include_action=properties_action, include_protocol=include_protocol)
                 complete_entities_list = schema_manager.get_complete_entities_list(token, property_list, segregated_properties[1], is_include_action=properties_action)
                 # Final result
-                final_result = complete_entities_list
+                final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list, properties_to_include=protocol_properties)
 
     # Return all the details if no property filtering
     else:
@@ -1710,15 +1731,16 @@ def get_ancestors(id):
         # Final result after normalization
         final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list, properties_to_include=['protocol_url'])
 
-        if public_entity and not user_in_sennet_read_group(request):
-            filtered_final_result = []
-            for ancestor in final_result:
-                ancestor_entity_type = ancestor.get('entity_type')
-                fields_to_exclude = schema_manager.get_fields_to_exclude(ancestor_entity_type)
-                filtered_ancestor = schema_manager.exclude_properties_from_response(fields_to_exclude, ancestor)
-                filtered_final_result.append(filtered_ancestor)
+    # Filter any non-public fields from the result
+    if public_entity and not user_in_sennet_read_group(request):
+        filtered_final_result = []
+        for ancestor in final_result:
+            ancestor_entity_type = ancestor.get('entity_type')
+            fields_to_exclude = schema_manager.get_fields_to_exclude(ancestor_entity_type)
+            filtered_ancestor = schema_manager.exclude_properties_from_response(fields_to_exclude, ancestor)
+            filtered_final_result.append(filtered_ancestor)
 
-            final_result = filtered_final_result
+        final_result = filtered_final_result
 
     return jsonify(final_result)
 
@@ -1801,11 +1823,19 @@ def get_descendants(id):
                 abort_bad_req("Missing required key: filter_properties")
             if 'filter_properties' in filtering_dict:
                 properties_action = filtering_dict.get('is_include', True)
+
+                # Need to manually check for protocol_url
+                include_protocol = False
+                protocol_properties = []
+                if 'protocol_url' in filtering_dict['filter_properties'] and properties_action:
+                    include_protocol = True
+                    protocol_properties = ['protocol_url']
+
                 segregated_properties = schema_manager.group_verify_properties_list(properties=filtering_dict['filter_properties'])
-                property_list = app_neo4j_queries.get_descendants(neo4j_driver_instance, uuid, data_access_level, properties=segregated_properties[0] + segregated_properties[2], is_include_action=properties_action)
+                property_list = app_neo4j_queries.get_descendants(neo4j_driver_instance, uuid, data_access_level, properties=segregated_properties[0] + segregated_properties[2], is_include_action=properties_action,  include_protocol=include_protocol)
                 complete_entities_list = schema_manager.get_complete_entities_list(token, property_list, segregated_properties[1], is_include_action=properties_action)
                 # Final result
-                final_result = complete_entities_list
+                final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list, properties_to_include=protocol_properties)
     # Return all the details if no property filtering
     else:
         descendants_list = app_neo4j_queries.get_descendants(neo4j_driver_instance, uuid, data_access_level,
@@ -1832,15 +1862,16 @@ def get_descendants(id):
         # Final result after normalization
         final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list, properties_to_include=['protocol_url'])
 
-        if public_entity and not authorized:
-            filtered_final_result = []
-            for ancestor in final_result:
-                ancestor_entity_type = ancestor.get('entity_type')
-                fields_to_exclude = schema_manager.get_fields_to_exclude(ancestor_entity_type)
-                filtered_ancestor = schema_manager.exclude_properties_from_response(fields_to_exclude, ancestor)
-                filtered_final_result.append(filtered_ancestor)
+    # Filter any non-public fields from the result
+    if public_entity and not authorized:
+        filtered_final_result = []
+        for ancestor in final_result:
+            ancestor_entity_type = ancestor.get('entity_type')
+            fields_to_exclude = schema_manager.get_fields_to_exclude(ancestor_entity_type)
+            filtered_ancestor = schema_manager.exclude_properties_from_response(fields_to_exclude, ancestor)
+            filtered_final_result.append(filtered_ancestor)
 
-            final_result = filtered_final_result
+        final_result = filtered_final_result
 
     return jsonify(final_result)
 
@@ -1935,7 +1966,7 @@ def get_parents(id):
                 property_list = app_neo4j_queries.get_parents(neo4j_driver_instance, uuid, properties=segregated_properties[0] + segregated_properties[2], is_include_action=properties_action)
                 complete_entities_list = schema_manager.get_complete_entities_list(token, property_list, segregated_properties[1], is_include_action=properties_action)
                 # Final result
-                final_result = complete_entities_list
+                final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list)
     # Return all the details if no property filtering
     else:
         parents_list = app_neo4j_queries.get_parents(neo4j_driver_instance, uuid)
@@ -2037,7 +2068,7 @@ def get_children(id):
                 property_list = app_neo4j_queries.get_children(neo4j_driver_instance, uuid, properties=segregated_properties[0] + segregated_properties[2], is_include_action=properties_action)
                 complete_entities_list = schema_manager.get_complete_entities_list(user_token, property_list, segregated_properties[1], is_include_action=properties_action)
                 # Final result
-                final_result = complete_entities_list
+                final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list)
     # Return all the details if no property filtering
     else:
         children_list = app_neo4j_queries.get_children(neo4j_driver_instance, uuid)
@@ -5013,7 +5044,6 @@ def get_datasets_for_upload(id: str):
     properties_action = None
     neo4j_properties_to_filter = []
 
-    should_normalize = True
     if request.method == 'POST':
         if request.is_json and request.json != {}:
             filtering_dict = request.json
@@ -5025,11 +5055,10 @@ def get_datasets_for_upload(id: str):
                 neo4j_properties_to_filter = segregated_properties[0] + segregated_properties[2]
                 properties_action = filtering_dict.get('is_include', True)
                 properties_to_exclude = properties_to_exclude + segregated_properties[1] if properties_action is False else segregated_properties[1]
-                should_normalize = False
 
     token = get_internal_token()
     datasets = schema_triggers.get_normalized_upload_datasets(entity_dict["uuid"], token, properties_to_exclude, properties=neo4j_properties_to_filter,
-                                                              is_include_action=properties_action, should_normalize=should_normalize)
+                                                              is_include_action=properties_action)
     return jsonify(datasets)
 
 
