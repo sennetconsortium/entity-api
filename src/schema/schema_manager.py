@@ -1219,11 +1219,10 @@ def remove_unauthorized_fields_from_response(entities_list:List, unauthorized:bo
     if unauthorized:
         filtered_final_result = []
         for entity in entities_list:
-            entity_entity_type = entity.get('entity_type')
-            fields_to_exclude = get_fields_to_exclude(entity_entity_type)
+            entity_type = entity.get('entity_type')
+            fields_to_exclude = get_fields_to_exclude(entity_type)
             filtered_entity = exclude_properties_from_response(fields_to_exclude, entity)
             filtered_final_result.append(filtered_entity)
-
         return filtered_final_result
     else:
         return entities_list

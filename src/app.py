@@ -2154,18 +2154,8 @@ def get_siblings(id):
 
     complete_entities_list = schema_manager.get_complete_entities_list(token, sibling_list, properties_to_skip)
     # Final result after normalization
-    final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list)
-
-    filtered_final_result = []
-    for sibling in final_result:
-        sibling_entity_type = sibling.get('entity_type')
-        fields_to_exclude = schema_manager.get_fields_to_exclude(sibling_entity_type)
-        if public_entity and not user_in_sennet_read_group(request):
-            filtered_sibling = schema_manager.exclude_properties_from_response(fields_to_exclude, sibling)
-            filtered_final_result.append(filtered_sibling)
-        else:
-            filtered_final_result.append(sibling)
-    final_result = filtered_final_result
+    _final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list)
+    final_result = schema_manager.remove_unauthorized_fields_from_response(_final_result, unauthorized=not user_in_sennet_read_group(request))
 
     return jsonify(final_result)
 
@@ -2274,18 +2264,8 @@ def get_tuplets(id):
 
     complete_entities_list = schema_manager.get_complete_entities_list(token, tuplet_list, properties_to_skip)
     # Final result after normalization
-    final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list)
-
-    filtered_final_result = []
-    for tuplet in final_result:
-        tuple_entity_type = tuplet.get('entity_type')
-        fields_to_exclude = schema_manager.get_fields_to_exclude(tuple_entity_type)
-        if public_entity and not user_in_sennet_read_group(request):
-            filtered_tuplet = schema_manager.exclude_properties_from_response(fields_to_exclude, tuplet)
-            filtered_final_result.append(filtered_tuplet)
-        else:
-            filtered_final_result.append(tuplet)
-    final_result = filtered_final_result
+    _final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list)
+    final_result = schema_manager.remove_unauthorized_fields_from_response(_final_result, unauthorized=not user_in_sennet_read_group(request))
 
     return jsonify(final_result)
 
@@ -3140,7 +3120,6 @@ def get_associated_samples_from_dataset(id):
     # Query target entity against uuid-api and neo4j and return as a dict if exists
     entity_dict = query_target_entity(id)
     normalized_entity_type = entity_dict['entity_type']
-    excluded_fields = schema_manager.get_fields_to_exclude('Sample')
 
     # Only for Dataset
     if not schema_manager.entity_type_instanceof(normalized_entity_type, 'Dataset'):
@@ -3168,13 +3147,8 @@ def get_associated_samples_from_dataset(id):
     complete_entities_list = schema_manager.get_complete_entities_list(token, associated_samples)
 
     # Final result after normalization
-    final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list)
-
-    if public_entity and not user_in_sennet_read_group(request):
-        filtered_sample_list = []
-        for sample in final_result:
-            filtered_sample_list.append(schema_manager.exclude_properties_from_response(excluded_fields, sample))
-        final_result = filtered_sample_list
+    _final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list)
+    final_result = schema_manager.remove_unauthorized_fields_from_response(_final_result, unauthorized=not user_in_sennet_read_group(request))
 
     return jsonify(final_result)
 
@@ -3203,7 +3177,6 @@ def get_associated_sources_from_dataset(id):
     # Query target entity against uuid-api and neo4j and return as a dict if exists
     entity_dict = query_target_entity(id)
     normalized_entity_type = entity_dict['entity_type']
-    excluded_fields = schema_manager.get_fields_to_exclude('Source')
 
     # Only for Dataset
     if not schema_manager.entity_type_instanceof(normalized_entity_type, 'Dataset'):
@@ -3231,13 +3204,8 @@ def get_associated_sources_from_dataset(id):
     complete_entities_list = schema_manager.get_complete_entities_list(token, associated_sources)
 
     # Final result after normalization
-    final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list)
-
-    if public_entity and not user_in_sennet_read_group(request):
-        filtered_donor_list = []
-        for donor in final_result:
-            filtered_donor_list.append(schema_manager.exclude_properties_from_response(excluded_fields, donor))
-        final_result = filtered_donor_list
+    _final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list)
+    final_result = schema_manager.remove_unauthorized_fields_from_response(_final_result, unauthorized=not user_in_sennet_read_group(request))
 
     return jsonify(final_result)
 
