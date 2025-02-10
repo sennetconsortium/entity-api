@@ -643,11 +643,11 @@ def get_collection_entities(property_key: str, normalized_type: str, user_token:
         "title",
         "upload",
     ]
-    collection_entities = get_normalized_collection_entities(existing_data_dict["uuid"], user_token, properties=properties_to_skip)
+    collection_entities = get_normalized_collection_entities(existing_data_dict["uuid"], user_token, properties_to_exclude=properties_to_skip)
     return property_key, collection_entities
 
 
-def get_normalized_collection_entities(uuid: str, token: str, skip_completion: bool = False, properties: List[str] = [], is_include_action: bool = True):
+def get_normalized_collection_entities(uuid: str, token: str, skip_completion: bool = False, properties_to_exclude: List[str] = []):
     """Query the Neo4j database to get the associated entities for a given Collection UUID and normalize the results.
 
     Parameters
@@ -658,10 +658,9 @@ def get_normalized_collection_entities(uuid: str, token: str, skip_completion: b
         The user's globus nexus token or internal token
     skip_completion : bool
         Skip the call to get_complete_entities_list, default is False
-    properties : List[str]
-        A list of property keys to filter in or out from the normalized results, default is []
-    is_include_action : bool
-        Whether to include or exclude the listed properties
+    properties_to_exclude : List[str]
+        A list of property keys to exclude from the normalized results, default is []
+
 
     Returns
     -------
@@ -670,23 +669,18 @@ def get_normalized_collection_entities(uuid: str, token: str, skip_completion: b
         list: A list of associated entity dicts with all the normalized information
     """
     db = schema_manager.get_neo4j_driver_instance()
-    segregated_properties = schema_manager.group_verify_properties_list(properties=properties)
-    neo4j_properties = segregated_properties[0] + segregated_properties[2]
-    entities_list = schema_neo4j_queries.get_collection_entities(db, uuid, properties=neo4j_properties, is_include_action=is_include_action)
-
-    if len(neo4j_properties) == 1 and neo4j_properties[0] == 'uuid':
-        return entities_list
+    entities_list = schema_neo4j_queries.get_collection_entities(db, uuid)
 
     if skip_completion:
         complete_entities_list = entities_list
     else:
         complete_entities_list = schema_manager.get_complete_entities_list(token=token,
                                                                            entities_list=entities_list,
-                                                                           properties_to_skip=properties,
-                                                                           is_include_action=is_include_action)
+                                                                           properties_to_skip=properties_to_exclude)
 
     return schema_manager.normalize_entities_list_for_response(entities_list=complete_entities_list,
-                                                               properties_to_exclude=[] if is_include_action else properties)
+                                                               properties_to_exclude=properties_to_exclude)
+
 
 
 def get_publication_associated_collection(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
@@ -1379,7 +1373,7 @@ def get_source_mapped_metadata(property_key, normalized_type, user_token, existi
     """
     if not equals(Ontology.ops().source_types().HUMAN, existing_data_dict['source_type']):
         return property_key, None
-    if 'metadata' not in existing_data_dict:
+    if 'metadata' not in existing_data_dict or existing_data_dict['metadata'] is None:
         return property_key, None
 
     if (
@@ -1392,7 +1386,11 @@ def get_source_mapped_metadata(property_key, normalized_type, user_token, existi
         )
         raise schema_errors.InvalidPropertyRequirementsException(msg)
 
-    metadata = json.loads(existing_data_dict['metadata'].replace("'", '"'))
+    if not isinstance(existing_data_dict['metadata'], dict):
+        metadata = json.loads(existing_data_dict['metadata'].replace("'", '"'))
+    else:
+        metadata = existing_data_dict['metadata']
+
     donor_metadata = metadata.get('organ_donor_data') or metadata.get('living_donor_data') or {}
 
     mapped_metadata = {}
@@ -1447,11 +1445,29 @@ def get_cedar_mapped_metadata(property_key, normalized_type, user_token, existin
     if equals(Ontology.ops().source_types().HUMAN, existing_data_dict.get('source_type')):
         return property_key, None
 
-    # For mouse sources, all samples, and all datasets
-    if 'metadata' not in existing_data_dict:
-        return property_key, None
+    # TODO: Remove this check for Dataset as all entity types will have metadata in "metadata"
+    if equals(Ontology.ops().entities().DATASET, normalized_type):
+        # For datasets
+        if 'ingest_metadata' not in existing_data_dict or existing_data_dict['ingest_metadata'] is None:
+            return property_key, None
 
-    metadata = ast.literal_eval(existing_data_dict['metadata'])
+        if not isinstance(existing_data_dict['ingest_metadata'], dict):
+            ingest_metadata = ast.literal_eval(existing_data_dict['ingest_metadata'])
+        else:
+            ingest_metadata = existing_data_dict['ingest_metadata']
+
+        if 'metadata' not in ingest_metadata:
+            return property_key, None
+
+        metadata = ingest_metadata['metadata']
+    else:
+        # For mouse sources, samples
+        if 'metadata' not in existing_data_dict or existing_data_dict['metadata'] is None:
+            return property_key, None
+        if not isinstance(existing_data_dict['metadata'], dict):
+            metadata = ast.literal_eval(existing_data_dict['metadata'])
+        else:
+            metadata = existing_data_dict['metadata']
 
     mapped_metadata = {}
     for k, v in metadata.items():
@@ -2964,7 +2980,7 @@ def get_upload_datasets(property_key: str, normalized_type: str, user_token: str
     return property_key, upload_datasets
 
 
-def get_normalized_upload_datasets(uuid: str, token, properties_to_exclude: List[str] = [], properties: List[str] = [], is_include_action: bool = False):
+def get_normalized_upload_datasets(uuid: str, token, properties_to_exclude: List[str] = []):
     """Query the Neo4j database to get the associated datasets for a given Upload UUID and normalize the results.
 
     Parameters
@@ -2975,27 +2991,21 @@ def get_normalized_upload_datasets(uuid: str, token, properties_to_exclude: List
         Either the user's globus nexus token or the internal token
     properties_to_exclude : List[str]
         A list of property keys to exclude from the normalized results
-    properties : List[str]
-        the properties to be filtered
-    is_include_action : bool
-        Whether to include or exclude the listed properties
 
     Returns
     -------
     list: A list of associated dataset dicts with all the normalized information
     """
     db = schema_manager.get_neo4j_driver_instance()
-    datasets_list = schema_neo4j_queries.get_upload_datasets(db, uuid, properties=properties, is_include_action=is_include_action)
+    datasets_list = schema_neo4j_queries.get_upload_datasets(db, uuid)
 
-    if len(properties) == 1 and properties[0] == 'uuid':
-        return datasets_list
 
-    complete_list = schema_manager.get_complete_entities_list(token, datasets_list, properties_to_exclude, is_include_action=is_include_action)
+    complete_list = schema_manager.get_complete_entities_list(token, datasets_list, properties_to_exclude)
 
     # Get rid of the entity node properties that are not defined in the yaml schema
     # as well as the ones defined as `exposed: false` in the yaml schema
     return schema_manager.normalize_entities_list_for_response(complete_list,
-                                                               properties_to_exclude=[] if is_include_action else properties_to_exclude)
+                                                               properties_to_exclude=properties_to_exclude)
 
 
 ####################################################################################################

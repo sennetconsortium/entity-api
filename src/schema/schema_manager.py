@@ -11,6 +11,7 @@ from hubmap_commons.string_helper import convert_str_literal
 # Don't confuse urllib (Python native library) with urllib3 (3rd-party library, requests also uses urllib3)
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
+from lib.property_groups import PropertyGroups
 # Local modules
 from schema import schema_errors
 from schema import schema_triggers
@@ -20,6 +21,10 @@ from schema import schema_neo4j_queries
 
 # Atlas Consortia commons
 from atlas_consortia_commons.rest import abort_bad_req
+from atlas_consortia_commons.string import equals
+from typing import List
+
+from lib.ontology import Ontology
 
 logger = logging.getLogger(__name__)
 
@@ -368,6 +373,24 @@ def get_schema_defaults(properties, is_include_action = True, target_entity_type
 
     return defaults
 
+def rearrange_datasets(results, entity_type = 'Dataset'):
+    """
+    If asked for the descendants of a Dataset then sort by last_modified_timestamp and place the published dataset at the top
+
+    :param results : List[dict]
+    :param entity_type : str
+    :return:
+    """
+    if isinstance(results[0], str) is False and equals(entity_type,  Ontology.ops().entities().DATASET):
+        results = sorted(results, key=lambda d: d['last_modified_timestamp'], reverse=True)
+
+        published_processed_dataset_location = next(
+            (i for i, item in enumerate(results) if item["status"] == "Published"), None)
+        if published_processed_dataset_location and published_processed_dataset_location != 0:
+            published_processed_dataset = results.pop(published_processed_dataset_location)
+            results.insert(0, published_processed_dataset)
+
+
 def group_verify_properties_list(normalized_class='All', properties=[]):
     """ Separates neo4j properties from transient ones. Will also gather specific property dependencies via a
     `dependency_properties` list setting in the schema yaml. Also filters out any unknown properties.
@@ -381,8 +404,8 @@ def group_verify_properties_list(normalized_class='All', properties=[]):
 
     Returns
     -------
-    tuple
-        A partitioned tuple with neo4j, trigger and dependency properties respectively
+    PropertyGroups
+        An instance of simple class PropertyGroups containing neo4j, trigger, activity and dependency properties
     """
     # Determine the schema section based on class
     global _schema
@@ -390,17 +413,25 @@ def group_verify_properties_list(normalized_class='All', properties=[]):
     defaults = get_schema_defaults([])
 
     if len(properties) == 1 and properties[0] in defaults:
-        return properties, [], []
+       return PropertyGroups(properties, [], [], [], [], [])
 
     neo4j_fields = []
     trigger_fields = []
+    activity_fields = []
+    json_fields = []
+    list_fields = []
     schema_section = {}
+    activities_schema_section = {}
     dependencies = set()
 
     def check_dependencies(_entity_properties):
         for _p in properties:
             if _p in _entity_properties:
                 dependencies.update(_entity_properties[_p].get('dependency_properties', []))
+
+    activity_properties = _schema['ACTIVITIES']['Activity'].get('properties', {})
+    check_dependencies(activity_properties)
+    activities_schema_section.update(activity_properties)
 
     if normalized_class == 'All':
         for entity in _schema['ENTITIES']:
@@ -419,10 +450,19 @@ def group_verify_properties_list(normalized_class='All', properties=[]):
             else:
                 neo4j_fields.append(p)
 
+                if 'type' in schema_section[p]:
+                    if schema_section[p]['type'] == 'json_string':
+                        json_fields.append(p)
+                    if schema_section[p]['type'] == 'list':
+                        list_fields.append(p)
+
+        if p in activities_schema_section:
+            activity_fields.append(p)
+
     if 'entity_type' not in neo4j_fields and len(trigger_fields) > 0:
         neo4j_fields.append('entity_type')
 
-    return neo4j_fields, trigger_fields, list(dependencies)
+    return PropertyGroups(neo4j_fields, trigger_fields, activity_fields, list(dependencies), json_fields, list_fields)
 
 def exclude_properties_from_response(excluded_fields, output_dict):
     """Removes specified fields from an existing dictionary.
@@ -1143,7 +1183,13 @@ list
 """
 
 
-def normalize_entities_list_for_response(entities_list, properties_to_exclude=[], properties_to_include=[]):
+def normalize_entities_list_for_response(entities_list:List, properties_to_exclude=[], properties_to_include=[]):
+    if len(entities_list) <= 0:
+        return []
+
+    if isinstance(entities_list[0], str):
+        return entities_list
+
     normalized_entities_list = []
 
     for entity_dict in entities_list:
@@ -1153,6 +1199,33 @@ def normalize_entities_list_for_response(entities_list, properties_to_exclude=[]
 
     return normalized_entities_list
 
+
+def remove_unauthorized_fields_from_response(entities_list:List, unauthorized:bool):
+    """
+    If a user is unauthorized fields listed in excluded_properties_from_public_response under the respective
+    schema yaml will be removed from the results
+
+    Parameters
+    ----------
+    entities_list : List[dict]
+        The list to be potentially filtered
+    unauthorized : bool
+        Whether user is authorized or not
+
+    Returns
+    -------
+    List[dict]
+    """
+    if unauthorized:
+        filtered_final_result = []
+        for entity in entities_list:
+            entity_type = entity.get('entity_type')
+            fields_to_exclude = get_fields_to_exclude(entity_type)
+            filtered_entity = exclude_properties_from_response(fields_to_exclude, entity)
+            filtered_final_result.append(filtered_entity)
+        return filtered_final_result
+    else:
+        return entities_list
 
 """
 Validate json data from user request against the schema

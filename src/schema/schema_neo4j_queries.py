@@ -2,9 +2,10 @@ import ast
 
 from neo4j.exceptions import TransactionError
 import logging
-from typing import List, Optional
+from typing import List, Union
 
 import schema.schema_manager
+from lib.property_groups import PropertyGroups
 
 logger = logging.getLogger(__name__)
 
@@ -801,13 +802,13 @@ list
 """
 
 
-def get_collection_entities(neo4j_driver, uuid, properties: List[str] = None, is_include_action: bool = True):
+def get_collection_entities(neo4j_driver, uuid, properties: Union[PropertyGroups, List[str]] = None, is_include_action: bool = True):
     results = []
 
     query = (f"MATCH (t:Entity)-[:IN_COLLECTION]->(c:Collection|Epicollection) "
              f"WHERE c.uuid = '{uuid}' "
              f"{exclude_include_query_part(properties, is_include_action)}")
-             #f"RETURN apoc.coll.toSet(COLLECT(e)) AS {record_field_name}")
+
 
     logger.info("======get_collection_entities() query======")
     logger.info(query)
@@ -816,11 +817,7 @@ def get_collection_entities(neo4j_driver, uuid, properties: List[str] = None, is
         record = session.read_transaction(_execute_readonly_tx, query)
 
         if record and record[record_field_name]:
-            if isinstance(properties, list):
-                results = record[record_field_name]
-            else:
-                # Convert the list of nodes to a list of dicts
-                results = _nodes_to_dicts(record[record_field_name])
+            results = record[record_field_name]
 
     return results
 
@@ -1024,7 +1021,7 @@ list
 """
 
 
-def get_upload_datasets(neo4j_driver, uuid, query_filter='', properties: List[str] = None, is_include_action: bool = True):
+def get_upload_datasets(neo4j_driver, uuid, query_filter='', properties: Union[PropertyGroups, List[str]] = None, is_include_action: bool = True):
     """
 
     Parameters
@@ -1035,7 +1032,7 @@ def get_upload_datasets(neo4j_driver, uuid, query_filter='', properties: List[st
         The uuid of target entity
     query_filter: str
         An additional filter against the cypher match
-    properties : List[str]
+    properties : Union[PropertyGroups, List[str]]
         A list of property keys to filter in or out from the normalized results, default is []
     is_include_action : bool
         Whether to include or exclude the listed properties
@@ -1043,7 +1040,8 @@ def get_upload_datasets(neo4j_driver, uuid, query_filter='', properties: List[st
     """
     results = []
 
-    if len(properties) > 0:
+    is_filtered = isinstance(properties, PropertyGroups) or  isinstance(properties, list)
+    if is_filtered:
         query = (f"MATCH (t:Dataset)-[:IN_UPLOAD]->(s:Upload) "
                  f"WHERE s.uuid = '{uuid}' {query_filter} "
                  f"{exclude_include_query_part(properties, is_include_action, target_entity_type = 'Dataset')}")
@@ -1059,7 +1057,7 @@ def get_upload_datasets(neo4j_driver, uuid, query_filter='', properties: List[st
         record = session.read_transaction(execute_readonly_tx, query)
 
         if record and record[record_field_name]:
-            if isinstance(properties, list):
+            if is_filtered:
                 # Just return the list of property values from each entity node
                 results = record[record_field_name]
             else:
@@ -2206,14 +2204,96 @@ def get_sources_associated_entity(neo4j_driver, uuid, filter_out = None):
     return results
 
 
-def exclude_include_query_part(properties:List[str], is_include_action = True, target_entity_type = 'Any'):
+def activity_query_part(properties = None, for_all_match = False):
+    """
+    Builds activity query part(s) for grabbing properties like protocol_url from Activity
+
+    Parameters
+    ----------
+    properties : PropertyGroups
+        The properties that will be used to build additional query parts
+    for_all_match : bool
+        Whether to return a query part used for grabbing the entire nodes list
+
+    Returns
+    -------
+    Union[str, tuple[str,str,str]]
+        A string if using a grab all query, OR
+        tuple for exclude_include_query_part with [0] Additional MATCH, [1] map pair query parts for apoc.map.fromPairs, [2] and 'a' variable to use in WITH statements
+    """
+    query_match_part = f"MATCH (e2:Entity)-[:WAS_GENERATED_BY]->(a:Activity) WHERE e2.uuid = t.uuid"
+
+    if for_all_match:
+        query_match_part = query_match_part + f" WITH t, apoc.map.fromPairs([['protocol_url', a.protocol_url]]) as a2 WITH apoc.map.merge(t,a2) as x RETURN apoc.coll.toSet(COLLECT(x)) AS "
+        return query_match_part
+
+    if isinstance(properties, PropertyGroups) and len(properties.activity) > 0:
+        query_grab_part = ''
+        for p in properties.activity:
+            query_grab_part = query_grab_part + f", ['{p}', a.{p}]"
+
+        return query_match_part, query_grab_part, ', a'
+    else:
+        return '', '', ''
+
+def property_type_query_part(properties:PropertyGroups, is_include_action = True):
+    """
+    Builds property type query part(s) for parsing properties of certain types
+
+    Parameters
+    ----------
+    properties : PropertyGroups
+        The properties that will be used to build additional query parts
+    is_include_action : bool
+        whether to include or exclude the listed properties
+
+    Returns
+    -------
+    str
+        The query part(s) for concatenation into apoc.map.fromPairs method
+    """
+    if is_include_action is False:
+        return ''
+
+    map_parts = ''
+
+    for j in properties.json:
+        map_parts = map_parts + f", ['{j}', apoc.convert.fromJsonMap(t.{j})]"
+
+    for l in properties.list:
+        map_parts = map_parts + f", ['{l}', apoc.convert.fromJsonList(t.{l})]"
+
+    return map_parts
+
+def build_additional_query_parts(properties:PropertyGroups, is_include_action = True):
+    """
+    Builds additional query parts to be concatenated with other query
+
+    Parameters
+    ----------
+    properties : PropertyGroups
+        The properties that will be used to build additional query parts
+    is_include_action : bool
+        whether to include or exclude the listed properties
+
+    Returns
+    -------
+    tuple[str,str,str]
+        [0] Additional MATCH, [1] map pair query parts for apoc.map.fromPairs, [2] and variables to use in WITH statements
+    """
+    _activity_query_part = activity_query_part(properties if is_include_action else None)
+    _property_type_query_part = property_type_query_part(properties, is_include_action)
+
+    return _activity_query_part[0], _activity_query_part[1] + _property_type_query_part, _activity_query_part[2]
+
+def exclude_include_query_part(properties:Union[PropertyGroups, List[str]], is_include_action = True, target_entity_type = 'Any'):
     """
     Builds a cypher query part that can be used to include or exclude certain properties.
     The preceding MATCH query part should have a label 't'. E.g. MATCH (t:Entity)-[*]->(s:Source)
 
     Parameters
     ----------
-    properties : List[str]
+    properties : Union[PropertyGroups, List[str]]
         the properties to be filtered
     is_include_action : bool
         whether to include or exclude the listed properties
@@ -2225,22 +2305,29 @@ def exclude_include_query_part(properties:List[str], is_include_action = True, t
     str
         the inclusion exclusion query part to be applied with a MATCH query part
     """
+    if isinstance(properties, PropertyGroups):
+        _properties = properties.neo4j + properties.dependency
+    else:
+        _properties = properties
 
-    if is_include_action and len(properties) == 1 and properties[0] in ['uuid']:
-        return f"RETURN apoc.coll.toSet(COLLECT(t.{properties[0]})) AS {record_field_name}"
+    if is_include_action and len(_properties) == 1 and _properties[0] in ['uuid']:
+        return f"RETURN apoc.coll.toSet(COLLECT(t.{_properties[0]})) AS {record_field_name}"
 
     action = ''
     if is_include_action is False:
         action = 'NOT'
 
-    schema.schema_manager.get_schema_defaults(properties, is_include_action, target_entity_type)
+    schema.schema_manager.get_schema_defaults(_properties, is_include_action, target_entity_type)
+    more_to_grab_query_part = build_additional_query_parts(properties, is_include_action)
+    a = more_to_grab_query_part[2] if isinstance(more_to_grab_query_part, tuple) else ''
+    map_pairs_part = more_to_grab_query_part[1] if isinstance(more_to_grab_query_part, tuple) else ''
 
                    # unwind the keys of the results from target/t
-    query_part = (f"WITH keys(t) AS k1, t unwind k1 AS k2 "
+    query_part = (f"WITH keys(t) AS k1, t{a} unwind k1 AS k2 "
                   # filter by a list[] of properties
-                  f"WITH t, k2 WHERE {action} k2 IN {properties} "
+                  f"WITH t{a}, k2 WHERE {action} k2 IN {_properties} "
                   # everything is unwinded as separate rows, so let's build it back up by uuid to form: {prop: val, uuid:uuidVal}
-                  f"WITH t, apoc.map.fromPairs([[k2, t[k2]], ['uuid', t.uuid]]) AS dict "
+                  f"WITH t{a}, apoc.map.fromPairs([[k2, t[k2]], ['uuid', t.uuid]{map_pairs_part}]) AS dict "
                   # collect all these individual dicts as a list[], and then group them by uuids, 
                   # which forms a dict with uuid as keys and list of dicts as values: 
                   # {uuidVal: [{prop: val, uuid:uuidVal}, {prop2: val2, uuid:uuidVal}, ... {propN: valN, uuid:uuidVal}], uuidVal2: [...]}
@@ -2252,4 +2339,4 @@ def exclude_include_query_part(properties:List[str], is_include_action = True, t
                   # collect each row to form a list[] and return
                   f"RETURN collect(rows) AS {record_field_name}")
 
-    return query_part
+    return f"{more_to_grab_query_part[0]} {query_part}"
