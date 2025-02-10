@@ -4982,7 +4982,7 @@ def get_datasets_for_upload(id: str):
 
     uuid = entity_dict['uuid']
     token = get_internal_token()
-    datasets = []
+    _final_result = []
     if request.method == 'POST':
         if request.is_json and request.json != {}:
             filtering_dict = request.json
@@ -4994,11 +4994,12 @@ def get_datasets_for_upload(id: str):
                 properties_action = filtering_dict.get('is_include', True)
                 datasets_list = schema_neo4j_queries.get_upload_datasets(neo4j_driver_instance, uuid=uuid, properties=segregated_properties, is_include_action=properties_action)
                 complete_list = schema_manager.get_complete_entities_list(token, datasets_list, properties_to_skip=segregated_properties.trigger, is_include_action=properties_action)
-                datasets = schema_manager.normalize_entities_list_for_response(complete_list,
+                _final_result = schema_manager.normalize_entities_list_for_response(complete_list,
                                                                            properties_to_exclude=properties_to_filter if properties_action is False else [])
     else:
-        datasets = schema_triggers.get_normalized_upload_datasets(uuid, token, properties_to_exclude)
-    return jsonify(datasets)
+        _final_result = schema_triggers.get_normalized_upload_datasets(uuid, token, properties_to_exclude)
+    final_result = schema_manager.remove_unauthorized_fields_from_response(_final_result, unauthorized=not user_in_sennet_read_group(request))
+    return jsonify(final_result)
 
 
 @app.route("/collections/<id>/entities", methods=["GET", "POST"])
@@ -5053,7 +5054,7 @@ def get_entities_for_collection(id: str):
     ]
 
     uuid = entity_dict["uuid"]
-    entities = []
+    _final_result = []
     if request.method == 'POST':
         if request.is_json and request.json != {}:
             filtering_dict = request.json
@@ -5065,18 +5066,19 @@ def get_entities_for_collection(id: str):
                 properties_action = filtering_dict.get('is_include', True)
                 entities_list = schema_neo4j_queries.get_collection_entities(neo4j_driver_instance, uuid=uuid, properties=segregated_properties, is_include_action=properties_action)
                 complete_list = schema_manager.get_complete_entities_list(token, entities_list, properties_to_skip=segregated_properties.trigger, is_include_action=properties_action)
-                entities = schema_manager.normalize_entities_list_for_response(complete_list,
+                _final_result = schema_manager.normalize_entities_list_for_response(complete_list,
                                                                                properties_to_exclude=properties_to_filter if properties_action is False else segregated_properties.activity)
     else:
         # Get the entities associated with the collection
-        entities = schema_triggers.get_normalized_collection_entities(
+        _final_result = schema_triggers.get_normalized_collection_entities(
             uuid,
             token,
             properties_to_exclude=properties_to_exclude,
             skip_completion=True
         )
 
-    return jsonify(entities)
+    final_result = schema_manager.remove_unauthorized_fields_from_response(_final_result, unauthorized=not user_in_sennet_read_group(request))
+    return jsonify(final_result)
 
 
 """
