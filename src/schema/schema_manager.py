@@ -1200,6 +1200,33 @@ def normalize_entities_list_for_response(entities_list:List, properties_to_exclu
     return normalized_entities_list
 
 
+def remove_unauthorized_fields_from_response(entities_list:List, unauthorized:bool):
+    """
+    If a user is unauthorized fields listed in excluded_properties_from_public_response under the respective
+    schema yaml will be removed from the results
+
+    Parameters
+    ----------
+    entities_list : List[dict]
+        The list to be potentially filtered
+    unauthorized : bool
+        Whether user is authorized or not
+
+    Returns
+    -------
+    List[dict]
+    """
+    if unauthorized:
+        filtered_final_result = []
+        for entity in entities_list:
+            entity_type = entity.get('entity_type')
+            fields_to_exclude = get_fields_to_exclude(entity_type)
+            filtered_entity = exclude_properties_from_response(fields_to_exclude, entity)
+            filtered_final_result.append(filtered_entity)
+        return filtered_final_result
+    else:
+        return entities_list
+
 """
 Validate json data from user request against the schema
 
