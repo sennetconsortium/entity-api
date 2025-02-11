@@ -131,11 +131,11 @@ def create_provenance(db_session, provenance):
 
     previous_uuid = None
     timestamp = int(time.time() * 1000)
-    for entity_type in provenance:
-        activity = generate_entity()
-        activity_data = {
-            "uuid": activity["uuid"],
-            "sennet_id": activity["sennet_id"],
+
+    def gen_activity(_act):
+        return {
+            "uuid": _act["uuid"],
+            "sennet_id": _act["sennet_id"],
             "created_by_user_displayname": USER["name"],
             "created_by_user_email": USER["email"],
             "created_by_user_sub": USER["sub"],
@@ -145,6 +145,10 @@ def create_provenance(db_session, provenance):
             "protocol_url": "https://dx.doi.org/tests",
             "started_at_time": timestamp,
         }
+
+    for entity_type in provenance:
+        activity = generate_entity()
+        activity_data = gen_activity(activity)
 
         entity_type = entity_type.lower()
         entity = generate_entity()
@@ -218,6 +222,14 @@ def create_provenance(db_session, provenance):
         else:
             raise ValueError(f"Unknown entity type: {entity_type}")
 
+        gen_by_activity = generate_entity()
+        gen_by_activity_data = gen_activity(gen_by_activity)
+
+        db_session.run(
+            f"CREATE (:Activity {{ {', '.join(f'{k}: ${k}' for k in gen_by_activity_data)} }})",
+            **gen_by_activity_data,
+        )
+
         if previous_uuid is None:
             # connect directly to lab, this is a source
             db_session.run(
@@ -230,12 +242,20 @@ def create_provenance(db_session, provenance):
                 source_uuid=entity["uuid"],
             )
 
+            db_session.run(
+                "MATCH (a:Activity {uuid: $activity_uuid}), (e:Entity {uuid: $entity_uuid}) MERGE (a)<-[:WAS_GENERATED_BY]-(e)",
+                activity_uuid=gen_by_activity["uuid"],
+                entity_uuid=entity["uuid"],
+            )
+
         else:
+
             # Create and link activity
             db_session.run(
                 f"CREATE (:Activity {{ {', '.join(f'{k}: ${k}' for k in activity_data)} }})",
                 **activity_data,
             )
+
             db_session.run(
                 "MATCH (p:Entity {uuid: $previous_uuid}), (a:Activity {uuid: $activity_uuid}) MERGE (p)<-[:USED]-(a)",
                 previous_uuid=previous_uuid,
@@ -250,6 +270,12 @@ def create_provenance(db_session, provenance):
                 "MATCH (a:Activity {uuid: $activity_uuid}), (e:Entity {uuid: $entity_uuid}) MERGE (a)<-[:WAS_GENERATED_BY]-(e)",
                 activity_uuid=activity["uuid"],
                 entity_uuid=entity["uuid"],
+            )
+
+            db_session.run(
+                "MATCH (a:Activity {uuid: $activity_uuid}), (e:Entity {uuid: $previous_uuid}) MERGE (a)<-[:WAS_GENERATED_BY]-(e)",
+                activity_uuid=gen_by_activity["uuid"],
+                previous_uuid=previous_uuid,
             )
 
         previous_uuid = entity["uuid"]
