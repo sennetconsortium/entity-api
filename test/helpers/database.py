@@ -225,23 +225,25 @@ def create_provenance(db_session, provenance):
         gen_by_activity = generate_entity()
         gen_by_activity_data = gen_activity(gen_by_activity)
 
+        # Create the activity
         db_session.run(
             f"CREATE (:Activity {{ {', '.join(f'{k}: ${k}' for k in gen_by_activity_data)} }})",
             **gen_by_activity_data,
         )
 
         if previous_uuid is None:
-            # connect directly to lab, this is a source
+            # Create the source
             db_session.run(
                 f"CREATE (:Entity:{data['entity_type']} {{ {', '.join(f'{k}: ${k}' for k in data)} }})",
                 **data,
             )
+            # Connect directly to lab, this is a source
             db_session.run(
                 "MATCH (l:Lab {uuid: $lab_uuid}), (e:Source {uuid: $source_uuid}) MERGE (l)<-[:WAS_ATTRIBUTED_TO]-(e)",
                 lab_uuid=GROUP["uuid"],
                 source_uuid=entity["uuid"],
             )
-
+            # Connect the activity to the source
             db_session.run(
                 "MATCH (a:Activity {uuid: $activity_uuid}), (e:Entity {uuid: $entity_uuid}) MERGE (a)<-[:WAS_GENERATED_BY]-(e)",
                 activity_uuid=gen_by_activity["uuid"],
@@ -249,31 +251,20 @@ def create_provenance(db_session, provenance):
             )
 
         else:
-
-            # Create and link activity
-            db_session.run(
-                f"CREATE (:Activity {{ {', '.join(f'{k}: ${k}' for k in activity_data)} }})",
-                **activity_data,
-            )
-
-            db_session.run(
-                "MATCH (p:Entity {uuid: $previous_uuid}), (a:Activity {uuid: $activity_uuid}) MERGE (p)<-[:USED]-(a)",
-                previous_uuid=previous_uuid,
-                activity_uuid=activity["uuid"],
-            )
-            # Create and link the entity
+            # Create the entity
             db_session.run(
                 f"CREATE (:Entity:{data['entity_type']} {{ {', '.join(f'{k}: ${k}' for k in data)} }})",
                 **data,
             )
+            # Connect the new entity and activity
             db_session.run(
                 "MATCH (a:Activity {uuid: $activity_uuid}), (e:Entity {uuid: $entity_uuid}) MERGE (a)<-[:WAS_GENERATED_BY]-(e)",
-                activity_uuid=activity["uuid"],
+                activity_uuid=gen_by_activity["uuid"],
                 entity_uuid=entity["uuid"],
             )
-
+            # Connect the previous entity and the activity
             db_session.run(
-                "MATCH (a:Activity {uuid: $activity_uuid}), (e:Entity {uuid: $previous_uuid}) MERGE (a)<-[:WAS_GENERATED_BY]-(e)",
+                "MATCH (a:Activity {uuid: $activity_uuid}), (e:Entity {uuid: $previous_uuid}) MERGE (e)<-[:USED]-(a)",
                 activity_uuid=gen_by_activity["uuid"],
                 previous_uuid=previous_uuid,
             )
