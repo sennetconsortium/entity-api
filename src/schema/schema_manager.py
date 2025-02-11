@@ -6,11 +6,11 @@ from datetime import datetime
 
 from flask import Response
 from hubmap_commons.file_helper import ensureTrailingSlashURL
-from hubmap_commons.string_helper import convert_str_literal
 
 # Don't confuse urllib (Python native library) with urllib3 (3rd-party library, requests also uses urllib3)
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
+from lib.commons import get_as_dict
 from lib.property_groups import PropertyGroups
 # Local modules
 from schema import schema_errors
@@ -1650,17 +1650,11 @@ def _normalize_metadata(entity_dict, metadata_scope:MetadataScopeEnum, propertie
                 properties[key]['indexed'] is False:
             # Do not include properties in metadata for indexing if they are not True i.e. False or non-boolean
             continue
-        # Only run convert_str_literal() on string representation of Python dict and list with removing control characters
-        # No convertion for string representation of Python string, meaning that can still contain control characters
         if entity_dict[key] and (properties[key]['type'] in ['list', 'json_string']):
             logger.info(
-                f"Executing convert_str_literal() on {normalized_entity_type}.{key} of uuid: {entity_dict['uuid']}")
+                f"Executing get_as_dict() on {normalized_entity_type}.{key} of uuid: {entity_dict['uuid']}")
 
-            # Safely evaluate a string containing a Python dict or list literal
-            # Only convert to Python list/dict when the string literal is not empty
-            # instead of returning the json-as-string or array-as-string
-            # convert_str_literal() also removes those control chars to avoid SyntaxError
-            entity_dict[key] = convert_str_literal(entity_dict[key])
+            entity_dict[key] = get_as_dict(entity_dict[key])
 
         # Add the target key with correct value of data type to the normalized_entity dict
         normalized_metadata[key] = entity_dict[key]
@@ -2575,18 +2569,13 @@ def normalize_entity_result_for_response(entity_dict, properties_to_exclude = []
             if (key in properties) and (key not in properties_to_exclude):
                 # Skip properties with None value and the ones that are marked as not to be exposed.
                 # By default, all properties are exposed if not marked as `exposed: false`
-                # It's still possible to see `exposed: true` marked explictly
+                # It's still possible to see `exposed: true` marked explicitly
                 if (entity_dict[key] is not None) and ('exposed' not in properties[key]) or (('exposed' in properties[key]) and properties[key]['exposed']):
-                    # Only run convert_str_literal() on string representation of Python dict and list with removing control characters
-                    # No convertion for string representation of Python string, meaning that can still contain control characters
                     if entity_dict[key] and (properties[key]['type'] in ['list', 'json_string']):
-                        logger.info(f"Executing convert_str_literal() on {normalized_entity_type}.{key} of uuid: {entity_dict['uuid']}")
+                        logger.info(f"Executing get_as_dict() on {normalized_entity_type}.{key} of uuid: {entity_dict['uuid']}")
 
-                        # Safely evaluate a string containing a Python dict or list literal
-                        # Only convert to Python list/dict when the string literal is not empty
-                        # instead of returning the json-as-string or array-as-string
-                        # convert_str_literal() also removes those control chars to avoid SyntaxError
-                        entity_dict[key] = convert_str_literal(entity_dict[key])
+                        # Safely evaluate a string containing a json or list string
+                        entity_dict[key] = get_as_dict(entity_dict[key])
 
                     # Add the target key with correct value of data type to the normalized_entity dict
                     normalized_entity[key] = entity_dict[key]
