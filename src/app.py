@@ -1635,7 +1635,6 @@ def get_ancestors(id):
     entity_dict = query_target_entity(id)
     normalized_entity_type = entity_dict['entity_type']
     uuid = entity_dict['uuid']
-    public_entity = True
 
     # Collection doesn't have ancestors via Activity nodes
     if normalized_entity_type == 'Collection':
@@ -1646,12 +1645,10 @@ def get_ancestors(id):
         if entity_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
             # Token is required and the user must belong to SenNet-READ group
             token = get_user_token(request, non_public_access_required=True)
-            public_entity = False
-    elif normalized_entity_type == 'Sample':
+    elif normalized_entity_type == 'Sample' or normalized_entity_type == 'Source':
         # The `data_access_level` of Sample can only be either 'public' or 'consortium'
         if entity_dict['data_access_level'] == ACCESS_LEVEL_CONSORTIUM:
             token = get_user_token(request, non_public_access_required=True)
-            public_entity = False
     else:
         # Source and Upload will always get back an empty list
         # becuase their direct ancestor is Lab, which is being skipped by Neo4j query
@@ -1754,19 +1751,16 @@ def get_descendants(id):
     entity_dict = query_target_entity(id)
     normalized_entity_type = entity_dict['entity_type']
     uuid = entity_dict['uuid']
-    public_entity = True
 
     if schema_manager.entity_type_instanceof(normalized_entity_type, 'Dataset'):
         # Only published/public datasets don't require token
         if entity_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
             # Token is required and the user must belong to SenNet-READ group
             token = get_user_token(request, non_public_access_required=True)
-            public_entity = False
     elif normalized_entity_type == 'Sample' or normalized_entity_type == 'Source':
         # The `data_access_level` of Sample/Source can only be either 'public' or 'consortium'
         if entity_dict['data_access_level'] == ACCESS_LEVEL_CONSORTIUM:
             token = get_user_token(request, non_public_access_required=True)
-            public_entity = False
     elif normalized_entity_type == 'Upload':
         # Uploads are always consortium level
         token = get_user_token(request, non_public_access_required=True)
