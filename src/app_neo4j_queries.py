@@ -9,6 +9,7 @@ from schema import schema_neo4j_queries
 from typing import List, Union
 
 import schema.schema_manager
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -1938,7 +1939,7 @@ def _build_properties_map(entity_data_dict):
         else:
             # Convert list and dict to string
             # Must also escape single quotes in the string to build a valid Cypher query
-            escaped_str = str(value).replace("'", r"\'")
+            escaped_str = json.dumps(value)
             # Also need to quote the string value
             key_value_pair = f"{key}: '{escaped_str}'"
 

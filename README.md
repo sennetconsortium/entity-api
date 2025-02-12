@@ -48,3 +48,17 @@ The documentation for the API calls is hosted on SmartAPI. Modifying the `entity
 ## Testing
 
 Install the development dependencies using `pip install -r src/requirements.dev.txt`. Install Docker and ensure it is running. Run `./run_tests.sh` at the root of the project. This test script will create a temporary Neo4J database using Docker for integration tests.
+
+### Run a neo4j test instance if needed for debugging
+```angular2html
+docker run \
+	--env=NEO4J_AUTH=none \
+    --publish=7474:7474 --publish=7687:7687 \
+    --volume=$HOME/neo4j/data:/data \
+    --name neo4j-apoc \
+    -e NEO4J_apoc_export_file_enabled=true \
+    -e NEO4J_apoc_import_file_enabled=true \
+    -e NEO4J_apoc_import_file_use__neo4j__config=true \
+    -e NEO4J_PLUGINS=\[\"apoc\"\] \
+    neo4j
+```
