@@ -807,8 +807,11 @@ def get_entity_provenance(id):
     if 'depth' in request.args:
         depth = int(request.args.get('depth'))
 
+    authorized = user_in_sennet_read_group(request)
+    data_access_level = 'public' if authorized is False else None
+
     # Convert neo4j json to dict
-    neo4j_result = app_neo4j_queries.get_provenance(neo4j_driver_instance, uuid, depth)
+    neo4j_result = app_neo4j_queries.get_provenance(neo4j_driver_instance, uuid, depth, data_access_level=data_access_level)
     raw_provenance_dict = dict(neo4j_result['json'])
 
     raw_descendants_dict = None
@@ -816,14 +819,9 @@ def get_entity_provenance(id):
         # The parsed query string value is a string 'true'
         return_descendants = request.args.get('return_descendants')
 
-        # The value should be in a format expected by the apoc.path.subgraphAll.labelFilter config param
-        label_filter = request.args.get('filter', '')
-        allowable_filter_chars = "[a-zA-Z+/>\-|]"
-        label_filter = ''.join(re.findall(allowable_filter_chars, label_filter))
-
         if (return_descendants is not None) and (return_descendants.lower() == 'true'):
             neo4j_result_descendants = app_neo4j_queries.get_provenance(neo4j_driver_instance, uuid, depth, True,
-                                                                        label_filter)
+                                                                         data_access_level=data_access_level)
             raw_descendants_dict = dict(neo4j_result_descendants['json'])
 
     # Normalize the raw provenance nodes based on the yaml schema
