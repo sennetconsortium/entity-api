@@ -807,8 +807,11 @@ def get_entity_provenance(id):
     if 'depth' in request.args:
         depth = int(request.args.get('depth'))
 
+    authorized = user_in_sennet_read_group(request)
+    data_access_level = 'public' if authorized is False else None
+
     # Convert neo4j json to dict
-    neo4j_result = app_neo4j_queries.get_provenance(neo4j_driver_instance, uuid, depth)
+    neo4j_result = app_neo4j_queries.get_provenance(neo4j_driver_instance, uuid, depth, data_access_level=data_access_level)
     raw_provenance_dict = dict(neo4j_result['json'])
 
     raw_descendants_dict = None
@@ -816,14 +819,9 @@ def get_entity_provenance(id):
         # The parsed query string value is a string 'true'
         return_descendants = request.args.get('return_descendants')
 
-        # The value should be in a format expected by the apoc.path.subgraphAll.labelFilter config param
-        label_filter = request.args.get('filter', '')
-        allowable_filter_chars = "[a-zA-Z+/>\-|]"
-        label_filter = ''.join(re.findall(allowable_filter_chars, label_filter))
-
         if (return_descendants is not None) and (return_descendants.lower() == 'true'):
             neo4j_result_descendants = app_neo4j_queries.get_provenance(neo4j_driver_instance, uuid, depth, True,
-                                                                        label_filter)
+                                                                         data_access_level=data_access_level)
             raw_descendants_dict = dict(neo4j_result_descendants['json'])
 
     # Normalize the raw provenance nodes based on the yaml schema
@@ -1404,9 +1402,24 @@ def update_entity(id: str, user_token: str, json_data_dict: dict):
             ValueError) as e:
         abort_bad_req(e)
 
-    # Sample, Dataset, and Upload: additional validation, update entity, after_update_trigger
-    # Collection and Source: update entity
+    # Source, Sample, Dataset, and Upload: additional validation, update entity, after_update_trigger
+    # Collection: update entity
+    if normalized_entity_type == 'Source':
+        # Verify that the user isn't trying to alter `sample_category` or `organ`
+        if 'source_type' in json_data_dict and 'source_type' in entity_dict:
+            if json_data_dict['source_type'] != entity_dict['source_type']:
+                abort_bad_req('The field `source_type` can not be changed after the entity has been registered.')
+
     if normalized_entity_type == 'Sample':
+        # Verify that the user isn't trying to alter `sample_category` or `organ`
+        if 'sample_category' in json_data_dict and 'sample_category' in entity_dict:
+            if json_data_dict['sample_category'] != entity_dict['sample_category']:
+                abort_bad_req('The field `sample_category` can not be changed after the entity has been registered.')
+
+        if 'organ' in json_data_dict and 'organ' in entity_dict:
+            if json_data_dict['organ'] != entity_dict['organ']:
+                abort_bad_req('The field `organ` can not be changed after the entity has been registered.')
+
         # A bit more validation for updating the sample and the linkage to existing source entity
         has_direct_ancestor_uuid = False
         if ('direct_ancestor_uuid' in json_data_dict) and json_data_dict['direct_ancestor_uuid']:
