@@ -826,7 +826,7 @@ dict
 """
 
 
-def get_complete_entity_result(token, entity_dict, properties_to_skip=[], is_include_action=False):
+def get_complete_entity_result(token, entity_dict, properties_to_skip=[], is_include_action=False, use_memcache=True):
     global _memcached_client
     global _memcached_prefix
 
@@ -840,8 +840,8 @@ def get_complete_entity_result(token, entity_dict, properties_to_skip=[], is_inc
         cache_result = None
 
         # Need both client and prefix when fetching the cache
-        # Do NOT fetch cache if properties_to_skip is specified
-        if _memcached_client and _memcached_prefix and (not properties_to_skip):
+        # Do NOT fetch cache if properties_to_skip is specified or use_memcache is False
+        if _memcached_client and _memcached_prefix and (not properties_to_skip and not use_memcache):
             cache_key = f'{_memcached_prefix}_complete_{entity_uuid}'
             cache_result = _memcached_client.get(cache_key)
 
@@ -1047,11 +1047,11 @@ list
 """
 
 
-def get_complete_entities_list(token, entities_list, properties_to_skip=[], is_include_action=False):
+def get_complete_entities_list(token, entities_list, properties_to_skip=[], is_include_action=False, use_memcache=True):
     complete_entities_list = []
 
     for entity_dict in entities_list:
-        complete_entity_dict = get_complete_entity_result(token, entity_dict, properties_to_skip, is_include_action=is_include_action)
+        complete_entity_dict = get_complete_entity_result(token, entity_dict, properties_to_skip, is_include_action=is_include_action, use_memcache=use_memcache)
         complete_entities_list.append(complete_entity_dict)
 
     return complete_entities_list
