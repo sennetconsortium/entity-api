@@ -202,6 +202,21 @@ def test_update_dataset(app, requests, db_session):
     with app.test_client() as client:
         data = {
             "description": "New Testing lab notes",
+            "contributors": [
+                {
+                    "affiliation": "Test Laboratory",
+                    "display_name": "Teßt '$PI&*\" Üser",
+                    "email": "Teßt.Üser@jax.org",
+                    "first_name": "Teßt",
+                    "is_contact": "Yes",
+                    "is_operator": "Yes",
+                    "is_principal_investigator": "Yes",
+                    "last_name": "Üser",
+                    "metadata_schema_id": "94dae6f8-0756-4ab0-a47b-138e446a9501",
+                    "middle_name_or_initial": "'$PI&*\"",
+                    "orcid": "0000-0000-0000-0000"
+                },
+            ],
         }
 
         res = client.put(
@@ -215,6 +230,7 @@ def test_update_dataset(app, requests, db_session):
         assert res.json["sennet_id"] == test_dataset["sennet_id"]
 
         assert res.json["description"] == data["description"]
+        assert res.json["contributors"] == data["contributors"]
 
         # check database
         db_entity = get_entity(test_dataset["uuid"], db_session)
