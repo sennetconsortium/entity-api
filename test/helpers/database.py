@@ -147,9 +147,6 @@ def create_provenance(db_session, provenance):
         }
 
     for entity_type in provenance:
-        activity = generate_entity()
-        activity_data = gen_activity(activity)
-
         entity_type = entity_type.lower()
         entity = generate_entity()
         data = {

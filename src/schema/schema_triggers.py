@@ -56,8 +56,8 @@ def set_timestamp(property_key, normalized_type, user_token, existing_data_dict,
         str: The neo4j TIMESTAMP() function as string
     """
     # Use the neo4j TIMESTAMP() function during entity creation
-    # Will be proessed in app_neo4j_queries._build_properties_map()
-    # and schema_neo4j_queries._build_properties_map()
+    # Will be proessed in app_neo4j_queries.build_parameterized_map()
+    # and schema_neo4j_queries.build_parameterized_map()
     return property_key, 'TIMESTAMP()'
 
 

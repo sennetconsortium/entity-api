@@ -277,6 +277,21 @@ def test_create_dataset(db_session, app, requests):
             "contains_human_genetic_sequences": False,
             "dataset_type": "RNAseq",
             "direct_ancestor_uuids": [test_entities["section"]["uuid"]],  # section to link to
+            "contributors": [
+                {
+                    "affiliation": "Test Laboratory",
+                    "display_name": "Teßt '$PI&*\" Üser",
+                    "email": "Teßt.Üser@jax.org",
+                    "first_name": "Teßt",
+                    "is_contact": "Yes",
+                    "is_operator": "Yes",
+                    "is_principal_investigator": "Yes",
+                    "last_name": "Üser",
+                    "metadata_schema_id": "94dae6f8-0756-4ab0-a47b-138e446a9501",
+                    "middle_name_or_initial": "'$PI&*\"",
+                    "orcid": "0000-0000-0000-0000"
+                },
+            ],
         }
 
         res = client.post(
@@ -296,6 +311,7 @@ def test_create_dataset(db_session, app, requests):
 
         assert res.json["contains_human_genetic_sequences"] == data["contains_human_genetic_sequences"]
         assert res.json["dataset_type"] == data["dataset_type"]
+        assert res.json["contributors"] == data["contributors"]
         assert len(res.json["direct_ancestors"]) == 1
         assert res.json["direct_ancestors"][0]["uuid"] == test_entities["section"]["uuid"]
 
