@@ -871,7 +871,7 @@ def get_complete_entity_result(token, entity_dict, properties_to_skip=[], is_inc
 
             # Need both client and prefix when creating the cache
             # Do NOT cache when properties_to_skip is specified
-            if _memcached_client and _memcached_prefix and (not properties_to_skip):
+            if _memcached_client and _memcached_prefix and (not properties_to_skip and use_memcache):
                 logger.info(f'Creating complete entity cache of {entity_type} {entity_uuid} at time {datetime.now()}')
 
                 cache_key = f'{_memcached_prefix}_complete_{entity_uuid}'
