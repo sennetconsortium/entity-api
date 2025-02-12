@@ -6,6 +6,7 @@ from typing import List, Union
 
 import schema.schema_manager
 from lib.property_groups import PropertyGroups
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -1267,56 +1268,6 @@ def get_has_rui_information(neo4j_driver, entity_uuid):
 ## Internal Functions
 ####################################################################################################
 
-"""
-Build the property key-value pairs to be used in the Cypher clause for node creation/update
-
-Parameters
-----------
-entity_data_dict : dict
-    The target Entity node to be created
-
-Returns
--------
-str
-    A string representation of the node properties map containing 
-    key-value pairs to be used in Cypher clause
-"""
-
-
-def _build_properties_map(entity_data_dict):
-    separator = ', '
-    node_properties_list = []
-
-    for key, value in entity_data_dict.items():
-        if isinstance(value, (int, bool)):
-            # Treat integer and boolean as is
-            key_value_pair = f"{key}: {value}"
-        elif isinstance(value, str):
-            # Special case is the value is 'TIMESTAMP()' string
-            # Remove the quotes since neo4j only takes TIMESTAMP() as a function
-            if value == 'TIMESTAMP()':
-                key_value_pair = f"{key}: {value}"
-            else:
-                # Escape single quote
-                escaped_str = value.replace("'", r"\'")
-                # Quote the value
-                key_value_pair = f"{key}: '{escaped_str}'"
-        else:
-            # Convert list and dict to string
-            # Must also escape single quotes in the string to build a valid Cypher query
-            escaped_str = str(value).replace("'", r"\'")
-            # Also need to quote the string value
-            key_value_pair = f"{key}: '{escaped_str}'"
-
-        # Add to the list
-        node_properties_list.append(key_value_pair)
-
-    # Example: {uuid: 'eab7fd6911029122d9bbd4d96116db9b', rui_location: 'Joe <info>', lab_tissue_sample_id: 'dadsadsd'}
-    # Note: all the keys are not quoted, otherwise Cypher syntax error
-    node_properties_map = f"{{ {separator.join(node_properties_list)} }}"
-
-    return node_properties_map
-
 
 """
 Execute a unit of work in a managed read transaction
@@ -1359,16 +1310,16 @@ neo4j.node
 
 
 def _create_activity_tx(tx, activity_data_dict):
-    node_properties_map = _build_properties_map(activity_data_dict)
+    parameterized_str, parameterized_data = build_parameterized_map(activity_data_dict)
 
     query = (f"CREATE (e:Activity) "
-             f"SET e = {node_properties_map} "
+             f"SET e = {parameterized_str} "
              f"RETURN e AS {record_field_name}")
 
     logger.info("======_create_activity_tx() query======")
     logger.info(query)
 
-    result = tx.run(query)
+    result = tx.run(query, **parameterized_data)
     record = result.single()
     node = record[record_field_name]
 
@@ -1835,55 +1786,28 @@ def get_children(neo4j_driver, uuid, property_key=None):
     return results
 
 
-"""
-Build the property key-value pairs to be used in the Cypher clause for node creation/update
-
-Parameters
-----------
-entity_data_dict : dict
-    The target Entity node to be created
-
-Returns
--------
-str
-    A string representation of the node properties map containing 
-    key-value pairs to be used in Cypher clause
-"""
-def build_properties_map(entity_data_dict):
-    separator = ', '
-    node_properties_list = []
+def build_parameterized_map(entity_data_dict):
+    parameterized_list = []
+    data = {}
 
     for key, value in entity_data_dict.items():
-        if isinstance(value, (int, bool)):
-            # Treat integer and boolean as is
-            key_value_pair = f"{key}: {value}"
-        elif isinstance(value, str):
+        if isinstance(value, (str, int, bool)):
             # Special case is the value is 'TIMESTAMP()' string
             # Remove the quotes since neo4j only takes TIMESTAMP() as a function
             if value == 'TIMESTAMP()':
-                key_value_pair = f"{key}: {value}"
+                parameterized_list.append(f"{key}: {value}")
             else:
-                # Escape single quote
-                escaped_str = value.replace("'", r"\'")
-                # Quote the value
-                key_value_pair = f"{key}: '{escaped_str}'"
-        else:
-            # Convert list and dict to string, retain the original data without removing any control characters
-            # Will need to call schema_manager.convert_str_literal() to convert the list/dict literal back to object
-            # Note that schema_manager.convert_str_literal() removes any control characters to avoid SyntaxError
-            # Must also escape single quotes in the string to build a valid Cypher query
-            escaped_str = str(value).replace("'", r"\'")
-            # Also need to quote the string value
-            key_value_pair = f"{key}: '{escaped_str}'"
+                parameterized_list.append(f"{key}: ${key}")
+                data[key] = value
 
-        # Add to the list
-        node_properties_list.append(key_value_pair)
+        else:
+            parameterized_list.append(f"{key}: ${key}")
+            data[key] = json.dumps(value)
 
     # Example: {uuid: 'eab7fd6911029122d9bbd4d96116db9b', rui_location: 'Joe <info>', lab_tissue_sample_id: 'dadsadsd'}
     # Note: all the keys are not quoted, otherwise Cypher syntax error
-    node_properties_map = f"{{ {separator.join(node_properties_list)} }}"
-
-    return node_properties_map
+    parametered_str = f"{{ {', '.join(parameterized_list)} }}"
+    return parametered_str, data
 
 
 """
@@ -1906,11 +1830,11 @@ dict
     A dictionary of updated entity details returned from the Cypher query
 """
 def update_entity(neo4j_driver, entity_type, entity_data_dict, uuid):
-    node_properties_map = build_properties_map(entity_data_dict)
+    parameterized_str, parameterized_data = build_parameterized_map(entity_data_dict)
 
     query = (f"MATCH (e:{entity_type}) "
-             f"WHERE e.uuid = '{uuid}' "
-             f"SET e += {node_properties_map} "
+             f"WHERE e.uuid = $uuid "
+             f"SET e += {parameterized_str} "
              f"RETURN e AS {record_field_name}")
 
     logger.info("======update_entity() query======")
@@ -1922,7 +1846,7 @@ def update_entity(neo4j_driver, entity_type, entity_data_dict, uuid):
 
             tx = session.begin_transaction()
 
-            result = tx.run(query)
+            result = tx.run(query, uuid=uuid, **parameterized_data)
             record = result.single()
             entity_node = record[record_field_name]
 
