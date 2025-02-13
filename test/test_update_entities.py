@@ -2,13 +2,10 @@ from test.helpers.auth import AUTH_TOKEN
 from test.helpers.database import create_provenance, get_entity
 from test.helpers.response import mock_response
 
-import pytest
-
 
 # Update Entity Tests
 
 
-@pytest.mark.usefixtures("lab")
 def test_update_source(app, requests, db_session):
     # Create provenance in test database
     test_entities = create_provenance(db_session, ["source"])
@@ -49,7 +46,6 @@ def test_update_source(app, requests, db_session):
         assert db_entity["lab_source_id"] == data["lab_source_id"]
 
 
-@pytest.mark.usefixtures("lab")
 def test_update_organ_sample(app, requests, db_session):
     # Create provenance in test database
     test_entities = create_provenance(db_session, ["source", "organ"])
@@ -90,7 +86,6 @@ def test_update_organ_sample(app, requests, db_session):
         assert db_entity["lab_tissue_sample_id"] == data["lab_tissue_sample_id"]
 
 
-@pytest.mark.usefixtures("lab")
 def test_update_block_sample(app, requests, db_session):
     # Create provenance in test database
     test_entities = create_provenance(db_session, ["source", "organ", "block"])
@@ -131,7 +126,6 @@ def test_update_block_sample(app, requests, db_session):
         assert db_entity["lab_tissue_sample_id"] == data["lab_tissue_sample_id"]
 
 
-@pytest.mark.usefixtures("lab")
 def test_update_section_sample(app, requests, db_session):
     # Create provenance in test database
     test_entities = create_provenance(db_session, ["source", "organ", "block", "section"])
@@ -172,7 +166,6 @@ def test_update_section_sample(app, requests, db_session):
         assert db_entity["lab_tissue_sample_id"] == data["lab_tissue_sample_id"]
 
 
-@pytest.mark.usefixtures("lab")
 def test_update_dataset(app, requests, db_session):
     # Create provenance in test database
     test_entities = create_provenance(db_session, ["source", "organ", "block", "section", "dataset"])

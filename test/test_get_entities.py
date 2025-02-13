@@ -3,13 +3,10 @@ from test.helpers.auth import AUTH_TOKEN
 from test.helpers.database import create_provenance
 from test.helpers.response import mock_response
 
-import pytest
-
 
 # Get Entity Tests
 
 
-@pytest.mark.usefixtures("lab")
 def test_get_source_by_uuid(db_session, app, requests):
     # Create provenance in test database
     test_entities = create_provenance(db_session, ["source"])
@@ -44,7 +41,6 @@ def test_get_source_by_uuid(db_session, app, requests):
         assert res.json["data_access_level"] == "consortium"
 
 
-@pytest.mark.usefixtures("lab")
 def test_get_source_by_sennet_id(db_session, app, requests):
     # Create provenance in test database
     test_entities = create_provenance(db_session, ["source"])
@@ -79,7 +75,6 @@ def test_get_source_by_sennet_id(db_session, app, requests):
         assert res.json["data_access_level"] == "consortium"
 
 
-@pytest.mark.usefixtures("lab")
 def test_get_organ_sample_by_uuid(db_session, app, requests):
     # Create provenance in test database
     test_entities = create_provenance(db_session, ["source", "organ"])
@@ -120,7 +115,6 @@ def test_get_organ_sample_by_uuid(db_session, app, requests):
         assert res.json["data_access_level"] == "consortium"
 
 
-@pytest.mark.usefixtures("lab")
 def test_get_organ_sample_by_sennet_id(db_session, app, requests):
     # Create provenance in test database
     test_entities = create_provenance(db_session, ["source", "organ"])
@@ -161,7 +155,6 @@ def test_get_organ_sample_by_sennet_id(db_session, app, requests):
         assert res.json["data_access_level"] == "consortium"
 
 
-@pytest.mark.usefixtures("lab")
 def test_get_block_sample_by_uuid(db_session, app, requests):
     # Create provenance in test database
     test_entities = create_provenance(db_session, ["source", "organ", "block"])
@@ -202,7 +195,6 @@ def test_get_block_sample_by_uuid(db_session, app, requests):
         assert res.json["data_access_level"] == "consortium"
 
 
-@pytest.mark.usefixtures("lab")
 def test_get_block_sample_by_sennet_id(db_session, app, requests):
     # Create provenance in test database
     test_entities = create_provenance(db_session, ["source", "organ", "block"])
@@ -243,7 +235,6 @@ def test_get_block_sample_by_sennet_id(db_session, app, requests):
         assert res.json["data_access_level"] == "consortium"
 
 
-@pytest.mark.usefixtures("lab")
 def test_get_section_sample_by_uuid(db_session, app, requests):
     # Create provenance in test database
     test_entities = create_provenance(db_session, ["source", "organ", "block", "section"])
@@ -284,7 +275,6 @@ def test_get_section_sample_by_uuid(db_session, app, requests):
         assert res.json["data_access_level"] == "consortium"
 
 
-@pytest.mark.usefixtures("lab")
 def test_get_section_sample_by_sennet_id(db_session, app, requests):
     # Create provenance in test database
     test_entities = create_provenance(db_session, ["source", "organ", "block", "section"])
@@ -325,7 +315,6 @@ def test_get_section_sample_by_sennet_id(db_session, app, requests):
         assert res.json["data_access_level"] == "consortium"
 
 
-@pytest.mark.usefixtures("lab")
 def test_get_dataset_by_uuid(db_session, app, requests):
     # Create provenance in test database
     test_entities = create_provenance(db_session, ["source", "organ", "block", "section", "dataset"])
@@ -369,7 +358,6 @@ def test_get_dataset_by_uuid(db_session, app, requests):
         assert res.json["data_access_level"] == "consortium"
 
 
-@pytest.mark.usefixtures("lab")
 def test_get_dataset_by_sennet_id(db_session, app, requests):
     # Create provenance in test database
     test_entities = create_provenance(db_session, ["source", "organ", "block", "section", "dataset"])

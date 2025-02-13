@@ -3,8 +3,6 @@ from test.helpers.auth import AUTH_TOKEN
 from test.helpers.database import create_provenance, generate_entity, get_entity
 from test.helpers.response import mock_response
 
-import pytest
-
 
 def test_index(app):
     """Test that the index page is working"""
@@ -18,7 +16,6 @@ def test_index(app):
 # Create Entity Tests
 
 
-@pytest.mark.usefixtures("lab")
 def test_create_source(app, requests, db_session):
     entities = [
         generate_entity(),  # source
@@ -69,7 +66,6 @@ def test_create_source(app, requests, db_session):
         assert db_entity["source_type"] == data["source_type"]
 
 
-@pytest.mark.usefixtures("lab")
 def test_create_organ_sample(db_session, app, requests):
     # Create provenance in test database
     test_entities = create_provenance(db_session, ["source"])
@@ -128,7 +124,6 @@ def test_create_organ_sample(db_session, app, requests):
         assert db_entity["lab_tissue_sample_id"] == data["lab_tissue_sample_id"]
 
 
-@pytest.mark.usefixtures("lab")
 def test_create_block_sample(db_session, app, requests):
     # Create provenance in test database
     test_entities = create_provenance(db_session, ["source", "organ"])
@@ -184,7 +179,6 @@ def test_create_block_sample(db_session, app, requests):
         assert db_entity["lab_tissue_sample_id"] == data["lab_tissue_sample_id"]
 
 
-@pytest.mark.usefixtures("lab")
 def test_create_section_sample(db_session, app, requests):
     # Create provenance in test database
     test_entities = create_provenance(db_session, ["source", "organ", "block"])
@@ -242,7 +236,6 @@ def test_create_section_sample(db_session, app, requests):
         assert db_entity["lab_tissue_sample_id"] == data["lab_tissue_sample_id"]
 
 
-@pytest.mark.usefixtures("lab")
 def test_create_dataset(db_session, app, requests):
     # Create provenance in test database
     test_entities = create_provenance(db_session, ["source", "organ", "block", "section"])

@@ -60,14 +60,14 @@ def db_session():
 
     driver = wait_for_neo4j(neo4j_uri, neo4j_username, neo4j_password)
     session = driver.session()
+    create_lab(session)
     yield session
     session.close()
     driver.close()
 
 
-@pytest.fixture(scope="session")
-def lab(db_session):
-    """Test fixture to create a lab node in the Neo4j database
+def create_lab(db_session):
+    """Create a lab node in the Neo4j database
 
     Parameters
     ----------
