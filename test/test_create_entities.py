@@ -5,18 +5,6 @@ from test.helpers.response import mock_response
 import pytest
 
 
-@pytest.fixture()
-def app(auth):
-    import app as app_module
-
-    app_module.app.config.update({"TESTING": True})
-    app_module.auth_helper_instance = auth
-    app_module.schema_manager._auth_helper = auth
-    # other setup
-    yield app_module.app
-    # clean up
-
-
 def test_index(app):
     """Test that the index page is working"""
 
