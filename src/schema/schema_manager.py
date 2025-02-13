@@ -434,8 +434,10 @@ def rearrange_datasets(results, entity_type = 'Dataset'):
 
 
 def group_verify_properties_list(normalized_class='All', properties=[]):
-    """ Separates neo4j properties from transient ones. Will also gather specific property dependencies via a
-    `dependency_properties` list setting in the schema yaml. Also filters out any unknown properties.
+    """ Separates neo4j properties from transient ones. More over, buckets neo4j properties that are
+     either json_string or list to allow them to be handled via apoc.convert.* functions.
+     Will also gather specific property dependencies via a `dependency_properties` list setting in the schema yaml.
+     Also filters out any unknown properties.
 
     Parameters
     ----------
