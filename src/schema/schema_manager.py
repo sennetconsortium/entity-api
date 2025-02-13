@@ -151,6 +151,16 @@ def load_provenance_schema(valid_yaml_file):
 
 
 def group_schema_properties_by_name():
+    """
+    This formats the entities schema properties using property names as key.
+    Then within various buckets, has a set containing entity names which the property belongs to.
+
+    This allows for constant time access when filtering responses by property names.
+
+    Returns
+    -------
+    dict
+    """
     global _schema
 
     schema_properties_by_name = {}
