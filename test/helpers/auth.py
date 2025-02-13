@@ -13,6 +13,8 @@ def auth():
     auth_mock = MagicMock()
     auth_mock.get_globus_groups_info.return_value = globus_group_info
     auth_mock.getAuthorizationTokens = MagicMock(side_effect=get_authorization_tokens)
+    auth_mock.getProcessSecret.return_value = "super_process_secret"
+    auth_mock.groupNameToId.return_value = GROUP
     auth_mock.getUserTokenFromRequest = MagicMock(side_effect=get_user_token_from_request)
     auth_mock.getUserInfoUsingRequest = MagicMock(side_effect=get_user_info_using_request)
     auth_mock.getUserInfo = MagicMock(side_effect=get_user_info)
