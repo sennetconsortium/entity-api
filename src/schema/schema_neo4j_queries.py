@@ -206,9 +206,13 @@ def get_dataset_organ_and_source_info(neo4j_driver, uuid):
     source_type = None
 
     with neo4j_driver.session() as session:
-        sample_query = (f"MATCH (e:Dataset)-[:USED|WAS_GENERATED_BY*]->(s:Sample) "
-                        f"WHERE e.uuid='{uuid}' AND s.sample_category is not null and s.sample_category='Organ' "
-                        f"RETURN apoc.coll.toSet(COLLECT(s)) AS {record_field_name}")
+        sample_query = ("MATCH (e:Dataset)-[:USED|WAS_GENERATED_BY*]->(s:Sample) WHERE "
+                 f"e.uuid='{uuid}' AND s.sample_category is not null and s.sample_category='Organ' "
+                 "MATCH (s2:Sample)-[:USED|WAS_GENERATED_BY*]->(d:Source) WHERE s2.uuid=s.uuid AND s2.sample_category is not null "
+                 "RETURN DISTINCT d.metadata AS source_metadata, d.source_type AS source_type, "
+                 "CASE WHEN s.organ is not null THEN s.organ "
+                 "ELSE s.sample_category "
+                 "END AS organ_type")
 
         logger.info("======get_dataset_organ_and_source_info() sample_query======")
         logger.info(sample_query)
@@ -216,29 +220,10 @@ def get_dataset_organ_and_source_info(neo4j_driver, uuid):
         with neo4j_driver.session() as session:
             record = session.read_transaction(_execute_readonly_tx, sample_query)
 
-            if record and record[record_field_name]:
-                # Convert the list of nodes to a list of dicts
-                sample_records = _nodes_to_dicts(record[record_field_name])
-                for sample_record in sample_records:
-                    if sample_record['organ'] is None:
-                        organ_names.add(sample_record['sample_category'])
-                    else:
-                        organ_names.add(sample_record['organ'])
-
-                    sample_uuid = sample_record['uuid']
-
-                    source_query = (f"MATCH (s:Sample)-[:USED|WAS_GENERATED_BY*]->(d:Source) "
-                                    f"WHERE s.uuid='{sample_uuid}' AND s.sample_category is not null "
-                                    f"RETURN DISTINCT d.metadata AS source_metadata, d.source_type AS source_type")
-
-                    logger.info("======get_dataset_organ_and_source_info() source_query======")
-                    logger.info(source_query)
-
-                    source_record = session.read_transaction(_execute_readonly_tx, source_query)
-
-                    if source_record:
-                        source_metadata.add(source_record[0])
-                        source_type = source_record[1]
+            if record:
+                source_metadata.add(record[0])
+                source_type = record[1]
+                organ_names.add(record[2])
 
     return organ_names, source_metadata, source_type
 
