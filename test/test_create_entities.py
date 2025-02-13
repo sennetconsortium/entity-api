@@ -66,6 +66,24 @@ def test_create_source(app, requests, db_session):
         assert db_entity["source_type"] == data["source_type"]
 
 
+def test_create_source_no_auth(app):
+    with app.test_client() as client:
+        data = {
+            "description": "Testing lab notes",
+            "group_uuid": GROUP["uuid"],
+            "lab_source_id": "test_lab_source_id",
+            "protocol_url": "dx.doi.org/10.17504/protocols.io.3byl4j398lo5/v1",
+            "source_type": "Human",
+        }
+
+        res = client.post(
+            "/entities/source?return_all_properties=true",
+            json=data,
+        )
+
+        assert res.status_code == 401
+
+
 def test_create_organ_sample(db_session, app, requests):
     # Create provenance in test database
     test_entities = create_provenance(db_session, ["source"])
@@ -124,6 +142,24 @@ def test_create_organ_sample(db_session, app, requests):
         assert db_entity["lab_tissue_sample_id"] == data["lab_tissue_sample_id"]
 
 
+def test_create_organ_sample_no_auth(app):
+    with app.test_client() as client:
+        data = {
+            "description": "Testing lab notes",
+            "group_uuid": GROUP["uuid"],
+            "lab_source_id": "test_lab_source_id",
+            "protocol_url": "dx.doi.org/10.17504/protocols.io.3byl4j398lo5/v1",
+            "source_type": "Human",
+        }
+
+        res = client.post(
+            "/entities/sample?return_all_properties=true",
+            json=data,
+        )
+
+        assert res.status_code == 401
+
+
 def test_create_block_sample(db_session, app, requests):
     # Create provenance in test database
     test_entities = create_provenance(db_session, ["source", "organ"])
@@ -177,6 +213,24 @@ def test_create_block_sample(db_session, app, requests):
         db_entity = get_entity(entities[0]["uuid"], db_session)
         assert db_entity["sample_category"] == data["sample_category"]
         assert db_entity["lab_tissue_sample_id"] == data["lab_tissue_sample_id"]
+
+
+def test_create_block_sample_no_auth(app):
+    with app.test_client() as client:
+        data = {
+            "description": "Testing lab notes",
+            "group_uuid": GROUP["uuid"],
+            "lab_source_id": "test_lab_source_id",
+            "protocol_url": "dx.doi.org/10.17504/protocols.io.3byl4j398lo5/v1",
+            "source_type": "Human",
+        }
+
+        res = client.post(
+            "/entities/sample?return_all_properties=true",
+            json=data,
+        )
+
+        assert res.status_code == 401
 
 
 def test_create_section_sample(db_session, app, requests):
@@ -234,6 +288,24 @@ def test_create_section_sample(db_session, app, requests):
         db_entity = get_entity(entities[0]["uuid"], db_session)
         assert db_entity["sample_category"] == data["sample_category"]
         assert db_entity["lab_tissue_sample_id"] == data["lab_tissue_sample_id"]
+
+
+def test_create_section_sample_no_auth(app):
+    with app.test_client() as client:
+        data = {
+            "description": "Testing lab notes",
+            "group_uuid": GROUP["uuid"],
+            "lab_source_id": "test_lab_source_id",
+            "protocol_url": "dx.doi.org/10.17504/protocols.io.3byl4j398lo5/v1",
+            "source_type": "Human",
+        }
+
+        res = client.post(
+            "/entities/sample?return_all_properties=true",
+            json=data,
+        )
+
+        assert res.status_code == 401
 
 
 def test_create_dataset(db_session, app, requests):
@@ -313,3 +385,21 @@ def test_create_dataset(db_session, app, requests):
         db_entity = get_entity(entities[0]["uuid"], db_session)
         assert db_entity["contains_human_genetic_sequences"] == data["contains_human_genetic_sequences"]
         assert db_entity["dataset_type"] == data["dataset_type"]
+
+
+def test_create_dataset_no_auth(app):
+    with app.test_client() as client:
+        data = {
+            "description": "Testing lab notes",
+            "group_uuid": GROUP["uuid"],
+            "lab_source_id": "test_lab_source_id",
+            "protocol_url": "dx.doi.org/10.17504/protocols.io.3byl4j398lo5/v1",
+            "source_type": "Human",
+        }
+
+        res = client.post(
+            "/entities/dataset?return_all_properties=true",
+            json=data,
+        )
+
+        assert res.status_code == 401

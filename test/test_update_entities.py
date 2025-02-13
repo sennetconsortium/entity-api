@@ -46,6 +46,25 @@ def test_update_source(app, requests, db_session):
         assert db_entity["lab_source_id"] == data["lab_source_id"]
 
 
+def test_update_source_no_auth(app, db_session):
+    # Create provenance in test database
+    test_entities = create_provenance(db_session, ["source"])
+    test_source = test_entities["source"]
+
+    with app.test_client() as client:
+        data = {
+            "description": "New Testing lab notes",
+            "lab_source_id": "new_test_lab_source_id",
+        }
+
+        res = client.put(
+            f"/entities/{test_source['uuid']}?return_all_properties=true",
+            json=data,
+        )
+
+        assert res.status_code == 401
+
+
 def test_update_organ_sample(app, requests, db_session):
     # Create provenance in test database
     test_entities = create_provenance(db_session, ["source", "organ"])
@@ -84,6 +103,25 @@ def test_update_organ_sample(app, requests, db_session):
         db_entity = get_entity(test_organ["uuid"], db_session)
         assert db_entity["description"] == data["description"]
         assert db_entity["lab_tissue_sample_id"] == data["lab_tissue_sample_id"]
+
+
+def test_update_organ_sample_no_auth(app, db_session):
+    # Create provenance in test database
+    test_entities = create_provenance(db_session, ["source", "organ"])
+    test_organ = test_entities["organ"]
+
+    with app.test_client() as client:
+        data = {
+            "description": "New Testing lab notes",
+            "lab_tissue_sample_id": "new_test_lab_tissue_organ_id",
+        }
+
+        res = client.put(
+            f"/entities/{test_organ['uuid']}?return_all_properties=true",
+            json=data,
+        )
+
+        assert res.status_code == 401
 
 
 def test_update_block_sample(app, requests, db_session):
@@ -126,6 +164,25 @@ def test_update_block_sample(app, requests, db_session):
         assert db_entity["lab_tissue_sample_id"] == data["lab_tissue_sample_id"]
 
 
+def test_update_block_sample_no_auth(app, requests, db_session):
+    # Create provenance in test database
+    test_entities = create_provenance(db_session, ["source", "organ", "block"])
+    test_block = test_entities["block"]
+
+    with app.test_client() as client:
+        data = {
+            "description": "New Testing lab notes",
+            "lab_tissue_sample_id": "new_test_lab_tissue_block_id",
+        }
+
+        res = client.put(
+            f"/entities/{test_block['uuid']}?return_all_properties=true",
+            json=data,
+        )
+
+        assert res.status_code == 401
+
+
 def test_update_section_sample(app, requests, db_session):
     # Create provenance in test database
     test_entities = create_provenance(db_session, ["source", "organ", "block", "section"])
@@ -164,6 +221,25 @@ def test_update_section_sample(app, requests, db_session):
         db_entity = get_entity(test_section["uuid"], db_session)
         assert db_entity["description"] == data["description"]
         assert db_entity["lab_tissue_sample_id"] == data["lab_tissue_sample_id"]
+
+
+def test_update_section_sample_no_auth(app, db_session):
+    # Create provenance in test database
+    test_entities = create_provenance(db_session, ["source", "organ", "block", "section"])
+    test_section = test_entities["section"]
+
+    with app.test_client() as client:
+        data = {
+            "description": "New Testing lab notes",
+            "lab_tissue_sample_id": "new_test_lab_tissue_section_id",
+        }
+
+        res = client.put(
+            f"/entities/{test_section['uuid']}?return_all_properties=true",
+            json=data,
+        )
+
+        assert res.status_code == 401
 
 
 def test_update_dataset(app, requests, db_session):
@@ -217,3 +293,21 @@ def test_update_dataset(app, requests, db_session):
         # check database
         db_entity = get_entity(test_dataset["uuid"], db_session)
         assert db_entity["description"] == data["description"]
+
+
+def test_update_dataset_no_auth(app, db_session):
+    # Create provenance in test database
+    test_entities = create_provenance(db_session, ["source", "organ", "block", "section", "dataset"])
+    test_dataset = test_entities["dataset"]
+
+    with app.test_client() as client:
+        data = {
+            "description": "New Testing lab notes",
+        }
+
+        res = client.put(
+            f"/entities/{test_dataset['uuid']}?return_all_properties=true",
+            json=data,
+        )
+
+        assert res.status_code == 401
