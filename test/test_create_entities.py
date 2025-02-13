@@ -1,4 +1,5 @@
 from test.helpers import GROUP, USER
+from test.helpers.auth import AUTH_TOKEN
 from test.helpers.database import create_provenance, generate_entity, get_entity
 from test.helpers.response import mock_response
 
@@ -43,7 +44,7 @@ def test_create_source(app, requests, db_session):
         res = client.post(
             "/entities/source?return_all_properties=true",
             json=data,
-            headers={"Authorization": "Bearer test_token"},
+            headers={"Authorization": f"Bearer {AUTH_TOKEN}"},
         )
 
         assert res.status_code == 200
@@ -97,7 +98,7 @@ def test_create_organ_sample(db_session, app, requests):
         res = client.post(
             "/entities/sample?return_all_properties=true",
             json=data,
-            headers={"Authorization": "Bearer test_token"},
+            headers={"Authorization": f"Bearer {AUTH_TOKEN}"},
         )
 
         assert res.status_code == 200
@@ -155,7 +156,7 @@ def test_create_block_sample(db_session, app, requests):
         res = client.post(
             "/entities/sample?return_all_properties=true",
             json=data,
-            headers={"Authorization": "Bearer test_token"},
+            headers={"Authorization": f"Bearer {AUTH_TOKEN}"},
         )
 
         assert res.status_code == 200
@@ -212,7 +213,7 @@ def test_create_section_sample(db_session, app, requests):
         res = client.post(
             "/entities/sample?return_all_properties=true",
             json=data,
-            headers={"Authorization": "Bearer test_token"},
+            headers={"Authorization": f"Bearer {AUTH_TOKEN}"},
         )
 
         assert res.status_code == 200
@@ -286,7 +287,7 @@ def test_create_dataset(db_session, app, requests):
             "/entities/dataset?return_all_properties=true",
             json=data,
             headers={
-                "Authorization": "Bearer test_token",
+                "Authorization": f"Bearer {AUTH_TOKEN}",
                 "X-SenNet-Application": "portal-ui",
             },
         )

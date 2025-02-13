@@ -1,4 +1,5 @@
 from test.helpers import GROUP, USER
+from test.helpers.auth import AUTH_TOKEN
 from test.helpers.database import create_provenance
 from test.helpers.response import mock_response
 
@@ -25,7 +26,7 @@ def test_get_source_by_uuid(db_session, app, requests):
     with app.test_client() as client:
         res = client.get(
             f"/entities/{test_source['uuid']}",
-            headers={"Authorization": "Bearer test_token"},
+            headers={"Authorization": f"Bearer {AUTH_TOKEN}"},
         )
 
         assert res.status_code == 200
@@ -60,7 +61,7 @@ def test_get_source_by_sennet_id(db_session, app, requests):
     with app.test_client() as client:
         res = client.get(
             f"/entities/{test_source['sennet_id']}",
-            headers={"Authorization": "Bearer test_token"},
+            headers={"Authorization": f"Bearer {AUTH_TOKEN}"},
         )
 
         assert res.status_code == 200
@@ -95,7 +96,7 @@ def test_get_organ_sample_by_uuid(db_session, app, requests):
     with app.test_client() as client:
         res = client.get(
             f"/entities/{test_organ['uuid']}",
-            headers={"Authorization": "Bearer test_token"},
+            headers={"Authorization": f"Bearer {AUTH_TOKEN}"},
         )
 
         assert res.status_code == 200
@@ -136,7 +137,7 @@ def test_get_organ_sample_by_sennet_id(db_session, app, requests):
     with app.test_client() as client:
         res = client.get(
             f"/entities/{test_organ['sennet_id']}",
-            headers={"Authorization": "Bearer test_token"},
+            headers={"Authorization": f"Bearer {AUTH_TOKEN}"},
         )
 
         assert res.status_code == 200
@@ -177,7 +178,7 @@ def test_get_block_sample_by_uuid(db_session, app, requests):
     with app.test_client() as client:
         res = client.get(
             f"/entities/{test_block['uuid']}",
-            headers={"Authorization": "Bearer test_token"},
+            headers={"Authorization": f"Bearer {AUTH_TOKEN}"},
         )
 
         assert res.status_code == 200
@@ -218,7 +219,7 @@ def test_get_block_sample_by_sennet_id(db_session, app, requests):
     with app.test_client() as client:
         res = client.get(
             f"/entities/{test_block['sennet_id']}",
-            headers={"Authorization": "Bearer test_token"},
+            headers={"Authorization": f"Bearer {AUTH_TOKEN}"},
         )
 
         assert res.status_code == 200
@@ -259,7 +260,7 @@ def test_get_section_sample_by_uuid(db_session, app, requests):
     with app.test_client() as client:
         res = client.get(
             f"/entities/{test_section['uuid']}",
-            headers={"Authorization": "Bearer test_token"},
+            headers={"Authorization": f"Bearer {AUTH_TOKEN}"},
         )
 
         assert res.status_code == 200
@@ -300,7 +301,7 @@ def test_get_section_sample_by_sennet_id(db_session, app, requests):
     with app.test_client() as client:
         res = client.get(
             f"/entities/{test_section['sennet_id']}",
-            headers={"Authorization": "Bearer test_token"},
+            headers={"Authorization": f"Bearer {AUTH_TOKEN}"},
         )
 
         assert res.status_code == 200
@@ -341,7 +342,7 @@ def test_get_dataset_by_uuid(db_session, app, requests):
     with app.test_client() as client:
         res = client.get(
             f"/entities/{test_dataset['uuid']}",
-            headers={"Authorization": "Bearer test_token"},
+            headers={"Authorization": f"Bearer {AUTH_TOKEN}"},
         )
 
         assert res.status_code == 200
@@ -385,7 +386,7 @@ def test_get_dataset_by_sennet_id(db_session, app, requests):
     with app.test_client() as client:
         res = client.get(
             f"/entities/{test_dataset['sennet_id']}",
-            headers={"Authorization": "Bearer test_token"},
+            headers={"Authorization": f"Bearer {AUTH_TOKEN}"},
         )
 
         assert res.status_code == 200

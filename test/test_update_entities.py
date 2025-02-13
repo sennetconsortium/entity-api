@@ -1,3 +1,4 @@
+from test.helpers.auth import AUTH_TOKEN
 from test.helpers.database import create_provenance, get_entity
 from test.helpers.response import mock_response
 
@@ -32,7 +33,7 @@ def test_update_source(app, requests, db_session):
         res = client.put(
             f"/entities/{test_source['uuid']}?return_all_properties=true",
             json=data,
-            headers={"Authorization": "Bearer test_token"},
+            headers={"Authorization": f"Bearer {AUTH_TOKEN}"},
         )
 
         assert res.status_code == 200
@@ -73,7 +74,7 @@ def test_update_organ_sample(app, requests, db_session):
         res = client.put(
             f"/entities/{test_organ['uuid']}?return_all_properties=true",
             json=data,
-            headers={"Authorization": "Bearer test_token"},
+            headers={"Authorization": f"Bearer {AUTH_TOKEN}"},
         )
 
         assert res.status_code == 200
@@ -114,7 +115,7 @@ def test_update_block_sample(app, requests, db_session):
         res = client.put(
             f"/entities/{test_block['uuid']}?return_all_properties=true",
             json=data,
-            headers={"Authorization": "Bearer test_token"},
+            headers={"Authorization": f"Bearer {AUTH_TOKEN}"},
         )
 
         assert res.status_code == 200
@@ -155,7 +156,7 @@ def test_update_section_sample(app, requests, db_session):
         res = client.put(
             f"/entities/{test_section['uuid']}?return_all_properties=true",
             json=data,
-            headers={"Authorization": "Bearer test_token"},
+            headers={"Authorization": f"Bearer {AUTH_TOKEN}"},
         )
 
         assert res.status_code == 200
@@ -210,7 +211,7 @@ def test_update_dataset(app, requests, db_session):
         res = client.put(
             f"/entities/{test_dataset['uuid']}?return_all_properties=true",
             json=data,
-            headers={"Authorization": "Bearer test_token"},
+            headers={"Authorization": f"Bearer {AUTH_TOKEN}"},
         )
 
         assert res.status_code == 200
