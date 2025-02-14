@@ -366,10 +366,6 @@ ENTITIES:
       - metadata:
           - lab_id
           - slide_id
-      - ingest_metadata:
-          - metadata:
-              - lab_id
-              - slide_id
       - cedar_mapped_metadata:
           - Lab ID
           - Slide ID
@@ -518,9 +514,18 @@ ENTITIES:
         type: boolean
         description: "Whether this dataset has a pipeline message."
         on_index_trigger: get_has_pipeline_or_validation_message
+      metadata:
+        type: json_string # dict
+        description: "Metadata associated with the ingested experimental data"
+      files:
+        type: list
+        description: "A list of files associated with the dataset."
+      calculated_metadata:
+        type: json_string # dict
+        description: "Calculated metadata outputted from the processing pipeline."
       ingest_metadata:
         type: json_string # dict
-        description: "The metadata returned from the processing at data submission time."
+        description: "Information associated with running the ingest and processing pipelines"
       local_directory_rel_path:
         # Example: protected/<TMC>/<uuid>
         type: string
@@ -693,10 +698,9 @@ ENTITIES:
       - lab_dataset_id
       - sources:
           - lab_source_id
-      - ingest_metadata:
-          - metadata:
-              - lab_id
-              - slide_id
+      - metadata:
+          - lab_id
+          - slide_id
       - cedar_mapped_metadata:
           - Lab ID
           - Slide ID
