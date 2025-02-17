@@ -49,6 +49,7 @@ _neo4j_driver = None
 _ubkg = None
 _memcached_client = None
 _memcached_prefix = None
+_schema_properties = {}
 
 # For handling cached requests to uuid-api and external static resources (github raw yaml files)
 request_cache = {}
@@ -92,9 +93,11 @@ def initialize(valid_yaml_file,
     global _ubkg
     global _memcached_client
     global _memcached_prefix
+    global _schema_properties
 
     logger.info(f"Initialize schema_manager using valid_yaml_file={valid_yaml_file}.")
     _schema = load_provenance_schema(valid_yaml_file)
+    _schema_properties = group_schema_properties_by_name()
     if _schema is None:
         logger.error(f"Failed to load _schema using {valid_yaml_file}.")
     _uuid_api_url = uuid_api_url
@@ -146,6 +149,45 @@ def load_provenance_schema(valid_yaml_file):
             schema_dict['ENTITIES'][entity]['properties'] = remove_none_values(schema_dict['ENTITIES'][entity]['properties'])
         return schema_dict
 
+
+def group_schema_properties_by_name():
+    """
+    This formats the entities schema properties using property names as key.
+    Then within various buckets, has a set containing entity names which the property belongs to.
+
+    This allows for constant time access when filtering responses by property names.
+
+    Returns
+    -------
+    dict
+    """
+    global _schema
+
+    schema_properties_by_name = {}
+    for entity in _schema['ENTITIES']:
+        entity_properties = _schema['ENTITIES'][entity].get('properties', {})
+        for p in entity_properties:
+            if p not in schema_properties_by_name:
+                schema_properties_by_name[p] = {}
+                schema_properties_by_name[p]['dependencies'] = set()
+                schema_properties_by_name[p]['trigger'] = set()
+                schema_properties_by_name[p]['neo4j'] = set()
+                schema_properties_by_name[p]['json_string'] = set()
+                schema_properties_by_name[p]['list'] = set()
+                schema_properties_by_name[p]['dependencies'].update(entity_properties[p].get('dependency_properties', []))
+
+            if 'on_read_trigger' in entity_properties[p]:
+                schema_properties_by_name[p]['trigger'].add(entity)
+            else:
+                schema_properties_by_name[p]['neo4j'].add(entity)
+
+                if 'type' in entity_properties[p]:
+                    if entity_properties[p]['type'] == 'json_string':
+                        schema_properties_by_name[p]['json_string'].add(entity)
+                    if entity_properties[p]['type'] == 'list':
+                        schema_properties_by_name[p]['list'].add(entity)
+
+    return schema_properties_by_name
 
 ####################################################################################################
 ## Helper functions
@@ -392,8 +434,10 @@ def rearrange_datasets(results, entity_type = 'Dataset'):
 
 
 def group_verify_properties_list(normalized_class='All', properties=[]):
-    """ Separates neo4j properties from transient ones. Will also gather specific property dependencies via a
-    `dependency_properties` list setting in the schema yaml. Also filters out any unknown properties.
+    """ Separates neo4j properties from transient ones. More over, buckets neo4j properties that are
+     either json_string or list to allow them to be handled via apoc.convert.* functions.
+     Will also gather specific property dependencies via a `dependency_properties` list setting in the schema yaml.
+     Also filters out any unknown properties.
 
     Parameters
     ----------
@@ -409,60 +453,43 @@ def group_verify_properties_list(normalized_class='All', properties=[]):
     """
     # Determine the schema section based on class
     global _schema
+    global _schema_properties
 
     defaults = get_schema_defaults([])
 
     if len(properties) == 1 and properties[0] in defaults:
        return PropertyGroups(properties, [], [], [], [], [])
 
-    neo4j_fields = []
-    trigger_fields = []
+    neo4j_fields = set()
+    trigger_fields = set()
     activity_fields = []
-    json_fields = []
-    list_fields = []
-    schema_section = {}
-    activities_schema_section = {}
+    json_fields = set()
+    list_fields = set()
     dependencies = set()
 
-    def check_dependencies(_entity_properties):
-        for _p in properties:
-            if _p in _entity_properties:
-                dependencies.update(_entity_properties[_p].get('dependency_properties', []))
-
     activity_properties = _schema['ACTIVITIES']['Activity'].get('properties', {})
-    check_dependencies(activity_properties)
-    activities_schema_section.update(activity_properties)
-
-    if normalized_class == 'All':
-        for entity in _schema['ENTITIES']:
-            entity_properties = _schema['ENTITIES'][entity].get('properties', {})
-            check_dependencies(entity_properties)
-            schema_section.update(entity_properties)
-    else:
-        entity_properties = _schema['ENTITIES'][normalized_class].get('properties', {})
-        check_dependencies(entity_properties)
-        schema_section = entity_properties
 
     for p in properties:
-        if p in schema_section:
-            if 'on_read_trigger' in schema_section[p]:
-                trigger_fields.append(p)
-            else:
-                neo4j_fields.append(p)
+        if p in _schema_properties:
+            if 'trigger' in _schema_properties[p] and (len(_schema_properties[p]['trigger']) or normalized_class in _schema_properties[p]['trigger']):
+                trigger_fields.add(p)
 
-                if 'type' in schema_section[p]:
-                    if schema_section[p]['type'] == 'json_string':
-                        json_fields.append(p)
-                    if schema_section[p]['type'] == 'list':
-                        list_fields.append(p)
+            if 'neo4j' in _schema_properties[p] and (len(_schema_properties[p]['neo4j']) or normalized_class in _schema_properties[p]['neo4j']):
+                neo4j_fields.add(p)
 
-        if p in activities_schema_section:
+                if len(_schema_properties[p]['json_string']) or normalized_class in _schema_properties[p]['json_string']:
+                    json_fields.add(p)
+                if len(_schema_properties[p]['list']) or normalized_class in _schema_properties[p]['list']:
+                    list_fields.add(p)
+
+            if 'dependencies' in _schema_properties[p] and len(_schema_properties[p]['dependencies']):
+                dependencies.update(list(_schema_properties[p]['dependencies']))
+
+        if p in activity_properties:
             activity_fields.append(p)
+            dependencies.update(activity_properties[p].get('dependency_properties', []))
 
-    if 'entity_type' not in neo4j_fields and len(trigger_fields) > 0:
-        neo4j_fields.append('entity_type')
-
-    return PropertyGroups(neo4j_fields, trigger_fields, activity_fields, list(dependencies), json_fields, list_fields)
+    return PropertyGroups(list(neo4j_fields), list(trigger_fields), activity_fields, list(dependencies), list(json_fields), list(list_fields))
 
 def exclude_properties_from_response(excluded_fields, output_dict):
     """Removes specified fields from an existing dictionary.
