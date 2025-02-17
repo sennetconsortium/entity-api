@@ -2,6 +2,7 @@ from test.helpers import GROUP, GROUP_ID, USER
 from unittest.mock import MagicMock, patch
 
 import pytest
+from flask import Response
 
 AUTH_TOKEN = "test_token"
 
@@ -28,7 +29,10 @@ def auth():
 
 
 def get_authorization_tokens(headers):
-    return headers.get("Authorization").split(" ")[1]
+    auth_header = headers.get("Authorization")
+    if auth_header is None or auth_header == "":
+        return Response("Empty Authorization header", 401)
+    return auth_header.split(" ")[1]
 
 
 def get_user_token_from_request(req, getGroups=True):
