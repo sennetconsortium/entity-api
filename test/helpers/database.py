@@ -146,7 +146,16 @@ def create_provenance(db_session, provenance):
             "started_at_time": timestamp,
         }
 
-    for entity_type in provenance:
+    for item in provenance:
+        if isinstance(item, dict):
+            if "entity_type" in item or "sample_category" in item:
+                raise ValueError("entity_type and sample_category are not allowed in provenance items. Use type instead.")
+            entity_type = item.pop("type")
+        elif isinstance(item, str):
+            entity_type = item
+        else:
+            raise ValueError("Invalid provenance item")
+
         entity_type = entity_type.lower()
         entity = generate_entity()
         data = {
@@ -218,6 +227,9 @@ def create_provenance(db_session, provenance):
             )
         else:
             raise ValueError(f"Unknown entity type: {entity_type}")
+
+        if isinstance(item, dict):
+            data.update(item)
 
         gen_by_activity = generate_entity()
         gen_by_activity_data = gen_activity(gen_by_activity)
