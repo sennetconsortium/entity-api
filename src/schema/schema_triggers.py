@@ -1579,7 +1579,7 @@ def get_dataset_title(property_key, normalized_type, user_token, existing_data_d
                 ancestor_metadata_dict = schema_manager.convert_str_to_data(metadata)
 
                 if equals(source_type, Ontology.ops().source_types().MOUSE):
-                    sex = 'female' if equals(ancestor_metadata_dict['sex'], 'F') else 'male'
+                    sex = ancestor_metadata_dict['sex'].lower()
                     is_embryo = ancestor_metadata_dict['is_embryo']
                     embryo = ' embryo' if is_embryo is True or equals(is_embryo, 'True') else ''
 
