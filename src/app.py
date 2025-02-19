@@ -2672,8 +2672,7 @@ def get_globus_url(id):
     # public access
     if entity_data_access_level == ACCESS_LEVEL_PUBLIC:
         globus_server_uuid = app.config['GLOBUS_PUBLIC_ENDPOINT_UUID']
-        access_dir = access_level_prefix_dir(app.config['PUBLIC_DATA_SUBDIR'])
-        dir_path = dir_path + access_dir + "/"
+        dir_path = dir_path + "/"
     # consortium access
     elif (entity_data_access_level == ACCESS_LEVEL_CONSORTIUM) and (not user_data_access_level == ACCESS_LEVEL_PUBLIC):
         globus_server_uuid = app.config['GLOBUS_CONSORTIUM_ENDPOINT_UUID']
