@@ -561,7 +561,7 @@ def update_file_descriptions(property_key, normalized_type, user_token, existing
             # Note: The property, name specified by `target_property_key`, is stored in Neo4j as a string representation of the Python list
             # It's not stored in Neo4j as a json string! And we can't store it as a json string
             # due to the way that Cypher handles single/double quotes.
-            existing_files_list = schema_manager.convert_str_to_data(existing_data_dict[property_key])
+            existing_files_list = schema_manager.get_as_dict(existing_data_dict[property_key])
     else:
         if not property_key in generated_dict:
             msg = create_trigger_error_msg(
@@ -1592,7 +1592,7 @@ def get_dataset_title(property_key, normalized_type, user_token, existing_data_d
                 # Note: The donor_metadata is stored in Neo4j as a string representation of the Python dict
                 # It's not stored in Neo4j as a json string! And we can't store it as a json string
                 # due to the way that Cypher handles single/double quotes.
-                ancestor_metadata_dict = schema_manager.convert_str_to_data(metadata)
+                ancestor_metadata_dict = schema_manager.get_as_dict(metadata)
 
                 if equals(source_type, Ontology.ops().source_types().MOUSE):
                     sex = 'female' if equals(ancestor_metadata_dict['sex'], 'F') else 'male'
@@ -2298,7 +2298,7 @@ def delete_thumbnail_file(property_key, normalized_type, user_token, existing_da
             # is stored in Neo4j as a string representation of the Python dict
             # It's not stored in Neo4j as a json string! And we can't store it as a json string
             # due to the way that Cypher handles single/double quotes.
-            file_info_dict = schema_manager.convert_str_to_data(existing_data_dict[target_property_key])
+            file_info_dict = schema_manager.get_as_dict(existing_data_dict[target_property_key])
     else:
         file_info_dict = generated_dict[target_property_key]
 
@@ -2370,7 +2370,7 @@ def set_was_attributed_to(property_key, normalized_type, user_token, existing_da
     # Build a list of direct ancestor uuids
     # Only one uuid in the list in this case
     direct_ancestor_uuids = [existing_data_dict['group_uuid']]
-    # direct_ancestor_uuids =  schema_manager.convert_str_to_data(existing_data_dict['was_attributed_to'])
+    # direct_ancestor_uuids =  schema_manager.get_as_dict(existing_data_dict['was_attributed_to'])
 
     activity_data_dict = schema_manager.generate_activity_data(normalized_type, user_token, existing_data_dict)
 
@@ -2472,7 +2472,7 @@ def set_was_derived_from(property_key, normalized_type, user_token, existing_dat
 
     # Build a list of direct ancestor uuids
     # Only one uuid in the list in this case
-    direct_ancestor_uuids = schema_manager.convert_str_to_data(existing_data_dict['was_derived_from'])
+    direct_ancestor_uuids = schema_manager.get_as_dict(existing_data_dict['was_derived_from'])
 
     # Generate property values for Activity node
     activity_data_dict = schema_manager.generate_activity_data(normalized_type, user_token, existing_data_dict)
@@ -2585,7 +2585,7 @@ def set_in_collection(property_key, normalized_type, user_token, existing_data_d
         )
         raise KeyError(msg)
 
-    direct_ancestor_uuids = schema_manager.convert_str_to_data(existing_data_dict['entities'])
+    direct_ancestor_uuids = schema_manager.get_as_dict(existing_data_dict['entities'])
 
     try:
         # Create a linkage
@@ -3141,7 +3141,7 @@ def set_processing_information(property_key, normalized_type, user_token, existi
     metadata = None
     for key in ['metadata', 'ingest_metadata']:
         if key in new_data_dict:
-            metadata = schema_manager.convert_str_to_data(new_data_dict[key])
+            metadata = schema_manager.get_as_dict(new_data_dict[key])
             break
     if metadata is None or 'dag_provenance_list' not in metadata:
         return 'processing_information', None
@@ -3273,7 +3273,7 @@ def _commit_files(target_property_key, property_key, normalized_type, user_token
             # Note: The property, name specified by `target_property_key`, is stored in Neo4j as a string representation of the Python list
             # It's not stored in Neo4j as a json string! And we can't store it as a json string
             # due to the way that Cypher handles single/double quotes.
-            files_info_list = schema_manager.convert_str_to_data(existing_data_dict[target_property_key])
+            files_info_list = schema_manager.get_as_dict(existing_data_dict[target_property_key])
     else:
         files_info_list = generated_dict[target_property_key]
 
@@ -3397,7 +3397,7 @@ def _delete_files(target_property_key, property_key, normalized_type, user_token
             # Note: The property, name specified by `target_property_key`, is stored in Neo4j as a string representation of the Python list
             # It's not stored in Neo4j as a json string! And we can't store it as a json string
             # due to the way that Cypher handles single/double quotes.
-            files_info_list = schema_manager.convert_str_to_data(existing_data_dict[target_property_key])
+            files_info_list = schema_manager.get_as_dict(existing_data_dict[target_property_key])
     else:
         files_info_list = generated_dict[target_property_key]
 
