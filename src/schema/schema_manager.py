@@ -1180,7 +1180,7 @@ def normalize_object_result_for_response(provenance_type, entity_dict, propertie
                     # Safely evaluate a string containing a Python dict or list literal
                     # Only convert to Python list/dict when the string literal is not empty
                     # instead of returning the json-as-string or array-as-string
-                    entity_dict[key] = convert_str_to_data(entity_dict[key])
+                    entity_dict[key] = get_as_dict(entity_dict[key])
 
                 # Add the target key with correct value of data type to the normalized_entity dict
                 normalized_entity[key] = entity_dict[key]
@@ -2404,41 +2404,6 @@ def get_ubkg_instance():
     global _ubkg
 
     return _ubkg
-
-
-"""
-Convert a string representation of the Python list/dict (either nested or not) to a Python list/dict
-
-Parameters
-----------
-data_str: str
-    The string representation of the Python list/dict stored in Neo4j.
-    It's not stored in Neo4j as a json string! And we can't store it as a json string
-    due to the way that Cypher handles single/double quotes.
-
-Returns
--------
-list or dict
-    The real Python list or dict after evaluation
-"""
-
-
-def convert_str_to_data(data_str):
-    if isinstance(data_str, str):
-        # ast uses compile to compile the source string (which must be an expression) into an AST
-        # If the source string is not a valid expression (like an empty string), a SyntaxError will be raised by compile
-        # If, on the other hand, the source string would be a valid expression (e.g. a variable name like foo),
-        # compile will succeed but then literal_eval() might fail with a ValueError
-        # Also this fails with a TypeError: literal_eval("{{}: 'value'}")
-        try:
-            data = ast.literal_eval(data_str)
-            return data
-        except (SyntaxError, ValueError, TypeError):
-            msg = f"Invalid expression (string value): {data_str} to be evaluated by ast.literal_eval()"
-            logger.exception(msg)
-    else:
-        # Just return the input data string
-        return data_str
 
 
 ####################################################################################################

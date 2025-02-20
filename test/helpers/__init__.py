@@ -1,3 +1,5 @@
+import pytest
+
 GROUP_ID = "7bce0f62-851c-4fdf-afee-5e20581957ba"
 
 GROUP = {
@@ -18,3 +20,15 @@ USER = {
     "hmgroupids": [GROUP_ID],
     "group_membership_ids": [GROUP_ID],
 }
+
+
+@pytest.fixture()
+def app(auth):
+    import app as app_module
+
+    app_module.app.config.update({"TESTING": True})
+    app_module.auth_helper_instance = auth
+    app_module.schema_manager._auth_helper = auth
+    # other setup
+    yield app_module.app
+    # clean up

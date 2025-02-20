@@ -2106,7 +2106,7 @@ def get_sources_associated_entity(neo4j_driver, uuid, filter_out = None):
 
         for result in results:
             if 'metadata' in result and result['metadata'] != '{}':
-                result['metadata'] = ast.literal_eval(result['metadata'])
+                result['metadata'] = json.loads(result['metadata'])
             else:
                 result.pop('metadata', None)
 
