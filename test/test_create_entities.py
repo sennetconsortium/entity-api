@@ -1,20 +1,7 @@
 from test.helpers import GROUP, USER
+from test.helpers.auth import AUTH_TOKEN
 from test.helpers.database import create_provenance, generate_entity, get_entity
 from test.helpers.response import mock_response
-
-import pytest
-
-
-@pytest.fixture()
-def app(auth):
-    import app as app_module
-
-    app_module.app.config.update({"TESTING": True})
-    app_module.auth_helper_instance = auth
-    app_module.schema_manager._auth_helper = auth
-    # other setup
-    yield app_module.app
-    # clean up
 
 
 def test_index(app):
@@ -29,7 +16,6 @@ def test_index(app):
 # Create Entity Tests
 
 
-@pytest.mark.usefixtures("lab")
 def test_create_source(app, requests, db_session):
     entities = [
         generate_entity(),  # source
@@ -55,7 +41,7 @@ def test_create_source(app, requests, db_session):
         res = client.post(
             "/entities/source?return_all_properties=true",
             json=data,
-            headers={"Authorization": "Bearer test_token"},
+            headers={"Authorization": f"Bearer {AUTH_TOKEN}"},
         )
 
         assert res.status_code == 200
@@ -80,7 +66,24 @@ def test_create_source(app, requests, db_session):
         assert db_entity["source_type"] == data["source_type"]
 
 
-@pytest.mark.usefixtures("lab")
+def test_create_source_no_auth(app):
+    with app.test_client() as client:
+        data = {
+            "description": "Testing lab notes",
+            "group_uuid": GROUP["uuid"],
+            "lab_source_id": "test_lab_source_id",
+            "protocol_url": "dx.doi.org/10.17504/protocols.io.3byl4j398lo5/v1",
+            "source_type": "Human",
+        }
+
+        res = client.post(
+            "/entities/source?return_all_properties=true",
+            json=data,
+        )
+
+        assert res.status_code == 401
+
+
 def test_create_organ_sample(db_session, app, requests):
     # Create provenance in test database
     test_entities = create_provenance(db_session, ["source"])
@@ -109,7 +112,7 @@ def test_create_organ_sample(db_session, app, requests):
         res = client.post(
             "/entities/sample?return_all_properties=true",
             json=data,
-            headers={"Authorization": "Bearer test_token"},
+            headers={"Authorization": f"Bearer {AUTH_TOKEN}"},
         )
 
         assert res.status_code == 200
@@ -139,7 +142,24 @@ def test_create_organ_sample(db_session, app, requests):
         assert db_entity["lab_tissue_sample_id"] == data["lab_tissue_sample_id"]
 
 
-@pytest.mark.usefixtures("lab")
+def test_create_organ_sample_no_auth(app):
+    with app.test_client() as client:
+        data = {
+            "description": "Testing lab notes",
+            "group_uuid": GROUP["uuid"],
+            "lab_source_id": "test_lab_source_id",
+            "protocol_url": "dx.doi.org/10.17504/protocols.io.3byl4j398lo5/v1",
+            "source_type": "Human",
+        }
+
+        res = client.post(
+            "/entities/sample?return_all_properties=true",
+            json=data,
+        )
+
+        assert res.status_code == 401
+
+
 def test_create_block_sample(db_session, app, requests):
     # Create provenance in test database
     test_entities = create_provenance(db_session, ["source", "organ"])
@@ -167,7 +187,7 @@ def test_create_block_sample(db_session, app, requests):
         res = client.post(
             "/entities/sample?return_all_properties=true",
             json=data,
-            headers={"Authorization": "Bearer test_token"},
+            headers={"Authorization": f"Bearer {AUTH_TOKEN}"},
         )
 
         assert res.status_code == 200
@@ -195,7 +215,24 @@ def test_create_block_sample(db_session, app, requests):
         assert db_entity["lab_tissue_sample_id"] == data["lab_tissue_sample_id"]
 
 
-@pytest.mark.usefixtures("lab")
+def test_create_block_sample_no_auth(app):
+    with app.test_client() as client:
+        data = {
+            "description": "Testing lab notes",
+            "group_uuid": GROUP["uuid"],
+            "lab_source_id": "test_lab_source_id",
+            "protocol_url": "dx.doi.org/10.17504/protocols.io.3byl4j398lo5/v1",
+            "source_type": "Human",
+        }
+
+        res = client.post(
+            "/entities/sample?return_all_properties=true",
+            json=data,
+        )
+
+        assert res.status_code == 401
+
+
 def test_create_section_sample(db_session, app, requests):
     # Create provenance in test database
     test_entities = create_provenance(db_session, ["source", "organ", "block"])
@@ -224,7 +261,7 @@ def test_create_section_sample(db_session, app, requests):
         res = client.post(
             "/entities/sample?return_all_properties=true",
             json=data,
-            headers={"Authorization": "Bearer test_token"},
+            headers={"Authorization": f"Bearer {AUTH_TOKEN}"},
         )
 
         assert res.status_code == 200
@@ -253,7 +290,24 @@ def test_create_section_sample(db_session, app, requests):
         assert db_entity["lab_tissue_sample_id"] == data["lab_tissue_sample_id"]
 
 
-@pytest.mark.usefixtures("lab")
+def test_create_section_sample_no_auth(app):
+    with app.test_client() as client:
+        data = {
+            "description": "Testing lab notes",
+            "group_uuid": GROUP["uuid"],
+            "lab_source_id": "test_lab_source_id",
+            "protocol_url": "dx.doi.org/10.17504/protocols.io.3byl4j398lo5/v1",
+            "source_type": "Human",
+        }
+
+        res = client.post(
+            "/entities/sample?return_all_properties=true",
+            json=data,
+        )
+
+        assert res.status_code == 401
+
+
 def test_create_dataset(db_session, app, requests):
     # Create provenance in test database
     test_entities = create_provenance(db_session, ["source", "organ", "block", "section"])
@@ -298,7 +352,7 @@ def test_create_dataset(db_session, app, requests):
             "/entities/dataset?return_all_properties=true",
             json=data,
             headers={
-                "Authorization": "Bearer test_token",
+                "Authorization": f"Bearer {AUTH_TOKEN}",
                 "X-SenNet-Application": "portal-ui",
             },
         )
@@ -331,3 +385,21 @@ def test_create_dataset(db_session, app, requests):
         db_entity = get_entity(entities[0]["uuid"], db_session)
         assert db_entity["contains_human_genetic_sequences"] == data["contains_human_genetic_sequences"]
         assert db_entity["dataset_type"] == data["dataset_type"]
+
+
+def test_create_dataset_no_auth(app):
+    with app.test_client() as client:
+        data = {
+            "description": "Testing lab notes",
+            "group_uuid": GROUP["uuid"],
+            "lab_source_id": "test_lab_source_id",
+            "protocol_url": "dx.doi.org/10.17504/protocols.io.3byl4j398lo5/v1",
+            "source_type": "Human",
+        }
+
+        res = client.post(
+            "/entities/dataset?return_all_properties=true",
+            json=data,
+        )
+
+        assert res.status_code == 401
