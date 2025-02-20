@@ -1360,7 +1360,7 @@ depth : int
 """
 
 
-def get_provenance(neo4j_driver, uuid, depth, return_descendants=None, query_filter=None):
+def get_provenance(neo4j_driver, uuid, depth, return_descendants=None, data_access_level=None):
     # max_level_str is the string used to put a limit on the number of levels to traverse
     max_level_str = ''
     if depth is not None and len(str(depth)) > 0:
@@ -1370,14 +1370,18 @@ def get_provenance(neo4j_driver, uuid, depth, return_descendants=None, query_fil
     if return_descendants:
         relationship_filter = '<USED|<WAS_GENERATED_BY'
 
-    label_filter = ''
-    if query_filter is not None and len(query_filter) > 0:
-        label_filter = f", labelFilter:'{query_filter}'"
+    predicate = ''
+    allow_nodes = ''
+    if data_access_level:
+        allow_nodes = ', allowlistNodes: allowlistNodes'
+        predicate = ("MATCH(allowedEntity:Entity)-[:WAS_GENERATED_BY]->(allowedActivity:Activity) "
+                     f"WHERE (allowedEntity.data_access_level = '{data_access_level}' OR allowedEntity.status = 'Published')  "
+                     "WITH n, collect(allowedEntity)+collect(allowedActivity) AS allowlistNodes ")
 
     # More info on apoc.path.subgraphAll() procedure: https://neo4j.com/labs/apoc/4.0/graph-querying/expand-subgraph/
     query = (f"MATCH (n:Entity) "
-             f"WHERE n.uuid = '{uuid}' "
-             f"CALL apoc.path.subgraphAll(n, {{ {max_level_str} relationshipFilter:'{relationship_filter}' {label_filter} }}) "
+             f"WHERE n.uuid = '{uuid}' {predicate} "
+             f"CALL apoc.path.subgraphAll(n, {{ {max_level_str} relationshipFilter:'{relationship_filter}' {allow_nodes} }}) "
              f"YIELD nodes, relationships "
              f"WITH [node in nodes | node {{ .*, label:labels(node)[0] }} ] as nodes, "
              f"[rel in relationships | rel {{ .*, fromNode: {{ label:labels(startNode(rel))[0], uuid:startNode(rel).uuid }}, toNode: {{ label:labels(endNode(rel))[0], uuid:endNode(rel).uuid }}, rel_data: {{ type: type(rel) }} }} ] as rels "

@@ -1331,9 +1331,8 @@ def get_has_metadata(property_key, normalized_type, user_token, existing_data_di
         raise KeyError(msg)
 
     if equals(Ontology.ops().entities().DATASET, existing_data_dict['entity_type']):
-        ingest_metadata = existing_data_dict.get('ingest_metadata', {})
-        has_metadata = 'metadata' in ingest_metadata
-        return property_key, str(has_metadata)
+        metadata = existing_data_dict.get('metadata')
+        return property_key, str(metadata is not None)
 
     SpecimenCategories = Ontology.ops().specimen_categories()
     if (
@@ -1446,28 +1445,13 @@ def get_cedar_mapped_metadata(property_key, normalized_type, user_token, existin
     if equals(Ontology.ops().source_types().HUMAN, existing_data_dict.get('source_type')):
         return property_key, None
 
-    if equals(Ontology.ops().entities().DATASET, normalized_type):
-        # For datasets
-        if 'ingest_metadata' not in existing_data_dict or existing_data_dict['ingest_metadata'] is None:
-            return property_key, None
-
-        if not isinstance(existing_data_dict['ingest_metadata'], dict):
-            ingest_metadata = ast.literal_eval(existing_data_dict['ingest_metadata'])
-        else:
-            ingest_metadata = existing_data_dict['ingest_metadata']
-
-        if 'metadata' not in ingest_metadata:
-            return property_key, None
-
-        metadata = ingest_metadata['metadata']
+    # For mouse sources, all samples, and all datasets
+    if 'metadata' not in existing_data_dict or existing_data_dict['metadata'] is None:
+        return property_key, None
+    if not isinstance(existing_data_dict['metadata'], dict):
+        metadata = ast.literal_eval(existing_data_dict['metadata'])
     else:
-        # For mouse sources, samples
-        if 'metadata' not in existing_data_dict or existing_data_dict['metadata'] is None:
-            return property_key, None
-        if not isinstance(existing_data_dict['metadata'], dict):
-            metadata = ast.literal_eval(existing_data_dict['metadata'])
-        else:
-            metadata = existing_data_dict['metadata']
+        metadata = existing_data_dict['metadata']
 
     mapped_metadata = {}
     for k, v in metadata.items():
@@ -1595,7 +1579,7 @@ def get_dataset_title(property_key, normalized_type, user_token, existing_data_d
                 ancestor_metadata_dict = schema_manager.get_as_dict(metadata)
 
                 if equals(source_type, Ontology.ops().source_types().MOUSE):
-                    sex = 'female' if equals(ancestor_metadata_dict['sex'], 'F') else 'male'
+                    sex = ancestor_metadata_dict['sex'].lower()
                     is_embryo = ancestor_metadata_dict['is_embryo']
                     embryo = ' embryo' if is_embryo is True or equals(is_embryo, 'True') else ''
 
@@ -1903,7 +1887,7 @@ def get_has_pipeline_or_validation_message(property_key, normalized_type, user_t
         return property_key, None
 
     has_msg = property in existing_data_dict and len(existing_data_dict[property]) > 0
-    return property_key, has_msg
+    return property_key, str(has_msg)
 
 
 def get_has_rui_information(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
