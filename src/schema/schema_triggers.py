@@ -1449,7 +1449,7 @@ def get_cedar_mapped_metadata(property_key, normalized_type, user_token, existin
     if 'metadata' not in existing_data_dict or existing_data_dict['metadata'] is None:
         return property_key, None
     if not isinstance(existing_data_dict['metadata'], dict):
-        metadata = ast.literal_eval(existing_data_dict['metadata'])
+        metadata = json.loads(existing_data_dict['metadata'])
     else:
         metadata = existing_data_dict['metadata']
 
@@ -1929,7 +1929,7 @@ def get_rui_location_anatomical_locations(property_key, normalized_type, user_to
     """
     rui_location_anatomical_locations = None
     if "rui_location" in existing_data_dict:
-        rui_location = ast.literal_eval(existing_data_dict["rui_location"])
+        rui_location = json.loads(existing_data_dict["rui_location"])
         if "ccf_annotations" in rui_location:
             annotation_urls = rui_location["ccf_annotations"]
             labels = [
