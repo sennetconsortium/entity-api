@@ -3730,7 +3730,10 @@ def get_dataset_type_hierarchy(property_key, normalized_type, user_token, existi
         return property_key, None
 
     if "description" not in res.json() or "assaytype" not in res.json():
-        return property_key, None
+        return property_key, {
+            "first_level": existing_data_dict['dataset_type'],
+            "second_level": existing_data_dict['dataset_type']
+        }
 
     desc = res.json()["description"]
     assay_type = res.json()["assaytype"]
