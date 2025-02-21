@@ -2136,12 +2136,31 @@ def activity_query_part(properties = None, for_all_match = False):
         query_match_part = query_match_part + f" WITH t, apoc.map.fromPairs([['protocol_url', a.protocol_url]]) as a2 WITH apoc.map.merge(t,a2) as x RETURN apoc.coll.toSet(COLLECT(x)) AS "
         return query_match_part
 
-    if isinstance(properties, PropertyGroups) and len(properties.activity) > 0:
+    def _query_grab_part(_properties, grab_part):
+        for p in _properties:
+            val_part = f'a.{p}'
+
+            if p in properties.activity_json:
+                val_part = f'apoc.convert.fromJsonMap({val_part})'
+            elif p in properties.activity_list:
+                val_part = f'apoc.convert.fromJsonList({val_part})'
+
+            # handle name collision for activity and entity
+            name_part = f'activity_{p}' if p in (properties.neo4j + properties.dependency) else p
+
+            grab_part = grab_part + f", ['{name_part}', {val_part}]"
+
+        return grab_part
+
+    if isinstance(properties, PropertyGroups):
         query_grab_part = ''
-        for p in properties.activity:
-            query_grab_part = query_grab_part + f", ['{p}', a.{p}]"
+        if len(properties.activity_neo4j) > 0:
+            query_grab_part = _query_grab_part(properties.activity_neo4j, query_grab_part)
+        if len(properties.activity_dep) > 0:
+            query_grab_part = _query_grab_part(properties.activity_neo4j, query_grab_part)
 
         return query_match_part, query_grab_part, ', a'
+
     else:
         return '', '', ''
 
@@ -2227,9 +2246,10 @@ def exclude_include_query_part(properties:Union[PropertyGroups, List[str]], is_i
         action = 'NOT'
 
     schema.schema_manager.get_schema_defaults(_properties, is_include_action, target_entity_type)
-    more_to_grab_query_part = build_additional_query_parts(properties, is_include_action)
+    more_to_grab_query_part = build_additional_query_parts(properties, is_include_action) if isinstance(properties, PropertyGroups) else None
     a = more_to_grab_query_part[2] if isinstance(more_to_grab_query_part, tuple) else ''
     map_pairs_part = more_to_grab_query_part[1] if isinstance(more_to_grab_query_part, tuple) else ''
+    match_part = more_to_grab_query_part[0] if isinstance(more_to_grab_query_part, tuple) else ''
 
                    # unwind the keys of the results from target/t
     query_part = (f"WITH keys(t) AS k1, t{a} unwind k1 AS k2 "
@@ -2248,4 +2268,4 @@ def exclude_include_query_part(properties:Union[PropertyGroups, List[str]], is_i
                   # collect each row to form a list[] and return
                   f"RETURN collect(rows) AS {record_field_name}")
 
-    return f"{more_to_grab_query_part[0]} {query_part}"
+    return f"{match_part} {query_part}"
