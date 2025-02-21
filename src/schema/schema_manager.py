@@ -449,7 +449,7 @@ def group_verify_properties_list(normalized_class='All', properties=[]):
     Returns
     -------
     PropertyGroups
-        An instance of simple class PropertyGroups containing neo4j, trigger, activity and dependency properties
+        An instance of simple class PropertyGroups containing entity and activity neo4j, trigger, dependency properties
     """
     # Determine the schema section based on class
     global _schema
@@ -458,14 +458,16 @@ def group_verify_properties_list(normalized_class='All', properties=[]):
     defaults = get_schema_defaults([])
 
     if len(properties) == 1 and properties[0] in defaults:
-       return PropertyGroups(properties, [], [], [], [], [])
+       return PropertyGroups(properties)
 
     neo4j_fields = set()
     trigger_fields = set()
-    activity_fields = []
     json_fields = set()
     list_fields = set()
     dependencies = set()
+    activity_fields = []
+    activity_json_fields = []
+    activity_list_fields = []
 
     activity_properties = _schema['ACTIVITIES']['Activity'].get('properties', {})
 
@@ -487,9 +489,20 @@ def group_verify_properties_list(normalized_class='All', properties=[]):
 
         if p in activity_properties:
             activity_fields.append(p)
-            dependencies.update(activity_properties[p].get('dependency_properties', []))
+            # TODO: To add support, if ever became a requirement, would need to grab trigger and dependencies and add to return instance below
+            # trigger fields would also have to be appended in calls: get_complete_entities_list(PropertyGroups.trigger + PropertyGroups.activity_trigger)
+            # if 'on_read_trigger' in activity_properties[p]:
+            #     activity_trigger.append(p)
+            # activity_dependencies.update(activity_properties[p].get('dependency_properties', []))
 
-    return PropertyGroups(list(neo4j_fields), list(trigger_fields), activity_fields, list(dependencies), list(json_fields), list(list_fields))
+            if 'type' in activity_properties[p]:
+                if activity_properties[p]['type'] == 'json_string':
+                    activity_json_fields.append(p)
+                if activity_properties[p]['type'] == 'list':
+                    activity_list_fields.append(p)
+
+    return PropertyGroups(list(neo4j_fields), list(trigger_fields), list(json_fields), list(list_fields), dep=list(dependencies),
+                          activity_neo4j=activity_fields, activity_json=activity_json_fields, activity_list=activity_list_fields)
 
 def exclude_properties_from_response(excluded_fields, output_dict):
     """Removes specified fields from an existing dictionary.
