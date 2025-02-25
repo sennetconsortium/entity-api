@@ -56,8 +56,8 @@ def set_timestamp(property_key, normalized_type, user_token, existing_data_dict,
         str: The neo4j TIMESTAMP() function as string
     """
     # Use the neo4j TIMESTAMP() function during entity creation
-    # Will be proessed in app_neo4j_queries._build_properties_map()
-    # and schema_neo4j_queries._build_properties_map()
+    # Will be proessed in app_neo4j_queries.build_parameterized_map()
+    # and schema_neo4j_queries.build_parameterized_map()
     return property_key, 'TIMESTAMP()'
 
 
@@ -561,7 +561,7 @@ def update_file_descriptions(property_key, normalized_type, user_token, existing
             # Note: The property, name specified by `target_property_key`, is stored in Neo4j as a string representation of the Python list
             # It's not stored in Neo4j as a json string! And we can't store it as a json string
             # due to the way that Cypher handles single/double quotes.
-            existing_files_list = schema_manager.convert_str_to_data(existing_data_dict[property_key])
+            existing_files_list = schema_manager.get_as_dict(existing_data_dict[property_key])
     else:
         if not property_key in generated_dict:
             msg = create_trigger_error_msg(
@@ -643,11 +643,11 @@ def get_collection_entities(property_key: str, normalized_type: str, user_token:
         "title",
         "upload",
     ]
-    collection_entities = get_normalized_collection_entities(existing_data_dict["uuid"], user_token, properties=properties_to_skip)
+    collection_entities = get_normalized_collection_entities(existing_data_dict["uuid"], user_token, properties_to_exclude=properties_to_skip)
     return property_key, collection_entities
 
 
-def get_normalized_collection_entities(uuid: str, token: str, skip_completion: bool = False, properties: List[str] = [], is_include_action: bool = True):
+def get_normalized_collection_entities(uuid: str, token: str, skip_completion: bool = False, properties_to_exclude: List[str] = []):
     """Query the Neo4j database to get the associated entities for a given Collection UUID and normalize the results.
 
     Parameters
@@ -658,10 +658,9 @@ def get_normalized_collection_entities(uuid: str, token: str, skip_completion: b
         The user's globus nexus token or internal token
     skip_completion : bool
         Skip the call to get_complete_entities_list, default is False
-    properties : List[str]
-        A list of property keys to filter in or out from the normalized results, default is []
-    is_include_action : bool
-        Whether to include or exclude the listed properties
+    properties_to_exclude : List[str]
+        A list of property keys to exclude from the normalized results, default is []
+
 
     Returns
     -------
@@ -670,23 +669,18 @@ def get_normalized_collection_entities(uuid: str, token: str, skip_completion: b
         list: A list of associated entity dicts with all the normalized information
     """
     db = schema_manager.get_neo4j_driver_instance()
-    segregated_properties = schema_manager.group_verify_properties_list(properties=properties)
-    neo4j_properties = segregated_properties[0] + segregated_properties[2]
-    entities_list = schema_neo4j_queries.get_collection_entities(db, uuid, properties=neo4j_properties, is_include_action=is_include_action)
-
-    if len(neo4j_properties) == 1 and neo4j_properties[0] == 'uuid':
-        return entities_list
+    entities_list = schema_neo4j_queries.get_collection_entities(db, uuid)
 
     if skip_completion:
         complete_entities_list = entities_list
     else:
         complete_entities_list = schema_manager.get_complete_entities_list(token=token,
                                                                            entities_list=entities_list,
-                                                                           properties_to_skip=properties,
-                                                                           is_include_action=is_include_action)
+                                                                           properties_to_skip=properties_to_exclude)
 
     return schema_manager.normalize_entities_list_for_response(entities_list=complete_entities_list,
-                                                               properties_to_exclude=[] if is_include_action else properties)
+                                                               properties_to_exclude=properties_to_exclude)
+
 
 
 def get_publication_associated_collection(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
@@ -1379,7 +1373,7 @@ def get_source_mapped_metadata(property_key, normalized_type, user_token, existi
     """
     if not equals(Ontology.ops().source_types().HUMAN, existing_data_dict['source_type']):
         return property_key, None
-    if 'metadata' not in existing_data_dict:
+    if 'metadata' not in existing_data_dict or existing_data_dict['metadata'] is None:
         return property_key, None
 
     if (
@@ -1392,7 +1386,11 @@ def get_source_mapped_metadata(property_key, normalized_type, user_token, existi
         )
         raise schema_errors.InvalidPropertyRequirementsException(msg)
 
-    metadata = json.loads(existing_data_dict['metadata'].replace("'", '"'))
+    if not isinstance(existing_data_dict['metadata'], dict):
+        metadata = json.loads(existing_data_dict['metadata'].replace("'", '"'))
+    else:
+        metadata = existing_data_dict['metadata']
+
     donor_metadata = metadata.get('organ_donor_data') or metadata.get('living_donor_data') or {}
 
     mapped_metadata = {}
@@ -1448,10 +1446,12 @@ def get_cedar_mapped_metadata(property_key, normalized_type, user_token, existin
         return property_key, None
 
     # For mouse sources, all samples, and all datasets
-    if 'metadata' not in existing_data_dict:
+    if 'metadata' not in existing_data_dict or existing_data_dict['metadata'] is None:
         return property_key, None
-
-    metadata = ast.literal_eval(existing_data_dict['metadata'])
+    if not isinstance(existing_data_dict['metadata'], dict):
+        metadata = json.loads(existing_data_dict['metadata'])
+    else:
+        metadata = existing_data_dict['metadata']
 
     mapped_metadata = {}
     for k, v in metadata.items():
@@ -1576,7 +1576,7 @@ def get_dataset_title(property_key, normalized_type, user_token, existing_data_d
                 # Note: The donor_metadata is stored in Neo4j as a string representation of the Python dict
                 # It's not stored in Neo4j as a json string! And we can't store it as a json string
                 # due to the way that Cypher handles single/double quotes.
-                ancestor_metadata_dict = schema_manager.convert_str_to_data(metadata)
+                ancestor_metadata_dict = schema_manager.get_as_dict(metadata)
 
                 if equals(source_type, Ontology.ops().source_types().MOUSE):
                     sex = ancestor_metadata_dict['sex'].lower()
@@ -1929,7 +1929,7 @@ def get_rui_location_anatomical_locations(property_key, normalized_type, user_to
     """
     rui_location_anatomical_locations = None
     if "rui_location" in existing_data_dict:
-        rui_location = ast.literal_eval(existing_data_dict["rui_location"])
+        rui_location = json.loads(existing_data_dict["rui_location"])
         if "ccf_annotations" in rui_location:
             annotation_urls = rui_location["ccf_annotations"]
             labels = [
@@ -2282,7 +2282,7 @@ def delete_thumbnail_file(property_key, normalized_type, user_token, existing_da
             # is stored in Neo4j as a string representation of the Python dict
             # It's not stored in Neo4j as a json string! And we can't store it as a json string
             # due to the way that Cypher handles single/double quotes.
-            file_info_dict = schema_manager.convert_str_to_data(existing_data_dict[target_property_key])
+            file_info_dict = schema_manager.get_as_dict(existing_data_dict[target_property_key])
     else:
         file_info_dict = generated_dict[target_property_key]
 
@@ -2354,7 +2354,7 @@ def set_was_attributed_to(property_key, normalized_type, user_token, existing_da
     # Build a list of direct ancestor uuids
     # Only one uuid in the list in this case
     direct_ancestor_uuids = [existing_data_dict['group_uuid']]
-    # direct_ancestor_uuids =  schema_manager.convert_str_to_data(existing_data_dict['was_attributed_to'])
+    # direct_ancestor_uuids =  schema_manager.get_as_dict(existing_data_dict['was_attributed_to'])
 
     activity_data_dict = schema_manager.generate_activity_data(normalized_type, user_token, existing_data_dict)
 
@@ -2456,7 +2456,7 @@ def set_was_derived_from(property_key, normalized_type, user_token, existing_dat
 
     # Build a list of direct ancestor uuids
     # Only one uuid in the list in this case
-    direct_ancestor_uuids = schema_manager.convert_str_to_data(existing_data_dict['was_derived_from'])
+    direct_ancestor_uuids = schema_manager.get_as_dict(existing_data_dict['was_derived_from'])
 
     # Generate property values for Activity node
     activity_data_dict = schema_manager.generate_activity_data(normalized_type, user_token, existing_data_dict)
@@ -2569,7 +2569,7 @@ def set_in_collection(property_key, normalized_type, user_token, existing_data_d
         )
         raise KeyError(msg)
 
-    direct_ancestor_uuids = schema_manager.convert_str_to_data(existing_data_dict['entities'])
+    direct_ancestor_uuids = schema_manager.get_as_dict(existing_data_dict['entities'])
 
     try:
         # Create a linkage
@@ -2964,7 +2964,7 @@ def get_upload_datasets(property_key: str, normalized_type: str, user_token: str
     return property_key, upload_datasets
 
 
-def get_normalized_upload_datasets(uuid: str, token, properties_to_exclude: List[str] = [], properties: List[str] = [], is_include_action: bool = False):
+def get_normalized_upload_datasets(uuid: str, token, properties_to_exclude: List[str] = []):
     """Query the Neo4j database to get the associated datasets for a given Upload UUID and normalize the results.
 
     Parameters
@@ -2975,27 +2975,21 @@ def get_normalized_upload_datasets(uuid: str, token, properties_to_exclude: List
         Either the user's globus nexus token or the internal token
     properties_to_exclude : List[str]
         A list of property keys to exclude from the normalized results
-    properties : List[str]
-        the properties to be filtered
-    is_include_action : bool
-        Whether to include or exclude the listed properties
 
     Returns
     -------
     list: A list of associated dataset dicts with all the normalized information
     """
     db = schema_manager.get_neo4j_driver_instance()
-    datasets_list = schema_neo4j_queries.get_upload_datasets(db, uuid, properties=properties, is_include_action=is_include_action)
+    datasets_list = schema_neo4j_queries.get_upload_datasets(db, uuid)
 
-    if len(properties) == 1 and properties[0] == 'uuid':
-        return datasets_list
 
-    complete_list = schema_manager.get_complete_entities_list(token, datasets_list, properties_to_exclude, is_include_action=is_include_action)
+    complete_list = schema_manager.get_complete_entities_list(token, datasets_list, properties_to_exclude)
 
     # Get rid of the entity node properties that are not defined in the yaml schema
     # as well as the ones defined as `exposed: false` in the yaml schema
     return schema_manager.normalize_entities_list_for_response(complete_list,
-                                                               properties_to_exclude=[] if is_include_action else properties_to_exclude)
+                                                               properties_to_exclude=properties_to_exclude)
 
 
 ####################################################################################################
@@ -3131,7 +3125,7 @@ def set_processing_information(property_key, normalized_type, user_token, existi
     metadata = None
     for key in ['metadata', 'ingest_metadata']:
         if key in new_data_dict:
-            metadata = schema_manager.convert_str_to_data(new_data_dict[key])
+            metadata = schema_manager.get_as_dict(new_data_dict[key])
             break
     if metadata is None or 'dag_provenance_list' not in metadata:
         return 'processing_information', None
@@ -3263,7 +3257,7 @@ def _commit_files(target_property_key, property_key, normalized_type, user_token
             # Note: The property, name specified by `target_property_key`, is stored in Neo4j as a string representation of the Python list
             # It's not stored in Neo4j as a json string! And we can't store it as a json string
             # due to the way that Cypher handles single/double quotes.
-            files_info_list = schema_manager.convert_str_to_data(existing_data_dict[target_property_key])
+            files_info_list = schema_manager.get_as_dict(existing_data_dict[target_property_key])
     else:
         files_info_list = generated_dict[target_property_key]
 
@@ -3387,7 +3381,7 @@ def _delete_files(target_property_key, property_key, normalized_type, user_token
             # Note: The property, name specified by `target_property_key`, is stored in Neo4j as a string representation of the Python list
             # It's not stored in Neo4j as a json string! And we can't store it as a json string
             # due to the way that Cypher handles single/double quotes.
-            files_info_list = schema_manager.convert_str_to_data(existing_data_dict[target_property_key])
+            files_info_list = schema_manager.get_as_dict(existing_data_dict[target_property_key])
     else:
         files_info_list = generated_dict[target_property_key]
 
@@ -3736,7 +3730,10 @@ def get_dataset_type_hierarchy(property_key, normalized_type, user_token, existi
         return property_key, None
 
     if "description" not in res.json() or "assaytype" not in res.json():
-        return property_key, None
+        return property_key, {
+            "first_level": existing_data_dict['dataset_type'],
+            "second_level": existing_data_dict['dataset_type']
+        }
 
     desc = res.json()["description"]
     assay_type = res.json()["assaytype"]

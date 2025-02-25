@@ -361,6 +361,8 @@ ENTITIES:
               - lab_source_id
           - origin_samples:
               - lab_tissue_sample_id
+      - origin_samples:
+          - lab_tissue_sample_id
       - sources:
           - lab_source_id
       - origin_samples:

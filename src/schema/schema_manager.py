@@ -6,11 +6,12 @@ from datetime import datetime
 
 from flask import Response
 from hubmap_commons.file_helper import ensureTrailingSlashURL
-from hubmap_commons.string_helper import convert_str_literal
 
 # Don't confuse urllib (Python native library) with urllib3 (3rd-party library, requests also uses urllib3)
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
+from lib.commons import get_as_dict
+from lib.property_groups import PropertyGroups
 # Local modules
 from schema import schema_errors
 from schema import schema_triggers
@@ -20,6 +21,10 @@ from schema import schema_neo4j_queries
 
 # Atlas Consortia commons
 from atlas_consortia_commons.rest import abort_bad_req
+from atlas_consortia_commons.string import equals
+from typing import List
+
+from lib.ontology import Ontology
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +49,7 @@ _neo4j_driver = None
 _ubkg = None
 _memcached_client = None
 _memcached_prefix = None
+_schema_properties = {}
 
 # For handling cached requests to uuid-api and external static resources (github raw yaml files)
 request_cache = {}
@@ -87,9 +93,11 @@ def initialize(valid_yaml_file,
     global _ubkg
     global _memcached_client
     global _memcached_prefix
+    global _schema_properties
 
     logger.info(f"Initialize schema_manager using valid_yaml_file={valid_yaml_file}.")
     _schema = load_provenance_schema(valid_yaml_file)
+    _schema_properties = group_schema_properties_by_name()
     if _schema is None:
         logger.error(f"Failed to load _schema using {valid_yaml_file}.")
     _uuid_api_url = uuid_api_url
@@ -141,6 +149,45 @@ def load_provenance_schema(valid_yaml_file):
             schema_dict['ENTITIES'][entity]['properties'] = remove_none_values(schema_dict['ENTITIES'][entity]['properties'])
         return schema_dict
 
+
+def group_schema_properties_by_name():
+    """
+    This formats the entities schema properties using property names as key.
+    Then within various buckets, has a set containing entity names which the property belongs to.
+
+    This allows for constant time access when filtering responses by property names.
+
+    Returns
+    -------
+    dict
+    """
+    global _schema
+
+    schema_properties_by_name = {}
+    for entity in _schema['ENTITIES']:
+        entity_properties = _schema['ENTITIES'][entity].get('properties', {})
+        for p in entity_properties:
+            if p not in schema_properties_by_name:
+                schema_properties_by_name[p] = {}
+                schema_properties_by_name[p]['dependencies'] = set()
+                schema_properties_by_name[p]['trigger'] = set()
+                schema_properties_by_name[p]['neo4j'] = set()
+                schema_properties_by_name[p]['json_string'] = set()
+                schema_properties_by_name[p]['list'] = set()
+                schema_properties_by_name[p]['dependencies'].update(entity_properties[p].get('dependency_properties', []))
+
+            if 'on_read_trigger' in entity_properties[p]:
+                schema_properties_by_name[p]['trigger'].add(entity)
+            else:
+                schema_properties_by_name[p]['neo4j'].add(entity)
+
+                if 'type' in entity_properties[p]:
+                    if entity_properties[p]['type'] == 'json_string':
+                        schema_properties_by_name[p]['json_string'].add(entity)
+                    if entity_properties[p]['type'] == 'list':
+                        schema_properties_by_name[p]['list'].add(entity)
+
+    return schema_properties_by_name
 
 ####################################################################################################
 ## Helper functions
@@ -368,9 +415,29 @@ def get_schema_defaults(properties, is_include_action = True, target_entity_type
 
     return defaults
 
+def rearrange_datasets(results, entity_type = 'Dataset'):
+    """
+    If asked for the descendants of a Dataset then sort by last_modified_timestamp and place the published dataset at the top
+
+    :param results : List[dict]
+    :param entity_type : str
+    :return:
+    """
+    if isinstance(results[0], str) is False and equals(entity_type,  Ontology.ops().entities().DATASET):
+        results = sorted(results, key=lambda d: d['last_modified_timestamp'], reverse=True)
+
+        published_processed_dataset_location = next(
+            (i for i, item in enumerate(results) if item["status"] == "Published"), None)
+        if published_processed_dataset_location and published_processed_dataset_location != 0:
+            published_processed_dataset = results.pop(published_processed_dataset_location)
+            results.insert(0, published_processed_dataset)
+
+
 def group_verify_properties_list(normalized_class='All', properties=[]):
-    """ Separates neo4j properties from transient ones. Will also gather specific property dependencies via a
-    `dependency_properties` list setting in the schema yaml. Also filters out any unknown properties.
+    """ Separates neo4j properties from transient ones. More over, buckets neo4j properties that are
+     either json_string or list to allow them to be handled via apoc.convert.* functions.
+     Will also gather specific property dependencies via a `dependency_properties` list setting in the schema yaml.
+     Also filters out any unknown properties.
 
     Parameters
     ----------
@@ -381,48 +448,61 @@ def group_verify_properties_list(normalized_class='All', properties=[]):
 
     Returns
     -------
-    tuple
-        A partitioned tuple with neo4j, trigger and dependency properties respectively
+    PropertyGroups
+        An instance of simple class PropertyGroups containing entity and activity neo4j, trigger, dependency properties
     """
     # Determine the schema section based on class
     global _schema
+    global _schema_properties
 
     defaults = get_schema_defaults([])
 
     if len(properties) == 1 and properties[0] in defaults:
-        return properties, [], []
+       return PropertyGroups(properties)
 
-    neo4j_fields = []
-    trigger_fields = []
-    schema_section = {}
+    neo4j_fields = set()
+    trigger_fields = set()
+    json_fields = set()
+    list_fields = set()
     dependencies = set()
+    activity_fields = []
+    activity_json_fields = []
+    activity_list_fields = []
 
-    def check_dependencies(_entity_properties):
-        for _p in properties:
-            if _p in _entity_properties:
-                dependencies.update(_entity_properties[_p].get('dependency_properties', []))
-
-    if normalized_class == 'All':
-        for entity in _schema['ENTITIES']:
-            entity_properties = _schema['ENTITIES'][entity].get('properties', {})
-            check_dependencies(entity_properties)
-            schema_section.update(entity_properties)
-    else:
-        entity_properties = _schema['ENTITIES'][normalized_class].get('properties', {})
-        check_dependencies(entity_properties)
-        schema_section = entity_properties
+    activity_properties = _schema['ACTIVITIES']['Activity'].get('properties', {})
 
     for p in properties:
-        if p in schema_section:
-            if 'on_read_trigger' in schema_section[p]:
-                trigger_fields.append(p)
-            else:
-                neo4j_fields.append(p)
+        if p in _schema_properties:
+            if 'trigger' in _schema_properties[p] and (len(_schema_properties[p]['trigger']) or normalized_class in _schema_properties[p]['trigger']):
+                trigger_fields.add(p)
 
-    if 'entity_type' not in neo4j_fields and len(trigger_fields) > 0:
-        neo4j_fields.append('entity_type')
+            if 'neo4j' in _schema_properties[p] and (len(_schema_properties[p]['neo4j']) or normalized_class in _schema_properties[p]['neo4j']):
+                neo4j_fields.add(p)
 
-    return neo4j_fields, trigger_fields, list(dependencies)
+                if len(_schema_properties[p]['json_string']) or normalized_class in _schema_properties[p]['json_string']:
+                    json_fields.add(p)
+                if len(_schema_properties[p]['list']) or normalized_class in _schema_properties[p]['list']:
+                    list_fields.add(p)
+
+            if 'dependencies' in _schema_properties[p] and len(_schema_properties[p]['dependencies']):
+                dependencies.update(list(_schema_properties[p]['dependencies']))
+
+        if p in activity_properties:
+            activity_fields.append(p)
+            # TODO: To add support, if ever became a requirement, would need to grab trigger and dependencies and add to return instance below
+            # trigger fields would also have to be appended in calls: get_complete_entities_list(PropertyGroups.trigger + PropertyGroups.activity_trigger)
+            # if 'on_read_trigger' in activity_properties[p]:
+            #     activity_trigger.append(p)
+            # activity_dependencies.update(activity_properties[p].get('dependency_properties', []))
+
+            if 'type' in activity_properties[p]:
+                if activity_properties[p]['type'] == 'json_string':
+                    activity_json_fields.append(p)
+                if activity_properties[p]['type'] == 'list':
+                    activity_list_fields.append(p)
+
+    return PropertyGroups(list(neo4j_fields), list(trigger_fields), list(json_fields), list(list_fields), dep=list(dependencies),
+                          activity_neo4j=activity_fields, activity_json=activity_json_fields, activity_list=activity_list_fields)
 
 def exclude_properties_from_response(excluded_fields, output_dict):
     """Removes specified fields from an existing dictionary.
@@ -786,7 +866,7 @@ dict
 """
 
 
-def get_complete_entity_result(token, entity_dict, properties_to_skip=[], is_include_action=False):
+def get_complete_entity_result(token, entity_dict, properties_to_skip=[], is_include_action=False, use_memcache=True):
     global _memcached_client
     global _memcached_prefix
 
@@ -800,8 +880,8 @@ def get_complete_entity_result(token, entity_dict, properties_to_skip=[], is_inc
         cache_result = None
 
         # Need both client and prefix when fetching the cache
-        # Do NOT fetch cache if properties_to_skip is specified
-        if _memcached_client and _memcached_prefix and (not properties_to_skip):
+        # Do NOT fetch cache if properties_to_skip is specified or use_memcache is False
+        if _memcached_client and _memcached_prefix and (not properties_to_skip and use_memcache):
             cache_key = f'{_memcached_prefix}_complete_{entity_uuid}'
             cache_result = _memcached_client.get(cache_key)
 
@@ -831,7 +911,7 @@ def get_complete_entity_result(token, entity_dict, properties_to_skip=[], is_inc
 
             # Need both client and prefix when creating the cache
             # Do NOT cache when properties_to_skip is specified
-            if _memcached_client and _memcached_prefix and (not properties_to_skip):
+            if _memcached_client and _memcached_prefix and (not properties_to_skip and use_memcache):
                 logger.info(f'Creating complete entity cache of {entity_type} {entity_uuid} at time {datetime.now()}')
 
                 cache_key = f'{_memcached_prefix}_complete_{entity_uuid}'
@@ -1007,11 +1087,11 @@ list
 """
 
 
-def get_complete_entities_list(token, entities_list, properties_to_skip=[], is_include_action=False):
+def get_complete_entities_list(token, entities_list, properties_to_skip=[], is_include_action=False, use_memcache=True):
     complete_entities_list = []
 
     for entity_dict in entities_list:
-        complete_entity_dict = get_complete_entity_result(token, entity_dict, properties_to_skip, is_include_action=is_include_action)
+        complete_entity_dict = get_complete_entity_result(token, entity_dict, properties_to_skip, is_include_action=is_include_action, use_memcache=use_memcache)
         complete_entities_list.append(complete_entity_dict)
 
     return complete_entities_list
@@ -1113,7 +1193,7 @@ def normalize_object_result_for_response(provenance_type, entity_dict, propertie
                     # Safely evaluate a string containing a Python dict or list literal
                     # Only convert to Python list/dict when the string literal is not empty
                     # instead of returning the json-as-string or array-as-string
-                    entity_dict[key] = convert_str_to_data(entity_dict[key])
+                    entity_dict[key] = get_as_dict(entity_dict[key])
 
                 # Add the target key with correct value of data type to the normalized_entity dict
                 normalized_entity[key] = entity_dict[key]
@@ -1143,7 +1223,13 @@ list
 """
 
 
-def normalize_entities_list_for_response(entities_list, properties_to_exclude=[], properties_to_include=[]):
+def normalize_entities_list_for_response(entities_list:List, properties_to_exclude=[], properties_to_include=[]):
+    if len(entities_list) <= 0:
+        return []
+
+    if isinstance(entities_list[0], str):
+        return entities_list
+
     normalized_entities_list = []
 
     for entity_dict in entities_list:
@@ -1153,6 +1239,33 @@ def normalize_entities_list_for_response(entities_list, properties_to_exclude=[]
 
     return normalized_entities_list
 
+
+def remove_unauthorized_fields_from_response(entities_list:List, unauthorized:bool):
+    """
+    If a user is unauthorized fields listed in excluded_properties_from_public_response under the respective
+    schema yaml will be removed from the results
+
+    Parameters
+    ----------
+    entities_list : List[dict]
+        The list to be potentially filtered
+    unauthorized : bool
+        Whether user is authorized or not
+
+    Returns
+    -------
+    List[dict]
+    """
+    if unauthorized:
+        filtered_final_result = []
+        for entity in entities_list:
+            entity_type = entity.get('entity_type')
+            fields_to_exclude = get_fields_to_exclude(entity_type)
+            filtered_entity = exclude_properties_from_response(fields_to_exclude, entity)
+            filtered_final_result.append(filtered_entity)
+        return filtered_final_result
+    else:
+        return entities_list
 
 """
 Validate json data from user request against the schema
@@ -1577,17 +1690,11 @@ def _normalize_metadata(entity_dict, metadata_scope:MetadataScopeEnum, propertie
                 properties[key]['indexed'] is False:
             # Do not include properties in metadata for indexing if they are not True i.e. False or non-boolean
             continue
-        # Only run convert_str_literal() on string representation of Python dict and list with removing control characters
-        # No convertion for string representation of Python string, meaning that can still contain control characters
         if entity_dict[key] and (properties[key]['type'] in ['list', 'json_string']):
             logger.info(
-                f"Executing convert_str_literal() on {normalized_entity_type}.{key} of uuid: {entity_dict['uuid']}")
+                f"Executing get_as_dict() on {normalized_entity_type}.{key} of uuid: {entity_dict['uuid']}")
 
-            # Safely evaluate a string containing a Python dict or list literal
-            # Only convert to Python list/dict when the string literal is not empty
-            # instead of returning the json-as-string or array-as-string
-            # convert_str_literal() also removes those control chars to avoid SyntaxError
-            entity_dict[key] = convert_str_literal(entity_dict[key])
+            entity_dict[key] = get_as_dict(entity_dict[key])
 
         # Add the target key with correct value of data type to the normalized_entity dict
         normalized_metadata[key] = entity_dict[key]
@@ -2313,41 +2420,6 @@ def get_ubkg_instance():
     return _ubkg
 
 
-"""
-Convert a string representation of the Python list/dict (either nested or not) to a Python list/dict
-
-Parameters
-----------
-data_str: str
-    The string representation of the Python list/dict stored in Neo4j.
-    It's not stored in Neo4j as a json string! And we can't store it as a json string
-    due to the way that Cypher handles single/double quotes.
-
-Returns
--------
-list or dict
-    The real Python list or dict after evaluation
-"""
-
-
-def convert_str_to_data(data_str):
-    if isinstance(data_str, str):
-        # ast uses compile to compile the source string (which must be an expression) into an AST
-        # If the source string is not a valid expression (like an empty string), a SyntaxError will be raised by compile
-        # If, on the other hand, the source string would be a valid expression (e.g. a variable name like foo),
-        # compile will succeed but then literal_eval() might fail with a ValueError
-        # Also this fails with a TypeError: literal_eval("{{}: 'value'}")
-        try:
-            data = ast.literal_eval(data_str)
-            return data
-        except (SyntaxError, ValueError, TypeError):
-            msg = f"Invalid expression (string value): {data_str} to be evaluated by ast.literal_eval()"
-            logger.exception(msg)
-    else:
-        # Just return the input data string
-        return data_str
-
-
 ####################################################################################################
 ## Internal functions
 ####################################################################################################
@@ -2502,18 +2574,13 @@ def normalize_entity_result_for_response(entity_dict, properties_to_exclude = []
             if (key in properties) and (key not in properties_to_exclude):
                 # Skip properties with None value and the ones that are marked as not to be exposed.
                 # By default, all properties are exposed if not marked as `exposed: false`
-                # It's still possible to see `exposed: true` marked explictly
+                # It's still possible to see `exposed: true` marked explicitly
                 if (entity_dict[key] is not None) and ('exposed' not in properties[key]) or (('exposed' in properties[key]) and properties[key]['exposed']):
-                    # Only run convert_str_literal() on string representation of Python dict and list with removing control characters
-                    # No convertion for string representation of Python string, meaning that can still contain control characters
                     if entity_dict[key] and (properties[key]['type'] in ['list', 'json_string']):
-                        logger.info(f"Executing convert_str_literal() on {normalized_entity_type}.{key} of uuid: {entity_dict['uuid']}")
+                        logger.info(f"Executing get_as_dict() on {normalized_entity_type}.{key} of uuid: {entity_dict['uuid']}")
 
-                        # Safely evaluate a string containing a Python dict or list literal
-                        # Only convert to Python list/dict when the string literal is not empty
-                        # instead of returning the json-as-string or array-as-string
-                        # convert_str_literal() also removes those control chars to avoid SyntaxError
-                        entity_dict[key] = convert_str_literal(entity_dict[key])
+                        # Safely evaluate a string containing a json or list string
+                        entity_dict[key] = get_as_dict(entity_dict[key])
 
                     # Add the target key with correct value of data type to the normalized_entity dict
                     normalized_entity[key] = entity_dict[key]
