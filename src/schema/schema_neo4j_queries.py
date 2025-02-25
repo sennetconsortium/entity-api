@@ -2,9 +2,11 @@ import ast
 
 from neo4j.exceptions import TransactionError
 import logging
-from typing import List, Optional
+from typing import List, Union
 
 import schema.schema_manager
+from lib.property_groups import PropertyGroups
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -204,9 +206,13 @@ def get_dataset_organ_and_source_info(neo4j_driver, uuid):
     source_type = None
 
     with neo4j_driver.session() as session:
-        sample_query = (f"MATCH (e:Dataset)-[:USED|WAS_GENERATED_BY*]->(s:Sample) "
-                        f"WHERE e.uuid='{uuid}' AND s.sample_category is not null and s.sample_category='Organ' "
-                        f"RETURN apoc.coll.toSet(COLLECT(s)) AS {record_field_name}")
+        sample_query = ("MATCH (e:Dataset)-[:USED|WAS_GENERATED_BY*]->(s:Sample) WHERE "
+                 f"e.uuid='{uuid}' AND s.sample_category is not null and s.sample_category='Organ' "
+                 "MATCH (s2:Sample)-[:USED|WAS_GENERATED_BY*]->(d:Source) WHERE s2.uuid=s.uuid AND s2.sample_category is not null "
+                 "RETURN DISTINCT d.metadata AS source_metadata, d.source_type AS source_type, "
+                 "CASE WHEN s.organ is not null THEN s.organ "
+                 "ELSE s.sample_category "
+                 "END AS organ_type")
 
         logger.info("======get_dataset_organ_and_source_info() sample_query======")
         logger.info(sample_query)
@@ -214,29 +220,10 @@ def get_dataset_organ_and_source_info(neo4j_driver, uuid):
         with neo4j_driver.session() as session:
             record = session.read_transaction(_execute_readonly_tx, sample_query)
 
-            if record and record[record_field_name]:
-                # Convert the list of nodes to a list of dicts
-                sample_records = _nodes_to_dicts(record[record_field_name])
-                for sample_record in sample_records:
-                    if sample_record['organ'] is None:
-                        organ_names.add(sample_record['sample_category'])
-                    else:
-                        organ_names.add(sample_record['organ'])
-
-                    sample_uuid = sample_record['uuid']
-
-                    source_query = (f"MATCH (s:Sample)-[:USED|WAS_GENERATED_BY*]->(d:Source) "
-                                    f"WHERE s.uuid='{sample_uuid}' AND s.sample_category is not null "
-                                    f"RETURN DISTINCT d.metadata AS source_metadata, d.source_type AS source_type")
-
-                    logger.info("======get_dataset_organ_and_source_info() source_query======")
-                    logger.info(source_query)
-
-                    source_record = session.read_transaction(_execute_readonly_tx, source_query)
-
-                    if source_record:
-                        source_metadata.add(source_record[0])
-                        source_type = source_record[1]
+            if record:
+                source_metadata.add(record[0])
+                source_type = record[1]
+                organ_names.add(record[2])
 
     return organ_names, source_metadata, source_type
 
@@ -801,13 +788,13 @@ list
 """
 
 
-def get_collection_entities(neo4j_driver, uuid, properties: List[str] = None, is_include_action: bool = True):
+def get_collection_entities(neo4j_driver, uuid, properties: Union[PropertyGroups, List[str]] = None, is_include_action: bool = True):
     results = []
 
     query = (f"MATCH (t:Entity)-[:IN_COLLECTION]->(c:Collection|Epicollection) "
              f"WHERE c.uuid = '{uuid}' "
              f"{exclude_include_query_part(properties, is_include_action)}")
-             #f"RETURN apoc.coll.toSet(COLLECT(e)) AS {record_field_name}")
+
 
     logger.info("======get_collection_entities() query======")
     logger.info(query)
@@ -816,11 +803,7 @@ def get_collection_entities(neo4j_driver, uuid, properties: List[str] = None, is
         record = session.read_transaction(_execute_readonly_tx, query)
 
         if record and record[record_field_name]:
-            if isinstance(properties, list):
-                results = record[record_field_name]
-            else:
-                # Convert the list of nodes to a list of dicts
-                results = _nodes_to_dicts(record[record_field_name])
+            results = record[record_field_name]
 
     return results
 
@@ -1024,7 +1007,7 @@ list
 """
 
 
-def get_upload_datasets(neo4j_driver, uuid, query_filter='', properties: List[str] = None, is_include_action: bool = True):
+def get_upload_datasets(neo4j_driver, uuid, query_filter='', properties: Union[PropertyGroups, List[str]] = None, is_include_action: bool = True):
     """
 
     Parameters
@@ -1035,7 +1018,7 @@ def get_upload_datasets(neo4j_driver, uuid, query_filter='', properties: List[st
         The uuid of target entity
     query_filter: str
         An additional filter against the cypher match
-    properties : List[str]
+    properties : Union[PropertyGroups, List[str]]
         A list of property keys to filter in or out from the normalized results, default is []
     is_include_action : bool
         Whether to include or exclude the listed properties
@@ -1043,7 +1026,8 @@ def get_upload_datasets(neo4j_driver, uuid, query_filter='', properties: List[st
     """
     results = []
 
-    if len(properties) > 0:
+    is_filtered = isinstance(properties, PropertyGroups) or  isinstance(properties, list)
+    if is_filtered:
         query = (f"MATCH (t:Dataset)-[:IN_UPLOAD]->(s:Upload) "
                  f"WHERE s.uuid = '{uuid}' {query_filter} "
                  f"{exclude_include_query_part(properties, is_include_action, target_entity_type = 'Dataset')}")
@@ -1059,7 +1043,7 @@ def get_upload_datasets(neo4j_driver, uuid, query_filter='', properties: List[st
         record = session.read_transaction(execute_readonly_tx, query)
 
         if record and record[record_field_name]:
-            if isinstance(properties, list):
+            if is_filtered:
                 # Just return the list of property values from each entity node
                 results = record[record_field_name]
             else:
@@ -1269,56 +1253,6 @@ def get_has_rui_information(neo4j_driver, entity_uuid):
 ## Internal Functions
 ####################################################################################################
 
-"""
-Build the property key-value pairs to be used in the Cypher clause for node creation/update
-
-Parameters
-----------
-entity_data_dict : dict
-    The target Entity node to be created
-
-Returns
--------
-str
-    A string representation of the node properties map containing 
-    key-value pairs to be used in Cypher clause
-"""
-
-
-def _build_properties_map(entity_data_dict):
-    separator = ', '
-    node_properties_list = []
-
-    for key, value in entity_data_dict.items():
-        if isinstance(value, (int, bool)):
-            # Treat integer and boolean as is
-            key_value_pair = f"{key}: {value}"
-        elif isinstance(value, str):
-            # Special case is the value is 'TIMESTAMP()' string
-            # Remove the quotes since neo4j only takes TIMESTAMP() as a function
-            if value == 'TIMESTAMP()':
-                key_value_pair = f"{key}: {value}"
-            else:
-                # Escape single quote
-                escaped_str = value.replace("'", r"\'")
-                # Quote the value
-                key_value_pair = f"{key}: '{escaped_str}'"
-        else:
-            # Convert list and dict to string
-            # Must also escape single quotes in the string to build a valid Cypher query
-            escaped_str = str(value).replace("'", r"\'")
-            # Also need to quote the string value
-            key_value_pair = f"{key}: '{escaped_str}'"
-
-        # Add to the list
-        node_properties_list.append(key_value_pair)
-
-    # Example: {uuid: 'eab7fd6911029122d9bbd4d96116db9b', rui_location: 'Joe <info>', lab_tissue_sample_id: 'dadsadsd'}
-    # Note: all the keys are not quoted, otherwise Cypher syntax error
-    node_properties_map = f"{{ {separator.join(node_properties_list)} }}"
-
-    return node_properties_map
-
 
 """
 Execute a unit of work in a managed read transaction
@@ -1361,16 +1295,16 @@ neo4j.node
 
 
 def _create_activity_tx(tx, activity_data_dict):
-    node_properties_map = _build_properties_map(activity_data_dict)
+    parameterized_str, parameterized_data = build_parameterized_map(activity_data_dict)
 
     query = (f"CREATE (e:Activity) "
-             f"SET e = {node_properties_map} "
+             f"SET e = {parameterized_str} "
              f"RETURN e AS {record_field_name}")
 
     logger.info("======_create_activity_tx() query======")
     logger.info(query)
 
-    result = tx.run(query)
+    result = tx.run(query, **parameterized_data)
     record = result.single()
     node = record[record_field_name]
 
@@ -1837,55 +1771,28 @@ def get_children(neo4j_driver, uuid, property_key=None):
     return results
 
 
-"""
-Build the property key-value pairs to be used in the Cypher clause for node creation/update
-
-Parameters
-----------
-entity_data_dict : dict
-    The target Entity node to be created
-
-Returns
--------
-str
-    A string representation of the node properties map containing 
-    key-value pairs to be used in Cypher clause
-"""
-def build_properties_map(entity_data_dict):
-    separator = ', '
-    node_properties_list = []
+def build_parameterized_map(entity_data_dict):
+    parameterized_list = []
+    data = {}
 
     for key, value in entity_data_dict.items():
-        if isinstance(value, (int, bool)):
-            # Treat integer and boolean as is
-            key_value_pair = f"{key}: {value}"
-        elif isinstance(value, str):
+        if isinstance(value, (str, int, bool)):
             # Special case is the value is 'TIMESTAMP()' string
             # Remove the quotes since neo4j only takes TIMESTAMP() as a function
             if value == 'TIMESTAMP()':
-                key_value_pair = f"{key}: {value}"
+                parameterized_list.append(f"{key}: {value}")
             else:
-                # Escape single quote
-                escaped_str = value.replace("'", r"\'")
-                # Quote the value
-                key_value_pair = f"{key}: '{escaped_str}'"
-        else:
-            # Convert list and dict to string, retain the original data without removing any control characters
-            # Will need to call schema_manager.convert_str_literal() to convert the list/dict literal back to object
-            # Note that schema_manager.convert_str_literal() removes any control characters to avoid SyntaxError
-            # Must also escape single quotes in the string to build a valid Cypher query
-            escaped_str = str(value).replace("'", r"\'")
-            # Also need to quote the string value
-            key_value_pair = f"{key}: '{escaped_str}'"
+                parameterized_list.append(f"{key}: ${key}")
+                data[key] = value
 
-        # Add to the list
-        node_properties_list.append(key_value_pair)
+        else:
+            parameterized_list.append(f"{key}: ${key}")
+            data[key] = json.dumps(value)
 
     # Example: {uuid: 'eab7fd6911029122d9bbd4d96116db9b', rui_location: 'Joe <info>', lab_tissue_sample_id: 'dadsadsd'}
     # Note: all the keys are not quoted, otherwise Cypher syntax error
-    node_properties_map = f"{{ {separator.join(node_properties_list)} }}"
-
-    return node_properties_map
+    parametered_str = f"{{ {', '.join(parameterized_list)} }}"
+    return parametered_str, data
 
 
 """
@@ -1908,11 +1815,11 @@ dict
     A dictionary of updated entity details returned from the Cypher query
 """
 def update_entity(neo4j_driver, entity_type, entity_data_dict, uuid):
-    node_properties_map = build_properties_map(entity_data_dict)
+    parameterized_str, parameterized_data = build_parameterized_map(entity_data_dict)
 
     query = (f"MATCH (e:{entity_type}) "
-             f"WHERE e.uuid = '{uuid}' "
-             f"SET e += {node_properties_map} "
+             f"WHERE e.uuid = $uuid "
+             f"SET e += {parameterized_str} "
              f"RETURN e AS {record_field_name}")
 
     logger.info("======update_entity() query======")
@@ -1924,7 +1831,7 @@ def update_entity(neo4j_driver, entity_type, entity_data_dict, uuid):
 
             tx = session.begin_transaction()
 
-            result = tx.run(query)
+            result = tx.run(query, uuid=uuid, **parameterized_data)
             record = result.single()
             entity_node = record[record_field_name]
 
@@ -2199,21 +2106,122 @@ def get_sources_associated_entity(neo4j_driver, uuid, filter_out = None):
 
         for result in results:
             if 'metadata' in result and result['metadata'] != '{}':
-                result['metadata'] = ast.literal_eval(result['metadata'])
+                result['metadata'] = json.loads(result['metadata'])
             else:
                 result.pop('metadata', None)
 
     return results
 
 
-def exclude_include_query_part(properties:List[str], is_include_action = True, target_entity_type = 'Any'):
+def activity_query_part(properties = None, for_all_match = False):
+    """
+    Builds activity query part(s) for grabbing properties like protocol_url from Activity
+
+    Parameters
+    ----------
+    properties : PropertyGroups
+        The properties that will be used to build additional query parts
+    for_all_match : bool
+        Whether to return a query part used for grabbing the entire nodes list
+
+    Returns
+    -------
+    Union[str, tuple[str,str,str]]
+        A string if using a grab all query, OR
+        tuple for exclude_include_query_part with [0] Additional MATCH, [1] map pair query parts for apoc.map.fromPairs, [2] and 'a' variable to use in WITH statements
+    """
+    query_match_part = f"MATCH (e2:Entity)-[:WAS_GENERATED_BY]->(a:Activity) WHERE e2.uuid = t.uuid"
+
+    if for_all_match:
+        query_match_part = query_match_part + f" WITH t, apoc.map.fromPairs([['protocol_url', a.protocol_url]]) as a2 WITH apoc.map.merge(t,a2) as x RETURN apoc.coll.toSet(COLLECT(x)) AS "
+        return query_match_part
+
+    def _query_grab_part(_properties, grab_part):
+        for p in _properties:
+            val_part = f'a.{p}'
+
+            if p in properties.activity_json:
+                val_part = f'apoc.convert.fromJsonMap({val_part})'
+            elif p in properties.activity_list:
+                val_part = f'apoc.convert.fromJsonList({val_part})'
+
+            # handle name collision for activity and entity
+            name_part = f'activity_{p}' if p in (properties.neo4j + properties.dependency) else p
+
+            grab_part = grab_part + f", ['{name_part}', {val_part}]"
+
+        return grab_part
+
+    if isinstance(properties, PropertyGroups):
+        query_grab_part = ''
+        if len(properties.activity_neo4j) > 0:
+            query_grab_part = _query_grab_part(properties.activity_neo4j, query_grab_part)
+        if len(properties.activity_dep) > 0:
+            query_grab_part = _query_grab_part(properties.activity_dep, query_grab_part)
+
+        return query_match_part, query_grab_part, ', a'
+
+    else:
+        return '', '', ''
+
+def property_type_query_part(properties:PropertyGroups, is_include_action = True):
+    """
+    Builds property type query part(s) for parsing properties of certain types
+
+    Parameters
+    ----------
+    properties : PropertyGroups
+        The properties that will be used to build additional query parts
+    is_include_action : bool
+        whether to include or exclude the listed properties
+
+    Returns
+    -------
+    str
+        The query part(s) for concatenation into apoc.map.fromPairs method
+    """
+    if is_include_action is False:
+        return ''
+
+    map_parts = ''
+
+    for j in properties.json:
+        map_parts = map_parts + f", ['{j}', apoc.convert.fromJsonMap(t.{j})]"
+
+    for l in properties.list:
+        map_parts = map_parts + f", ['{l}', apoc.convert.fromJsonList(t.{l})]"
+
+    return map_parts
+
+def build_additional_query_parts(properties:PropertyGroups, is_include_action = True):
+    """
+    Builds additional query parts to be concatenated with other query
+
+    Parameters
+    ----------
+    properties : PropertyGroups
+        The properties that will be used to build additional query parts
+    is_include_action : bool
+        whether to include or exclude the listed properties
+
+    Returns
+    -------
+    tuple[str,str,str]
+        [0] Additional MATCH, [1] map pair query parts for apoc.map.fromPairs, [2] and variables to use in WITH statements
+    """
+    _activity_query_part = activity_query_part(properties if is_include_action else None)
+    _property_type_query_part = property_type_query_part(properties, is_include_action)
+
+    return _activity_query_part[0], _activity_query_part[1] + _property_type_query_part, _activity_query_part[2]
+
+def exclude_include_query_part(properties:Union[PropertyGroups, List[str]], is_include_action = True, target_entity_type = 'Any'):
     """
     Builds a cypher query part that can be used to include or exclude certain properties.
     The preceding MATCH query part should have a label 't'. E.g. MATCH (t:Entity)-[*]->(s:Source)
 
     Parameters
     ----------
-    properties : List[str]
+    properties : Union[PropertyGroups, List[str]]
         the properties to be filtered
     is_include_action : bool
         whether to include or exclude the listed properties
@@ -2225,22 +2233,30 @@ def exclude_include_query_part(properties:List[str], is_include_action = True, t
     str
         the inclusion exclusion query part to be applied with a MATCH query part
     """
+    if isinstance(properties, PropertyGroups):
+        _properties = properties.neo4j + properties.dependency
+    else:
+        _properties = properties
 
-    if is_include_action and len(properties) == 1 and properties[0] in ['uuid']:
-        return f"RETURN apoc.coll.toSet(COLLECT(t.{properties[0]})) AS {record_field_name}"
+    if is_include_action and len(_properties) == 1 and _properties[0] in ['uuid']:
+        return f"RETURN apoc.coll.toSet(COLLECT(t.{_properties[0]})) AS {record_field_name}"
 
     action = ''
     if is_include_action is False:
         action = 'NOT'
 
-    schema.schema_manager.get_schema_defaults(properties, is_include_action, target_entity_type)
+    schema.schema_manager.get_schema_defaults(_properties, is_include_action, target_entity_type)
+    more_to_grab_query_part = build_additional_query_parts(properties, is_include_action) if isinstance(properties, PropertyGroups) else None
+    a = more_to_grab_query_part[2] if isinstance(more_to_grab_query_part, tuple) else ''
+    map_pairs_part = more_to_grab_query_part[1] if isinstance(more_to_grab_query_part, tuple) else ''
+    match_part = more_to_grab_query_part[0] if isinstance(more_to_grab_query_part, tuple) else ''
 
                    # unwind the keys of the results from target/t
-    query_part = (f"WITH keys(t) AS k1, t unwind k1 AS k2 "
+    query_part = (f"WITH keys(t) AS k1, t{a} unwind k1 AS k2 "
                   # filter by a list[] of properties
-                  f"WITH t, k2 WHERE {action} k2 IN {properties} "
+                  f"WITH t{a}, k2 WHERE {action} k2 IN {_properties} "
                   # everything is unwinded as separate rows, so let's build it back up by uuid to form: {prop: val, uuid:uuidVal}
-                  f"WITH t, apoc.map.fromPairs([[k2, t[k2]], ['uuid', t.uuid]]) AS dict "
+                  f"WITH t{a}, apoc.map.fromPairs([[k2, t[k2]], ['uuid', t.uuid]{map_pairs_part}]) AS dict "
                   # collect all these individual dicts as a list[], and then group them by uuids, 
                   # which forms a dict with uuid as keys and list of dicts as values: 
                   # {uuidVal: [{prop: val, uuid:uuidVal}, {prop2: val2, uuid:uuidVal}, ... {propN: valN, uuid:uuidVal}], uuidVal2: [...]}
@@ -2252,4 +2268,4 @@ def exclude_include_query_part(properties:List[str], is_include_action = True, t
                   # collect each row to form a list[] and return
                   f"RETURN collect(rows) AS {record_field_name}")
 
-    return query_part
+    return f"{match_part} {query_part}"
