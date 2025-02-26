@@ -21,9 +21,9 @@ docker run -d \
     neo4j:5.20.0-ubi8
 
 # Read values from config file and set them as environment variables
-UBKG_SERVER=$(awk -F ' = ' '/UBKG_SERVER/ {print $2}' src/instance/app.cfg | tr -d '[:space:]' | sed "s/^'//;s/'$//")
-UBKG_ENDPOINT_VALUESET=$(awk -F ' = ' '/UBKG_ENDPOINT_VALUESET/ {print $2}' src/instance/app.cfg | tr -d '[:space:]' | sed "s/^'//;s/'$//")
-UBKG_CODES=$(awk -F ' = ' '/UBKG_CODES/ {print $2}' src/instance/app.cfg | tr -d '[:space:]' | sed "s/^'//;s/'$//")
+UBKG_SERVER=$(awk -F ' = ' '/^UBKG_SERVER/ {print $2}' src/instance/app.cfg | tr -d '[:space:]' | sed "s/^'//;s/'$//")
+UBKG_ENDPOINT_VALUESET=$(awk -F ' = ' '/^UBKG_ENDPOINT_VALUESET/ {print $2}' src/instance/app.cfg | tr -d '[:space:]' | sed "s/^'//;s/'$//")
+UBKG_CODES=$(awk -F ' = ' '/^UBKG_CODES/ {print $2}' src/instance/app.cfg | tr -d '[:space:]' | sed "s/^'//;s/'$//")
 
 # Set the test config file and backup the original config file
 mv src/instance/app.cfg src/instance/app.cfg.bak
