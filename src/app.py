@@ -1441,21 +1441,14 @@ def update_entity(id: str, user_token: str, json_data_dict: dict):
             after_update(normalized_entity_type, user_token, merged_updated_dict)
 
     elif normalized_entity_type in ['Dataset', 'Publication']:
-        # A bit more validation if `direct_ancestor_uuids` provided
-        has_direct_ancestor_uuids = False
         if ('direct_ancestor_uuids' in json_data_dict) and (json_data_dict['direct_ancestor_uuids']):
-            has_direct_ancestor_uuids = True
-
-            # Check existence of those source entities
-            for direct_ancestor_uuids in json_data_dict['direct_ancestor_uuids']:
-                direct_ancestor_uuids_dict = query_target_entity(direct_ancestor_uuids)
-                validate_constraints_by_entities(direct_ancestor_uuids_dict, json_data_dict, normalized_entity_type)
+            abort_bad_req('The field `direct_ancestor_uuids` can not be changed after the entity has been registered.')
 
         # Generate 'before_update_trigger' data and update the entity details in Neo4j
         merged_updated_dict = update_object_details('ENTITIES', request, normalized_entity_type, user_token, json_data_dict, entity_dict)
 
         # Handle linkages update via `after_update_trigger` methods
-        if has_direct_ancestor_uuids or has_updated_status:
+        if has_updated_status:
             after_update(normalized_entity_type, user_token, merged_updated_dict)
 
     elif normalized_entity_type == 'Upload':
