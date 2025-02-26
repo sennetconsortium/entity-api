@@ -1441,8 +1441,10 @@ def update_entity(id: str, user_token: str, json_data_dict: dict):
             after_update(normalized_entity_type, user_token, merged_updated_dict)
 
     elif normalized_entity_type in ['Dataset', 'Publication']:
-        if ('direct_ancestor_uuids' in json_data_dict) and (json_data_dict['direct_ancestor_uuids']):
-            abort_bad_req('The field `direct_ancestor_uuids` can not be changed after the entity has been registered.')
+        if 'direct_ancestor_uuids' in json_data_dict:
+            existing_direct_ancestor_uuids = schema_neo4j_queries.get_dataset_direct_ancestors(neo4j_driver_instance, entity_dict['uuid'], property_key='uuid')
+            if not collections.Counter(existing_direct_ancestor_uuids) == collections.Counter(json_data_dict['direct_ancestor_uuids']):
+                abort_bad_req('The field `direct_ancestor_uuids` can not be changed after the entity has been registered.')
 
         # Generate 'before_update_trigger' data and update the entity details in Neo4j
         merged_updated_dict = update_object_details('ENTITIES', request, normalized_entity_type, user_token, json_data_dict, entity_dict)
