@@ -739,7 +739,7 @@ For example: /documents/<id>?property=data_access_level
 Parameters
 ----------
 id : str
-    The HuBMAP ID (e.g. HBM123.ABCD.456) or UUID of target entity 
+    The SenNet ID (e.g. SNT123.ABCD.456) or UUID of target entity 
 Returns
 -------
 json
@@ -4657,7 +4657,7 @@ def get_collections(id):
                                           entity_dict=entity_dict)
 
     if entity_scope == DataVisibilityEnum.NONPUBLIC:
-        # Token is required and the user must belong to HuBMAP-READ group
+        # Token is required and the user must belong to SenNet-READ group
         token = get_user_token(request, non_public_access_required=True)
         public_entity = False
 
@@ -4762,7 +4762,7 @@ def get_uploads(id):
         abort_bad_req(f"Unsupported entity type of id {id}: {normalized_entity_type}")
 
     if entity_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
-        # Token is required and the user must belong to HuBMAP-READ group
+        # Token is required and the user must belong to SenNet-READ group
         token = get_user_token(request, non_public_access_required = True)
 
     # By now, either the entity is public accessible or the user token has the correct access level
@@ -5727,7 +5727,7 @@ scope of metadata requested e.g. complete data for a another service, indexing d
 Parameters
 ----------
 entity_id : str
-    The HuBMAP ID (e.g. HBM123.ABCD.456) or UUID of target entity 
+    The SenNet ID (e.g. SNT123.ABCD.456) or UUID of target entity 
 metadata_scope:
     A recognized scope from the SchemaConstants, controlling the triggers which are fired and elements
     from Neo4j which are retained.  Default is MetadataScopeEnum.INDEX.
@@ -5781,7 +5781,7 @@ def _get_metadata_by_id(entity_id: str = None, metadata_scope: MetadataScopeEnum
         if isinstance(user_token, Response):
             abort_forbidden(f"{normalized_entity_type} for {entity_id} is not accessible without presenting a token.")
         else:
-            # When the groups token is valid, but the user doesn't belong to HuBMAP-READ group
+            # When the groups token is valid, but the user doesn't belong to SenNet-READ group
             # Or the token is valid but doesn't contain group information (auth token or transfer token)
             user_authorized = user_in_sennet_read_group(request)
 
@@ -5840,7 +5840,7 @@ def _property_key_filtering_notice(result_filtering_accepted_property_keys):
     return f"Only the following property keys are supported in the query string: {COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}. To use additional, send a POST request with a list of 'properties', specifying whether to include or exclude the properties via is_include: bool option. {{properties:[str], is_include:bool}}"
 
 """
-Check if the user with token is in the HuBMAP-READ group
+Check if the user with token is in the SenNet-READ group
 
 Parameters
 ----------
@@ -5868,7 +5868,7 @@ def user_in_sennet_read_group(request):
 
         # If the token is not a groups token, no group information available
         # The commons.hm_auth.AuthCache would return a Response with 500 error message
-        # We treat such cases as the user not in the HuBMAP-READ group
+        # We treat such cases as the user not in the SenNet-READ group
         return False
 
     return (sennet_read_group_uuid in user_info['hmgroupids'])
