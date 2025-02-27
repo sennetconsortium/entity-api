@@ -1420,20 +1420,13 @@ def update_entity(id: str, user_token: str, json_data_dict: dict):
         # A bit more validation for updating the sample and the linkage to existing source entity
         has_direct_ancestor_uuid = False
         if ('direct_ancestor_uuid' in json_data_dict) and json_data_dict['direct_ancestor_uuid']:
-            has_direct_ancestor_uuid = True
+            existing_direct_ancestor_uuid = schema_neo4j_queries.get_sample_direct_ancestor(schema_manager.get_neo4j_driver_instance(),
+                                                                                   entity_dict['uuid'], property_key='uuid')
+            if not existing_direct_ancestor_uuid == json_data_dict['direct_ancestor_uuid']:
+                abort_bad_req('The field `direct_ancestor_uuid` can not be changed after the entity has been registered.')
 
-            direct_ancestor_uuid = json_data_dict['direct_ancestor_uuid']
-            # Check existence of the source entity
-            direct_ancestor_uuid_dict = query_target_entity(direct_ancestor_uuid)
-            validate_constraints_by_entities(direct_ancestor_uuid_dict, json_data_dict, normalized_entity_type)
-            # Also make sure it's either another Sample or a Source
-            if direct_ancestor_uuid_dict['entity_type'] not in ['Source', 'Sample']:
-                abort_bad_req(f"The uuid: {direct_ancestor_uuid} is not a Source neither a Sample, cannot be used as the direct ancestor of this Sample")
 
-            merged = {**entity_dict, **json_data_dict}
-            check_multiple_organs_constraint(merged, direct_ancestor_uuid_dict, entity_dict['uuid'])
-
-        # Generate 'before_update_triiger' data and update the entity details in Neo4j
+        # Generate 'before_update_trigger' data and update the entity details in Neo4j
         merged_updated_dict = update_object_details('ENTITIES', request, normalized_entity_type, user_token, json_data_dict, entity_dict)
 
         # Handle linkages update via `after_update_trigger` methods
