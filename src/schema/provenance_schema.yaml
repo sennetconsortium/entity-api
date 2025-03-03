@@ -612,6 +612,7 @@ ENTITIES:
         transient: true
         immutable: true
         description: "The activity that was performed."
+        use_activity_value: true
         before_property_create_validators:
           - validate_creation_action
       dataset_category:
@@ -661,6 +662,9 @@ ENTITIES:
         description: "The modified and mapped metadata returned from the processing at data submission time."
         on_read_trigger: get_cedar_mapped_metadata
         on_index_trigger: get_cedar_mapped_metadata
+        dependency_properties:
+          - ingest_metadata
+          - metadata
       sources:
         type: list
         generated: true

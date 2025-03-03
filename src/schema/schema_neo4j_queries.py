@@ -8,6 +8,8 @@ import schema.schema_manager
 from lib.property_groups import PropertyGroups
 import json
 
+from schema import schema_manager
+
 logger = logging.getLogger(__name__)
 
 # The filed name of the single result record
@@ -2130,6 +2132,7 @@ def activity_query_part(properties = None, for_all_match = False):
         A string if using a grab all query, OR
         tuple for exclude_include_query_part with [0] Additional MATCH, [1] map pair query parts for apoc.map.fromPairs, [2] and 'a' variable to use in WITH statements
     """
+
     query_match_part = f"MATCH (e2:Entity)-[:WAS_GENERATED_BY]->(a:Activity) WHERE e2.uuid = t.uuid"
 
     if for_all_match:
@@ -2145,8 +2148,10 @@ def activity_query_part(properties = None, for_all_match = False):
             elif p in properties.activity_list:
                 val_part = f'apoc.convert.fromJsonList({val_part})'
 
+            name_part = p
             # handle name collision for activity and entity
-            name_part = f'activity_{p}' if p in (properties.neo4j + properties.dependency) else p
+            if p in (properties.neo4j + properties.dependency) and len(schema_manager.get_schema_properties()[p]['use_activity_value']) <= 0:
+                name_part = f'activity_{p}'
 
             grab_part = grab_part + f", ['{name_part}', {val_part}]"
 

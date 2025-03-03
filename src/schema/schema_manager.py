@@ -149,6 +149,9 @@ def load_provenance_schema(valid_yaml_file):
             schema_dict['ENTITIES'][entity]['properties'] = remove_none_values(schema_dict['ENTITIES'][entity]['properties'])
         return schema_dict
 
+def get_schema_properties():
+    global _schema_properties
+    return _schema_properties
 
 def group_schema_properties_by_name():
     """
@@ -174,12 +177,16 @@ def group_schema_properties_by_name():
                 schema_properties_by_name[p]['neo4j'] = set()
                 schema_properties_by_name[p]['json_string'] = set()
                 schema_properties_by_name[p]['list'] = set()
+                schema_properties_by_name[p]['use_activity_value'] = set()
                 schema_properties_by_name[p]['dependencies'].update(entity_properties[p].get('dependency_properties', []))
 
             if 'on_read_trigger' in entity_properties[p]:
                 schema_properties_by_name[p]['trigger'].add(entity)
             else:
                 schema_properties_by_name[p]['neo4j'].add(entity)
+
+                if 'use_activity_value' in entity_properties[p]:
+                    schema_properties_by_name[p]['use_activity_value'].add(entity)
 
                 if 'type' in entity_properties[p]:
                     if entity_properties[p]['type'] == 'json_string':
@@ -1204,6 +1211,66 @@ def normalize_object_result_for_response(provenance_type, entity_dict, propertie
 
     return normalized_entity
 
+
+def normalize_filtered_properties_object_response(entity_dict, property_groups:PropertyGroups, is_include_action=True, provenance_type='ENTITIES'):
+    global _schema
+
+    normalized_entity = {}
+    properties = []
+    activity_properties = _schema['ACTIVITIES']['Activity']['properties']
+    properties_to_filter = list(set(property_groups.neo4j + property_groups.trigger + property_groups.activity_neo4j + property_groups.activity_trigger))
+
+    check_activity_list = False
+    if len(property_groups.activity_neo4j + property_groups.activity_trigger) > 0:
+        check_activity_list = True
+
+    # In case entity_dict is None or
+    # an incorrectly created entity that doesn't have the `entity_type` property
+    if entity_dict and ('entity_type' in entity_dict):
+        normalized_entity_type = entity_dict['entity_type']
+        properties = get_entity_properties(_schema[provenance_type], normalized_entity_type)
+    else:
+        logger.error(f"Unable to normalize object result with"
+                     f" entity_dict={str(entity_dict)} and"
+                     f" provenance_type={provenance_type}.")
+        raise schema_errors.SchemaValidationException("Unable to normalize object, missing entity_type.")
+
+    for key in entity_dict:
+        _key = key.replace('activity_', '')
+        # Only return the properties defined in the schema yaml
+        # Exclude additional properties if specified
+        if (key in properties) or (check_activity_list and (_key in activity_properties) ):
+            if (is_include_action and _key in properties_to_filter) or (is_include_action is False and _key not in properties_to_filter):
+
+                if entity_dict[key] and (properties[_key]['type'] in ['list', 'json_string']):
+                    # Safely evaluate a string containing a Python dict or list literal
+                    # Only convert to Python list/dict when the string literal is not empty
+                    # instead of returning the json-as-string or array-as-string
+                    entity_dict[key] = get_as_dict(entity_dict[key])
+
+                # Add the target key with correct value of data type to the normalized_entity dict
+                normalized_entity[key] = entity_dict[key]
+
+                # Final step: remove properties with empty string value, empty dict {}, and empty list []
+                if (isinstance(normalized_entity[key], (str, dict, list)) and (not normalized_entity[key])):
+                    normalized_entity.pop(key)
+
+    return normalized_entity
+
+def normalize_filtered_properties_response(entities_list:List, properties:PropertyGroups, is_include_action=True):
+    if len(entities_list) <= 0:
+        return []
+
+    if isinstance(entities_list[0], str):
+        return entities_list
+
+    normalized_entities_list = []
+
+    for entity_dict in entities_list:
+        normalized_entity_dict = normalize_filtered_properties_object_response(entity_dict, properties, is_include_action)
+        normalized_entities_list.append(normalized_entity_dict)
+
+    return normalized_entities_list
 
 """
 Normalize the given list of complete entity results by removing properties that are not defined in the yaml schema

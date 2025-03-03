@@ -5059,8 +5059,7 @@ def get_datasets_for_upload(id: str):
                 properties_action = filtering_dict.get('is_include', True)
                 datasets_list = schema_neo4j_queries.get_upload_datasets(neo4j_driver_instance, uuid=uuid, properties=segregated_properties, is_include_action=properties_action)
                 complete_list = schema_manager.get_complete_entities_list(token, datasets_list, properties_to_skip=segregated_properties.trigger, is_include_action=properties_action, use_memcache=False)
-                _final_result = schema_manager.normalize_entities_list_for_response(complete_list,
-                                                                           properties_to_exclude=properties_to_filter if properties_action is False else [])
+                _final_result = schema_manager.normalize_filtered_properties_response(complete_list, segregated_properties, is_include_action=properties_action)
     else:
         _final_result = schema_triggers.get_normalized_upload_datasets(uuid, token, properties_to_exclude)
     final_result = schema_manager.remove_unauthorized_fields_from_response(_final_result, unauthorized=not user_in_sennet_read_group(request))
