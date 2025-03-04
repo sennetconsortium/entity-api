@@ -16,6 +16,7 @@ from urllib3.exceptions import InsecureRequestWarning
 from pathlib import Path
 import logging
 import json
+
 from lib.constraints import get_constraints_by_ancestor, get_constraints_by_descendant, build_constraint, \
     build_constraint_unit
 
@@ -1724,7 +1725,7 @@ def get_ancestors(id):
                 property_list = app_neo4j_queries.get_ancestors(neo4j_driver_instance, uuid, data_access_level, properties=segregated_properties, is_include_action=properties_action)
                 complete_entities_list = schema_manager.get_complete_entities_list(token, property_list, segregated_properties.trigger, is_include_action=properties_action, use_memcache=False)
                 # Final result
-                _final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list, properties_to_include=segregated_properties.activity_neo4j)
+                _final_result = schema_manager.normalize_filtered_properties_response(complete_entities_list, segregated_properties, is_include_action=properties_action)
                 final_result = schema_manager.remove_unauthorized_fields_from_response(_final_result, unauthorized=not authorized)
 
     # Return all the details if no property filtering
@@ -1841,7 +1842,7 @@ def get_descendants(id):
                 property_list = app_neo4j_queries.get_descendants(neo4j_driver_instance, uuid, data_access_level, properties=segregated_properties, is_include_action=properties_action)
                 complete_entities_list = schema_manager.get_complete_entities_list(token, property_list, segregated_properties.trigger, is_include_action=properties_action, use_memcache=False)
                 # Final result
-                _final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list, properties_to_include=segregated_properties.activity_neo4j)
+                _final_result = schema_manager.normalize_filtered_properties_response(complete_entities_list, segregated_properties, is_include_action=properties_action)
                 final_result = schema_manager.remove_unauthorized_fields_from_response(_final_result, unauthorized=not authorized)
     # Return all the details if no property filtering
     else:
@@ -1964,7 +1965,7 @@ def get_parents(id):
                 property_list = app_neo4j_queries.get_parents(neo4j_driver_instance, uuid, properties=segregated_properties, is_include_action=properties_action)
                 complete_entities_list = schema_manager.get_complete_entities_list(token, property_list, segregated_properties.trigger, is_include_action=properties_action, use_memcache=False)
                 # Final result
-                _final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list, properties_to_include=segregated_properties.activity_neo4j)
+                _final_result = schema_manager.normalize_filtered_properties_response(complete_entities_list, segregated_properties, is_include_action=properties_action)
                 final_result = schema_manager.remove_unauthorized_fields_from_response(_final_result, unauthorized=not user_in_sennet_read_group(request))
     # Return all the details if no property filtering
     else:
@@ -2060,7 +2061,7 @@ def get_children(id):
                 property_list = app_neo4j_queries.get_children(neo4j_driver_instance, uuid, properties=segregated_properties, is_include_action=properties_action)
                 complete_entities_list = schema_manager.get_complete_entities_list(user_token, property_list, segregated_properties.trigger, is_include_action=properties_action, use_memcache=False)
                 # Final result
-                _final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list, properties_to_include=segregated_properties.activity_neo4j)
+                _final_result = schema_manager.normalize_filtered_properties_response(complete_entities_list, segregated_properties, is_include_action=properties_action)
                 final_result = schema_manager.remove_unauthorized_fields_from_response(_final_result, unauthorized=not user_in_sennet_read_group(request))
     # Return all the details if no property filtering
     else:
@@ -5142,8 +5143,7 @@ def get_entities_for_collection(id: str):
                 properties_action = filtering_dict.get('is_include', True)
                 entities_list = schema_neo4j_queries.get_collection_entities(neo4j_driver_instance, uuid=uuid, properties=segregated_properties, is_include_action=properties_action)
                 complete_list = schema_manager.get_complete_entities_list(token, entities_list, properties_to_skip=segregated_properties.trigger, is_include_action=properties_action, use_memcache=False)
-                _final_result = schema_manager.normalize_entities_list_for_response(complete_list,
-                                                                                    properties_to_exclude=properties_to_filter if properties_action is False else segregated_properties.activity_neo4j)
+                _final_result = schema_manager.normalize_filtered_properties_response(complete_list, segregated_properties, is_include_action=properties_action)
     else:
         # Get the entities associated with the collection
         _final_result = schema_triggers.get_normalized_collection_entities(

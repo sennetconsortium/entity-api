@@ -1242,7 +1242,7 @@ def normalize_filtered_properties_object_response(entity_dict, property_groups:P
         if (key in properties) or (check_activity_list and (_key in activity_properties) ):
             if (is_include_action and _key in properties_to_filter) or (is_include_action is False and _key not in properties_to_filter):
 
-                if entity_dict[key] and (properties[_key]['type'] in ['list', 'json_string']):
+                if entity_dict[key] and (_key in properties and properties[_key]['type'] in ['list', 'json_string']):
                     # Safely evaluate a string containing a Python dict or list literal
                     # Only convert to Python list/dict when the string literal is not empty
                     # instead of returning the json-as-string or array-as-string

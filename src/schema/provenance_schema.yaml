@@ -724,8 +724,6 @@ ENTITIES:
         transient: true
         generated: true
         immutable: true
-        on_read_trigger: get_creation_action_activity
-        on_index_trigger: get_creation_action_activity
         description: "The activity that was performed."
       dataset_type:
         before_create_trigger: set_publication_dataset_type
