@@ -5062,7 +5062,7 @@ def get_datasets_for_upload(id: str):
                 segregated_properties = schema_manager.group_verify_properties_list(Ontology.ops().entities().DATASET, properties_to_filter)
                 properties_action = filtering_dict.get('is_include', True)
                 datasets_list = schema_neo4j_queries.get_upload_datasets(neo4j_driver_instance, uuid=uuid, properties=segregated_properties, is_include_action=properties_action)
-                complete_list = schema_manager.get_complete_entities_list(token, datasets_list, properties_to_skip=segregated_properties.trigger, is_include_action=properties_action, use_memcache=False)
+                complete_list = schema_manager.get_complete_entities_list(token, datasets_list, properties_to_filter=segregated_properties.trigger, is_include_action=properties_action, use_memcache=False)
                 _final_result = schema_manager.normalize_filtered_properties_response(complete_list, segregated_properties, is_include_action=properties_action)
     else:
         _final_result = schema_triggers.get_normalized_upload_datasets(uuid, token, properties_to_exclude)
@@ -5145,7 +5145,7 @@ def get_entities_for_collection(id: str):
                 segregated_properties = schema_manager.group_verify_properties_list(properties=properties_to_filter)
                 properties_action = filtering_dict.get('is_include', True)
                 entities_list = schema_neo4j_queries.get_collection_entities(neo4j_driver_instance, uuid=uuid, properties=segregated_properties, is_include_action=properties_action)
-                complete_list = schema_manager.get_complete_entities_list(token, entities_list, properties_to_skip=segregated_properties.trigger, is_include_action=properties_action, use_memcache=False)
+                complete_list = schema_manager.get_complete_entities_list(token, entities_list, properties_to_filter=segregated_properties.trigger, is_include_action=properties_action, use_memcache=False)
                 _final_result = schema_manager.normalize_filtered_properties_response(complete_list, segregated_properties, is_include_action=properties_action)
     else:
         # Get the entities associated with the collection

@@ -50,6 +50,7 @@ _ubkg = None
 _memcached_client = None
 _memcached_prefix = None
 _schema_properties = {}
+_schema_triggers_meta = {}
 
 # For handling cached requests to uuid-api and external static resources (github raw yaml files)
 request_cache = {}
@@ -564,7 +565,7 @@ def exclude_properties_from_response(excluded_fields, output_dict):
 
 
 def generate_triggered_data(trigger_type: TriggerTypeEnum, normalized_class, user_token, existing_data_dict
-                            , new_data_dict, properties_to_skip = [], is_include_action = False):
+                            , new_data_dict, properties_to_filter = [], is_include_action = False):
     """
     Generating triggered data based on the target events and methods
 
@@ -580,9 +581,8 @@ def generate_triggered_data(trigger_type: TriggerTypeEnum, normalized_class, use
         A dictionary that contains existing entity data
     new_data_dict : dict
         A dictionary that contains incoming entity data
-    properties_to_skip : list
-        Any properties to skip running triggers.
-        This now ideally should be called properties_to_filter because of newly introduced is_include_action.
+    properties_to_filter : list
+        Any properties to skip or include when running triggers.
     is_include_action : bool
         Whether to include or exclude the properties listed in properties_to_skip
 
@@ -621,8 +621,8 @@ def generate_triggered_data(trigger_type: TriggerTypeEnum, normalized_class, use
     for key in properties:
         # Among those properties that have the target trigger type,
         # we can skip the ones specified in the `properties_to_skip` by not running their triggers
-        if (trigger_type.value in properties[key]) and ((key not in properties_to_skip and is_include_action is False)
-                                                        or (key in properties_to_skip and is_include_action)):
+        if (trigger_type.value in properties[key]) and ((key not in properties_to_filter and is_include_action is False)
+                                                        or (key in properties_to_filter and is_include_action)):
             # 'after_create_trigger' and 'after_update_trigger' don't generate property values
             # E.g., create relationships between nodes in neo4j
             # So just return the empty trigger_generated_data_dict
@@ -873,7 +873,7 @@ dict
 """
 
 
-def get_complete_entity_result(token, entity_dict, properties_to_skip=[], is_include_action=False, use_memcache=True):
+def get_complete_entity_result(token, entity_dict, properties_to_filter = [], is_include_action=False, use_memcache=True):
     global _memcached_client
     global _memcached_prefix
 
@@ -888,7 +888,7 @@ def get_complete_entity_result(token, entity_dict, properties_to_skip=[], is_inc
 
         # Need both client and prefix when fetching the cache
         # Do NOT fetch cache if properties_to_skip is specified or use_memcache is False
-        if _memcached_client and _memcached_prefix and (not properties_to_skip and use_memcache):
+        if _memcached_client and _memcached_prefix and (not properties_to_filter and use_memcache):
             cache_key = f'{_memcached_prefix}_complete_{entity_uuid}'
             cache_result = _memcached_client.get(cache_key)
 
@@ -907,7 +907,7 @@ def get_complete_entity_result(token, entity_dict, properties_to_skip=[], is_inc
                                                                           , user_token=token
                                                                           , existing_data_dict=entity_dict
                                                                           , new_data_dict={}
-                                                                          , properties_to_skip=properties_to_skip
+                                                                          , properties_to_filter=properties_to_filter
                                                                           , is_include_action=is_include_action)
 
             # Merge the entity info and the generated on read data into one dictionary
@@ -918,7 +918,7 @@ def get_complete_entity_result(token, entity_dict, properties_to_skip=[], is_inc
 
             # Need both client and prefix when creating the cache
             # Do NOT cache when properties_to_skip is specified
-            if _memcached_client and _memcached_prefix and (not properties_to_skip and use_memcache):
+            if _memcached_client and _memcached_prefix and (not properties_to_filter and use_memcache):
                 logger.info(f'Creating complete entity cache of {entity_type} {entity_uuid} at time {datetime.now()}')
 
                 cache_key = f'{_memcached_prefix}_complete_{entity_uuid}'
@@ -1019,12 +1019,12 @@ def _get_metadata_result(token, entity_dict, metadata_scope:MetadataScopeEnum, p
                 # Pass {} since no new_data_dict for 'on_read_trigger'
                 #generated_on_read_trigger_data_dict = generate_triggered_data('on_read_trigger', entity_type, token,
                 #                                                              entity_dict, {}, properties_to_skip)
-                generated_on_read_trigger_data_dict = generate_triggered_data(  trigger_type=TriggerTypeEnum.ON_READ
-                                                                                , normalized_class=entity_type
-                                                                                , user_token=token
-                                                                                , existing_data_dict=entity_dict
-                                                                                , new_data_dict={}
-                                                                                , properties_to_skip=properties_to_skip)
+                generated_on_read_trigger_data_dict = generate_triggered_data(trigger_type=TriggerTypeEnum.ON_READ
+                                                                              , normalized_class=entity_type
+                                                                              , user_token=token
+                                                                              , existing_data_dict=entity_dict
+                                                                              , new_data_dict={}
+                                                                              , properties_to_filter=properties_to_skip)
 
                 # Merge the entity info and the generated on read data into one dictionary
                 complete_entity_dict = {**entity_dict, **generated_on_read_trigger_data_dict}
@@ -1035,12 +1035,12 @@ def _get_metadata_result(token, entity_dict, metadata_scope:MetadataScopeEnum, p
                 # No error handling here since if a 'on_index_trigger' method fails,
                 # the property value will be the error message
                 # Pass {} since no new_data_dict for 'on_index_trigger'
-                generated_on_index_trigger_data_dict = generate_triggered_data( trigger_type=TriggerTypeEnum.ON_INDEX
-                                                                                , normalized_class=entity_type
-                                                                                , user_token=token
-                                                                                , existing_data_dict=entity_dict
-                                                                                , new_data_dict={}
-                                                                                , properties_to_skip=properties_to_skip)
+                generated_on_index_trigger_data_dict = generate_triggered_data(trigger_type=TriggerTypeEnum.ON_INDEX
+                                                                               , normalized_class=entity_type
+                                                                               , user_token=token
+                                                                               , existing_data_dict=entity_dict
+                                                                               , new_data_dict={}
+                                                                               , properties_to_filter=properties_to_skip)
 
                 # Merge the entity info and the generated on read data into one dictionary
                 complete_entity_dict = {**entity_dict, **generated_on_index_trigger_data_dict}
@@ -1094,11 +1094,11 @@ list
 """
 
 
-def get_complete_entities_list(token, entities_list, properties_to_skip=[], is_include_action=False, use_memcache=True):
+def get_complete_entities_list(token, entities_list, properties_to_filter = [], is_include_action=False, use_memcache=True):
     complete_entities_list = []
 
     for entity_dict in entities_list:
-        complete_entity_dict = get_complete_entity_result(token, entity_dict, properties_to_skip, is_include_action=is_include_action, use_memcache=use_memcache)
+        complete_entity_dict = get_complete_entity_result(token, entity_dict, properties_to_filter, is_include_action=is_include_action, use_memcache=use_memcache)
         complete_entities_list.append(complete_entity_dict)
 
     return complete_entities_list

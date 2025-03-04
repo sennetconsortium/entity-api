@@ -676,7 +676,7 @@ def get_normalized_collection_entities(uuid: str, token: str, skip_completion: b
     else:
         complete_entities_list = schema_manager.get_complete_entities_list(token=token,
                                                                            entities_list=entities_list,
-                                                                           properties_to_skip=properties_to_exclude)
+                                                                           properties_to_filter=properties_to_exclude)
 
     return schema_manager.normalize_entities_list_for_response(entities_list=complete_entities_list,
                                                                properties_to_exclude=properties_to_exclude)
