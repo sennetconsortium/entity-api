@@ -1213,6 +1213,23 @@ def normalize_object_result_for_response(provenance_type, entity_dict, propertie
 
 
 def normalize_filtered_properties_object_response(entity_dict, property_groups:PropertyGroups, is_include_action=True, provenance_type='ENTITIES'):
+    """
+
+    Parameters
+    ----------
+    entity_dict : dict
+        The entity dictionary to normalize
+    property_groups : PropertyGroups
+        A list of property keys to filter in or out from the normalized results, default is []
+    is_include_action : bool
+        Whether to include or exclude the listed properties
+    provenance_type : str
+        The provenance type of the object
+
+    Returns
+    -------
+
+    """
     global _schema
 
     normalized_entity = {}
@@ -1258,6 +1275,21 @@ def normalize_filtered_properties_object_response(entity_dict, property_groups:P
     return normalized_entity
 
 def normalize_filtered_properties_response(entities_list:List, properties:PropertyGroups, is_include_action=True):
+    """
+
+    Parameters
+    ----------
+    entities_list :
+        List of entities to normalize
+    properties : PropertyGroups
+        A list of property keys to filter in or out from the normalized results, default is []
+    is_include_action : bool
+        Whether to include or exclude the listed properties
+
+    Returns
+    -------
+
+    """
     if len(entities_list) <= 0:
         return []
 
