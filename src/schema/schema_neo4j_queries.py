@@ -1,5 +1,3 @@
-import ast
-
 from neo4j.exceptions import TransactionError
 import logging
 from typing import List, Union
@@ -1216,10 +1214,9 @@ def get_has_rui_information(neo4j_driver, entity_uuid):
             return str(results)
 
     # Check the ancestry of the given entity and if the origin sample is
-    # Adipose Tissue (AD), Blood (BD), Bone Marrow (BM), Breast (BS), Muscle (MU), or Other (OT), then return "N/A"
-
+    # Adipose Tissue (AD), Blood (BD), Bone Marrow (BM), Breast (BS), Bone (BX), Muscle (MU), or Other (OT), then return "N/A"
     organ_query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(o:Sample) "
-                   f"WHERE e.uuid='{entity_uuid}' AND o.sample_category='Organ' AND o.organ IN ['AD', 'BD', 'BM', 'BS', 'MU', 'OT'] "
+                   f"WHERE e.uuid='{entity_uuid}' AND o.sample_category='Organ' AND o.organ IN ['AD', 'BD', 'BM', 'BS', 'BX', 'MU', 'OT'] "
                    f"RETURN 'N/A' as {record_field_name}")
 
     logger.info("======get_has_rui_information() organ_query======")
