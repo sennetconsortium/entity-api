@@ -1853,7 +1853,7 @@ def get_bulk_origin_samples(user_token, bulk_keys, entities_list):
 
         if len(uuids) > 0:
             # let's do a query for the rest that were not Samples or sample_category of Organs
-            origin_samples_results = schema_neo4j_queries.get_bulk_origin_samples(schema_manager.get_neo4j_driver_instance(),
+            origin_samples_results = schema_neo4j_queries.get_origin_samples(schema_manager.get_neo4j_driver_instance(),
                                                                      uuids)
             for r in origin_samples_results:
                 for origin_sample in r['result']:
@@ -1895,28 +1895,26 @@ def get_origin_samples(property_key, normalized_type, user_token, existing_data_
     # The origin_sample is the sample that `sample_category` is "organ" and the `organ` code is set at the same time
 
     try:
+        def _get_organ_hierarchy(entity_dict):
+            organ_hierarchy_key, organ_hierarchy_value = get_organ_hierarchy(property_key='organ_hierarchy',
+                                                                             normalized_type=Ontology.ops().entities().SAMPLE,
+                                                                             user_token=user_token,
+                                                                             existing_data_dict=entity_dict,
+                                                                             new_data_dict=new_data_dict)
+            entity_dict[organ_hierarchy_key] = organ_hierarchy_value
+
         if equals(existing_data_dict.get("sample_category"), Ontology.ops().specimen_categories().ORGAN):
             # Return the organ if this is an organ
-            organ_hierarchy_key, organ_hierarchy_value = get_organ_hierarchy(property_key='organ_hierarchy',
-                                normalized_type=Ontology.ops().entities().SAMPLE,
-                                user_token=user_token,
-                                existing_data_dict=existing_data_dict,
-                                new_data_dict=new_data_dict)
-            existing_data_dict[organ_hierarchy_key] = organ_hierarchy_value
+            _get_organ_hierarchy(existing_data_dict)
             return property_key, [existing_data_dict]
 
         origin_samples = None
         if normalized_type in ["Sample", "Dataset", "Publication"]:
             origin_samples = schema_neo4j_queries.get_origin_samples(schema_manager.get_neo4j_driver_instance(),
-                                                                   existing_data_dict['uuid'])
+                                                                   [existing_data_dict['uuid']], is_bulk=False)
 
             for origin_sample in origin_samples:
-                organ_hierarchy_key, organ_hierarchy_value = get_organ_hierarchy(property_key='organ_hierarchy',
-                                                                                 normalized_type=Ontology.ops().entities().SAMPLE,
-                                                                                 user_token=user_token,
-                                                                                 existing_data_dict=origin_sample,
-                                                                                 new_data_dict=new_data_dict)
-                origin_sample[organ_hierarchy_key] = organ_hierarchy_value
+                _get_organ_hierarchy(origin_sample)
 
         return property_key, origin_samples
     except Exception:

@@ -147,46 +147,9 @@ def filter_ancestors_by_type(neo4j_driver, direct_ancestor_uuids, entity_type):
     return records if records else None
 
 
-"""
-Get the origin (organ) sample ancestor of a given entity by uuid
-
-Parameters
-----------
-neo4j_driver : neo4j.Driver object
-    The neo4j database connection pool
-uuid : str
-    The uuid of target entity 
-property_key : str
-    A target property key for result filtering
-
-Returns
--------
-list
-    A unique list of uuids of source entities
-"""
-
-
-def get_origin_samples(neo4j_driver, uuid):
-    result = {}
-
-    query = (f"MATCH (e:Entity)-[:WAS_GENERATED_BY|USED*]->(s:Sample) "
-             f"WHERE e.uuid='{uuid}' and s.sample_category='Organ' "
-             f"return apoc.coll.toSet(COLLECT(s)) AS {record_field_name}")
-
-    logger.info("======get_origin_samples() query======")
-    logger.info(query)
-
-    with neo4j_driver.session() as session:
-        record = session.read_transaction(_execute_readonly_tx, query)
-        if record and record[record_field_name]:
-            # Convert the entity node to dict
-            result = _nodes_to_dicts(record[record_field_name])
-
-    return result
-
-
-def get_bulk_origin_samples(neo4j_driver, uuids:List):
+def get_origin_samples(neo4j_driver, uuids:List, is_bulk = True):
     """
+    Get the origin (organ) sample ancestor of a given entities by uuids
 
     Parameters
     ----------
@@ -194,26 +157,37 @@ def get_bulk_origin_samples(neo4j_driver, uuids:List):
         The neo4j database connection pool
     uuids : List[str]
         A list of uuids to be filtered
+    is_bulk : bool
+        Whether to return the result for bulk processing
     Returns
     -------
     list
-        A list in the form of [{result:List, uuid:str}] where result is a list of results associated with the uuid
+        If is_bulk True A list in the form of [{result:List[dict], uuid:str}] where result is a list of results associated with the uuid
+        else a regular List[dict]
     """
     result = {}
 
+    return_part = 'return apoc.coll.toSet(COLLECT(s)) AS '
+    if is_bulk:
+        return_part = "With e, COLLECT(s) as list return collect(apoc.map.fromPairs([['uuid', e.uuid], ['result', list]])) AS "
+
     query = (f"MATCH (e:Entity)-[:WAS_GENERATED_BY|USED*]->(s:Sample) "
              f"WHERE e.uuid IN {uuids} and s.sample_category='Organ' "
-             f"With e, COLLECT(s) as list return collect(apoc.map.fromPairs([['uuid', e.uuid], ['result', list]])) AS {record_field_name}")
+             f"{return_part} {record_field_name}")
 
-    logger.info("======get_bulk_origin_samples() query======")
+    logger.info("======get_origin_samples() query======")
     logger.info(query)
 
     with neo4j_driver.session() as session:
         record = session.read_transaction(_execute_readonly_tx, query)
         if record and record[record_field_name]:
-            for r in record[record_field_name]:
-                r['result'] = _nodes_to_dicts(r['result'])
-            result = record[record_field_name]
+            if is_bulk:
+                for r in record[record_field_name]:
+                    r['result'] = _nodes_to_dicts(r['result'])
+                result = record[record_field_name]
+            else:
+                # Convert the entity node to dict
+                result = _nodes_to_dicts(record[record_field_name])
 
     return result
 
