@@ -2087,11 +2087,12 @@ def get_sources_associated_entity(neo4j_driver, uuid, filter_out = None):
 
     query_filter = ''
     if filter_out is not None:
-        query_filter = f" and not s.uuid in {filter_out}"
+        query_filter = f" and not t.uuid in {filter_out}"
 
-    query = (f"MATCH (e:Entity)-[*]->(s:Source) "
+    _activity_query_part = activity_query_part(for_all_match=True)
+    query = (f"MATCH (e:Entity)-[*]->(t:Source) "
              f"WHERE e.uuid = '{uuid}' {query_filter} "
-             f"RETURN apoc.coll.toSet(COLLECT(s))  as {record_field_name}")
+             f"{_activity_query_part} {record_field_name}")
 
     logger.info("=====get_sources_associated_dataset() query======")
     logger.info(query)
@@ -2101,7 +2102,7 @@ def get_sources_associated_entity(neo4j_driver, uuid, filter_out = None):
 
         if record and record[record_field_name]:
             # Convert the neo4j node into Python dict
-            results = nodes_to_dicts(record[record_field_name])
+            results = record[record_field_name]
 
         for result in results:
             if 'metadata' in result and result['metadata'] != '{}':
