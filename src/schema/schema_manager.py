@@ -1148,7 +1148,7 @@ def handle_bulk_triggers(token, entities_list):
                 msg = f"Failed to call the {TriggerTypeEnum.ON_BULK_READ.value} method: {trigger_method_name} \n {str(ex)}"
                 # Log the full stack trace, prepend a line with our message
                 logger.exception(msg)
-
+    _schema_triggers_bulk = {}
     return entities_list
 
 """
