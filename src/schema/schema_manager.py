@@ -1125,24 +1125,31 @@ def get_complete_entities_list(token, entities_list, properties_to_filter = [], 
         complete_entities_list.append(complete_entity_dict)
         _schema_triggers_bulk['current_index'] = _schema_triggers_bulk['current_index'] + 1
 
+    return handle_bulk_triggers(token, complete_entities_list)
+
+
+
+def handle_bulk_triggers(token, entities_list):
+    global _schema_triggers_bulk
+
     if _schema_triggers_bulk['groups'] != {}:
         for storage_key in _schema_triggers_bulk['groups']:
+            trigger_method_name = ''
             try:
                 uuids = list(_schema_triggers_bulk['groups'][storage_key])
                 bulk_meta_references = _schema_triggers_bulk['bulk_meta_references'][f"{uuids[0]}_{storage_key}"]
                 trigger_method_name = bulk_meta_references[2]
                 trigger_method_to_call = getattr(schema_triggers, trigger_method_name)
-                trigger_method_to_call(token, (storage_key, trigger_method_name), complete_entities_list)
+                trigger_method_to_call(token, (storage_key, bulk_meta_references[1], trigger_method_name), entities_list)
 
                 logger.info(f"To run {TriggerTypeEnum.ON_BULK_READ.value}: {trigger_method_name}")
 
-            except AttributeError:
-                msg = f"Failed to call the {TriggerTypeEnum.ON_BULK_READ.value} method"
+            except Exception as ex:
+                msg = f"Failed to call the {TriggerTypeEnum.ON_BULK_READ.value} method: {trigger_method_name} \n {str(ex)}"
                 # Log the full stack trace, prepend a line with our message
                 logger.exception(msg)
 
-    return complete_entities_list
-
+    return entities_list
 
 """
 Normalize the activity result by filtering out properties that are not defined in the yaml schema
@@ -1344,25 +1351,29 @@ def normalize_filtered_properties_response(entities_list:List, properties:Proper
 
     return normalized_entities_list
 
-"""
-Normalize the given list of complete entity results by removing properties that are not defined in the yaml schema
-and filter out the ones that are marked as `exposed: false` prior to sending the response
 
-Parameters
-----------
-entities_list : dict
-    A merged dictionary that contains all possible data to be used by the trigger methods
-properties_to_exclude : list
-    Any additional properties to exclude from the response
-
-Returns
--------
-list
-    A list of normalzied entity dictionaries
-"""
 
 
 def normalize_entities_list_for_response(entities_list:List, properties_to_exclude=[], properties_to_include=[]):
+    """
+    Normalize the given list of complete entity results by removing properties that are not defined in the yaml schema
+    and filter out the ones that are marked as `exposed: false` prior to sending the response
+
+    Parameters
+    ----------
+    entities_list : dict
+        A merged dictionary that contains all possible data to be used by the trigger methods
+    properties_to_exclude : list
+        Any additional properties to exclude from the response
+    properties_to_include : list
+        Any additional properties to include in the response
+
+    Returns
+    -------
+    list
+        A list of normalized entity dictionaries
+    """
+
     if len(entities_list) <= 0:
         return []
 

@@ -185,7 +185,20 @@ def get_origin_samples(neo4j_driver, uuid):
     return result
 
 
-def get_bulk_origin_samples(neo4j_driver, uuids):
+def get_bulk_origin_samples(neo4j_driver, uuids:List):
+    """
+
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    uuids : List[str]
+        A list of uuids to be filtered
+    Returns
+    -------
+    list
+        A list in the form of [{result:List, uuid:str}] where result is a list of results associated with the uuid
+    """
     result = {}
 
     query = (f"MATCH (e:Entity)-[:WAS_GENERATED_BY|USED*]->(s:Sample) "
