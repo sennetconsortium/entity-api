@@ -1846,7 +1846,7 @@ def get_bulk_origin_samples(user_token, bulk_keys, entities_list):
             # handle the ones that are sample_category of Organs, they are the origin_samples of themselves
             if equals(existing_data_dict.get("sample_category"), Ontology.ops().specimen_categories().ORGAN):
                 _get_organ_hierarchy(existing_data_dict)
-                existing_data_dict[property_key] = [existing_data_dict]
+                existing_data_dict[property_key] = [copy.deepcopy(existing_data_dict)]
             # otherwise store for later cypher query
             elif existing_data_dict['entity_type'] in ["Sample", "Dataset", "Publication"]:
                 uuids.append(existing_data_dict['uuid'])

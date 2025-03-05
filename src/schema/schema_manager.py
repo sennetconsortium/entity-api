@@ -719,7 +719,7 @@ def generate_triggered_data(trigger_type: TriggerTypeEnum, normalized_class, use
                         # We can't create/update the entity
                         # without successfully executing this trigger method
                         raise schema_errors.BeforeUpdateTriggerException
-            elif trigger_type in [TriggerTypeEnum.ON_READ] and TriggerTypeEnum.ON_BULK_READ.value in properties[key]:
+            elif trigger_type in [TriggerTypeEnum.ON_READ] and TriggerTypeEnum.ON_BULK_READ.value in properties[key] and 'groups' in _schema_triggers_bulk:
                 trigger_method_name = properties[key][TriggerTypeEnum.ON_BULK_READ.value]
                 storage_key = f"{key}_{trigger_method_name}"
                 if storage_key not in _schema_triggers_bulk['groups']:
