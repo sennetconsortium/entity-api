@@ -1,6 +1,3 @@
-import ast
-from xml.sax.handler import all_properties
-
 import yaml
 import logging
 import requests
