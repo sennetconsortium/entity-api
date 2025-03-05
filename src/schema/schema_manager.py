@@ -375,7 +375,7 @@ def get_fields_to_exclude(normalized_class=None):
     return excluded_fields
 
 
-def get_schema_defaults(properties, is_include_action = True, target_entity_type = 'Any'):
+def get_schema_defaults(properties = [], is_include_action = True, target_entity_type = 'Any'):
     """
     Adds entity defaults to list
 
@@ -1257,7 +1257,7 @@ def normalize_filtered_properties_object_response(entity_dict, property_groups:P
         # Only return the properties defined in the schema yaml
         # Exclude additional properties if specified
         if (key in properties) or (check_activity_list and (_key in activity_properties) ):
-            if (is_include_action and _key in properties_to_filter) or (is_include_action is False and _key not in properties_to_filter):
+            if (is_include_action and _key in properties_to_filter) or (is_include_action is False and _key not in properties_to_filter) or (key in get_schema_defaults()):
 
                 if entity_dict[key] and (_key in properties and properties[_key]['type'] in ['list', 'json_string']):
                     # Safely evaluate a string containing a Python dict or list literal
