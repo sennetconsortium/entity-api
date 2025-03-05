@@ -1199,6 +1199,7 @@ def normalize_object_result_for_response(provenance_type='ENTITIES', entity_dict
                     # By default, all properties are exposed
                     # It's possible to see `exposed: true`
                     or (not is_strict and key in properties and properties[key].get('exposed', True))
+                        # any activity properties in the dict will need to be returned even if not listed in PropertyGroups
                         or (_key in activity_properties and activity_properties[_key].get('exposed', True))
             ):
 
