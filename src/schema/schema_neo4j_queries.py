@@ -167,12 +167,16 @@ def get_origin_samples(neo4j_driver, uuids:List, is_bulk = True):
     """
     result = {}
 
-    return_part = 'return apoc.coll.toSet(COLLECT(s)) AS '
+
+    activity_grab_part = f"WITH e, s, apoc.map.fromPairs([['protocol_url', a.protocol_url], ['creation_action', a.creation_action]]) as a2 WITH e, apoc.map.merge(s,a2) as x  "
+    return_part = f"{activity_grab_part} RETURN apoc.coll.toSet(COLLECT(x)) AS "
     if is_bulk:
-        return_part = "With e, COLLECT(s) as list return collect(apoc.map.fromPairs([['uuid', e.uuid], ['result', list]])) AS "
+        return_part = (f"{activity_grab_part} "
+                       "WITH e, COLLECT(x) as list return collect(apoc.map.fromPairs([['uuid', e.uuid], ['result', list]])) AS ")
 
     query = (f"MATCH (e:Entity)-[:WAS_GENERATED_BY|USED*]->(s:Sample) "
              f"WHERE e.uuid IN {uuids} and s.sample_category='Organ' "
+             "MATCH (e2:Entity)-[:WAS_GENERATED_BY]->(a:Activity) WHERE e2.uuid = s.uuid "
              f"{return_part} {record_field_name}")
 
     logger.info("======get_origin_samples() query======")
@@ -1130,12 +1134,13 @@ def get_sample_direct_ancestor(neo4j_driver, uuid, property_key=None):
                  # apoc.coll.toSet() reruns a set containing unique nodes
                  f"RETURN parent.{property_key} AS {record_field_name}")
     else:
-        query = (f"MATCH (e:Entity)-[:WAS_GENERATED_BY]->(:Activity)-[:USED]->(parent:Entity) "
+        _activity_query_part = activity_query_part(for_all_match=True)
+        query = (f"MATCH (e:Entity)-[:WAS_GENERATED_BY]->(:Activity)-[:USED]->(t:Entity) "
                  # Filter out the Lab entity if it's the ancestor
-                 f"WHERE e.uuid='{uuid}' AND parent.entity_type <> 'Lab' "
+                 f"WHERE e.uuid='{uuid}' AND t.entity_type <> 'Lab' "
                  # COLLECT() returns a list
                  # apoc.coll.toSet() reruns a set containing unique nodes
-                 f"RETURN parent AS {record_field_name}")
+                 f"{_activity_query_part} {record_field_name}")
 
     logger.info("======get_sample_direct_ancestor() query======")
     logger.info(query)
@@ -1148,7 +1153,7 @@ def get_sample_direct_ancestor(neo4j_driver, uuid, property_key=None):
                 result = record[record_field_name]
             else:
                 # Convert the entity node to dict
-                result = _node_to_dict(record[record_field_name])
+                result = record[record_field_name][0]
 
     return result
 
@@ -2093,11 +2098,12 @@ def get_sources_associated_entity(neo4j_driver, uuid, filter_out = None):
 
     query_filter = ''
     if filter_out is not None:
-        query_filter = f" and not s.uuid in {filter_out}"
+        query_filter = f" and not t.uuid in {filter_out}"
 
-    query = (f"MATCH (e:Entity)-[*]->(s:Source) "
+    _activity_query_part = activity_query_part(for_all_match=True)
+    query = (f"MATCH (e:Entity)-[*]->(t:Source) "
              f"WHERE e.uuid = '{uuid}' {query_filter} "
-             f"RETURN apoc.coll.toSet(COLLECT(s))  as {record_field_name}")
+             f"{_activity_query_part} {record_field_name}")
 
     logger.info("=====get_sources_associated_dataset() query======")
     logger.info(query)
@@ -2107,7 +2113,7 @@ def get_sources_associated_entity(neo4j_driver, uuid, filter_out = None):
 
         if record and record[record_field_name]:
             # Convert the neo4j node into Python dict
-            results = nodes_to_dicts(record[record_field_name])
+            results = record[record_field_name]
 
         for result in results:
             if 'metadata' in result and result['metadata'] != '{}':
