@@ -17,8 +17,6 @@ from pathlib import Path
 import logging
 import json
 
-from werkzeug.middleware.profiler import ProfilerMiddleware
-
 from lib.constraints import get_constraints_by_ancestor, get_constraints_by_descendant, build_constraint, \
     build_constraint_unit
 
@@ -30,7 +28,6 @@ from pymemcache import serde
 # Local modules
 import app_neo4j_queries
 import provenance
-from lib.property_groups import PropertyGroups
 from schema import schema_manager, schema_validators, schema_triggers
 from schema import schema_errors
 from schema import schema_neo4j_queries
@@ -70,7 +67,6 @@ logger = logging.getLogger()
 # Specify the absolute path of the instance folder and use the config file relative to the instance path
 app = Flask(__name__, instance_path=os.path.join(os.path.abspath(os.path.dirname(__file__)), 'instance'), instance_relative_config=True)
 app.config.from_pyfile('app.cfg')
-app.wsgi_app = ProfilerMiddleware(app.wsgi_app, profile_dir='/Users/LIB118/Work/logs/cprofile/test2')
 
 # Remove trailing slash / from URL base to avoid "//" caused by config with trailing slash
 app.config['UUID_API_URL'] = app.config['UUID_API_URL'].strip('/')
