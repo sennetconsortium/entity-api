@@ -611,9 +611,8 @@ ENTITIES:
         type: string
         transient: true
         immutable: true
-        on_read_trigger: get_creation_action_activity
-        on_index_trigger: get_creation_action_activity
         description: "The activity that was performed."
+        use_activity_value: true
         before_property_create_validators:
           - validate_creation_action
       dataset_category:
@@ -663,6 +662,9 @@ ENTITIES:
         description: "The modified and mapped metadata returned from the processing at data submission time."
         on_read_trigger: get_cedar_mapped_metadata
         on_index_trigger: get_cedar_mapped_metadata
+        dependency_properties:
+          - ingest_metadata
+          - metadata
       sources:
         type: list
         generated: true
@@ -722,8 +724,6 @@ ENTITIES:
         transient: true
         generated: true
         immutable: true
-        on_read_trigger: get_creation_action_activity
-        on_index_trigger: get_creation_action_activity
         description: "The activity that was performed."
       dataset_type:
         before_create_trigger: set_publication_dataset_type

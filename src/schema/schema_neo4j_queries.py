@@ -6,6 +6,8 @@ import schema.schema_manager
 from lib.property_groups import PropertyGroups
 import json
 
+from schema import schema_manager
+
 logger = logging.getLogger(__name__)
 
 # The filed name of the single result record
@@ -1030,9 +1032,10 @@ def get_upload_datasets(neo4j_driver, uuid, query_filter='', properties: Union[P
                  f"WHERE s.uuid = '{uuid}' {query_filter} "
                  f"{exclude_include_query_part(properties, is_include_action, target_entity_type = 'Dataset')}")
     else:
-        query = (f"MATCH (e:Dataset)-[:IN_UPLOAD]->(s:Upload) "
+        _activity_query_part = activity_query_part(for_all_match=True)
+        query = (f"MATCH (t:Dataset)-[:IN_UPLOAD]->(s:Upload) "
                  f"WHERE s.uuid = '{uuid}' {query_filter} "
-                 f"RETURN apoc.coll.toSet(COLLECT(e)) AS {record_field_name}")
+                 f"{_activity_query_part} {record_field_name}")
 
     logger.info("======get_upload_datasets() query======")
     logger.info(query)
@@ -1041,12 +1044,8 @@ def get_upload_datasets(neo4j_driver, uuid, query_filter='', properties: Union[P
         record = session.read_transaction(execute_readonly_tx, query)
 
         if record and record[record_field_name]:
-            if is_filtered:
-                # Just return the list of property values from each entity node
-                results = record[record_field_name]
-            else:
-                # Convert the list of nodes to a list of dicts
-                results = nodes_to_dicts(record[record_field_name])
+            # Just return the list of property values from each entity node
+            results = record[record_field_name]
 
     return results
 
@@ -2085,11 +2084,12 @@ def get_sources_associated_entity(neo4j_driver, uuid, filter_out = None):
 
     query_filter = ''
     if filter_out is not None:
-        query_filter = f" and not s.uuid in {filter_out}"
+        query_filter = f" and not t.uuid in {filter_out}"
 
-    query = (f"MATCH (e:Entity)-[*]->(s:Source) "
+    _activity_query_part = activity_query_part(for_all_match=True)
+    query = (f"MATCH (e:Entity)-[*]->(t:Source) "
              f"WHERE e.uuid = '{uuid}' {query_filter} "
-             f"RETURN apoc.coll.toSet(COLLECT(s))  as {record_field_name}")
+             f"{_activity_query_part} {record_field_name}")
 
     logger.info("=====get_sources_associated_dataset() query======")
     logger.info(query)
@@ -2099,7 +2099,7 @@ def get_sources_associated_entity(neo4j_driver, uuid, filter_out = None):
 
         if record and record[record_field_name]:
             # Convert the neo4j node into Python dict
-            results = nodes_to_dicts(record[record_field_name])
+            results = record[record_field_name]
 
         for result in results:
             if 'metadata' in result and result['metadata'] != '{}':
@@ -2127,10 +2127,11 @@ def activity_query_part(properties = None, for_all_match = False):
         A string if using a grab all query, OR
         tuple for exclude_include_query_part with [0] Additional MATCH, [1] map pair query parts for apoc.map.fromPairs, [2] and 'a' variable to use in WITH statements
     """
+
     query_match_part = f"MATCH (e2:Entity)-[:WAS_GENERATED_BY]->(a:Activity) WHERE e2.uuid = t.uuid"
 
     if for_all_match:
-        query_match_part = query_match_part + f" WITH t, apoc.map.fromPairs([['protocol_url', a.protocol_url]]) as a2 WITH apoc.map.merge(t,a2) as x RETURN apoc.coll.toSet(COLLECT(x)) AS "
+        query_match_part = query_match_part + f" WITH t, apoc.map.fromPairs([['protocol_url', a.protocol_url], ['creation_action', a.creation_action]]) as a2 WITH apoc.map.merge(t,a2) as x RETURN apoc.coll.toSet(COLLECT(x)) AS "
         return query_match_part
 
     def _query_grab_part(_properties, grab_part):
@@ -2142,8 +2143,10 @@ def activity_query_part(properties = None, for_all_match = False):
             elif p in properties.activity_list:
                 val_part = f'apoc.convert.fromJsonList({val_part})'
 
+            name_part = p
             # handle name collision for activity and entity
-            name_part = f'activity_{p}' if p in (properties.neo4j + properties.dependency) else p
+            if p in (properties.neo4j + properties.dependency) and len(schema_manager.get_schema_properties()[p]['use_activity_value']) <= 0:
+                name_part = f'activity_{p}'
 
             grab_part = grab_part + f", ['{name_part}', {val_part}]"
 

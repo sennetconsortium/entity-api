@@ -1,4 +1,3 @@
-import ast
 import yaml
 import logging
 import requests
@@ -149,6 +148,9 @@ def load_provenance_schema(valid_yaml_file):
             schema_dict['ENTITIES'][entity]['properties'] = remove_none_values(schema_dict['ENTITIES'][entity]['properties'])
         return schema_dict
 
+def get_schema_properties():
+    global _schema_properties
+    return _schema_properties
 
 def group_schema_properties_by_name():
     """
@@ -174,12 +176,16 @@ def group_schema_properties_by_name():
                 schema_properties_by_name[p]['neo4j'] = set()
                 schema_properties_by_name[p]['json_string'] = set()
                 schema_properties_by_name[p]['list'] = set()
+                schema_properties_by_name[p]['use_activity_value'] = set()
                 schema_properties_by_name[p]['dependencies'].update(entity_properties[p].get('dependency_properties', []))
 
             if 'on_read_trigger' in entity_properties[p]:
                 schema_properties_by_name[p]['trigger'].add(entity)
             else:
                 schema_properties_by_name[p]['neo4j'].add(entity)
+
+                if 'use_activity_value' in entity_properties[p]:
+                    schema_properties_by_name[p]['use_activity_value'].add(entity)
 
                 if 'type' in entity_properties[p]:
                     if entity_properties[p]['type'] == 'json_string':
@@ -368,7 +374,7 @@ def get_fields_to_exclude(normalized_class=None):
     return excluded_fields
 
 
-def get_schema_defaults(properties, is_include_action = True, target_entity_type = 'Any'):
+def get_schema_defaults(properties = [], is_include_action = True, target_entity_type = 'Any'):
     """
     Adds entity defaults to list
 
@@ -1134,62 +1140,67 @@ def normalize_activity_result_for_response(activity_dict, properties_to_exclude=
     return normalized_activity
 
 
-"""
-Normalize the entity result by filtering out properties that are not defined in the yaml schema
-and the ones that are marked as `exposed: false` prior to sending the response
 
-Parameters
-----------
-entity_dict : dict
-    A merged dictionary that contains all possible data to be used by the trigger methods
-properties_to_exclude : list
-    Any additional properties to exclude from the response
+def normalize_object_result_for_response(provenance_type='ENTITIES', entity_dict=None, property_groups:PropertyGroups = PropertyGroups(), is_include_action=True, is_strict = False):
+    """
 
-Returns
--------
-dict
-    A entity dictionary with keys that are all normalized
-"""
+    Parameters
+    ----------
+    entity_dict : dict
+        The entity dictionary to normalize
+    property_groups : PropertyGroups
+        A list of property keys to filter in or out from the normalized results, default is []
+    is_include_action : bool
+        Whether to include or exclude the listed properties
+    provenance_type : str
+        The provenance type of the object
+    is_strict : bool
+        Determines whether to liberally return other exposed properties not necessarily listed in PropertyGroups instance
 
+    Returns
+    -------
 
-def normalize_object_result_for_response(provenance_type, entity_dict, properties_to_exclude=[],
-                                         properties_to_include=[]):
+    """
+    if entity_dict is None:
+        entity_dict = {}
     global _schema
 
     normalized_entity = {}
     properties = []
+    activity_properties = _schema['ACTIVITIES']['Activity']['properties']
+    properties_to_filter = list(set(property_groups.neo4j + property_groups.trigger + property_groups.activity_neo4j + property_groups.activity_trigger))
+
+    check_activity_list = not is_strict
+    if len(property_groups.activity_neo4j + property_groups.activity_trigger) > 0:
+        check_activity_list = True
 
     # In case entity_dict is None or
     # an incorrectly created entity that doesn't have the `entity_type` property
     if entity_dict and ('entity_type' in entity_dict):
         normalized_entity_type = entity_dict['entity_type']
         properties = get_entity_properties(_schema[provenance_type], normalized_entity_type)
-    elif provenance_type == 'ACTIVITIES':
-        properties = _schema[provenance_type]['Activity']['properties']
     else:
         logger.error(f"Unable to normalize object result with"
                      f" entity_dict={str(entity_dict)} and"
                      f" provenance_type={provenance_type}.")
-        raise schema_errors.SchemaValidationException("Unable to normalize object.  See logs.")
+        raise schema_errors.SchemaValidationException("Unable to normalize object, missing entity_type.")
 
     for key in entity_dict:
+        _key = key.replace('activity_', '')
         # Only return the properties defined in the schema yaml
         # Exclude additional properties if specified
-        if (key in properties) and (key not in properties_to_exclude) or (key in properties_to_include):
-            if key in properties_to_include:
-                # Add the target key with correct value of data type to the normalized_entity dict
-                normalized_entity[key] = entity_dict[key]
+        if (key in properties) or (check_activity_list and (_key in activity_properties) ):
+            if ((is_include_action and _key in properties_to_filter)
+                    or (is_include_action is False and _key not in properties_to_filter)
+                    or (key in get_schema_defaults())
+                    # By default, all properties are exposed
+                    # It's possible to see `exposed: true`
+                    or (not is_strict and key in properties and properties[key].get('exposed', True))
+                        # any activity properties in the dict will need to be returned even if not listed in PropertyGroups
+                        or (_key in activity_properties and activity_properties[_key].get('exposed', True))
+            ):
 
-                # Final step: remove properties with empty string value, empty dict {}, and empty list []
-                if (isinstance(normalized_entity[key], (str, dict, list)) and (not normalized_entity[key])):
-                    normalized_entity.pop(key)
-
-            # Skip properties with None value and the ones that are marked as not to be exposed.
-            # By default, all properties are exposed if not marked as `exposed: false`
-            # It's still possible to see `exposed: true` marked explictly
-            elif (entity_dict[key] is not None) and ('exposed' not in properties[key]) or (
-                    ('exposed' in properties[key]) and properties[key]['exposed']):
-                if entity_dict[key] and (properties[key]['type'] in ['list', 'json_string']):
+                if entity_dict[key] and (_key in properties and properties[_key]['type'] in ['list', 'json_string']):
                     # Safely evaluate a string containing a Python dict or list literal
                     # Only convert to Python list/dict when the string literal is not empty
                     # instead of returning the json-as-string or array-as-string
@@ -1204,26 +1215,24 @@ def normalize_object_result_for_response(provenance_type, entity_dict, propertie
 
     return normalized_entity
 
+def normalize_entities_list_for_response(entities_list:List, property_groups:PropertyGroups = PropertyGroups(), is_include_action=True, is_strict = False):
+    """
 
-"""
-Normalize the given list of complete entity results by removing properties that are not defined in the yaml schema
-and filter out the ones that are marked as `exposed: false` prior to sending the response
+    Parameters
+    ----------
+    entities_list :
+        List of entities to normalize
+    property_groups : PropertyGroups
+        A list of property keys to filter in or out from the normalized results, default is []
+    is_include_action : bool
+        Whether to include or exclude the listed properties
+    is_strict : bool
+        Determines whether to liberally return other exposed properties not necessarily listed in PropertyGroups instance
 
-Parameters
-----------
-entities_list : dict
-    A merged dictionary that contains all possible data to be used by the trigger methods
-properties_to_exclude : list
-    Any additional properties to exclude from the response
+    Returns
+    -------
 
-Returns
--------
-list
-    A list of normalzied entity dictionaries
-"""
-
-
-def normalize_entities_list_for_response(entities_list:List, properties_to_exclude=[], properties_to_include=[]):
+    """
     if len(entities_list) <= 0:
         return []
 
@@ -1233,11 +1242,11 @@ def normalize_entities_list_for_response(entities_list:List, properties_to_exclu
     normalized_entities_list = []
 
     for entity_dict in entities_list:
-        normalized_entity_dict = normalize_object_result_for_response('ENTITIES', entity_dict, properties_to_exclude,
-                                                                      properties_to_include)
+        normalized_entity_dict = normalize_object_result_for_response(entity_dict=entity_dict, property_groups=property_groups, is_include_action=is_include_action, is_strict=is_strict)
         normalized_entities_list.append(normalized_entity_dict)
 
     return normalized_entities_list
+
 
 
 def remove_unauthorized_fields_from_response(entities_list:List, unauthorized:bool):
