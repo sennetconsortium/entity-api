@@ -50,7 +50,7 @@ _ubkg = None
 _memcached_client = None
 _memcached_prefix = None
 _schema_properties = {}
-_schema_triggers_meta = {}
+_schema_triggers_bulk = {}
 
 # For handling cached requests to uuid-api and external static resources (github raw yaml files)
 request_cache = {}
@@ -153,6 +153,18 @@ def load_provenance_schema(valid_yaml_file):
 def get_schema_properties():
     global _schema_properties
     return _schema_properties
+
+def get_schema_triggers_bulk():
+    global _schema_triggers_bulk
+    return _schema_triggers_bulk
+
+def init_schema_bulk_triggers():
+    global _schema_triggers_bulk
+    _schema_triggers_bulk = {
+        'groups': {},
+        'bulk_meta_references': {},
+        'results': {}
+    }
 
 def group_schema_properties_by_name():
     """
@@ -376,7 +388,7 @@ def get_fields_to_exclude(normalized_class=None):
     return excluded_fields
 
 
-def get_schema_defaults(properties, is_include_action = True, target_entity_type = 'Any'):
+def get_schema_defaults(properties = [], is_include_action = True, target_entity_type = 'Any'):
     """
     Adds entity defaults to list
 
@@ -593,6 +605,7 @@ def generate_triggered_data(trigger_type: TriggerTypeEnum, normalized_class, use
     """
 
     global _schema
+    global _schema_triggers_bulk
 
     schema_section = None
 
@@ -706,6 +719,13 @@ def generate_triggered_data(trigger_type: TriggerTypeEnum, normalized_class, use
                         # We can't create/update the entity
                         # without successfully executing this trigger method
                         raise schema_errors.BeforeUpdateTriggerException
+            elif trigger_type in [TriggerTypeEnum.ON_READ] and TriggerTypeEnum.ON_BULK_READ.value in properties[key]:
+                trigger_method_name = properties[key][TriggerTypeEnum.ON_BULK_READ.value]
+                storage_key = f"{key}_{trigger_method_name}"
+                if storage_key not in _schema_triggers_bulk['groups']:
+                    _schema_triggers_bulk['groups'][storage_key] = set()
+                _schema_triggers_bulk['groups'][storage_key].add(existing_data_dict['uuid'])
+                _schema_triggers_bulk['bulk_meta_references'][f"{existing_data_dict['uuid']}_{storage_key}"] = [_schema_triggers_bulk['current_index'], key, trigger_method_name]
             else:
                 # Handling of all other trigger types: before_create_trigger|on_read_trigger
                 trigger_method_name = properties[key][trigger_type.value]
@@ -1095,11 +1115,31 @@ list
 
 
 def get_complete_entities_list(token, entities_list, properties_to_filter = [], is_include_action=False, use_memcache=True):
+    global _schema_triggers_bulk
     complete_entities_list = []
+    init_schema_bulk_triggers()
+    _schema_triggers_bulk['current_index'] = 0
 
     for entity_dict in entities_list:
         complete_entity_dict = get_complete_entity_result(token, entity_dict, properties_to_filter, is_include_action=is_include_action, use_memcache=use_memcache)
         complete_entities_list.append(complete_entity_dict)
+        _schema_triggers_bulk['current_index'] = _schema_triggers_bulk['current_index'] + 1
+
+    if _schema_triggers_bulk['groups'] != {}:
+        for storage_key in _schema_triggers_bulk['groups']:
+            try:
+                uuids = list(_schema_triggers_bulk['groups'][storage_key])
+                bulk_meta_references = _schema_triggers_bulk['bulk_meta_references'][f"{uuids[0]}_{storage_key}"]
+                trigger_method_name = bulk_meta_references[2]
+                trigger_method_to_call = getattr(schema_triggers, trigger_method_name)
+                trigger_method_to_call(token, (storage_key, trigger_method_name), complete_entities_list)
+
+                logger.info(f"To run {TriggerTypeEnum.ON_BULK_READ.value}: {trigger_method_name}")
+
+            except AttributeError:
+                msg = f"Failed to call the {TriggerTypeEnum.ON_BULK_READ.value} method"
+                # Log the full stack trace, prepend a line with our message
+                logger.exception(msg)
 
     return complete_entities_list
 
@@ -1257,7 +1297,7 @@ def normalize_filtered_properties_object_response(entity_dict, property_groups:P
         # Only return the properties defined in the schema yaml
         # Exclude additional properties if specified
         if (key in properties) or (check_activity_list and (_key in activity_properties) ):
-            if (is_include_action and _key in properties_to_filter) or (is_include_action is False and _key not in properties_to_filter):
+            if (is_include_action and _key in properties_to_filter) or (is_include_action is False and _key not in properties_to_filter) or (key in get_schema_defaults()):
 
                 if entity_dict[key] and (_key in properties and properties[_key]['type'] in ['list', 'json_string']):
                     # Safely evaluate a string containing a Python dict or list literal

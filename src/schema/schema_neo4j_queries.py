@@ -185,6 +185,25 @@ def get_origin_samples(neo4j_driver, uuid):
     return result
 
 
+def get_bulk_origin_samples(neo4j_driver, uuids):
+    result = {}
+
+    query = (f"MATCH (e:Entity)-[:WAS_GENERATED_BY|USED*]->(s:Sample) "
+             f"WHERE e.uuid IN {uuids} and s.sample_category='Organ' "
+             f"With e, COLLECT(s) as list return collect(apoc.map.fromPairs([['uuid', e.uuid], ['result', list]])) AS {record_field_name}")
+
+    logger.info("======get_bulk_origin_samples() query======")
+    logger.info(query)
+
+    with neo4j_driver.session() as session:
+        record = session.read_transaction(_execute_readonly_tx, query)
+        if record and record[record_field_name]:
+            for r in record[record_field_name]:
+                r['result'] = _nodes_to_dicts(r['result'])
+            result = record[record_field_name]
+
+    return result
+
 """
 Get the sample organ name and source metadata information of the given dataset uuid
 
