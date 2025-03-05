@@ -1066,9 +1066,10 @@ def get_upload_datasets(neo4j_driver, uuid, query_filter='', properties: Union[P
                  f"WHERE s.uuid = '{uuid}' {query_filter} "
                  f"{exclude_include_query_part(properties, is_include_action, target_entity_type = 'Dataset')}")
     else:
-        query = (f"MATCH (e:Dataset)-[:IN_UPLOAD]->(s:Upload) "
+        _activity_query_part = activity_query_part(for_all_match=True)
+        query = (f"MATCH (t:Dataset)-[:IN_UPLOAD]->(s:Upload) "
                  f"WHERE s.uuid = '{uuid}' {query_filter} "
-                 f"RETURN apoc.coll.toSet(COLLECT(e)) AS {record_field_name}")
+                 f"{_activity_query_part} {record_field_name}")
 
     logger.info("======get_upload_datasets() query======")
     logger.info(query)
@@ -1077,12 +1078,8 @@ def get_upload_datasets(neo4j_driver, uuid, query_filter='', properties: Union[P
         record = session.read_transaction(execute_readonly_tx, query)
 
         if record and record[record_field_name]:
-            if is_filtered:
-                # Just return the list of property values from each entity node
-                results = record[record_field_name]
-            else:
-                # Convert the list of nodes to a list of dicts
-                results = nodes_to_dicts(record[record_field_name])
+            # Just return the list of property values from each entity node
+            results = record[record_field_name]
 
     return results
 
