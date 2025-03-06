@@ -477,13 +477,8 @@ def get_ancestor_organs(id):
     complete_entities_list = schema_manager.get_complete_entities_list(token, organs, properties_to_skip, use_memcache=True)
 
     # Final result after normalization
-    final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list)
-
-    if public_entity and not user_in_sennet_read_group(request):
-        filtered_organs_list = []
-        for organ in final_result:
-            filtered_organs_list.append(schema_manager.exclude_properties_from_response(excluded_fields, organ))
-        final_result = filtered_organs_list
+    _final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list)
+    final_result = schema_manager.remove_unauthorized_fields_from_response(_final_result, not user_in_sennet_read_group(request))
 
     return jsonify(final_result)
 
