@@ -725,6 +725,7 @@ ENTITIES:
         transient: true
         generated: true
         immutable: true
+        use_activity_value_if_null: true
         description: "The activity that was performed."
       dataset_type:
         before_create_trigger: set_publication_dataset_type
