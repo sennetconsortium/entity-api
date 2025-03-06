@@ -1086,7 +1086,7 @@ def _get_metadata_result(token, entity_dict, metadata_scope:MetadataScopeEnum, p
     return metadata_dict
 
 
-def get_complete_entities_list(token, entities_list, properties_to_filter = [], is_include_action=False, use_memcache=True):
+def get_complete_entities_list(token, entities_list, properties_to_filter:List = [], is_include_action=False, use_memcache=True):
     """
     Generate the complete entity records as well as result filtering for response
 
@@ -1098,6 +1098,10 @@ def get_complete_entities_list(token, entities_list, properties_to_filter = [], 
         A list of entity dictionaries
     properties_to_filter : list
         Any properties to skip running triggers
+    is_include_action : bool
+        Whether to include or exclude the listed properties
+    use_memcache : bool
+        Whether to use a cached result or not
 
     Returns
     -------
