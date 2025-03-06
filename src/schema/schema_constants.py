@@ -61,3 +61,4 @@ class TriggerTypeEnum(Enum):
     BEFORE_UPDATE = 'before_update_trigger'
     AFTER_CREATE = 'after_create_trigger'
     AFTER_UPDATE = 'after_update_trigger'
+    ON_BULK_READ = 'on_bulk_read_trigger'

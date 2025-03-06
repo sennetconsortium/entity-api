@@ -611,9 +611,8 @@ ENTITIES:
         type: string
         transient: true
         immutable: true
-        on_read_trigger: get_creation_action_activity
-        on_index_trigger: get_creation_action_activity
         description: "The activity that was performed."
+        use_activity_value_if_null: true
         before_property_create_validators:
           - validate_creation_action
       dataset_category:
@@ -632,6 +631,7 @@ ENTITIES:
         type: json_string
         transient: true
         description: 'The Sample ancestors that has the sample_category of "Organ".'
+        on_bulk_read_trigger: get_bulk_origin_samples
         on_read_trigger: get_origin_samples
         on_index_trigger: get_origin_samples
       assigned_to_group_name:
@@ -663,6 +663,9 @@ ENTITIES:
         description: "The modified and mapped metadata returned from the processing at data submission time."
         on_read_trigger: get_cedar_mapped_metadata
         on_index_trigger: get_cedar_mapped_metadata
+        dependency_properties:
+          - ingest_metadata
+          - metadata
       sources:
         type: list
         generated: true
@@ -722,8 +725,7 @@ ENTITIES:
         transient: true
         generated: true
         immutable: true
-        on_read_trigger: get_creation_action_activity
-        on_index_trigger: get_creation_action_activity
+        use_activity_value_if_null: true
         description: "The activity that was performed."
       dataset_type:
         before_create_trigger: set_publication_dataset_type
@@ -987,6 +989,7 @@ ENTITIES:
         type: string
         generated: true
         description: 'The name of the top level of the hierarchy this organ belongs to based on its laterality.'
+        on_read_trigger: get_organ_hierarchy
         on_index_trigger: get_organ_hierarchy
       organ_other:
         type: string
@@ -1025,6 +1028,7 @@ ENTITIES:
         type: json_string
         transient: true
         description: 'The list of Sample ancestors that has the sample_category of "Organ".'
+        on_bulk_read_trigger: get_bulk_origin_samples
         on_read_trigger: get_origin_samples
         on_index_trigger: get_origin_samples
       next_identifier:

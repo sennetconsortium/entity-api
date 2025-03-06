@@ -8,6 +8,7 @@ filters = {
         "lab_tissue_sample_id",
         "lab_dataset_id",
         "origin_samples",
+        "organ_hierarchy",
         "creation_action",
         "files",
         "metadata",
