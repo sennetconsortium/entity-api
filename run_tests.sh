@@ -33,7 +33,6 @@ echo "Running tests"
 UBKG_SERVER=$UBKG_SERVER \
 UBKG_ENDPOINT_VALUESET=$UBKG_ENDPOINT_VALUESET \
 UBKG_CODES=$UBKG_CODES \
-# pytest -s -W ignore::DeprecationWarning
 pytest -W ignore::DeprecationWarning
 
 # Restore the original config file
