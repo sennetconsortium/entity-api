@@ -2153,7 +2153,7 @@ def activity_query_part(properties = None, for_all_match = False):
 
             name_part = p
             # handle name collision for activity and entity
-            use_activity_value_count = len(schema_manager.get_schema_properties()[p].get('use_activity_value_if_null', []))
+            use_activity_value_count = len(schema_manager.get_schema_properties().get(p, {}).get('use_activity_value_if_null', []))
             if p in (properties.neo4j + properties.dependency):
                 if use_activity_value_count <= 0:
                     name_part = f'activity_{p}'
