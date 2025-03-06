@@ -612,7 +612,7 @@ ENTITIES:
         transient: true
         immutable: true
         description: "The activity that was performed."
-        use_activity_value: true
+        use_activity_value_if_null: true
         before_property_create_validators:
           - validate_creation_action
       dataset_category:

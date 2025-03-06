@@ -180,7 +180,7 @@ def group_schema_properties_by_name():
                 schema_properties_by_name[p]['neo4j'] = set()
                 schema_properties_by_name[p]['json_string'] = set()
                 schema_properties_by_name[p]['list'] = set()
-                schema_properties_by_name[p]['use_activity_value'] = set()
+                schema_properties_by_name[p]['use_activity_value_if_null'] = set()
                 schema_properties_by_name[p]['dependencies'].update(entity_properties[p].get('dependency_properties', []))
 
             if 'on_read_trigger' in entity_properties[p] or 'on_bulk_read_trigger' in entity_properties[p]:
@@ -188,8 +188,8 @@ def group_schema_properties_by_name():
             else:
                 schema_properties_by_name[p]['neo4j'].add(entity)
 
-                if 'use_activity_value' in entity_properties[p]:
-                    schema_properties_by_name[p]['use_activity_value'].add(entity)
+                if 'use_activity_value_if_null' in entity_properties[p]:
+                    schema_properties_by_name[p]['use_activity_value_if_null'].add(entity)
 
                 if 'type' in entity_properties[p]:
                     if entity_properties[p]['type'] == 'json_string':
@@ -1276,7 +1276,7 @@ def normalize_entities_list_for_response(entities_list:List, property_groups:Pro
 
     Parameters
     ----------
-    entities_list :
+    entities_list : List[dict]
         List of entities to normalize
     property_groups : PropertyGroups
         A list of property keys to filter in or out from the normalized results, default is []
