@@ -2042,7 +2042,7 @@ def get_children(id):
                 abort_bad_req(_property_key_filtering_notice(result_filtering_accepted_property_keys))
 
             # Only return a list of the filtered property value of each entity
-            property_list = app_neo4j_queries.get_children(neo4j_driver_instance, uuid, properties=result_filtering_accepted_property_keys)
+            property_list = schema_neo4j_queries.get_children(neo4j_driver_instance, uuid, properties=result_filtering_accepted_property_keys)
 
             # Final result
             final_result = property_list
@@ -2056,14 +2056,14 @@ def get_children(id):
             if 'filter_properties' in filtering_dict:
                 properties_action = filtering_dict.get('is_include', True)
                 segregated_properties = schema_manager.group_verify_properties_list(properties=filtering_dict['filter_properties'])
-                property_list = app_neo4j_queries.get_children(neo4j_driver_instance, uuid, properties=segregated_properties, is_include_action=properties_action)
+                property_list = schema_neo4j_queries.get_children(neo4j_driver_instance, uuid, properties=segregated_properties, is_include_action=properties_action)
                 complete_entities_list = schema_manager.get_complete_entities_list(user_token, property_list, segregated_properties.trigger, is_include_action=properties_action, use_memcache=False)
                 # Final result
                 _final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list, segregated_properties, is_include_action=properties_action, is_strict=True)
                 final_result = schema_manager.remove_unauthorized_fields_from_response(_final_result, unauthorized=not user_in_sennet_read_group(request))
     # Return all the details if no property filtering
     else:
-        children_list = app_neo4j_queries.get_children(neo4j_driver_instance, uuid)
+        children_list = schema_neo4j_queries.get_children(neo4j_driver_instance, uuid)
 
         # Generate trigger data and merge into a big dict
         # and skip some of the properties that are time-consuming to generate via triggers
@@ -5790,7 +5790,7 @@ def delete_cache(id):
 
         # If the target entity is Sample (`direct_ancestor`) or Dataset/Publication (`direct_ancestors`)
         # Delete the cache of all the direct descendants (children)
-        child_uuids = schema_neo4j_queries.get_children(neo4j_driver_instance, entity_uuid , 'uuid')
+        child_uuids = schema_neo4j_queries.get_children(neo4j_driver_instance, entity_uuid , properties=['uuid'])
 
         # If the target entity is Collection, delete the cache for each of its associated
         # Datasets and Publications (via [:IN_COLLECTION] relationship) as well as just Publications (via [:USES_DATA] relationship)

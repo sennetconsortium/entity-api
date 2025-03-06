@@ -1721,56 +1721,49 @@ def get_publication_associated_collection(neo4j_driver, uuid):
     return result
 
 
-"""
-Get all children by uuid
+def get_children(neo4j_driver, uuid, properties: Union[PropertyGroups, List[str]]  = None, is_include_action: bool = True):
+    """
+    Get all children by uuid
 
-Parameters
-----------
-neo4j_driver : neo4j.Driver object
-    The neo4j database connection pool
-uuid : str
-    The uuid of target entity 
-property_key : str
-    A target property key for result filtering
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    uuid : str
+        The uuid of target entity
+    properties : List[str]
+        A list of property keys to filter in or out from the normalized results, default is []
+    is_include_action : bool
+        Whether to include or exclude the listed properties
 
-Returns
--------
-dict
-    A list of unique child dictionaries returned from the Cypher query
-"""
-
-
-def get_children(neo4j_driver, uuid, property_key=None):
+    Returns
+    -------
+    dict
+        A list of unique child dictionaries returned from the Cypher query
+    """
     results = []
 
-    if property_key:
-        query = (f"MATCH (e:Entity)<-[:USED]-(:Activity)<-[:WAS_GENERATED_BY]-(child:Entity) "
+    is_filtered = isinstance(properties, PropertyGroups) or  isinstance(properties, list)
+    if is_filtered:
+        query = (f"MATCH (e:Entity)<-[:USED]-(:Activity)<-[:WAS_GENERATED_BY]-(t:Entity) "
                  # The target entity can't be a Lab
                  f"WHERE e.uuid='{uuid}' AND e.entity_type <> 'Lab' "
-                 # COLLECT() returns a list
-                 # apoc.coll.toSet() reruns a set containing unique nodes
-                 f"RETURN apoc.coll.toSet(COLLECT(child.{property_key})) AS {record_field_name}")
+                 f"{exclude_include_query_part(properties, is_include_action)}")
     else:
-        query = (f"MATCH (e:Entity)<-[:USED]-(:Activity)<-[:WAS_GENERATED_BY]-(child:Entity) "
+        _activity_query_part = activity_query_part(for_all_match=True)
+        query = (f"MATCH (e:Entity)<-[:USED]-(:Activity)<-[:WAS_GENERATED_BY]-(t:Entity) "
                  # The target entity can't be a Lab
                  f"WHERE e.uuid='{uuid}' AND e.entity_type <> 'Lab' "
-                 # COLLECT() returns a list
-                 # apoc.coll.toSet() reruns a set containing unique nodes
-                 f"RETURN apoc.coll.toSet(COLLECT(child)) AS {record_field_name}")
+                 f"{_activity_query_part} {record_field_name}")
 
     logger.info("======get_children() query======")
     logger.info(query)
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(execute_readonly_tx, query)
+        record = session.read_transaction(_execute_readonly_tx, query)
 
         if record and record[record_field_name]:
-            if property_key:
-                # Just return the list of property values from each entity node
-                results = record[record_field_name]
-            else:
-                # Convert the list of nodes to a list of dicts
-                results = nodes_to_dicts(record[record_field_name])
+            results = record[record_field_name]
 
     return results
 
