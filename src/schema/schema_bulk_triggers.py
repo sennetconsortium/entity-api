@@ -53,6 +53,8 @@ def get_bulk_origin_samples(user_token, bulk_trigger_manager:BulkTriggersManager
     ----------
     user_token: str
         The user's globus nexus token
+    bulk_trigger_manager : BulkTriggersManager
+        Instance of helper class for managing bulk triggers
     storage_key : str
         The reference key for finding what needs handling for bulk
     entities_list : list
@@ -77,6 +79,7 @@ def get_bulk_origin_samples(user_token, bulk_trigger_manager:BulkTriggersManager
                                                                              existing_data_dict=entity_dict,
                                                                              new_data_dict={})
             entity_dict[organ_hierarchy_key] = organ_hierarchy_value
+            return entity_dict
 
         uuids = []
         for uuid in bulk_trigger_manager.get_group_by_key(storage_key):
@@ -86,8 +89,7 @@ def get_bulk_origin_samples(user_token, bulk_trigger_manager:BulkTriggersManager
                 existing_data_dict = entities_list[index]
                 # handle the ones that are sample_category of Organs, they are the origin_samples of themselves
                 if equals(existing_data_dict.get("sample_category"), Ontology.ops().specimen_categories().ORGAN):
-                    _get_organ_hierarchy(existing_data_dict)
-                    existing_data_dict[property_key] = [copy.deepcopy(existing_data_dict)]
+                    entities_list[index][property_key] = [_get_organ_hierarchy(copy.deepcopy(existing_data_dict))]
                 # otherwise store for later cypher query
                 elif existing_data_dict['entity_type'] in ["Sample", "Dataset", "Publication"]:
                     uuids.append(existing_data_dict['uuid'])

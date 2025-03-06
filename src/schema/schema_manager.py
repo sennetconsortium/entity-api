@@ -567,7 +567,7 @@ def exclude_properties_from_response(excluded_fields, output_dict):
 
 
 def generate_triggered_data(trigger_type: TriggerTypeEnum, normalized_class, user_token, existing_data_dict
-                            , new_data_dict, properties_to_filter = [], is_include_action = False, bulk_trigger_manager_instance = None):
+                            , new_data_dict, properties_to_filter = [], is_include_action = False, bulk_trigger_manager_instance:BulkTriggersManager = None):
     """
     Generating triggered data based on the target events and methods
 
@@ -587,6 +587,8 @@ def generate_triggered_data(trigger_type: TriggerTypeEnum, normalized_class, use
         Any properties to skip or include when running triggers.
     is_include_action : bool
         Whether to include or exclude the properties listed in properties_to_skip
+    bulk_trigger_manager_instance : BulkTriggersManager
+         Instance of helper class for managing bulk triggers
 
     Returns
     -------
@@ -881,7 +883,7 @@ dict
 """
 
 
-def get_complete_entity_result(token, entity_dict, properties_to_filter = [], is_include_action=False, use_memcache=True, bulk_trigger_manager_instance=None):
+def get_complete_entity_result(token, entity_dict, properties_to_filter = [], is_include_action=False, use_memcache=True, bulk_trigger_manager_instance:BulkTriggersManager=None):
     global _memcached_client
     global _memcached_prefix
 
@@ -1084,26 +1086,24 @@ def _get_metadata_result(token, entity_dict, metadata_scope:MetadataScopeEnum, p
     return metadata_dict
 
 
-"""
-Generate the complete entity records as well as result filtering for response
-
-Parameters
-----------
-token: str
-    Either the user's globus nexus token or the internal token
-entities_list : list
-    A list of entity dictionaries
-properties_to_skip : list
-    Any properties to skip running triggers
-
-Returns
--------
-list
-    A list a complete entity dictionaries with all the normalized information
-"""
-
-
 def get_complete_entities_list(token, entities_list, properties_to_filter = [], is_include_action=False, use_memcache=True):
+    """
+    Generate the complete entity records as well as result filtering for response
+
+    Parameters
+    ----------
+    token: str
+        Either the user's globus nexus token or the internal token
+    entities_list : list
+        A list of entity dictionaries
+    properties_to_filter : list
+        Any properties to skip running triggers
+
+    Returns
+    -------
+    list
+        A list a complete entity dictionaries with all the normalized information
+    """
     bulk_trigger_manager_instance = BulkTriggersManager()
     complete_entities_list = []
 
@@ -1118,7 +1118,24 @@ def get_complete_entities_list(token, entities_list, properties_to_filter = [], 
 
 
 
-def handle_bulk_triggers(token, entities_list, bulk_trigger_manager_instance):
+def handle_bulk_triggers(token, entities_list, bulk_trigger_manager_instance:BulkTriggersManager):
+    """
+
+    Parameters
+    ----------
+    token : str
+        Either the user's globus nexus token or the internal token
+    entities_list : List[dict]
+        The list to perform triggers on
+    bulk_trigger_manager_instance : BulkTriggersManager
+         Instance of helper class for managing bulk triggers
+
+    Returns
+    -------
+    List[dict]
+        A list a complete entity dictionaries with updated bulk triggers
+
+    """
 
     if bulk_trigger_manager_instance.groups != {}:
         bulk_trigger_manager_instance.build_lists_index_references(entities_list)
