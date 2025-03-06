@@ -185,13 +185,7 @@ def get_origin_samples(neo4j_driver, uuids:List, is_bulk = True):
     with neo4j_driver.session() as session:
         record = session.read_transaction(_execute_readonly_tx, query)
         if record and record[record_field_name]:
-            if is_bulk:
-                for r in record[record_field_name]:
-                    r['result'] = _nodes_to_dicts(r['result'])
-                result = record[record_field_name]
-            else:
-                # Convert the entity node to dict
-                result = _nodes_to_dicts(record[record_field_name])
+            result = record[record_field_name]
 
     return result
 

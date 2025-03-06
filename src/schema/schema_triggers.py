@@ -1,5 +1,3 @@
-import ast
-import copy
 import json
 import urllib.parse
 from typing import List, Optional
@@ -1803,72 +1801,6 @@ def get_last_touch(property_key, normalized_type, user_token, existing_data_dict
 
     return property_key, last_touch
 
-
-
-def get_bulk_origin_samples(user_token, bulk_keys, entities_list):
-    """Trigger event method to grab the ancestor of entities where entity type is Sample and the sample_category is Organ.
-
-    Parameters
-    ----------
-    user_token: str
-        The user's globus nexus token
-    bulk_keys : tuple
-        The reference keys for finding what needs handling for bulk: storage_key, property_key and trigger_method_name
-    entities_list : list
-        List of entities to be bulk processed
-
-    Returns
-    -------
-    list
-        The processed list of entities
-    """
-    # The origin_sample is the sample that `sample_category` is "organ" and the `organ` code is set at the same time
-
-    _schema_triggers_bulk_meta = schema_manager.get_schema_triggers_bulk()
-    property_key = bulk_keys[1]
-    curr_trigger_ref = []
-    curr_uuid = None # tracking for error handling
-    try:
-
-        def _get_organ_hierarchy(entity_dict):
-            organ_hierarchy_key, organ_hierarchy_value = get_organ_hierarchy(property_key='organ_hierarchy',
-                                                                             normalized_type=Ontology.ops().entities().SAMPLE,
-                                                                             user_token=user_token,
-                                                                             existing_data_dict=entity_dict,
-                                                                             new_data_dict={})
-            entity_dict[organ_hierarchy_key] = organ_hierarchy_value
-
-        uuids = []
-        for uuid in _schema_triggers_bulk_meta['groups'][bulk_keys[0]]:
-            curr_uuid = uuid
-            curr_trigger_ref = _schema_triggers_bulk_meta['bulk_meta_references'][f"{uuid}_{bulk_keys[0]}"]
-            existing_data_dict = entities_list[curr_trigger_ref[0]]
-            # handle the ones that are sample_category of Organs, they are the origin_samples of themselves
-            if equals(existing_data_dict.get("sample_category"), Ontology.ops().specimen_categories().ORGAN):
-                _get_organ_hierarchy(existing_data_dict)
-                existing_data_dict[property_key] = [copy.deepcopy(existing_data_dict)]
-            # otherwise store for later cypher query
-            elif existing_data_dict['entity_type'] in ["Sample", "Dataset", "Publication"]:
-                uuids.append(existing_data_dict['uuid'])
-
-        if len(uuids) > 0:
-            # let's do a query for the rest that were not Samples or sample_category of Organs
-            origin_samples_results = schema_neo4j_queries.get_origin_samples(schema_manager.get_neo4j_driver_instance(),
-                                                                     uuids)
-            for r in origin_samples_results:
-                for origin_sample in r['result']:
-                    _get_organ_hierarchy(origin_sample)
-
-                curr_uuid = r['uuid']
-                curr_trigger_ref = _schema_triggers_bulk_meta['bulk_meta_references'][f"{r['uuid']}_{bulk_keys[0]}"]
-                entities_list[curr_trigger_ref[0]][property_key] = r['result']
-
-
-    except Exception:
-        logger.error(f"No origin sample found for an entity with UUID {curr_uuid} in bulk {str(curr_trigger_ref)} / {bulk_keys[0]}")
-        return property_key, None
-
-    return entities_list
 
 def get_origin_samples(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     """Trigger event method to grab the ancestor of this entity where entity type is Sample and the sample_category is Organ.

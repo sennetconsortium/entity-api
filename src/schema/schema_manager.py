@@ -9,12 +9,15 @@ from hubmap_commons.file_helper import ensureTrailingSlashURL
 # Don't confuse urllib (Python native library) with urllib3 (3rd-party library, requests also uses urllib3)
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
+
 from lib.commons import get_as_dict
 from lib.property_groups import PropertyGroups
 # Local modules
 from schema import schema_errors
 from schema import schema_triggers
+from schema import schema_bulk_triggers
 from schema import schema_validators
+from schema.schema_bulk_triggers import BulkTriggersManager
 from schema.schema_constants import SchemaConstants, MetadataScopeEnum, TriggerTypeEnum
 from schema import schema_neo4j_queries
 
@@ -49,7 +52,6 @@ _ubkg = None
 _memcached_client = None
 _memcached_prefix = None
 _schema_properties = {}
-_schema_triggers_bulk = {}
 
 # For handling cached requests to uuid-api and external static resources (github raw yaml files)
 request_cache = {}
@@ -153,17 +155,6 @@ def get_schema_properties():
     global _schema_properties
     return _schema_properties
 
-def get_schema_triggers_bulk():
-    global _schema_triggers_bulk
-    return _schema_triggers_bulk
-
-def init_schema_bulk_triggers():
-    global _schema_triggers_bulk
-    _schema_triggers_bulk = {
-        'groups': {},
-        'bulk_meta_references': {},
-        'results': {}
-    }
 
 def group_schema_properties_by_name():
     """
@@ -192,7 +183,7 @@ def group_schema_properties_by_name():
                 schema_properties_by_name[p]['use_activity_value'] = set()
                 schema_properties_by_name[p]['dependencies'].update(entity_properties[p].get('dependency_properties', []))
 
-            if 'on_read_trigger' in entity_properties[p]:
+            if 'on_read_trigger' in entity_properties[p] or 'on_bulk_read_trigger' in entity_properties[p]:
                 schema_properties_by_name[p]['trigger'].add(entity)
             else:
                 schema_properties_by_name[p]['neo4j'].add(entity)
@@ -576,7 +567,7 @@ def exclude_properties_from_response(excluded_fields, output_dict):
 
 
 def generate_triggered_data(trigger_type: TriggerTypeEnum, normalized_class, user_token, existing_data_dict
-                            , new_data_dict, properties_to_filter = [], is_include_action = False):
+                            , new_data_dict, properties_to_filter = [], is_include_action = False, bulk_trigger_manager_instance = None):
     """
     Generating triggered data based on the target events and methods
 
@@ -604,7 +595,6 @@ def generate_triggered_data(trigger_type: TriggerTypeEnum, normalized_class, use
     """
 
     global _schema
-    global _schema_triggers_bulk
 
     schema_section = None
 
@@ -718,13 +708,12 @@ def generate_triggered_data(trigger_type: TriggerTypeEnum, normalized_class, use
                         # We can't create/update the entity
                         # without successfully executing this trigger method
                         raise schema_errors.BeforeUpdateTriggerException
-            elif trigger_type in [TriggerTypeEnum.ON_READ] and TriggerTypeEnum.ON_BULK_READ.value in properties[key] and 'groups' in _schema_triggers_bulk:
+            elif trigger_type in [TriggerTypeEnum.ON_READ] and TriggerTypeEnum.ON_BULK_READ.value in properties[key] and bulk_trigger_manager_instance:
                 trigger_method_name = properties[key][TriggerTypeEnum.ON_BULK_READ.value]
                 storage_key = f"{key}_{trigger_method_name}"
-                if storage_key not in _schema_triggers_bulk['groups']:
-                    _schema_triggers_bulk['groups'][storage_key] = set()
-                _schema_triggers_bulk['groups'][storage_key].add(existing_data_dict['uuid'])
-                _schema_triggers_bulk['bulk_meta_references'][f"{existing_data_dict['uuid']}_{storage_key}"] = [_schema_triggers_bulk['current_index'], key, trigger_method_name]
+                uuid = existing_data_dict['uuid']
+                bulk_trigger_manager_instance.set_item_to_group_by_key(storage_key, uuid)
+                bulk_trigger_manager_instance.set_reference(key=storage_key, item=[key, trigger_method_name])
             else:
                 # Handling of all other trigger types: before_create_trigger|on_read_trigger
                 trigger_method_name = properties[key][trigger_type.value]
@@ -892,7 +881,7 @@ dict
 """
 
 
-def get_complete_entity_result(token, entity_dict, properties_to_filter = [], is_include_action=False, use_memcache=True):
+def get_complete_entity_result(token, entity_dict, properties_to_filter = [], is_include_action=False, use_memcache=True, bulk_trigger_manager_instance=None):
     global _memcached_client
     global _memcached_prefix
 
@@ -927,7 +916,8 @@ def get_complete_entity_result(token, entity_dict, properties_to_filter = [], is
                                                                           , existing_data_dict=entity_dict
                                                                           , new_data_dict={}
                                                                           , properties_to_filter=properties_to_filter
-                                                                          , is_include_action=is_include_action)
+                                                                          , is_include_action=is_include_action
+                                                                          , bulk_trigger_manager_instance=bulk_trigger_manager_instance)
 
             # Merge the entity info and the generated on read data into one dictionary
             complete_entity_dict = {**entity_dict, **generated_on_read_trigger_data_dict}
@@ -1114,32 +1104,31 @@ list
 
 
 def get_complete_entities_list(token, entities_list, properties_to_filter = [], is_include_action=False, use_memcache=True):
-    global _schema_triggers_bulk
+    bulk_trigger_manager_instance = BulkTriggersManager()
     complete_entities_list = []
-    init_schema_bulk_triggers()
-    _schema_triggers_bulk['current_index'] = 0
+
 
     for entity_dict in entities_list:
-        complete_entity_dict = get_complete_entity_result(token, entity_dict, properties_to_filter, is_include_action=is_include_action, use_memcache=use_memcache)
+        complete_entity_dict = get_complete_entity_result(token, entity_dict, properties_to_filter, is_include_action=is_include_action,
+                                                          use_memcache=use_memcache, bulk_trigger_manager_instance=bulk_trigger_manager_instance)
         complete_entities_list.append(complete_entity_dict)
-        _schema_triggers_bulk['current_index'] = _schema_triggers_bulk['current_index'] + 1
 
-    return handle_bulk_triggers(token, complete_entities_list)
+    final_result = handle_bulk_triggers(token, complete_entities_list, bulk_trigger_manager_instance=bulk_trigger_manager_instance)
+    return final_result
 
 
 
-def handle_bulk_triggers(token, entities_list):
-    global _schema_triggers_bulk
+def handle_bulk_triggers(token, entities_list, bulk_trigger_manager_instance):
 
-    if _schema_triggers_bulk['groups'] != {}:
-        for storage_key in _schema_triggers_bulk['groups']:
+    if bulk_trigger_manager_instance.groups != {}:
+        bulk_trigger_manager_instance.build_lists_index_references(entities_list)
+
+        for storage_key in bulk_trigger_manager_instance.groups:
             trigger_method_name = ''
             try:
-                uuids = list(_schema_triggers_bulk['groups'][storage_key])
-                bulk_meta_references = _schema_triggers_bulk['bulk_meta_references'][f"{uuids[0]}_{storage_key}"]
-                trigger_method_name = bulk_meta_references[2]
-                trigger_method_to_call = getattr(schema_triggers, trigger_method_name)
-                trigger_method_to_call(token, (storage_key, bulk_meta_references[1], trigger_method_name), entities_list)
+                trigger_method_name = bulk_trigger_manager_instance.get_trigger_method_name(storage_key)
+                trigger_method_to_call = getattr(schema_bulk_triggers, trigger_method_name)
+                trigger_method_to_call(token, bulk_trigger_manager_instance, storage_key, entities_list)
 
                 logger.info(f"To run {TriggerTypeEnum.ON_BULK_READ.value}: {trigger_method_name}")
 
@@ -1147,7 +1136,6 @@ def handle_bulk_triggers(token, entities_list):
                 msg = f"Failed to call the {TriggerTypeEnum.ON_BULK_READ.value} method: {trigger_method_name} \n {str(ex)}"
                 # Log the full stack trace, prepend a line with our message
                 logger.exception(msg)
-    _schema_triggers_bulk = {}
     return entities_list
 
 """
