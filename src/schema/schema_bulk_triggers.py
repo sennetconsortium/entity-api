@@ -10,14 +10,14 @@ logger = logging.getLogger(__name__)
 
 class BulkTriggersManager:
     def __init__(self):
-        self.groups = {}
-        self.references = {}
-        self.list_indexes = {}
+        self.groups = {}  # the keys of which are in the form property_key_trigger_name. Value is a python set of uuids requiring the same trigger
+        self.references = {} # the keys of which are in the form property_key_trigger_name. Value is a list with [property_key, trigger_name]
+        self.list_indexes = {} # the keys of which are entity uuids, value is the index that this entity is at in entities_list of the bulk trigger. Important for constant time finding of entities
 
-    def get_group_by_key(self, key):
+    def get_group_by_key(self, key:str):
         return self.groups[key]
 
-    def set_item_to_group_by_key(self, key, item):
+    def set_item_to_group_by_key(self, key:str, item:str):
         if key not in self.groups:
             self.groups[key] = set()
         self.groups[key].add(item)
@@ -25,21 +25,23 @@ class BulkTriggersManager:
     def set_reference(self, key, item):
         self.references[key] = item
 
-    def build_lists_index_references(self, list = []):
+    def build_lists_index_references(self, entities_list:list = []):
         i = 0
-        for r in list:
+        for r in entities_list:
             self.list_indexes[r['uuid']] = i
             i = i + 1
 
         return self.list_indexes
 
-    def get_trigger_method_name(self, key):
-        bulk_meta_references = self.references[key]
-        return bulk_meta_references[1]
+    def _get_from_references(self, key:str, index:int):
+        bulk_meta_references = self.references.get(key, [])
+        return bulk_meta_references[index] if len(bulk_meta_references) > index else None
 
-    def get_property_key(self, key):
-        bulk_meta_references = self.references[key]
-        return bulk_meta_references[0]
+    def get_trigger_method_name(self, key:str) -> str :
+        return self._get_from_references(key, 1)
+
+    def get_property_key(self, key:str) -> str:
+        return self._get_from_references(key, 0)
 
 
 
