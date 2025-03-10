@@ -3864,11 +3864,14 @@ def sankey_data():
     with open('sankey_mapping.json') as f:
         mapping_dict = json.load(f)
 
+    authorized = user_in_sennet_read_group(request)
+    data_access_level = 'public' if authorized is False else None
+
     # Instantiation of the list dataset_prov_list
     dataset_sankey_list = []
 
     # Call to app_neo4j_queries to prepare and execute the database query
-    sankey_info = app_neo4j_queries.get_sankey_info(neo4j_driver_instance)
+    sankey_info = app_neo4j_queries.get_sankey_info(neo4j_driver_instance, data_access_level=data_access_level)
     for dataset in sankey_info:
         internal_dict = collections.OrderedDict()
         internal_dict[HEADER_DATASET_GROUP_NAME] = dataset[HEADER_DATASET_GROUP_NAME]
