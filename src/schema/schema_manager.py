@@ -1,4 +1,3 @@
-import ast
 import yaml
 import logging
 import requests
@@ -10,12 +9,15 @@ from hubmap_commons.file_helper import ensureTrailingSlashURL
 # Don't confuse urllib (Python native library) with urllib3 (3rd-party library, requests also uses urllib3)
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
+
 from lib.commons import get_as_dict
 from lib.property_groups import PropertyGroups
 # Local modules
 from schema import schema_errors
 from schema import schema_triggers
+from schema import schema_bulk_triggers
 from schema import schema_validators
+from schema.schema_bulk_triggers import BulkTriggersManager
 from schema.schema_constants import SchemaConstants, MetadataScopeEnum, TriggerTypeEnum
 from schema import schema_neo4j_queries
 
@@ -149,6 +151,10 @@ def load_provenance_schema(valid_yaml_file):
             schema_dict['ENTITIES'][entity]['properties'] = remove_none_values(schema_dict['ENTITIES'][entity]['properties'])
         return schema_dict
 
+def get_schema_properties():
+    global _schema_properties
+    return _schema_properties
+
 
 def group_schema_properties_by_name():
     """
@@ -174,12 +180,16 @@ def group_schema_properties_by_name():
                 schema_properties_by_name[p]['neo4j'] = set()
                 schema_properties_by_name[p]['json_string'] = set()
                 schema_properties_by_name[p]['list'] = set()
+                schema_properties_by_name[p]['use_activity_value_if_null'] = set()
                 schema_properties_by_name[p]['dependencies'].update(entity_properties[p].get('dependency_properties', []))
 
-            if 'on_read_trigger' in entity_properties[p]:
+            if 'on_read_trigger' in entity_properties[p] or 'on_bulk_read_trigger' in entity_properties[p]:
                 schema_properties_by_name[p]['trigger'].add(entity)
             else:
                 schema_properties_by_name[p]['neo4j'].add(entity)
+
+                if 'use_activity_value_if_null' in entity_properties[p]:
+                    schema_properties_by_name[p]['use_activity_value_if_null'].add(entity)
 
                 if 'type' in entity_properties[p]:
                     if entity_properties[p]['type'] == 'json_string':
@@ -368,7 +378,7 @@ def get_fields_to_exclude(normalized_class=None):
     return excluded_fields
 
 
-def get_schema_defaults(properties, is_include_action = True, target_entity_type = 'Any'):
+def get_schema_defaults(properties = [], is_include_action = True, target_entity_type = 'Any'):
     """
     Adds entity defaults to list
 
@@ -557,7 +567,7 @@ def exclude_properties_from_response(excluded_fields, output_dict):
 
 
 def generate_triggered_data(trigger_type: TriggerTypeEnum, normalized_class, user_token, existing_data_dict
-                            , new_data_dict, properties_to_skip = [], is_include_action = False):
+                            , new_data_dict, properties_to_filter = [], is_include_action = False, bulk_trigger_manager_instance:BulkTriggersManager = None):
     """
     Generating triggered data based on the target events and methods
 
@@ -573,11 +583,12 @@ def generate_triggered_data(trigger_type: TriggerTypeEnum, normalized_class, use
         A dictionary that contains existing entity data
     new_data_dict : dict
         A dictionary that contains incoming entity data
-    properties_to_skip : list
-        Any properties to skip running triggers.
-        This now ideally should be called properties_to_filter because of newly introduced is_include_action.
+    properties_to_filter : list
+        Any properties to skip or include when running triggers.
     is_include_action : bool
         Whether to include or exclude the properties listed in properties_to_skip
+    bulk_trigger_manager_instance : BulkTriggersManager
+         Instance of helper class for managing bulk triggers
 
     Returns
     -------
@@ -614,8 +625,8 @@ def generate_triggered_data(trigger_type: TriggerTypeEnum, normalized_class, use
     for key in properties:
         # Among those properties that have the target trigger type,
         # we can skip the ones specified in the `properties_to_skip` by not running their triggers
-        if (trigger_type.value in properties[key]) and ((key not in properties_to_skip and is_include_action is False)
-                                                        or (key in properties_to_skip and is_include_action)):
+        if (trigger_type.value in properties[key]) and ((key not in properties_to_filter and is_include_action is False)
+                                                        or (key in properties_to_filter and is_include_action)):
             # 'after_create_trigger' and 'after_update_trigger' don't generate property values
             # E.g., create relationships between nodes in neo4j
             # So just return the empty trigger_generated_data_dict
@@ -699,6 +710,12 @@ def generate_triggered_data(trigger_type: TriggerTypeEnum, normalized_class, use
                         # We can't create/update the entity
                         # without successfully executing this trigger method
                         raise schema_errors.BeforeUpdateTriggerException
+            elif trigger_type in [TriggerTypeEnum.ON_READ] and TriggerTypeEnum.ON_BULK_READ.value in properties[key] and bulk_trigger_manager_instance:
+                trigger_method_name = properties[key][TriggerTypeEnum.ON_BULK_READ.value]
+                storage_key = f"{key}_{trigger_method_name}"
+                uuid = existing_data_dict['uuid']
+                bulk_trigger_manager_instance.set_item_to_group_by_key(storage_key, uuid)
+                bulk_trigger_manager_instance.set_reference(key=storage_key, item=[key, trigger_method_name])
             else:
                 # Handling of all other trigger types: before_create_trigger|on_read_trigger
                 trigger_method_name = properties[key][trigger_type.value]
@@ -866,7 +883,7 @@ dict
 """
 
 
-def get_complete_entity_result(token, entity_dict, properties_to_skip=[], is_include_action=False, use_memcache=True):
+def get_complete_entity_result(token, entity_dict, properties_to_filter = [], is_include_action=False, use_memcache=True, bulk_trigger_manager_instance:BulkTriggersManager=None):
     global _memcached_client
     global _memcached_prefix
 
@@ -881,7 +898,7 @@ def get_complete_entity_result(token, entity_dict, properties_to_skip=[], is_inc
 
         # Need both client and prefix when fetching the cache
         # Do NOT fetch cache if properties_to_skip is specified or use_memcache is False
-        if _memcached_client and _memcached_prefix and (not properties_to_skip and use_memcache):
+        if _memcached_client and _memcached_prefix and (not properties_to_filter and use_memcache):
             cache_key = f'{_memcached_prefix}_complete_{entity_uuid}'
             cache_result = _memcached_client.get(cache_key)
 
@@ -900,8 +917,9 @@ def get_complete_entity_result(token, entity_dict, properties_to_skip=[], is_inc
                                                                           , user_token=token
                                                                           , existing_data_dict=entity_dict
                                                                           , new_data_dict={}
-                                                                          , properties_to_skip=properties_to_skip
-                                                                          , is_include_action=is_include_action)
+                                                                          , properties_to_filter=properties_to_filter
+                                                                          , is_include_action=is_include_action
+                                                                          , bulk_trigger_manager_instance=bulk_trigger_manager_instance)
 
             # Merge the entity info and the generated on read data into one dictionary
             complete_entity_dict = {**entity_dict, **generated_on_read_trigger_data_dict}
@@ -911,7 +929,7 @@ def get_complete_entity_result(token, entity_dict, properties_to_skip=[], is_inc
 
             # Need both client and prefix when creating the cache
             # Do NOT cache when properties_to_skip is specified
-            if _memcached_client and _memcached_prefix and (not properties_to_skip and use_memcache):
+            if _memcached_client and _memcached_prefix and (not properties_to_filter and use_memcache):
                 logger.info(f'Creating complete entity cache of {entity_type} {entity_uuid} at time {datetime.now()}')
 
                 cache_key = f'{_memcached_prefix}_complete_{entity_uuid}'
@@ -1012,12 +1030,12 @@ def _get_metadata_result(token, entity_dict, metadata_scope:MetadataScopeEnum, p
                 # Pass {} since no new_data_dict for 'on_read_trigger'
                 #generated_on_read_trigger_data_dict = generate_triggered_data('on_read_trigger', entity_type, token,
                 #                                                              entity_dict, {}, properties_to_skip)
-                generated_on_read_trigger_data_dict = generate_triggered_data(  trigger_type=TriggerTypeEnum.ON_READ
-                                                                                , normalized_class=entity_type
-                                                                                , user_token=token
-                                                                                , existing_data_dict=entity_dict
-                                                                                , new_data_dict={}
-                                                                                , properties_to_skip=properties_to_skip)
+                generated_on_read_trigger_data_dict = generate_triggered_data(trigger_type=TriggerTypeEnum.ON_READ
+                                                                              , normalized_class=entity_type
+                                                                              , user_token=token
+                                                                              , existing_data_dict=entity_dict
+                                                                              , new_data_dict={}
+                                                                              , properties_to_filter=properties_to_skip)
 
                 # Merge the entity info and the generated on read data into one dictionary
                 complete_entity_dict = {**entity_dict, **generated_on_read_trigger_data_dict}
@@ -1028,12 +1046,12 @@ def _get_metadata_result(token, entity_dict, metadata_scope:MetadataScopeEnum, p
                 # No error handling here since if a 'on_index_trigger' method fails,
                 # the property value will be the error message
                 # Pass {} since no new_data_dict for 'on_index_trigger'
-                generated_on_index_trigger_data_dict = generate_triggered_data( trigger_type=TriggerTypeEnum.ON_INDEX
-                                                                                , normalized_class=entity_type
-                                                                                , user_token=token
-                                                                                , existing_data_dict=entity_dict
-                                                                                , new_data_dict={}
-                                                                                , properties_to_skip=properties_to_skip)
+                generated_on_index_trigger_data_dict = generate_triggered_data(trigger_type=TriggerTypeEnum.ON_INDEX
+                                                                               , normalized_class=entity_type
+                                                                               , user_token=token
+                                                                               , existing_data_dict=entity_dict
+                                                                               , new_data_dict={}
+                                                                               , properties_to_filter=properties_to_skip)
 
                 # Merge the entity info and the generated on read data into one dictionary
                 complete_entity_dict = {**entity_dict, **generated_on_index_trigger_data_dict}
@@ -1068,34 +1086,78 @@ def _get_metadata_result(token, entity_dict, metadata_scope:MetadataScopeEnum, p
     return metadata_dict
 
 
-"""
-Generate the complete entity records as well as result filtering for response
+def get_complete_entities_list(token, entities_list, properties_to_filter:List = [], is_include_action=False, use_memcache=True):
+    """
+    Generate the complete entity records as well as result filtering for response
 
-Parameters
-----------
-token: str
-    Either the user's globus nexus token or the internal token
-entities_list : list
-    A list of entity dictionaries
-properties_to_skip : list
-    Any properties to skip running triggers
+    Parameters
+    ----------
+    token: str
+        Either the user's globus nexus token or the internal token
+    entities_list : list
+        A list of entity dictionaries
+    properties_to_filter : list
+        Any properties to skip running triggers
+    is_include_action : bool
+        Whether to include or exclude the listed properties
+    use_memcache : bool
+        Whether to use a cached result or not
 
-Returns
--------
-list
-    A list a complete entity dictionaries with all the normalized information
-"""
-
-
-def get_complete_entities_list(token, entities_list, properties_to_skip=[], is_include_action=False, use_memcache=True):
+    Returns
+    -------
+    list
+        A list a complete entity dictionaries with all the normalized information
+    """
+    bulk_trigger_manager_instance = BulkTriggersManager()
     complete_entities_list = []
 
+
     for entity_dict in entities_list:
-        complete_entity_dict = get_complete_entity_result(token, entity_dict, properties_to_skip, is_include_action=is_include_action, use_memcache=use_memcache)
+        complete_entity_dict = get_complete_entity_result(token, entity_dict, properties_to_filter, is_include_action=is_include_action,
+                                                          use_memcache=use_memcache, bulk_trigger_manager_instance=bulk_trigger_manager_instance)
         complete_entities_list.append(complete_entity_dict)
 
-    return complete_entities_list
+    final_result = handle_bulk_triggers(token, complete_entities_list, bulk_trigger_manager_instance=bulk_trigger_manager_instance)
+    return final_result
 
+
+
+def handle_bulk_triggers(token, entities_list, bulk_trigger_manager_instance:BulkTriggersManager):
+    """
+
+    Parameters
+    ----------
+    token : str
+        Either the user's globus nexus token or the internal token
+    entities_list : List[dict]
+        The list to perform triggers on
+    bulk_trigger_manager_instance : BulkTriggersManager
+         Instance of helper class for managing bulk triggers
+
+    Returns
+    -------
+    List[dict]
+        A list a complete entity dictionaries with updated bulk triggers
+
+    """
+
+    if bulk_trigger_manager_instance.groups != {}:
+        bulk_trigger_manager_instance.build_lists_index_references(entities_list)
+
+        for storage_key in bulk_trigger_manager_instance.groups:
+            trigger_method_name = ''
+            try:
+                trigger_method_name = bulk_trigger_manager_instance.get_trigger_method_name(storage_key)
+                trigger_method_to_call = getattr(schema_bulk_triggers, trigger_method_name)
+                trigger_method_to_call(token, bulk_trigger_manager_instance, storage_key, entities_list)
+
+                logger.info(f"To run {TriggerTypeEnum.ON_BULK_READ.value}: {trigger_method_name}")
+
+            except Exception as ex:
+                msg = f"Failed to call the {TriggerTypeEnum.ON_BULK_READ.value} method: {trigger_method_name} \n {str(ex)}"
+                # Log the full stack trace, prepend a line with our message
+                logger.exception(msg)
+    return entities_list
 
 """
 Normalize the activity result by filtering out properties that are not defined in the yaml schema
@@ -1134,62 +1196,67 @@ def normalize_activity_result_for_response(activity_dict, properties_to_exclude=
     return normalized_activity
 
 
-"""
-Normalize the entity result by filtering out properties that are not defined in the yaml schema
-and the ones that are marked as `exposed: false` prior to sending the response
 
-Parameters
-----------
-entity_dict : dict
-    A merged dictionary that contains all possible data to be used by the trigger methods
-properties_to_exclude : list
-    Any additional properties to exclude from the response
+def normalize_object_result_for_response(provenance_type='ENTITIES', entity_dict=None, property_groups:PropertyGroups = PropertyGroups(), is_include_action=True, is_strict = False):
+    """
 
-Returns
--------
-dict
-    A entity dictionary with keys that are all normalized
-"""
+    Parameters
+    ----------
+    entity_dict : dict
+        The entity dictionary to normalize
+    property_groups : PropertyGroups
+        A list of property keys to filter in or out from the normalized results, default is []
+    is_include_action : bool
+        Whether to include or exclude the listed properties
+    provenance_type : str
+        The provenance type of the object
+    is_strict : bool
+        Determines whether to liberally return other exposed properties not necessarily listed in PropertyGroups instance
 
+    Returns
+    -------
 
-def normalize_object_result_for_response(provenance_type, entity_dict, properties_to_exclude=[],
-                                         properties_to_include=[]):
+    """
+    if entity_dict is None:
+        entity_dict = {}
     global _schema
 
     normalized_entity = {}
     properties = []
+    activity_properties = _schema['ACTIVITIES']['Activity']['properties']
+    properties_to_filter = list(set(property_groups.neo4j + property_groups.trigger + property_groups.activity_neo4j + property_groups.activity_trigger))
+
+    check_activity_list = not is_strict
+    if len(property_groups.activity_neo4j + property_groups.activity_trigger) > 0:
+        check_activity_list = True
 
     # In case entity_dict is None or
     # an incorrectly created entity that doesn't have the `entity_type` property
     if entity_dict and ('entity_type' in entity_dict):
         normalized_entity_type = entity_dict['entity_type']
         properties = get_entity_properties(_schema[provenance_type], normalized_entity_type)
-    elif provenance_type == 'ACTIVITIES':
-        properties = _schema[provenance_type]['Activity']['properties']
     else:
         logger.error(f"Unable to normalize object result with"
                      f" entity_dict={str(entity_dict)} and"
                      f" provenance_type={provenance_type}.")
-        raise schema_errors.SchemaValidationException("Unable to normalize object.  See logs.")
+        raise schema_errors.SchemaValidationException("Unable to normalize object, missing entity_type.")
 
     for key in entity_dict:
+        _key = key.replace('activity_', '')
         # Only return the properties defined in the schema yaml
         # Exclude additional properties if specified
-        if (key in properties) and (key not in properties_to_exclude) or (key in properties_to_include):
-            if key in properties_to_include:
-                # Add the target key with correct value of data type to the normalized_entity dict
-                normalized_entity[key] = entity_dict[key]
+        if (key in properties) or (check_activity_list and (_key in activity_properties) ):
+            if ((is_include_action and _key in properties_to_filter)
+                    or (is_include_action is False and _key not in properties_to_filter)
+                    or (key in get_schema_defaults())
+                    # By default, all properties are exposed
+                    # It's possible to see `exposed: true`
+                    or (not is_strict and key in properties and properties[key].get('exposed', True))
+                        # any activity properties in the dict will need to be returned even if not listed in PropertyGroups
+                        or (_key in activity_properties and activity_properties[_key].get('exposed', True))
+            ):
 
-                # Final step: remove properties with empty string value, empty dict {}, and empty list []
-                if (isinstance(normalized_entity[key], (str, dict, list)) and (not normalized_entity[key])):
-                    normalized_entity.pop(key)
-
-            # Skip properties with None value and the ones that are marked as not to be exposed.
-            # By default, all properties are exposed if not marked as `exposed: false`
-            # It's still possible to see `exposed: true` marked explictly
-            elif (entity_dict[key] is not None) and ('exposed' not in properties[key]) or (
-                    ('exposed' in properties[key]) and properties[key]['exposed']):
-                if entity_dict[key] and (properties[key]['type'] in ['list', 'json_string']):
+                if entity_dict[key] and (_key in properties and properties[_key]['type'] in ['list', 'json_string']):
                     # Safely evaluate a string containing a Python dict or list literal
                     # Only convert to Python list/dict when the string literal is not empty
                     # instead of returning the json-as-string or array-as-string
@@ -1204,26 +1271,24 @@ def normalize_object_result_for_response(provenance_type, entity_dict, propertie
 
     return normalized_entity
 
+def normalize_entities_list_for_response(entities_list:List, property_groups:PropertyGroups = PropertyGroups(), is_include_action=True, is_strict = False):
+    """
 
-"""
-Normalize the given list of complete entity results by removing properties that are not defined in the yaml schema
-and filter out the ones that are marked as `exposed: false` prior to sending the response
+    Parameters
+    ----------
+    entities_list : List[dict]
+        List of entities to normalize
+    property_groups : PropertyGroups
+        A list of property keys to filter in or out from the normalized results, default is []
+    is_include_action : bool
+        Whether to include or exclude the listed properties
+    is_strict : bool
+        Determines whether to liberally return other exposed properties not necessarily listed in PropertyGroups instance
 
-Parameters
-----------
-entities_list : dict
-    A merged dictionary that contains all possible data to be used by the trigger methods
-properties_to_exclude : list
-    Any additional properties to exclude from the response
+    Returns
+    -------
 
-Returns
--------
-list
-    A list of normalzied entity dictionaries
-"""
-
-
-def normalize_entities_list_for_response(entities_list:List, properties_to_exclude=[], properties_to_include=[]):
+    """
     if len(entities_list) <= 0:
         return []
 
@@ -1233,8 +1298,7 @@ def normalize_entities_list_for_response(entities_list:List, properties_to_exclu
     normalized_entities_list = []
 
     for entity_dict in entities_list:
-        normalized_entity_dict = normalize_object_result_for_response('ENTITIES', entity_dict, properties_to_exclude,
-                                                                      properties_to_include)
+        normalized_entity_dict = normalize_object_result_for_response(entity_dict=entity_dict, property_groups=property_groups, is_include_action=is_include_action, is_strict=is_strict)
         normalized_entities_list.append(normalized_entity_dict)
 
     return normalized_entities_list
