@@ -874,6 +874,9 @@ def build_nodes(raw_provenance_dict, normalized_provenance_dict, token):
             # Also skip next_revision_uuid and previous_revision_uuid for Dataset to avoid additional
             # checks when the target Dataset is public but the revisions are not public
             properties_to_skip = [
+                'collections',
+                'source',
+                'origin_samples',
                 'direct_ancestors',
                 'direct_ancestor',
                 'next_revision_uuid',
