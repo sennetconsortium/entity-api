@@ -1335,9 +1335,20 @@ def get_provenance(neo4j_driver, uuid, depth, return_descendants=None, data_acce
              f"WHERE n.uuid = '{uuid}' {predicate} "
              f"CALL apoc.path.subgraphAll(n, {{ {max_level_str} relationshipFilter:'{relationship_filter}' {allow_nodes} }}) "
              f"YIELD nodes, relationships "
-             f"WITH [node in nodes | node {{ .*, label:labels(node)[0] }} ] as nodes, "
-             f"[rel in relationships | rel {{ .*, fromNode: {{ label:labels(startNode(rel))[0], uuid:startNode(rel).uuid }}, toNode: {{ label:labels(endNode(rel))[0], uuid:endNode(rel).uuid }}, rel_data: {{ type: type(rel) }} }} ] as rels "
-             f"WITH {{ nodes:nodes, relationships:rels }} as json "
+             f"WITH [rel in relationships | rel {{ .*, fromNode: {{ label:labels(startNode(rel))[0], uuid:startNode(rel).uuid }}, toNode: {{ label:labels(endNode(rel))[0], uuid:endNode(rel).uuid }}, rel_data: {{ type: type(rel) }} }} ] as rels, "
+             f"[node in nodes | node {{ .*, label:labels(node)[0] }} ] as nodes "
+             # let's call a sub procedure in order to get the associated protocol_url and creation_action properties
+             "CALL { "
+             "WITH nodes "
+             "UNWIND nodes AS n "
+             "MATCH (e2:Entity)-[:WAS_GENERATED_BY]->(a:Activity) WHERE e2.uuid = n.uuid "
+             "WITH nodes, n, apoc.map.fromPairs([['protocol_url', a.protocol_url], ['creation_action', (case when n.creation_action is not null then n.creation_action else a.creation_action end)]]) as a2 "
+             "WITH nodes, apoc.map.merge(n, a2) as x "
+             # let's remove the entities from the original nodes list
+             "WITH [x in nodes WHERE x.label <> 'Entity' | x] as activities, collect(x) as x2 "
+             "RETURN apoc.coll.union(x2, activities) as n2 "
+             "} "
+             f"WITH {{ nodes:n2, relationships:rels }} as json "
              f"RETURN json")
 
     logger.info("======get_provenance() query======")
