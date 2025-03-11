@@ -16,6 +16,7 @@ from urllib3.exceptions import InsecureRequestWarning
 from pathlib import Path
 import logging
 import json
+
 from lib.constraints import get_constraints_by_ancestor, get_constraints_by_descendant, build_constraint, \
     build_constraint_unit
 
@@ -284,6 +285,8 @@ COMMA_SEPARATOR = ','
 """
 The default route
 
+AWS API Gateway and Flask treat this endpoint as public accessible
+
 Returns
 -------
 str
@@ -295,12 +298,13 @@ def index():
 
 
 """
-Delete ALL the following cached data from Memcached, Data Admin access is required in AWS API Gateway:
+Delete ALL the following cached data from Memcached:
     - cached individual entity dict
     - cached IDs dict from uuid-api
     - cached yaml content from github raw URLs
     - cached TSV file content for reference DOIs redirect
 
+Data Admin access is required in AWS API Gateway and Flask
 
 Returns
 -------
@@ -322,7 +326,9 @@ def flush_all_cache():
 
 
 """
-Delete the cached data from Memcached for a given entity, Data Admin access is required in AWS API Gateway
+Delete the cached data from Memcached for a given entity
+
+Data Admin access is required in AWS API Gateway and Flask
 
 Parameters
 ----------
@@ -350,6 +356,8 @@ def flush_cache(id):
 
 """
 Show status of neo4j connection with the current VERSION and BUILD
+
+AWS API Gateway and Flask treat this endpoint as public accessible
 
 Returns
 -------
@@ -387,7 +395,8 @@ def get_status():
 """
 Currently for debugging purpose
 Essentially does the same as ingest-api's `/metadata/usergroups` using the deprecated commons method
-Globus groups token is required by AWS API Gateway lambda authorizer
+
+Globus groups token is required by the AWS API Gateway lambda authorizer and Flask
 
 Returns
 -------
@@ -404,7 +413,8 @@ def get_user_groups(token: str):
 """
 Retrieve the ancestor organ(s) of a given entity
 
-The gateway treats this endpoint as public accessible
+AWS API Gateway and Flask treat this endpoint as public accessible. Public/consortium
+access rules apply.
 
 Parameters
 ----------
@@ -467,13 +477,8 @@ def get_ancestor_organs(id):
     complete_entities_list = schema_manager.get_complete_entities_list(token, organs, properties_to_skip, use_memcache=True)
 
     # Final result after normalization
-    final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list)
-
-    if public_entity and not user_in_sennet_read_group(request):
-        filtered_organs_list = []
-        for organ in final_result:
-            filtered_organs_list.append(schema_manager.exclude_properties_from_response(excluded_fields, organ))
-        final_result = filtered_organs_list
+    _final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list)
+    final_result = schema_manager.remove_unauthorized_fields_from_response(_final_result, not user_in_sennet_read_group(request))
 
     return jsonify(final_result)
 
@@ -525,7 +530,8 @@ def _get_entity_visibility(normalized_entity_type, entity_dict):
 """
 Retrieve the metadata information of a given entity by id
 
-The gateway treats this endpoint as public accessible
+AWS API Gateway and Flask treat this endpoint as public accessible. Public/consortium
+access rules apply.
 
 Result filtering is supported based on query string
 For example: /entities/<id>?property=data_access_level
@@ -593,8 +599,7 @@ def get_entity_by_id(id):
 
     # Also normalize the result based on schema
     final_result = schema_manager.normalize_object_result_for_response(provenance_type='ENTITIES',
-                                                                       entity_dict=complete_dict,
-                                                                       properties_to_include=['protocol_url'])
+                                                                       entity_dict=complete_dict)
 
     # Result filtering based on query string
     # The `data_access_level` property is available in all entities Source/Sample/Dataset
@@ -628,6 +633,8 @@ def get_entity_by_id(id):
 
 """
 Retrieve the entity's pipeline message property
+
+Globus groups token is required by the AWS API Gateway lambda authorizer and Flask
 
 Parameters
 ----------
@@ -683,6 +690,8 @@ Retrieve handful of information to be display in the Data Sharing Portal job das
 
 Takes as input a json body with required field "entity_uuids", which is an array of entity UUIDs
 
+Globus groups token is required by the AWS API Gateway lambda authorizer and Flask
+
 Parameters
 ----------
 entity_type : str
@@ -726,20 +735,23 @@ def get_entities_by_ids_for_dashboard(entity_type: str, json_data_dict: dict):
             abort_internal_err(e.response.text)
 
 
-
-
 """
 Retrieve the JSON containing the metadata information for a given entity which is to go into an
 OpenSearch document for the entity. Note this is a subset of the "complete" entity metadata returned by the
 `GET /entities/<id>` endpoint, with information design and coding design to perform reasonably for
 large volumes of indexing.
-The gateway treats this endpoint as public accessible.
+
 Result filtering is supported based on query string
 For example: /documents/<id>?property=data_access_level
+
+AWS API Gateway and Flask treat this endpoint as public accessible. Public/consortium
+access rules apply.
+
 Parameters
 ----------
 id : str
-    The HuBMAP ID (e.g. HBM123.ABCD.456) or UUID of target entity 
+    The SenNet ID (e.g. SNT123.ABCD.456) or UUID of target entity
+
 Returns
 -------
 json
@@ -755,7 +767,8 @@ def get_document_by_id(id):
 """
 Retrieve the full tree above the referenced entity and build the provenance document
 
-The gateway treats this endpoint as public accessible
+AWS API Gateway and Flask treat this endpoint as public accessible. Public/consortium
+access rules apply.
 
 Parameters
 ----------
@@ -891,7 +904,8 @@ def build_nodes(raw_provenance_dict, normalized_provenance_dict, token):
 """
 Show all the supported entity types
 
-The gateway treats this endpoint as public accessible
+AWS API Gateway and Flask treat this endpoint as public accessible. Public/consortium
+access rules apply.
 
 Returns
 -------
@@ -909,10 +923,11 @@ def get_entity_types():
 
 """
 Retrieve all the entity nodes for a given entity type
+
 Result filtering is supported based on query string
 For example: /<entity_type>/entities?property=uuid
 
-NOTE: this endpoint is NOT exposed via AWS API Gateway due to performance consideration
+This endpoint is NOT exposed via AWS API Gateway due to performance consideration
 It's only used by search-api with making internal calls during index/reindex time bypassing AWS API Gateway
 
 Parameters
@@ -987,8 +1002,7 @@ def get_entities_by_type(entity_type):
         complete_entities_list = schema_manager.get_complete_entities_list(token, entities_list, properties_to_skip, use_memcache=True)
 
         # Final result after normalization
-        final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list,
-                                                                           properties_to_include=['protocol_url'])
+        final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list)
 
     # Response with the final result
     return jsonify(final_result)
@@ -1000,6 +1014,8 @@ Create an entity of the target type in neo4j
 Response result filtering is supported based on query string
 For example: /entities/<entity_type>?return_all_properties=true
 Default to skip those time-consuming properties
+
+Globus groups token is required by the AWS API Gateway lambda authorizer and Flask
 
 Parameters
 ----------
@@ -1181,6 +1197,8 @@ def create_entity(entity_type: str, user_token: str, json_data_dict: dict):
 """
 Create multiple samples from the same source entity
 
+Globus groups token is required by the AWS API Gateway lambda authorizer and Flask
+
 Parameters
 ----------
 count : str
@@ -1236,6 +1254,8 @@ def create_multiple_samples(count: int, user_token: str, json_data_dict: dict):
 """
 Update the properties of a given activity, primarily the protocol_url and processing_information
 
+This endpoint is NOT exposed via AWS API Gateway
+
 Parameters
 ----------
 id : str
@@ -1269,6 +1289,23 @@ def update_activity(id: str, user_token: str, json_data_dict: dict):
     return jsonify(normalized_complete_dict)
 
 
+"""
+Check if the given entity type A is an instance of the given type B
+
+AWS API Gateway treats this endpoint as public accessible
+
+Parameters
+----------
+type_a : str
+    The given entity type A
+type_a : str
+    The given entity type B
+
+Returns
+-------
+json
+    A boolean value indicating if type A is an instance of type B
+"""
 @app.route('/entities/type/<type_a>/instanceof/<type_b>', methods=['GET'])
 def get_entities_type_instanceof(type_a, type_b):
     try:
@@ -1280,8 +1317,10 @@ def get_entities_type_instanceof(type_a, type_b):
 
 """
 Endpoint which sends the "visibility" of an entity using values from DataVisibilityEnum.
-Not exposed through the gateway.  Used by services like search-api to, for example, determine if
+Not exposed through the gateway. Used by services like search-api to, for example, determine if
 a Collection can be in a public index while encapsulating the logic to determine that in this service.
+
+This endpoint is NOT exposed via AWS API Gateway
 
 Parameters
 ----------
@@ -1331,6 +1370,8 @@ For example: /entities/<id>?return_dict=true
 Response result filtering is supported based on query string
 For example: /entities/<id>?return_all_properties=true
 Default to skip those time-consuming properties
+
+Globus groups token is required by the AWS API Gateway lambda authorizer and Flask
 
 Parameters
 ----------
@@ -1420,20 +1461,13 @@ def update_entity(id: str, user_token: str, json_data_dict: dict):
         # A bit more validation for updating the sample and the linkage to existing source entity
         has_direct_ancestor_uuid = False
         if ('direct_ancestor_uuid' in json_data_dict) and json_data_dict['direct_ancestor_uuid']:
-            has_direct_ancestor_uuid = True
+            existing_direct_ancestor_uuid = schema_neo4j_queries.get_sample_direct_ancestor(schema_manager.get_neo4j_driver_instance(),
+                                                                                   entity_dict['uuid'], property_key='uuid')
+            if not existing_direct_ancestor_uuid == json_data_dict['direct_ancestor_uuid']:
+                abort_bad_req('The field `direct_ancestor_uuid` can not be changed after the entity has been registered.')
 
-            direct_ancestor_uuid = json_data_dict['direct_ancestor_uuid']
-            # Check existence of the source entity
-            direct_ancestor_uuid_dict = query_target_entity(direct_ancestor_uuid)
-            validate_constraints_by_entities(direct_ancestor_uuid_dict, json_data_dict, normalized_entity_type)
-            # Also make sure it's either another Sample or a Source
-            if direct_ancestor_uuid_dict['entity_type'] not in ['Source', 'Sample']:
-                abort_bad_req(f"The uuid: {direct_ancestor_uuid} is not a Source neither a Sample, cannot be used as the direct ancestor of this Sample")
 
-            merged = {**entity_dict, **json_data_dict}
-            check_multiple_organs_constraint(merged, direct_ancestor_uuid_dict, entity_dict['uuid'])
-
-        # Generate 'before_update_triiger' data and update the entity details in Neo4j
+        # Generate 'before_update_trigger' data and update the entity details in Neo4j
         merged_updated_dict = update_object_details('ENTITIES', request, normalized_entity_type, user_token, json_data_dict, entity_dict)
 
         # Handle linkages update via `after_update_trigger` methods
@@ -1441,21 +1475,16 @@ def update_entity(id: str, user_token: str, json_data_dict: dict):
             after_update(normalized_entity_type, user_token, merged_updated_dict)
 
     elif normalized_entity_type in ['Dataset', 'Publication']:
-        # A bit more validation if `direct_ancestor_uuids` provided
-        has_direct_ancestor_uuids = False
-        if ('direct_ancestor_uuids' in json_data_dict) and (json_data_dict['direct_ancestor_uuids']):
-            has_direct_ancestor_uuids = True
-
-            # Check existence of those source entities
-            for direct_ancestor_uuids in json_data_dict['direct_ancestor_uuids']:
-                direct_ancestor_uuids_dict = query_target_entity(direct_ancestor_uuids)
-                validate_constraints_by_entities(direct_ancestor_uuids_dict, json_data_dict, normalized_entity_type)
+        if 'direct_ancestor_uuids' in json_data_dict:
+            existing_direct_ancestor_uuids = schema_neo4j_queries.get_dataset_direct_ancestors(neo4j_driver_instance, entity_dict['uuid'], property_key='uuid')
+            if not collections.Counter(existing_direct_ancestor_uuids) == collections.Counter(json_data_dict['direct_ancestor_uuids']):
+                abort_bad_req('The field `direct_ancestor_uuids` can not be changed after the entity has been registered.')
 
         # Generate 'before_update_trigger' data and update the entity details in Neo4j
         merged_updated_dict = update_object_details('ENTITIES', request, normalized_entity_type, user_token, json_data_dict, entity_dict)
 
         # Handle linkages update via `after_update_trigger` methods
-        if has_direct_ancestor_uuids or has_updated_status:
+        if has_updated_status:
             after_update(normalized_entity_type, user_token, merged_updated_dict)
 
     elif normalized_entity_type == 'Upload':
@@ -1602,7 +1631,8 @@ def update_entity(id: str, user_token: str, json_data_dict: dict):
 """
 Get all ancestors of the given entity
 
-The gateway treats this endpoint as public accessible
+AWS API Gateway and Flask treat this endpoint as public accessible. Public/consortium
+access rules apply.
 
 Result filtering based on query string
 For example: /ancestors/<id>?property=uuid
@@ -1688,7 +1718,7 @@ def get_ancestors(id):
                 property_list = app_neo4j_queries.get_ancestors(neo4j_driver_instance, uuid, data_access_level, properties=segregated_properties, is_include_action=properties_action)
                 complete_entities_list = schema_manager.get_complete_entities_list(token, property_list, segregated_properties.trigger, is_include_action=properties_action, use_memcache=False)
                 # Final result
-                _final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list, properties_to_include=segregated_properties.activity)
+                _final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list, segregated_properties, is_include_action=properties_action, is_strict=True)
                 final_result = schema_manager.remove_unauthorized_fields_from_response(_final_result, unauthorized=not authorized)
 
     # Return all the details if no property filtering
@@ -1716,7 +1746,7 @@ def get_ancestors(id):
         complete_entities_list = schema_manager.get_complete_entities_list(token, ancestors_list, properties_to_skip, use_memcache=True)
 
         # Final result after normalization
-        _final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list, properties_to_include=['protocol_url'])
+        _final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list, is_include_action=True)
         final_result = schema_manager.remove_unauthorized_fields_from_response(_final_result, unauthorized=not authorized)
 
     return jsonify(final_result)
@@ -1724,6 +1754,10 @@ def get_ancestors(id):
 
 """
 Get all descendants of the given entity
+
+AWS API Gateway and Flask treat this endpoint as public accessible. Public/consortium
+access rules apply.
+
 Result filtering based on query string
 For example: /descendants/<id>?property=uuid
 OR send a POST with: {filter_properties: list[str], is_include: bool}
@@ -1801,7 +1835,7 @@ def get_descendants(id):
                 property_list = app_neo4j_queries.get_descendants(neo4j_driver_instance, uuid, data_access_level, properties=segregated_properties, is_include_action=properties_action)
                 complete_entities_list = schema_manager.get_complete_entities_list(token, property_list, segregated_properties.trigger, is_include_action=properties_action, use_memcache=False)
                 # Final result
-                _final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list, properties_to_include=segregated_properties.activity)
+                _final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list, segregated_properties, is_include_action=properties_action, is_strict=True)
                 final_result = schema_manager.remove_unauthorized_fields_from_response(_final_result, unauthorized=not authorized)
     # Return all the details if no property filtering
     else:
@@ -1827,7 +1861,7 @@ def get_descendants(id):
         complete_entities_list = schema_manager.get_complete_entities_list(token, descendants_list, properties_to_skip,  use_memcache=True)
 
         # Final result after normalization
-        _final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list, properties_to_include=['protocol_url'])
+        _final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list, is_include_action=True)
         final_result = schema_manager.remove_unauthorized_fields_from_response(_final_result, unauthorized=not authorized)
 
     return jsonify(final_result)
@@ -1836,7 +1870,8 @@ def get_descendants(id):
 """
 Get all parents of the given entity
 
-The gateway treats this endpoint as public accessible
+AWS API Gateway and Flask treat this endpoint as public accessible. Public/consortium
+access rules apply.
 
 Result filtering based on query string
 For example: /parents/<id>?property=uuid
@@ -1923,7 +1958,7 @@ def get_parents(id):
                 property_list = app_neo4j_queries.get_parents(neo4j_driver_instance, uuid, properties=segregated_properties, is_include_action=properties_action)
                 complete_entities_list = schema_manager.get_complete_entities_list(token, property_list, segregated_properties.trigger, is_include_action=properties_action, use_memcache=False)
                 # Final result
-                _final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list, properties_to_include=segregated_properties.activity)
+                _final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list, segregated_properties, is_include_action=properties_action, is_strict=True)
                 final_result = schema_manager.remove_unauthorized_fields_from_response(_final_result, unauthorized=not user_in_sennet_read_group(request))
     # Return all the details if no property filtering
     else:
@@ -1958,6 +1993,9 @@ def get_parents(id):
 
 """
 Get all children of the given entity
+
+Globus groups token is required by the AWS API Gateway lambda authorizer
+
 Result filtering based on query string
 For example: /children/<id>?property=uuid
 OR send a POST with: {filter_properties: list[str], is_include: bool}
@@ -1999,7 +2037,7 @@ def get_children(id):
                 abort_bad_req(_property_key_filtering_notice(result_filtering_accepted_property_keys))
 
             # Only return a list of the filtered property value of each entity
-            property_list = app_neo4j_queries.get_children(neo4j_driver_instance, uuid, properties=result_filtering_accepted_property_keys)
+            property_list = schema_neo4j_queries.get_children(neo4j_driver_instance, uuid, properties=result_filtering_accepted_property_keys)
 
             # Final result
             final_result = property_list
@@ -2013,14 +2051,14 @@ def get_children(id):
             if 'filter_properties' in filtering_dict:
                 properties_action = filtering_dict.get('is_include', True)
                 segregated_properties = schema_manager.group_verify_properties_list(properties=filtering_dict['filter_properties'])
-                property_list = app_neo4j_queries.get_children(neo4j_driver_instance, uuid, properties=segregated_properties, is_include_action=properties_action)
+                property_list = schema_neo4j_queries.get_children(neo4j_driver_instance, uuid, properties=segregated_properties, is_include_action=properties_action)
                 complete_entities_list = schema_manager.get_complete_entities_list(user_token, property_list, segregated_properties.trigger, is_include_action=properties_action, use_memcache=False)
                 # Final result
-                _final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list, properties_to_include=segregated_properties.activity)
+                _final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list, segregated_properties, is_include_action=properties_action, is_strict=True)
                 final_result = schema_manager.remove_unauthorized_fields_from_response(_final_result, unauthorized=not user_in_sennet_read_group(request))
     # Return all the details if no property filtering
     else:
-        children_list = app_neo4j_queries.get_children(neo4j_driver_instance, uuid)
+        children_list = schema_neo4j_queries.get_children(neo4j_driver_instance, uuid)
 
         # Generate trigger data and merge into a big dict
         # and skip some of the properties that are time-consuming to generate via triggers
@@ -2050,7 +2088,8 @@ def get_children(id):
 """
 Get all siblings of the given entity
 
-The gateway treats this endpoint as public accessible
+AWS API Gateway and Flask treat this endpoint as public accessible. Public/consortium
+access rules apply.
 
 Result filtering based on query string
 For example: /entities/<id>/siblings?property=uuid
@@ -2170,7 +2209,8 @@ def get_siblings(id):
 """
 Get all tuplets of the given entity: sibling entities sharing an parent activity
 
-The gateway treats this endpoint as public accessible
+AWS API Gateway and Flask treat this endpoint as public accessible. Public/consortium
+access rules apply.
 
 Result filtering based on query string
 For example: /entities/{id}/tuplets?property=uuid
@@ -2279,6 +2319,9 @@ def get_tuplets(id):
 
 """
 Get all previous revisions of the given entity
+
+Globus groups token is required by AWS API Gateway lambda authorizer
+
 Result filtering based on query string
 For example: /previous_revisions/<id>?property=uuid
 
@@ -2349,6 +2392,9 @@ def get_previous_revisions(id):
 
 """
 Get all next revisions of the given entity
+
+Globus groups token is required by AWS API Gateway lambda authorizer
+
 Result filtering based on query string
 For example: /next_revisions/<id>?property=uuid
 
@@ -2419,7 +2465,7 @@ def get_next_revisions(id):
 """
 Redirect a request from a doi service for a dataset or collection
 
-The gateway treats this endpoint as public accessible
+AWS API Gateway treats this endpoint as public accessible
 
 Parameters
 ----------
@@ -2470,7 +2516,7 @@ def doi_redirect(id):
 """
 Redirection method created for REFERENCE organ DOI redirection, but can be for others if needed
 
-The gateway treats this endpoint as public accessible
+AWS API Gateway and Flask treat this endpoint as public accessible
 
 Parameters
 ----------
@@ -2491,7 +2537,8 @@ snid : str
 """
 Get the Globus URL to the given Dataset or Upload
 
-The gateway treats this endpoint as public accessible
+AWS API Gateway and Flask treat this endpoint as public accessible. Public/consortium
+access rules apply.
 
 It will provide a Globus URL to the dataset/upload directory in of three Globus endpoints based on the access
 level of the user (public, consortium or protected), public only, of course, if no token is provided.
@@ -2627,7 +2674,9 @@ def get_globus_url(id):
 
 
 """
-Retrive the latest (newest) revision of a Dataset
+Retrieve the latest (newest) revision of a Dataset
+
+AWS API Gateway treats this endpoint as public accessible
 
 Public/Consortium access rules apply - if no token/consortium access then
 must be for a public dataset and the returned Dataset must be the latest public version.
@@ -2705,11 +2754,13 @@ def get_dataset_latest_revision(id):
 
 
 """
-Retrive the calculated revision number of a Dataset
+Retrieve the calculated revision number of a Dataset
 
 The calculated revision is number is based on the [:REVISION_OF] relationships
 to the oldest dataset in a revision chain.
 Where the oldest dataset = 1 and each newer version is incremented by one (1, 2, 3 ...)
+
+AWS API Gateway treats this endpoint as public accessible
 
 Public/Consortium access rules apply, if is for a non-public dataset
 and no token or a token without membership in SenNet-Read group is sent with the request
@@ -2758,6 +2809,8 @@ def get_dataset_revision_number(id):
 
 """
 Retract a published dataset with a retraction reason and sub status
+
+Data Admin access is required in AWS API Gateway and Flask
 
 Takes as input a json body with required fields "retraction_reason" and "sub_status".
 Authorization handled by gateway. Only token of SenNet-Data-Admin group can use this call.
@@ -2855,6 +2908,9 @@ parameter "include_dataset" can be given with the value of "true". If this param
 is set to false, the dataset will not be included. For example, to include the full datasets for each revision,
 use '/datasets/<id>/revisions?include_dataset=true'. To omit the datasets, either set include_dataset=false, or
 simply do not include this parameter.
+
+AWS API Gateway and Flask treat this endpoint as public accessible. Public/consortium
+access rules apply.
 
 Parameters
 ----------
@@ -3041,7 +3097,8 @@ list
 """
 Get all organs associated with a given dataset
 
-The gateway treats this endpoint as public accessible
+AWS API Gateway and Flask treat this endpoint as public accessible. Public/consortium
+access rules apply.
 
 Parameters
 ----------
@@ -3105,7 +3162,8 @@ def get_associated_organs_from_dataset(id):
 """
 Get all samples associated with a given dataset
 
-The gateway treats this endpoint as public accessible
+AWS API Gateway and Flask treat this endpoint as public accessible. Public/consortium
+access rules apply.
 
 Parameters
 ----------
@@ -3164,7 +3222,8 @@ def get_associated_samples_from_dataset(id):
 """
 Get all sources associated with a given dataset
 
-The gateway treats this endpoint as public accessible
+AWS API Gateway and Flask treat this endpoint as public accessible. Public/consortium
+access rules apply.
 
 Parameters
 ----------
@@ -3223,29 +3282,32 @@ def get_associated_sources_from_dataset(id):
 """
 Get the complete provenance info for all datasets
 
+AWS API Gateway and Flask treat this endpoint as public accessible. Public/consortium
+access rules apply.
+
 Authentication
--------
+--------------
 No token is required, however if a token is given it must be valid or an error will be raised. If no token with SenNet
 Read Group access is given, only datasets designated as "published" will be returned
 
 Query Parameters
--------
-    format : string
-        Designates the output format of the returned data. Accepted values are "json" and "tsv". If none provided, by
-        default will return a tsv.
-    group_uuid : string
-        Filters returned datasets by a given group uuid.
-    organ : string
-        Filters returned datasets related to a samples of the given organ. Accepts 2 character organ codes. These codes
-        must match the organ types yaml at https://raw.githubusercontent.com/sennetconsortium/search-api/master/src/search-schema/data/definitions/enums/organ_types.yaml
-        or an error will be raised
-    has_rui_info : string
-        Accepts strings "true" or "false. Any other value will result in an error. If true, only datasets connected to
-        an sample that contain rui info will be returned. If false, only datasets that are NOT connected to samples
-        containing rui info will be returned. By default, no filtering is performed.
-    dataset_status : string
-        Filters results by dataset status. Accepted values are "Published", "QA", and "NEW". If a user only has access
-        to published datasets and enters QA or New, an error will be raised. By default, no filtering is performed
+----------------
+format : string
+    Designates the output format of the returned data. Accepted values are "json" and "tsv". If none provided, by
+    default will return a tsv.
+group_uuid : string
+    Filters returned datasets by a given group uuid.
+organ : string
+    Filters returned datasets related to a samples of the given organ. Accepts 2 character organ codes. These codes
+    must match the organ types yaml at https://raw.githubusercontent.com/sennetconsortium/search-api/master/src/search-schema/data/definitions/enums/organ_types.yaml
+    or an error will be raised
+has_rui_info : string
+    Accepts strings "true" or "false. Any other value will result in an error. If true, only datasets connected to
+    an sample that contain rui info will be returned. If false, only datasets that are NOT connected to samples
+    containing rui info will be returned. By default, no filtering is performed.
+dataset_status : string
+    Filters results by dataset status. Accepted values are "Published", "QA", and "NEW". If a user only has access
+    to published datasets and enters QA or New, an error will be raised. By default, no filtering is performed
 
 Returns
 -------
@@ -3515,19 +3577,22 @@ def get_prov_info():
 """
 Get the complete provenance info for a given dataset
 
+AWS API Gateway and Flask treat this endpoint as public accessible. Public/consortium
+access rules apply.
+
 Authentication
--------
+--------------
 No token is required, however if a token is given it must be valid or an error will be raised. If no token with SenNet
 Read Group access is given, only datasets designated as "published" will be returned
 
 Query Parameters
--------
+----------------
 format : string
         Designates the output format of the returned data. Accepted values are "json" and "tsv". If none provided, by
         default will return a tsv.
 
 Path Parameters
--------
+---------------
 id : string
     A SenNet_ID or UUID for a dataset. If an invalid dataset id is given, an error will be raised
 
@@ -3769,17 +3834,11 @@ def get_prov_info_for_dataset(id):
 """
 Get the information needed to generate the sankey on software-docs as a json.
 
+AWS API Gateway and Flask treat this endpoint as public accessible
+
 Authentication
--------
+--------------
 No token is required or checked. The information returned is what is displayed in the public sankey
-
-Query Parameters
--------
-N/A
-
-Path Parameters
--------
-N/A
 
 Returns
 -------
@@ -3799,11 +3858,14 @@ def sankey_data():
     with open('sankey_mapping.json') as f:
         mapping_dict = json.load(f)
 
+    authorized = user_in_sennet_read_group(request)
+    data_access_level = 'public' if authorized is False else None
+
     # Instantiation of the list dataset_prov_list
     dataset_sankey_list = []
 
     # Call to app_neo4j_queries to prepare and execute the database query
-    sankey_info = app_neo4j_queries.get_sankey_info(neo4j_driver_instance)
+    sankey_info = app_neo4j_queries.get_sankey_info(neo4j_driver_instance, data_access_level=data_access_level)
     for dataset in sankey_info:
         internal_dict = collections.OrderedDict()
         internal_dict[HEADER_DATASET_GROUP_NAME] = dataset[HEADER_DATASET_GROUP_NAME]
@@ -3829,14 +3891,16 @@ def sankey_data():
 """
 Get the complete provenance info for all samples
 
+Globus groups token is required by AWS API Gateway lambda authorizer
+
 Authentication
--------
+--------------
 Token that is part of the SenNet Read-Group is required.
 
 Query Parameters
--------
-    group_uuid : string
-        Filters returned samples by a given group uuid.
+----------------
+group_uuid : string
+    Filters returned samples by a given group uuid.
 
 Returns
 -------
@@ -3947,16 +4011,18 @@ def get_sample_prov_info():
 """
 Retrieves and validates constraints based on definitions within lib.constraints
 
+AWS API Gateway treats this endpoint as public accessible
+
 Authentication
--------
+--------------
 No token is required
 
-Query Paramters
--------
+Query Parameters
+---------------
 N/A
 
 Request Body
--------
+------------
 Requires a json list in the request body matching the following example
 Example:
             [{
@@ -3971,7 +4037,7 @@ Example:
                  }
              }]
 Returns
---------
+-------
 JSON
 """
 @app.route('/constraints', methods=['POST'])
@@ -4479,25 +4545,26 @@ def create_multiple_samples_details(request, normalized_entity_type, user_token,
 """
 Create multiple component datasets from a single Multi-Assay ancestor
 
-Input
------
-json
-    A json object with the fields:
-        creation_action
-         - type: str
-         - description: the action event that will describe the activity node. Allowed valuese are: "Multi-Assay Split"
-        group_uuid
-         - type: str
-         - description: the group uuid for the new component datasets
-        direct_ancestor_uuid
-         - type: str
-         - description: the uuid for the parent multi assay dataset
-        datasets
-         - type: dict
-         - description: the datasets to be created. Only difference between these and normal datasets are the field "dataset_link_abs_dir"
+Globus groups token is required by the AWS API Gateway lambda authorizer and Flask
+
+Request Body
+------------
+Requires a json list in the request body with the following fields:
+creation_action
+ - type: str
+ - description: the action event that will describe the activity node. Allowed valuese are: "Multi-Assay Split"
+group_uuid
+ - type: str
+ - description: the group uuid for the new component datasets
+direct_ancestor_uuid
+ - type: str
+ - description: the uuid for the parent multi assay dataset
+datasets
+ - type: dict
+ - description: the datasets to be created. Only difference between these and normal datasets are the field "dataset_link_abs_dir"
 
 Returns
---------
+-------
 json array
     List of the newly created datasets represented as dictionaries.
 """
@@ -4621,15 +4688,21 @@ def multiple_components(user_token: str, json_data_dict: dict):
 
     return jsonify(normalized_complete_entity_list)
 
+
 """
 Get all collections of the given entity
-The gateway treats this endpoint as public accessible
+
+AWS API Gateway and Flask treat this endpoint as public accessible. Public/consortium
+access rules apply.
+
 Result filtering based on query string
 For example: /entities/<id>/collections?property=uuid
+
 Parameters
 ----------
 id : str
     The SenNet ID (e.g. SNT123.ABCD.456) or UUID of given entity
+
 Returns
 -------
 json
@@ -4657,7 +4730,7 @@ def get_collections(id):
                                           entity_dict=entity_dict)
 
     if entity_scope == DataVisibilityEnum.NONPUBLIC:
-        # Token is required and the user must belong to HuBMAP-READ group
+        # Token is required and the user must belong to SenNet-READ group
         token = get_user_token(request, non_public_access_required=True)
         public_entity = False
 
@@ -4728,13 +4801,18 @@ def get_collections(id):
 
 """
 Get all uploads of the given entity
-The gateway treats this endpoint as public accessible
+
+AWS API Gateway and Flask treat this endpoint as public accessible. Public/consortium
+access rules apply.
+
 Result filtering based on query string
 For example: /entities/<id>/uploads?property=uuid
+
 Parameters
 ----------
 id : str
-    The SenNet ID (e.g. SNT123.ABCD.456) or UUID of given entity 
+    The SenNet ID (e.g. SNT123.ABCD.456) or UUID of given entity
+
 Returns
 -------
 json
@@ -4762,7 +4840,7 @@ def get_uploads(id):
         abort_bad_req(f"Unsupported entity type of id {id}: {normalized_entity_type}")
 
     if entity_dict['status'].lower() != DATASET_STATUS_PUBLISHED:
-        # Token is required and the user must belong to HuBMAP-READ group
+        # Token is required and the user must belong to SenNet-READ group
         token = get_user_token(request, non_public_access_required = True)
 
     # By now, either the entity is public accessible or the user token has the correct access level
@@ -4926,18 +5004,28 @@ def create_multiple_component_details(request, normalized_entity_type, user_toke
     return created_datasets
 
 
+"""
+Returns a list of datasets under a particular upload.
+
+Filter what properties to include by sending a POST with:
+`{filter_properties: list[str], is_include: bool}`
+
+Globus groups token is required by the AWS API Gateway lambda authorizer and Flask
+
+Parameters
+----------
+id : str
+    The SenNet ID (e.g. SNT123.ABCD.456) or UUID of given upload
+
+Returns
+-------
+json
+    A list of all the datasets of the target upload or a list of UUIDs if only the uuid
+    property is requested
+"""
 @app.route("/uploads/<id>/datasets", methods=["GET", "POST"])
 @require_valid_token()
 def get_datasets_for_upload(id: str):
-    """
-    Returns a list of datasets under a particular upload.
-    Filter what properties to include by sending a POST with:
-    `{filter_properties: list[str], is_include: bool}`
-
-    :param id: str
-    :return: list[str|dict]
-    """
-
     # Verify that the entity is an upload
     entity_dict = query_target_entity(id)
     entity_type = entity_dict["entity_type"]
@@ -4971,25 +5059,37 @@ def get_datasets_for_upload(id: str):
                 segregated_properties = schema_manager.group_verify_properties_list(Ontology.ops().entities().DATASET, properties_to_filter)
                 properties_action = filtering_dict.get('is_include', True)
                 datasets_list = schema_neo4j_queries.get_upload_datasets(neo4j_driver_instance, uuid=uuid, properties=segregated_properties, is_include_action=properties_action)
-                complete_list = schema_manager.get_complete_entities_list(token, datasets_list, properties_to_skip=segregated_properties.trigger, is_include_action=properties_action, use_memcache=False)
-                _final_result = schema_manager.normalize_entities_list_for_response(complete_list,
-                                                                           properties_to_exclude=properties_to_filter if properties_action is False else [])
+                complete_list = schema_manager.get_complete_entities_list(token, datasets_list, properties_to_filter=segregated_properties.trigger, is_include_action=properties_action, use_memcache=False)
+                _final_result = schema_manager.normalize_entities_list_for_response(complete_list, segregated_properties, is_include_action=properties_action, is_strict=True)
+
     else:
         _final_result = schema_triggers.get_normalized_upload_datasets(uuid, token, properties_to_exclude)
     final_result = schema_manager.remove_unauthorized_fields_from_response(_final_result, unauthorized=not user_in_sennet_read_group(request))
     return jsonify(final_result)
 
 
+"""
+Returns a list of entities under a particular collection.
+
+Filter what properties to include by sending a POST with:
+`{filter_properties: list[str], is_include: bool}`
+
+AWS API Gateway and Flask treat this endpoint as public accessible. Public/consortium
+access rules apply.
+
+Parameters
+----------
+id : str
+    The SenNet ID (e.g. SNT123.ABCD.456) or UUID of given collection
+
+Returns
+-------
+json
+    A list of all the entities of the target collection or a list of UUIDs if only the uuid
+    property is requested.
+"""
 @app.route("/collections/<id>/entities", methods=["GET", "POST"])
 def get_entities_for_collection(id: str):
-    """
-    Returns a list of entities under a particular collection.
-    Filter what properties to include by sending a POST with:
-    `{filter_properties: list[str], is_include: bool}`
-
-    :param id: str
-    :return: list[str|dict]
-    """
     # Verify that the entity is a collection
     entity_dict = query_target_entity(id)
     entity_type = entity_dict["entity_type"]
@@ -5043,9 +5143,8 @@ def get_entities_for_collection(id: str):
                 segregated_properties = schema_manager.group_verify_properties_list(properties=properties_to_filter)
                 properties_action = filtering_dict.get('is_include', True)
                 entities_list = schema_neo4j_queries.get_collection_entities(neo4j_driver_instance, uuid=uuid, properties=segregated_properties, is_include_action=properties_action)
-                complete_list = schema_manager.get_complete_entities_list(token, entities_list, properties_to_skip=segregated_properties.trigger, is_include_action=properties_action, use_memcache=False)
-                _final_result = schema_manager.normalize_entities_list_for_response(complete_list,
-                                                                               properties_to_exclude=properties_to_filter if properties_action is False else segregated_properties.activity)
+                complete_list = schema_manager.get_complete_entities_list(token, entities_list, properties_to_filter=segregated_properties.trigger, is_include_action=properties_action, use_memcache=False)
+                _final_result = schema_manager.normalize_entities_list_for_response(complete_list, segregated_properties, is_include_action=properties_action, is_strict=True)
     else:
         # Get the entities associated with the collection
         _final_result = schema_triggers.get_normalized_collection_entities(
@@ -5693,7 +5792,7 @@ def delete_cache(id):
 
         # If the target entity is Sample (`direct_ancestor`) or Dataset/Publication (`direct_ancestors`)
         # Delete the cache of all the direct descendants (children)
-        child_uuids = schema_neo4j_queries.get_children(neo4j_driver_instance, entity_uuid , 'uuid')
+        child_uuids = schema_neo4j_queries.get_children(neo4j_driver_instance, entity_uuid , properties=['uuid'])
 
         # If the target entity is Collection, delete the cache for each of its associated
         # Datasets and Publications (via [:IN_COLLECTION] relationship) as well as just Publications (via [:USES_DATA] relationship)
@@ -5727,7 +5826,7 @@ scope of metadata requested e.g. complete data for a another service, indexing d
 Parameters
 ----------
 entity_id : str
-    The HuBMAP ID (e.g. HBM123.ABCD.456) or UUID of target entity 
+    The SenNet ID (e.g. SNT123.ABCD.456) or UUID of target entity 
 metadata_scope:
     A recognized scope from the SchemaConstants, controlling the triggers which are fired and elements
     from Neo4j which are retained.  Default is MetadataScopeEnum.INDEX.
@@ -5781,7 +5880,7 @@ def _get_metadata_by_id(entity_id: str = None, metadata_scope: MetadataScopeEnum
         if isinstance(user_token, Response):
             abort_forbidden(f"{normalized_entity_type} for {entity_id} is not accessible without presenting a token.")
         else:
-            # When the groups token is valid, but the user doesn't belong to HuBMAP-READ group
+            # When the groups token is valid, but the user doesn't belong to SenNet-READ group
             # Or the token is valid but doesn't contain group information (auth token or transfer token)
             user_authorized = user_in_sennet_read_group(request)
 
@@ -5840,7 +5939,7 @@ def _property_key_filtering_notice(result_filtering_accepted_property_keys):
     return f"Only the following property keys are supported in the query string: {COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}. To use additional, send a POST request with a list of 'properties', specifying whether to include or exclude the properties via is_include: bool option. {{properties:[str], is_include:bool}}"
 
 """
-Check if the user with token is in the HuBMAP-READ group
+Check if the user with token is in the SenNet-READ group
 
 Parameters
 ----------
@@ -5868,7 +5967,7 @@ def user_in_sennet_read_group(request):
 
         # If the token is not a groups token, no group information available
         # The commons.hm_auth.AuthCache would return a Response with 500 error message
-        # We treat such cases as the user not in the HuBMAP-READ group
+        # We treat such cases as the user not in the SenNet-READ group
         return False
 
     return (sennet_read_group_uuid in user_info['hmgroupids'])
