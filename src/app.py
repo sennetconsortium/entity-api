@@ -1613,7 +1613,7 @@ def update_entity(id: str, user_token: str, json_data_dict: dict):
     # How to handle reindex collection?
     # Also reindex the updated entity node in elasticsearch via search-api
     logger.log(logging.INFO,
-               "Re-indexing for modification of {entity_dict['entity_type']} "
+               f"Re-indexing for modification of {entity_dict['entity_type']} "
                f"with UUID {entity_dict['uuid']}")
     reindex_entity(entity_dict['uuid'], user_token)
 
