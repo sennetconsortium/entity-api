@@ -43,9 +43,10 @@ def get_dataset_direct_ancestors(neo4j_driver, uuid, property_key=None):
                  f"WHERE t.uuid = '{uuid}' "
                  f"RETURN apoc.coll.toSet(COLLECT(s.{property_key})) AS {record_field_name}")
     else:
-        query = (f"MATCH (s:Entity)<-[:USED]-(a:Activity)<-[:WAS_GENERATED_BY]-(t:Dataset) "
-                 f"WHERE t.uuid = '{uuid}' "
-                 f"RETURN apoc.coll.toSet(COLLECT(s)) AS {record_field_name}")
+        _activity_query_part = activity_query_part(only_map_part=True)
+        query = (f"MATCH (t:Entity)<-[:USED]-(a:Activity)<-[:WAS_GENERATED_BY]-(e:Dataset) "
+                 f"WHERE e.uuid = '{uuid}' "
+                 f"{_activity_query_part} {record_field_name}")
 
     logger.info("======get_dataset_direct_ancestors() query======")
     logger.info(query)
@@ -55,12 +56,7 @@ def get_dataset_direct_ancestors(neo4j_driver, uuid, property_key=None):
         record = session.read_transaction(_execute_readonly_tx, query)
 
         if record and record[record_field_name]:
-            if property_key:
-                # Just return the list of property values from each entity node
-                results = record[record_field_name]
-            else:
-                # Convert the list of nodes to a list of dicts
-                results = _nodes_to_dicts(record[record_field_name])
+            results = record[record_field_name]
 
     return results
 
@@ -2108,7 +2104,7 @@ def get_sources_associated_entity(neo4j_driver, uuid, filter_out = None):
     return results
 
 
-def activity_query_part(properties = None, for_all_match = False):
+def activity_query_part(properties = None, for_all_match = False, only_map_part = False):
     """
     Builds activity query part(s) for grabbing properties like protocol_url from Activity
 
@@ -2118,6 +2114,8 @@ def activity_query_part(properties = None, for_all_match = False):
         The properties that will be used to build additional query parts
     for_all_match : bool
         Whether to return a query part used for grabbing the entire nodes list
+    only_map_part : bool
+        whether to return just the part that creates the map the activity properties
 
     Returns
     -------
@@ -2128,8 +2126,13 @@ def activity_query_part(properties = None, for_all_match = False):
 
     query_match_part = f"MATCH (e2:Entity)-[:WAS_GENERATED_BY]->(a:Activity) WHERE e2.uuid = t.uuid"
 
+    build_part = " WITH t, apoc.map.fromPairs([['protocol_url', a.protocol_url], ['creation_action', a.creation_action]]) as a2 WITH apoc.map.merge(t,a2) as x RETURN apoc.coll.toSet(COLLECT(x)) AS "
+
+    if only_map_part:
+        return build_part
+
     if for_all_match:
-        query_match_part = query_match_part + f" WITH t, apoc.map.fromPairs([['protocol_url', a.protocol_url], ['creation_action', a.creation_action]]) as a2 WITH apoc.map.merge(t,a2) as x RETURN apoc.coll.toSet(COLLECT(x)) AS "
+        query_match_part = query_match_part + build_part
         return query_match_part
 
     def _query_grab_part(_properties, grab_part):
