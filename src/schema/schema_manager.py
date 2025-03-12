@@ -1236,10 +1236,11 @@ def normalize_object_result_for_response(provenance_type='ENTITIES', entity_dict
         normalized_entity_type = entity_dict['entity_type']
         properties = get_entity_properties(_schema[provenance_type], normalized_entity_type)
     else:
-        logger.error(f"Unable to normalize object result with"
-                     f" entity_dict={str(entity_dict)} and"
-                     f" provenance_type={provenance_type}.")
-        raise schema_errors.SchemaValidationException("Unable to normalize object, missing entity_type.")
+        if provenance_type == 'ENTITIES':
+            logger.error(f"Unable to normalize object result with"
+                         f" entity_dict={str(entity_dict)} and"
+                         f" provenance_type={provenance_type}.")
+            raise schema_errors.SchemaValidationException("Unable to normalize object, missing entity_type.")
 
     for key in entity_dict:
         _key = key.replace('activity_', '')
