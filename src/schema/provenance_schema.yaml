@@ -1038,6 +1038,9 @@ ENTITIES:
         exposed: false # For internal use only
         description: "Internal count of child samples, used for generating the submission id of the children. This field is not exposed via the api."
         #todo: add new yaml attribute, exposed that defaults to true.  When false the attribute is not returned in ws response
+      rui_exemption:
+        type: boolean
+        description: "Identifies Sample Blocks that are exempt from spatial registration via RUI."
       rui_location:
         type: json_string
         description: "The sample location and orientation in the ancestor organ as specified in the RUI tool."

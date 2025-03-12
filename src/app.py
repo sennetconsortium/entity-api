@@ -874,6 +874,9 @@ def build_nodes(raw_provenance_dict, normalized_provenance_dict, token):
             # Also skip next_revision_uuid and previous_revision_uuid for Dataset to avoid additional
             # checks when the target Dataset is public but the revisions are not public
             properties_to_skip = [
+                'collections',
+                'source',
+                'origin_samples',
                 'direct_ancestors',
                 'direct_ancestor',
                 'next_revision_uuid',
@@ -1610,7 +1613,7 @@ def update_entity(id: str, user_token: str, json_data_dict: dict):
     # How to handle reindex collection?
     # Also reindex the updated entity node in elasticsearch via search-api
     logger.log(logging.INFO,
-               "Re-indexing for modification of {entity_dict['entity_type']} "
+               f"Re-indexing for modification of {entity_dict['entity_type']} "
                f"with UUID {entity_dict['uuid']}")
     reindex_entity(entity_dict['uuid'], user_token)
 
