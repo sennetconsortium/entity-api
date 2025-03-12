@@ -2157,7 +2157,7 @@ def activity_query_part(properties = None, for_all_match = False, only_map_part 
 
         return grab_part
 
-    if isinstance(properties, PropertyGroups):
+    if isinstance(properties, PropertyGroups) and (len(properties.activity_neo4j + properties.activity_dep) > 0):
         query_grab_part = ''
         if len(properties.activity_neo4j) > 0:
             query_grab_part = _query_grab_part(properties.activity_neo4j, query_grab_part)
