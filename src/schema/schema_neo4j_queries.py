@@ -1231,8 +1231,13 @@ def get_has_rui_information(neo4j_driver, entity_uuid):
 
     # If the first query fails to return then grab the ancestor Block and check if it contains rui_location
     query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(s:Sample) "
-             f"WHERE e.uuid='{entity_uuid}' AND s.rui_location IS NOT NULL AND NOT TRIM(s.rui_location) = '' "
-             f"RETURN COUNT(s) > 0 as {record_field_name}")
+             f"WHERE e.uuid='{entity_uuid}' AND s.sample_category='Block' "
+             "RETURN "
+             "CASE "
+             "WHEN s.rui_exemption = true THEN 'Exempt' "
+             "WHEN s.rui_location IS NOT NULL AND NOT TRIM(s.rui_location) = '' THEN 'True' "
+             "ELSE 'False' "
+             f"END as {record_field_name}")
 
     logger.info("======get_has_rui_information() query======")
     logger.info(query)
