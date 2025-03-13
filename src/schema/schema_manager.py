@@ -1217,8 +1217,9 @@ def normalize_object_result_for_response(provenance_type='ENTITIES', entity_dict
     -------
 
     """
-    if entity_dict is None:
-        entity_dict = {}
+    if entity_dict is None or entity_dict == {}:
+        return {}
+
     global _schema
 
     normalized_entity = {}
