@@ -133,8 +133,7 @@ def test_update_block_sample(app, requests, db_session):
     uuid_api_url = app.config["UUID_API_URL"]
     search_api_url = app.config["SEARCH_API_URL"]
 
-    calls = [1, 2]
-    for i in calls:
+    for i in range(2):
         requests.add_response(
             f"{uuid_api_url}/uuid/{test_block['uuid']}",
             "get",
