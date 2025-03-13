@@ -719,7 +719,7 @@ def get_publication_associated_collection(property_key, normalized_type, user_to
 
     # Get rid of the entity node properties that are not defined in the yaml schema
     # as well as the ones defined as `exposed: false` in the yaml schema
-    return property_key, schema_manager.normalize_entity_result_for_response(collection_dict)
+    return property_key, schema_manager.normalize_object_result_for_response(entity_dict=collection_dict)
 
 
 def link_publication_to_associated_collection(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
