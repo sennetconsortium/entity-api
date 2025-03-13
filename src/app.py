@@ -1651,7 +1651,7 @@ def update_entity(id: str, user_token: str, json_data_dict: dict):
     complete_dict = schema_manager.get_complete_entity_result(user_token, merged_updated_dict, properties_to_skip, use_memcache=True)
 
     # Will also filter the result based on schema
-    normalized_complete_dict = schema_manager.normalize_entity_result_for_response(complete_dict)
+    normalized_complete_dict = schema_manager.normalize_object_result_for_response(entity_dict=complete_dict)
 
     # Update the activity data if necessary
     if 'protocol_url' in json_data_dict or (
