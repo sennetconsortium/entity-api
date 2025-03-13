@@ -1546,14 +1546,14 @@ def get_dataset_title(property_key, normalized_type, user_token, existing_data_d
 
     dataset_type = existing_data_dict['dataset_type']
     # Get the sample organ name and source metadata information of this dataset
-    organ_names, source_metadata, source_type = schema_neo4j_queries.get_dataset_organ_and_source_info(
+    organ_type, source_metadata, source_type = schema_neo4j_queries.get_dataset_organ_and_source_info(
         schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'])
 
     # Parse the organ description
     organ_desc = ''
     organ_list = []
-    if organ_names is not None and bool(organ_names):
-        for organ_name in organ_names:
+    if organ_type is not None and bool(organ_type):
+        for organ_name in organ_type:
             if organ_name is not None:
                 try:
                     # The organ_name is the two-letter code only set if specimen_type == 'organ'

@@ -201,18 +201,18 @@ str: The source metadata (string representation of a Python dict)
 
 
 def get_dataset_organ_and_source_info(neo4j_driver, uuid):
-    organ_names = set()
-    source_metadata = set()
+    organ_type = None
+    source_metadata = None
     source_type = None
 
     with neo4j_driver.session() as session:
         sample_query = ("MATCH (e:Dataset)-[:USED|WAS_GENERATED_BY*]->(s:Sample) WHERE "
                  f"e.uuid='{uuid}' AND s.sample_category is not null and s.sample_category='Organ' "
                  "MATCH (s2:Sample)-[:USED|WAS_GENERATED_BY*]->(d:Source) WHERE s2.uuid=s.uuid AND s2.sample_category is not null "
-                 "RETURN DISTINCT d.metadata AS source_metadata, d.source_type AS source_type, "
-                 "CASE WHEN s.organ is not null THEN s.organ "
-                 "ELSE s.sample_category "
-                 "END AS organ_type")
+                 "RETURN COLLECT({source_metadata: d.metadata, source_type: d.source_type, "
+                 "organ_type: CASE WHEN s.organ is not null THEN s.organ "
+                 "ELSE s.sample_category END}) "
+                 f"AS {record_field_name}")
 
         logger.info("======get_dataset_organ_and_source_info() sample_query======")
         logger.info(sample_query)
@@ -220,12 +220,12 @@ def get_dataset_organ_and_source_info(neo4j_driver, uuid):
         with neo4j_driver.session() as session:
             record = session.read_transaction(_execute_readonly_tx, sample_query)
 
-            if record:
-                source_metadata.add(record[0])
-                source_type = record[1]
-                organ_names.add(record[2])
+            if record and record[record_field_name]:
+                source_metadata = [d['source_metadata'] for d in record[record_field_name]]
+                source_type = next(iter(set([d['source_type'] for d in record[record_field_name]])))
+                organ_type = set([d['organ_type'] for d in record[record_field_name]])
 
-    return organ_names, source_metadata, source_type
+    return organ_type, source_metadata, source_type
 
 
 def get_entity_type(neo4j_driver, entity_uuid: str) -> str:
@@ -2157,7 +2157,7 @@ def activity_query_part(properties = None, for_all_match = False, only_map_part 
 
         return grab_part
 
-    if isinstance(properties, PropertyGroups):
+    if isinstance(properties, PropertyGroups) and (len(properties.activity_neo4j + properties.activity_dep) > 0):
         query_grab_part = ''
         if len(properties.activity_neo4j) > 0:
             query_grab_part = _query_grab_part(properties.activity_neo4j, query_grab_part)
