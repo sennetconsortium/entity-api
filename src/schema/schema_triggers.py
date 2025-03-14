@@ -1463,7 +1463,7 @@ def get_cedar_mapped_metadata(property_key, normalized_type, user_token, existin
         if new_key not in mapped_metadata:
             mapped_metadata[new_key] = v
         else:
-            curr_val = mapped_metadata[new_key]
+            curr_val = str(mapped_metadata[new_key])
             if len(curr_val) < 1:
                 # Prevent space at the beginning if the value is empty
                 mapped_metadata[new_key] = v
