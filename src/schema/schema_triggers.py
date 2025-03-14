@@ -1453,25 +1453,30 @@ def get_cedar_mapped_metadata(property_key, normalized_type, user_token, existin
         metadata = existing_data_dict['metadata']
 
     mapped_metadata = {}
-    for k, v in metadata.items():
-        suffix = None
-        parts = [_normalize(word) for word in k.split('_')]
-        if parts[-1] == 'Value' or parts[-1] == 'Unit':
-            suffix = parts.pop()
+    try:
+        for k, v in metadata.items():
+            suffix = None
+            parts = [_normalize(word) for word in k.split('_')]
+            if parts[-1] == 'Value' or parts[-1] == 'Unit':
+                suffix = parts.pop()
 
-        new_key = ' '.join(parts)
-        if new_key not in mapped_metadata:
-            mapped_metadata[new_key] = v
-        else:
-            curr_val = str(mapped_metadata[new_key])
-            if len(curr_val) < 1:
-                # Prevent space at the beginning if the value is empty
+            new_key = ' '.join(parts)
+            if new_key not in mapped_metadata:
                 mapped_metadata[new_key] = v
-                continue
-            if suffix == 'Value':
-                mapped_metadata[new_key] = f"{v} {curr_val}"
-            if suffix == 'Unit':
-                mapped_metadata[new_key] = f"{curr_val} {v}"
+            else:
+                curr_val = str(mapped_metadata[new_key])
+                if len(curr_val) < 1:
+                    # Prevent space at the beginning if the value is empty
+                    mapped_metadata[new_key] = v
+                    continue
+                if suffix == 'Value':
+                    mapped_metadata[new_key] = f"{v} {curr_val}"
+                if suffix == 'Unit':
+                    mapped_metadata[new_key] = f"{curr_val} {v}"
+    except Exception as e:
+        msg = f"Failed to call the trigger method: get_cedar_mapped_metadata {existing_data_dict['uuid']}"
+        logger.exception(f"{msg} {str(e)}")
+        return property_key, mapped_metadata
 
     return property_key, mapped_metadata
 
