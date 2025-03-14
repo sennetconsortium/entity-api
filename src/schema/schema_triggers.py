@@ -1477,6 +1477,7 @@ def get_cedar_mapped_metadata(property_key, normalized_type, user_token, existin
     except Exception as e:
         msg = f"Failed to call the trigger method: get_cedar_mapped_metadata {existing_data_dict['uuid']}"
         logger.exception(f"{msg} {str(e)}")
+        mapped_metadata['Error'] = 'This metadata may be incomplete. If you continue to see this error message, please contact the SenNet Help Desk help@sennetconsortium.org.'
         return property_key, mapped_metadata
 
     return property_key, mapped_metadata
