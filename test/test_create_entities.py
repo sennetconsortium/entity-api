@@ -181,6 +181,7 @@ def test_create_block_sample(db_session, app, requests):
         data = {
             "sample_category": "Block",
             "lab_tissue_sample_id": "test_lab_tissue_block_id",
+            "protocol_url": "dx.doi.org/10.17504/protocols.io.test1f9n",
             "direct_ancestor_uuid": test_entities["organ"]["uuid"],  # organ to link to
         }
 
@@ -197,6 +198,7 @@ def test_create_block_sample(db_session, app, requests):
 
         assert res.json["sample_category"] == data["sample_category"]
         assert res.json["lab_tissue_sample_id"] == data["lab_tissue_sample_id"]
+        assert res.json["protocol_url"] == data["protocol_url"]
 
         assert res.json["source"]["uuid"] == test_entities["source"]["uuid"]
         assert len(res.json["origin_samples"]) == 1

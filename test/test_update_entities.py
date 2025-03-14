@@ -132,17 +132,21 @@ def test_update_block_sample(app, requests, db_session):
     # uuid and search api mock responses
     uuid_api_url = app.config["UUID_API_URL"]
     search_api_url = app.config["SEARCH_API_URL"]
-    requests.add_response(
-        f"{uuid_api_url}/uuid/{test_block['uuid']}",
-        "get",
-        mock_response(200, {k: test_block[k] for k in ["uuid", "sennet_id", "base_id"]}),
-    )
+
+    for i in range(2):
+        requests.add_response(
+            f"{uuid_api_url}/uuid/{test_block['uuid']}",
+            "get",
+            mock_response(200, {k: test_block[k] for k in ["uuid", "sennet_id", "base_id"]}),
+        )
+
     requests.add_response(f"{search_api_url}/reindex/{test_block['uuid']}", "put", mock_response(202))
 
     with app.test_client() as client:
         data = {
             "description": "New Testing lab notes",
             "lab_tissue_sample_id": "new_test_lab_tissue_block_id",
+            "protocol_url": "dx.doi.org/10.17504/protocols.io.test8f9n",
         }
 
         res = client.put(
@@ -157,6 +161,7 @@ def test_update_block_sample(app, requests, db_session):
 
         assert res.json["description"] == data["description"]
         assert res.json["lab_tissue_sample_id"] == data["lab_tissue_sample_id"]
+        assert res.json["protocol_url"] == data["protocol_url"]
 
         # check database
         db_entity = get_entity(test_block["uuid"], db_session)

@@ -1,5 +1,5 @@
 class PropertyGroups:
-    def __init__(self, neo4j, trigger = [], json = [], list = [], dep = [],
+    def __init__(self, neo4j = [], trigger = [], json = [], list = [], dep = [],
                  activity_neo4j = [], activity_trigger = [], activity_json = [], activity_list = [], activity_dep = []):
         """
 
