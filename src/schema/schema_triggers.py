@@ -1,4 +1,3 @@
-import ast
 import json
 import urllib.parse
 from typing import List, Optional
@@ -676,10 +675,10 @@ def get_normalized_collection_entities(uuid: str, token: str, skip_completion: b
     else:
         complete_entities_list = schema_manager.get_complete_entities_list(token=token,
                                                                            entities_list=entities_list,
-                                                                           properties_to_skip=properties_to_exclude)
+                                                                           properties_to_filter=properties_to_exclude)
 
     return schema_manager.normalize_entities_list_for_response(entities_list=complete_entities_list,
-                                                               properties_to_exclude=properties_to_exclude)
+                                                               property_groups=schema_manager.group_verify_properties_list(properties=properties_to_exclude), is_include_action=False)
 
 
 
@@ -720,7 +719,7 @@ def get_publication_associated_collection(property_key, normalized_type, user_to
 
     # Get rid of the entity node properties that are not defined in the yaml schema
     # as well as the ones defined as `exposed: false` in the yaml schema
-    return property_key, schema_manager.normalize_entity_result_for_response(collection_dict)
+    return property_key, schema_manager.normalize_object_result_for_response(entity_dict=collection_dict)
 
 
 def link_publication_to_associated_collection(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
@@ -1454,25 +1453,30 @@ def get_cedar_mapped_metadata(property_key, normalized_type, user_token, existin
         metadata = existing_data_dict['metadata']
 
     mapped_metadata = {}
-    for k, v in metadata.items():
-        suffix = None
-        parts = [_normalize(word) for word in k.split('_')]
-        if parts[-1] == 'Value' or parts[-1] == 'Unit':
-            suffix = parts.pop()
+    try:
+        for k, v in metadata.items():
+            suffix = None
+            parts = [_normalize(word) for word in k.split('_')]
+            if parts[-1] == 'Value' or parts[-1] == 'Unit':
+                suffix = parts.pop()
 
-        new_key = ' '.join(parts)
-        if new_key not in mapped_metadata:
-            mapped_metadata[new_key] = v
-        else:
-            curr_val = mapped_metadata[new_key]
-            if len(curr_val) < 1:
-                # Prevent space at the beginning if the value is empty
+            new_key = ' '.join(parts)
+            if new_key not in mapped_metadata:
                 mapped_metadata[new_key] = v
-                continue
-            if suffix == 'Value':
-                mapped_metadata[new_key] = f"{v} {curr_val}"
-            if suffix == 'Unit':
-                mapped_metadata[new_key] = f"{curr_val} {v}"
+            else:
+                curr_val = str(mapped_metadata[new_key])
+                if len(curr_val) < 1:
+                    # Prevent space at the beginning if the value is empty
+                    mapped_metadata[new_key] = v
+                    continue
+                if suffix == 'Value':
+                    mapped_metadata[new_key] = f"{v} {curr_val}"
+                if suffix == 'Unit':
+                    mapped_metadata[new_key] = f"{curr_val} {v}"
+    except Exception as e:
+        msg = f"Failed to call the trigger method: get_cedar_mapped_metadata {existing_data_dict['uuid']}"
+        logger.exception(f"{msg} {str(e)}")
+        return property_key, mapped_metadata
 
     return property_key, mapped_metadata
 
@@ -1828,28 +1832,26 @@ def get_origin_samples(property_key, normalized_type, user_token, existing_data_
     # The origin_sample is the sample that `sample_category` is "organ" and the `organ` code is set at the same time
 
     try:
+        def _get_organ_hierarchy(entity_dict):
+            organ_hierarchy_key, organ_hierarchy_value = get_organ_hierarchy(property_key='organ_hierarchy',
+                                                                             normalized_type=Ontology.ops().entities().SAMPLE,
+                                                                             user_token=user_token,
+                                                                             existing_data_dict=entity_dict,
+                                                                             new_data_dict=new_data_dict)
+            entity_dict[organ_hierarchy_key] = organ_hierarchy_value
+
         if equals(existing_data_dict.get("sample_category"), Ontology.ops().specimen_categories().ORGAN):
             # Return the organ if this is an organ
-            organ_hierarchy_key, organ_hierarchy_value = get_organ_hierarchy(property_key='organ_hierarchy',
-                                normalized_type=Ontology.ops().entities().SAMPLE,
-                                user_token=user_token,
-                                existing_data_dict=existing_data_dict,
-                                new_data_dict=new_data_dict)
-            existing_data_dict[organ_hierarchy_key] = organ_hierarchy_value
+            _get_organ_hierarchy(existing_data_dict)
             return property_key, [existing_data_dict]
 
         origin_samples = None
         if normalized_type in ["Sample", "Dataset", "Publication"]:
             origin_samples = schema_neo4j_queries.get_origin_samples(schema_manager.get_neo4j_driver_instance(),
-                                                                   existing_data_dict['uuid'])
+                                                                   [existing_data_dict['uuid']], is_bulk=False)
 
             for origin_sample in origin_samples:
-                organ_hierarchy_key, organ_hierarchy_value = get_organ_hierarchy(property_key='organ_hierarchy',
-                                                                                 normalized_type=Ontology.ops().entities().SAMPLE,
-                                                                                 user_token=user_token,
-                                                                                 existing_data_dict=origin_sample,
-                                                                                 new_data_dict=new_data_dict)
-                origin_sample[organ_hierarchy_key] = organ_hierarchy_value
+                _get_organ_hierarchy(origin_sample)
 
         return property_key, origin_samples
     except Exception:
@@ -2521,7 +2523,7 @@ def sync_component_dataset_status(property_key, normalized_type, user_token, exi
     if 'status' not in existing_data_dict:
         raise KeyError("Missing 'status' key in 'existing_data_dict' during calling 'link_dataset_to_direct_ancestors()' trigger method.")
     status = existing_data_dict['status']
-    children_uuids_list = schema_neo4j_queries.get_children(schema_manager.get_neo4j_driver_instance(), uuid, property_key='uuid')
+    children_uuids_list = schema_neo4j_queries.get_children(schema_manager.get_neo4j_driver_instance(), uuid, properties=['uuid'])
     status_body = {"status": status}
 
     for child_uuid in children_uuids_list:
