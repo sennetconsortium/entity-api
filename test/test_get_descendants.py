@@ -18,6 +18,13 @@ filters = {
     "is_include": True
 }
 
+filters_uuid = {
+    "filter_properties": [
+        "uuid"
+    ],
+    "is_include": True
+}
+
 
 # Get Descendants Tests
 
@@ -537,6 +544,37 @@ def test_get_section_sample_descendants_with_filters(db_session, app, requests):
             "status": test_entities["dataset"]["status"],
             "uuid": test_entities["dataset"]["uuid"],
         }
+
+def test_get_block_sample_descendants_uuids_with_filters_no_auth(db_session, app, requests):
+    # Create provenance in test database
+    test_entities = create_provenance(db_session, ["source", "organ",
+                                                   {"type": "block", "data_access_level": "public"},
+                                                   {"type": "section", "data_access_level": "public"},
+                                                   {"type": "dataset", "data_access_level": "public", "status": "Published"},
+                                                    ])
+    test_entity = test_entities["block"]
+
+    # uuid mock responses
+    uuid_api_url = app.config["UUID_API_URL"]
+    requests.add_response(
+        f"{uuid_api_url}/uuid/{test_entity['uuid']}",
+        "get",
+        mock_response(200, {k: test_entity[k] for k in ["uuid", "sennet_id", "base_id"]}),
+    )
+
+    with app.test_client() as client:
+        res = client.post(
+            f"/descendants/{test_entity['uuid']}",
+            json=filters_uuid,
+        )
+
+        assert res.status_code == 200
+        assert len(res.json) == 2
+
+        strs = [a for a in res.json if isinstance(a, str)]
+        assert len(strs) == 2
+        dataset_uuid = next(a for a in res.json if a == test_entities["dataset"]["uuid"])
+        assert dataset_uuid == test_entities["dataset"]["uuid"]
 
 
 def test_get_section_sample_descendants_with_filters_public_no_auth(db_session, app, requests):
