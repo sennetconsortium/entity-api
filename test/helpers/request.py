@@ -43,7 +43,7 @@ class RequestsMock:
 
         idx = self._call_index[method].get(normalized_url, 0)
         if idx >= len(self._responses[method][normalized_url]):
-            raise ValueError(f"No more responses for {method.upper()} {url}")
+            raise ValueError(f"No more responses for {method.upper()} {url}. The URL was called {idx + 1} times but only {idx} responses are in the RequestsMock. Please add an additional response in the test.")
         value = self._responses[method][normalized_url][idx]
         self._call_index[method][normalized_url] = idx + 1
         return value

@@ -879,54 +879,6 @@ def get_parents(neo4j_driver, uuid, properties: Union[PropertyGroups, List[str]]
     return results
 
 
-
-def get_children(neo4j_driver, uuid, properties: Union[PropertyGroups, List[str]]  = None, is_include_action: bool = True):
-    """
-    Get all children by uuid
-
-    Parameters
-    ----------
-    neo4j_driver : neo4j.Driver object
-        The neo4j database connection pool
-    uuid : str
-        The uuid of target entity
-    properties : List[str]
-        A list of property keys to filter in or out from the normalized results, default is []
-    is_include_action : bool
-        Whether to include or exclude the listed properties
-
-    Returns
-    -------
-    dict
-        A list of unique child dictionaries returned from the Cypher query
-    """
-    results = []
-
-    is_filtered = isinstance(properties, PropertyGroups) or  isinstance(properties, list)
-    if is_filtered:
-        query = (f"MATCH (e:Entity)<-[:USED]-(:Activity)<-[:WAS_GENERATED_BY]-(t:Entity) "
-                 # The target entity can't be a Lab
-                 f"WHERE e.uuid='{uuid}' AND e.entity_type <> 'Lab' "
-                 f"{schema_neo4j_queries.exclude_include_query_part(properties, is_include_action)}")
-    else:
-        _activity_query_part = schema_neo4j_queries.activity_query_part(for_all_match=True)
-        query = (f"MATCH (e:Entity)<-[:USED]-(:Activity)<-[:WAS_GENERATED_BY]-(t:Entity) "
-                 # The target entity can't be a Lab
-                 f"WHERE e.uuid='{uuid}' AND e.entity_type <> 'Lab' "
-                 f"{_activity_query_part} {record_field_name}")
-
-    logger.info("======get_children() query======")
-    logger.info(query)
-
-    with neo4j_driver.session() as session:
-        record = session.read_transaction(_execute_readonly_tx, query)
-
-        if record and record[record_field_name]:
-            results = record[record_field_name]
-
-    return results
-
-
 def get_source_organ_count(neo4j_driver, uuid: str, organ: str, case_uuid: str = None):
     """
     Count the amount of a certain organ is attached to a particular Source.
@@ -1383,9 +1335,20 @@ def get_provenance(neo4j_driver, uuid, depth, return_descendants=None, data_acce
              f"WHERE n.uuid = '{uuid}' {predicate} "
              f"CALL apoc.path.subgraphAll(n, {{ {max_level_str} relationshipFilter:'{relationship_filter}' {allow_nodes} }}) "
              f"YIELD nodes, relationships "
-             f"WITH [node in nodes | node {{ .*, label:labels(node)[0] }} ] as nodes, "
-             f"[rel in relationships | rel {{ .*, fromNode: {{ label:labels(startNode(rel))[0], uuid:startNode(rel).uuid }}, toNode: {{ label:labels(endNode(rel))[0], uuid:endNode(rel).uuid }}, rel_data: {{ type: type(rel) }} }} ] as rels "
-             f"WITH {{ nodes:nodes, relationships:rels }} as json "
+             f"WITH [rel in relationships | rel {{ .*, fromNode: {{ label:labels(startNode(rel))[0], uuid:startNode(rel).uuid }}, toNode: {{ label:labels(endNode(rel))[0], uuid:endNode(rel).uuid }}, rel_data: {{ type: type(rel) }} }} ] as rels, "
+             f"[node in nodes | node {{ .*, label:labels(node)[0] }} ] as nodes "
+             # let's call a sub procedure in order to get the associated protocol_url and creation_action properties
+             "CALL { "
+             "WITH nodes "
+             "UNWIND nodes AS n "
+             "MATCH (e2:Entity)-[:WAS_GENERATED_BY]->(a:Activity) WHERE e2.uuid = n.uuid "
+             "WITH nodes, n, apoc.map.fromPairs([['protocol_url', a.protocol_url], ['creation_action', (case when n.creation_action is not null then n.creation_action else a.creation_action end)]]) as a2 "
+             "WITH nodes, apoc.map.merge(n, a2) as x "
+             # let's remove the entities from the original nodes list
+             "WITH [x in nodes WHERE x.label <> 'Entity' | x] as activities, collect(x) as x2 "
+             "RETURN apoc.coll.union(x2, activities) as n2 "
+             "} "
+             f"WITH {{ nodes:n2, relationships:rels }} as json "
              f"RETURN json")
 
     logger.info("======get_provenance() query======")
@@ -1809,10 +1772,17 @@ neo4j_driver : neo4j.Driver object
 """
 
 
-def get_sankey_info(neo4j_driver):
-    query = (f"MATCH (ds:Dataset)-[]->(a)-[]->(:Sample)"
-             f"MATCH (source)<-[:USED]-(oa)<-[:WAS_GENERATED_BY]-(organ:Sample {{sample_category:'{Ontology.ops().specimen_categories().ORGAN}'}})<-[*]-(ds)"
-             f"RETURN distinct ds.group_name, organ.organ, ds.dataset_type, ds.status, ds. uuid order by ds.group_name")
+def get_sankey_info(neo4j_driver, data_access_level=None):
+    ds_predicate = ''
+    organ_predicate = ''
+
+    if data_access_level:
+        ds_predicate = "{status: 'Published'}"
+        organ_predicate = f", data_access_level: '{data_access_level}'"
+
+    query = (f"MATCH (ds:Dataset {ds_predicate})-[]->(a)-[]->(:Sample)"
+             f"MATCH (source)<-[:USED]-(oa)<-[:WAS_GENERATED_BY]-(organ:Sample {{sample_category:'{Ontology.ops().specimen_categories().ORGAN}'{organ_predicate}}})<-[*]-(ds)"
+             f"RETURN distinct ds.group_name, organ.organ, ds.dataset_type, ds.status, ds.uuid order by ds.group_name")
     logger.info("======get_sankey_info() query======")
     logger.info(query)
     with neo4j_driver.session() as session:

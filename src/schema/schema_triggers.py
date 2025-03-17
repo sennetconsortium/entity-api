@@ -1,4 +1,3 @@
-import ast
 import json
 import urllib.parse
 from typing import List, Optional
@@ -676,10 +675,10 @@ def get_normalized_collection_entities(uuid: str, token: str, skip_completion: b
     else:
         complete_entities_list = schema_manager.get_complete_entities_list(token=token,
                                                                            entities_list=entities_list,
-                                                                           properties_to_skip=properties_to_exclude)
+                                                                           properties_to_filter=properties_to_exclude)
 
     return schema_manager.normalize_entities_list_for_response(entities_list=complete_entities_list,
-                                                               properties_to_exclude=properties_to_exclude)
+                                                               property_groups=schema_manager.group_verify_properties_list(properties=properties_to_exclude), is_include_action=False)
 
 
 
@@ -720,7 +719,7 @@ def get_publication_associated_collection(property_key, normalized_type, user_to
 
     # Get rid of the entity node properties that are not defined in the yaml schema
     # as well as the ones defined as `exposed: false` in the yaml schema
-    return property_key, schema_manager.normalize_entity_result_for_response(collection_dict)
+    return property_key, schema_manager.normalize_object_result_for_response(entity_dict=collection_dict)
 
 
 def link_publication_to_associated_collection(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
@@ -1454,25 +1453,30 @@ def get_cedar_mapped_metadata(property_key, normalized_type, user_token, existin
         metadata = existing_data_dict['metadata']
 
     mapped_metadata = {}
-    for k, v in metadata.items():
-        suffix = None
-        parts = [_normalize(word) for word in k.split('_')]
-        if parts[-1] == 'Value' or parts[-1] == 'Unit':
-            suffix = parts.pop()
+    try:
+        for k, v in metadata.items():
+            suffix = None
+            parts = [_normalize(word) for word in k.split('_')]
+            if parts[-1] == 'Value' or parts[-1] == 'Unit':
+                suffix = parts.pop()
 
-        new_key = ' '.join(parts)
-        if new_key not in mapped_metadata:
-            mapped_metadata[new_key] = v
-        else:
-            curr_val = mapped_metadata[new_key]
-            if len(curr_val) < 1:
-                # Prevent space at the beginning if the value is empty
+            new_key = ' '.join(parts)
+            if new_key not in mapped_metadata:
                 mapped_metadata[new_key] = v
-                continue
-            if suffix == 'Value':
-                mapped_metadata[new_key] = f"{v} {curr_val}"
-            if suffix == 'Unit':
-                mapped_metadata[new_key] = f"{curr_val} {v}"
+            else:
+                curr_val = str(mapped_metadata[new_key])
+                if len(curr_val) < 1:
+                    # Prevent space at the beginning if the value is empty
+                    mapped_metadata[new_key] = v
+                    continue
+                if suffix == 'Value':
+                    mapped_metadata[new_key] = f"{v} {curr_val}"
+                if suffix == 'Unit':
+                    mapped_metadata[new_key] = f"{curr_val} {v}"
+    except Exception as e:
+        msg = f"Failed to call the trigger method: get_cedar_mapped_metadata {existing_data_dict['uuid']}"
+        logger.exception(f"{msg} {str(e)}")
+        return property_key, mapped_metadata
 
     return property_key, mapped_metadata
 
@@ -1547,14 +1551,14 @@ def get_dataset_title(property_key, normalized_type, user_token, existing_data_d
 
     dataset_type = existing_data_dict['dataset_type']
     # Get the sample organ name and source metadata information of this dataset
-    organ_names, source_metadata, source_type = schema_neo4j_queries.get_dataset_organ_and_source_info(
+    organ_type, source_metadata, source_type = schema_neo4j_queries.get_dataset_organ_and_source_info(
         schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'])
 
     # Parse the organ description
     organ_desc = ''
     organ_list = []
-    if organ_names is not None and bool(organ_names):
-        for organ_name in organ_names:
+    if organ_type is not None and bool(organ_type):
+        for organ_name in organ_type:
             if organ_name is not None:
                 try:
                     # The organ_name is the two-letter code only set if specimen_type == 'organ'
@@ -1828,28 +1832,26 @@ def get_origin_samples(property_key, normalized_type, user_token, existing_data_
     # The origin_sample is the sample that `sample_category` is "organ" and the `organ` code is set at the same time
 
     try:
+        def _get_organ_hierarchy(entity_dict):
+            organ_hierarchy_key, organ_hierarchy_value = get_organ_hierarchy(property_key='organ_hierarchy',
+                                                                             normalized_type=Ontology.ops().entities().SAMPLE,
+                                                                             user_token=user_token,
+                                                                             existing_data_dict=entity_dict,
+                                                                             new_data_dict=new_data_dict)
+            entity_dict[organ_hierarchy_key] = organ_hierarchy_value
+
         if equals(existing_data_dict.get("sample_category"), Ontology.ops().specimen_categories().ORGAN):
             # Return the organ if this is an organ
-            organ_hierarchy_key, organ_hierarchy_value = get_organ_hierarchy(property_key='organ_hierarchy',
-                                normalized_type=Ontology.ops().entities().SAMPLE,
-                                user_token=user_token,
-                                existing_data_dict=existing_data_dict,
-                                new_data_dict=new_data_dict)
-            existing_data_dict[organ_hierarchy_key] = organ_hierarchy_value
+            _get_organ_hierarchy(existing_data_dict)
             return property_key, [existing_data_dict]
 
         origin_samples = None
         if normalized_type in ["Sample", "Dataset", "Publication"]:
             origin_samples = schema_neo4j_queries.get_origin_samples(schema_manager.get_neo4j_driver_instance(),
-                                                                   existing_data_dict['uuid'])
+                                                                   [existing_data_dict['uuid']], is_bulk=False)
 
             for origin_sample in origin_samples:
-                organ_hierarchy_key, organ_hierarchy_value = get_organ_hierarchy(property_key='organ_hierarchy',
-                                                                                 normalized_type=Ontology.ops().entities().SAMPLE,
-                                                                                 user_token=user_token,
-                                                                                 existing_data_dict=origin_sample,
-                                                                                 new_data_dict=new_data_dict)
-                origin_sample[organ_hierarchy_key] = organ_hierarchy_value
+                _get_organ_hierarchy(origin_sample)
 
         return property_key, origin_samples
     except Exception:
@@ -1893,8 +1895,11 @@ def get_has_pipeline_or_validation_message(property_key, normalized_type, user_t
 def get_has_rui_information(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     if normalized_type in ["Sample", "Dataset"]:
         if normalized_type == "Sample":
-            if existing_data_dict['sample_category'] == 'Block' and 'rui_location' in existing_data_dict:
-                return property_key, str(True)
+            if existing_data_dict['sample_category'] == 'Block':
+                if 'rui_location' in existing_data_dict:
+                    return property_key, str(True)
+                if 'rui_exemption' in existing_data_dict and existing_data_dict['rui_exemption']:
+                    return property_key, "Exempt"
             if existing_data_dict['sample_category'] == 'Organ':
                 return property_key, None
 
@@ -2518,7 +2523,7 @@ def sync_component_dataset_status(property_key, normalized_type, user_token, exi
     if 'status' not in existing_data_dict:
         raise KeyError("Missing 'status' key in 'existing_data_dict' during calling 'link_dataset_to_direct_ancestors()' trigger method.")
     status = existing_data_dict['status']
-    children_uuids_list = schema_neo4j_queries.get_children(schema_manager.get_neo4j_driver_instance(), uuid, property_key='uuid')
+    children_uuids_list = schema_neo4j_queries.get_children(schema_manager.get_neo4j_driver_instance(), uuid, properties=['uuid'])
     status_body = {"status": status}
 
     for child_uuid in children_uuids_list:
