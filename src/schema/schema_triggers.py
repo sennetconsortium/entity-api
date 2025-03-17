@@ -1893,8 +1893,11 @@ def get_has_pipeline_or_validation_message(property_key, normalized_type, user_t
 def get_has_rui_information(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     if normalized_type in ["Sample", "Dataset"]:
         if normalized_type == "Sample":
-            if existing_data_dict['sample_category'] == 'Block' and 'rui_location' in existing_data_dict:
-                return property_key, str(True)
+            if existing_data_dict['sample_category'] == 'Block':
+                if 'rui_location' in existing_data_dict:
+                    return property_key, str(True)
+                if 'rui_exemption' in existing_data_dict and existing_data_dict['rui_exemption']:
+                    return property_key, "Exempt"
             if existing_data_dict['sample_category'] == 'Organ':
                 return property_key, None
 
