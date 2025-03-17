@@ -1322,13 +1322,19 @@ def remove_unauthorized_fields_from_response(entities_list:List, unauthorized:bo
     -------
     List[dict]
     """
+    if len(entities_list) > 0 and isinstance(entities_list[0], str):
+        return entities_list
+
     if unauthorized:
         filtered_final_result = []
         for entity in entities_list:
-            entity_type = entity.get('entity_type')
-            fields_to_exclude = get_fields_to_exclude(entity_type)
-            filtered_entity = exclude_properties_from_response(fields_to_exclude, entity)
-            filtered_final_result.append(filtered_entity)
+            if isinstance(entity, dict):
+                entity_type = entity.get('entity_type')
+                fields_to_exclude = get_fields_to_exclude(entity_type)
+                filtered_entity = exclude_properties_from_response(fields_to_exclude, entity)
+                filtered_final_result.append(filtered_entity)
+            else:
+                filtered_final_result.append(entity)
         return filtered_final_result
     else:
         return entities_list
