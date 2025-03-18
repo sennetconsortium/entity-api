@@ -2995,7 +2995,7 @@ def get_normalized_upload_datasets(uuid: str, token, properties_to_exclude: List
     # Get rid of the entity node properties that are not defined in the yaml schema
     # as well as the ones defined as `exposed: false` in the yaml schema
     return schema_manager.normalize_entities_list_for_response(complete_list,
-                                                               property_groups=schema_manager.group_verify_properties_list(properties=properties_to_exclude))
+                                                               property_groups=schema_manager.group_verify_properties_list(properties=properties_to_exclude), is_include_action=False, is_strict=True)
 
 
 ####################################################################################################
