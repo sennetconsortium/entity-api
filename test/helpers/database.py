@@ -126,6 +126,12 @@ def get_entity(uuid, db_session):
     return result.single()["e"]
 
 
+def get_activity_for_entity(uuid, db_session):
+    query = "MATCH (:Entity {uuid: $uuid})-[:WAS_GENERATED_BY]->(a:Activity) RETURN a"
+    result = db_session.run(query, uuid=uuid)
+    return result.single()["a"]
+
+
 def create_provenance(db_session, provenance):
     created_entities = {}
 
@@ -142,7 +148,7 @@ def create_provenance(db_session, provenance):
             "created_timestamp": timestamp,
             "creation_action": f"Create {entity_type.title()} Activity",
             "ended_at_time": timestamp,
-            "protocol_url": "https://dx.doi.org/tests",
+            "protocol_url": "dx.doi.org/tests",
             "started_at_time": timestamp,
         }
 

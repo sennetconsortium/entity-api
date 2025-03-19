@@ -117,6 +117,10 @@ ACTIVITIES:
       protocol_url:
         type: string
         description: "The protocols.io doi url pointing the protocol describing the source selection, inclusion/exclusion criteria"
+        before_property_create_validators:
+          - validate_doi_url
+        before_property_update_validators:
+          - validate_doi_url
         before_create_trigger: set_activity_protocol_url
         before_update_trigger: set_activity_protocol_url
       processing_information:

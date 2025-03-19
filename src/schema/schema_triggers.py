@@ -3045,8 +3045,12 @@ def set_activity_creation_action(property_key, normalized_type, user_token, exis
     return property_key, f"Create {new_data_dict['normalized_entity_type']} Activity"
 
 
+URL_SCHEME_REGEX = re.compile(r"^https?://")
+
+
 def set_activity_protocol_url(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
-    """Trigger event method of passing the protocol_url from the entity to the activity.
+    """Trigger event method of passing the protocol_url from the entity to the activity. This function
+    normalizes the protocol url before storage.
 
     Parameters
     ----------
@@ -3065,21 +3069,25 @@ def set_activity_protocol_url(property_key, normalized_type, user_token, existin
     -------
     Tuple[str, str]
         str: The target property key
-        str: The protocol_url string
+        str: The normalized protocol_url string
     """
     if normalized_type in ['Activity'] and 'protocol_url' not in new_data_dict:
         return property_key, None
+
     if 'entity_type' in new_data_dict and new_data_dict['entity_type'] in ['Dataset', 'Upload', 'Publication']:
         return property_key, None
-    else:
-        if 'protocol_url' not in new_data_dict:
-            msg = create_trigger_error_msg(
-                "Missing 'protocol_url' key in 'new_data_dict' during calling 'set_activity_protocol_url()' trigger method.",
-                existing_data_dict, new_data_dict
-            )
-            raise KeyError(msg)
 
-        return property_key, new_data_dict['protocol_url']
+    if 'protocol_url' not in new_data_dict:
+        msg = create_trigger_error_msg(
+            "Missing 'protocol_url' key in 'new_data_dict' during calling 'set_activity_protocol_url()' trigger method.",
+            existing_data_dict, new_data_dict
+        )
+        raise KeyError(msg)
+
+    protocol_url = new_data_dict['protocol_url'].strip()
+    normalized_protocol_url = URL_SCHEME_REGEX.sub('', protocol_url)
+
+    return property_key, normalized_protocol_url
 
 
 def get_creation_action_activity(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
