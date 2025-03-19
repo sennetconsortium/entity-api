@@ -39,12 +39,12 @@ list
 def get_dataset_direct_ancestors(neo4j_driver, uuid, property_key=None):
     results = []
     if property_key:
-        query = (f"MATCH (t:Entity)<-[:USED]-(dataset_activity:Activity)<-[:WAS_GENERATED_BY]-(d:Dataset) "
+        query = (f"MATCH (t:Entity)<-[:USED]-(:Activity)<-[:WAS_GENERATED_BY]-(d:Dataset) "
                  f"WHERE d.uuid = '{uuid}' "
                  f"RETURN apoc.coll.toSet(COLLECT(t.{property_key})) AS {record_field_name}")
     else:
         _activity_query_part = activity_query_part(for_all_match=True)
-        query = (f"MATCH (t:Entity)<-[:USED]-(dataset_activity:Activity)<-[:WAS_GENERATED_BY]-(d:Dataset) "
+        query = (f"MATCH (t:Entity)<-[:USED]-(:Activity)<-[:WAS_GENERATED_BY]-(d:Dataset) "
                  f"WHERE d.uuid = '{uuid}' "
                  f"{_activity_query_part} {record_field_name}")
 
