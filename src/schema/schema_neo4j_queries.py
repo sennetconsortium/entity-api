@@ -142,7 +142,7 @@ def filter_ancestors_by_type(neo4j_driver, direct_ancestor_uuids, entity_type):
     return records if records else None
 
 
-def get_origin_samples(neo4j_driver, uuids:List, is_bulk = True):
+def get_origin_samples(neo4j_driver, uuids: List, is_bulk: bool = True):
     """
     Get the origin (organ) sample ancestor of a given entities by uuids
 
@@ -162,14 +162,13 @@ def get_origin_samples(neo4j_driver, uuids:List, is_bulk = True):
     """
     result = {}
 
-
-    activity_grab_part = f"WITH e, s, apoc.map.fromPairs([['protocol_url', a.protocol_url], ['creation_action', a.creation_action]]) as a2 WITH e, apoc.map.merge(s,a2) as x  "
+    activity_grab_part = "WITH e, s, apoc.map.fromPairs([['protocol_url', a.protocol_url], ['creation_action', a.creation_action]]) as a2 WITH e, apoc.map.merge(s,a2) as x  "
     return_part = f"{activity_grab_part} RETURN apoc.coll.toSet(COLLECT(x)) AS "
     if is_bulk:
         return_part = (f"{activity_grab_part} "
                        "WITH e, COLLECT(x) as list return collect(apoc.map.fromPairs([['uuid', e.uuid], ['result', list]])) AS ")
 
-    query = (f"MATCH (e:Entity)-[:WAS_GENERATED_BY|USED*]->(s:Sample) "
+    query = ("MATCH (e:Entity)-[:WAS_GENERATED_BY|USED*]->(s:Sample) "
              f"WHERE e.uuid IN {uuids} and s.sample_category='Organ' "
              "MATCH (e2:Entity)-[:WAS_GENERATED_BY]->(a:Activity) WHERE e2.uuid = s.uuid "
              f"{return_part} {record_field_name}")
@@ -184,6 +183,7 @@ def get_origin_samples(neo4j_driver, uuids:List, is_bulk = True):
 
     return result
 
+
 """
 Get the sample organ name and source metadata information of the given dataset uuid
 
@@ -192,7 +192,7 @@ Parameters
 neo4j_driver : neo4j.Driver object
     The neo4j database connection pool
 uuid : str
-    The uuid of target entity 
+    The uuid of target entity
 
 Returns
 -------

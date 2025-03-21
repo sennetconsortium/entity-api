@@ -1853,7 +1853,8 @@ def get_origin_samples(property_key, normalized_type, user_token, existing_data_
         origin_samples = None
         if normalized_type in ["Sample", "Dataset", "Publication"]:
             origin_samples = schema_neo4j_queries.get_origin_samples(schema_manager.get_neo4j_driver_instance(),
-                                                                   [existing_data_dict['uuid']], is_bulk=False)
+                                                                     [existing_data_dict['uuid']],
+                                                                     is_bulk=False)
 
             for origin_sample in origin_samples:
                 _get_organ_hierarchy(origin_sample)
@@ -3683,13 +3684,14 @@ def get_organ_hierarchy(property_key, normalized_type, user_token, existing_data
     organ_hierarchy = None
     if equals(existing_data_dict['sample_category'], 'organ'):
         organ_types_categories = Ontology.ops(as_data_dict=True, key='rui_code', val_key='category').organ_types()
+
         organ_hierarchy = existing_data_dict['organ']
-        if existing_data_dict['organ'] in organ_types_categories and organ_types_categories[existing_data_dict['organ']] is not None:
-            return property_key, organ_types_categories[existing_data_dict['organ']]['term']
+        if organ_types_categories.get(organ_hierarchy) is not None:
+            return property_key, organ_types_categories[organ_hierarchy]['term']
 
         organ_types = Ontology.ops(as_data_dict=True, key='rui_code', val_key='term').organ_types()
         if existing_data_dict['organ'] in organ_types:
-            organ_name = organ_types[existing_data_dict['organ']]
+            organ_name = organ_types[organ_hierarchy]
             organ_hierarchy = organ_name
 
             # Deprecated. For backwards compatibility. Can eventually remove this regex on the text.
