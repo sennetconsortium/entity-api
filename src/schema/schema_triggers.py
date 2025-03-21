@@ -1650,6 +1650,13 @@ def get_dataset_title(property_key, normalized_type, user_token, existing_data_d
     return property_key, generated_title
 
 
+dataset_category_map = {
+    "Create Dataset Activity": "primary",
+    "Multi-Assay Split": "component",
+    "Central Process": "codcc-processed",
+    "Lab Process": "lab-processed",
+}
+
 def get_dataset_category(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     """Trigger event method of auto generating the dataset category.
 
@@ -1672,13 +1679,10 @@ def get_dataset_category(property_key, normalized_type, user_token, existing_dat
         str: The target property key
         str: The generated dataset category
     """
-    creation_action = dict([get_creation_action_activity("creation_action_activity", normalized_type, user_token, existing_data_dict, new_data_dict)]).get('creation_action_activity')
-    dataset_category_map = {
-        "Create Dataset Activity": "primary",
-        "Multi-Assay Split": "component",
-        "Central Process": "codcc-processed",
-        "Lab Process": "lab-processed",
-    }
+    creation_action = existing_data_dict.get('creation_action')
+    if creation_action is None:
+        creation_action = dict([get_creation_action_activity("creation_action_activity", normalized_type, user_token, existing_data_dict, new_data_dict)]).get('creation_action_activity')
+
     if dataset_category := dataset_category_map.get(creation_action):
         return property_key, dataset_category
 
@@ -3782,20 +3786,20 @@ def get_has_qa_derived_dataset(property_key, normalized_type, user_token, existi
         str: The target property key
         str: Whether a primary dataset has at least one processed dataset with a status of 'QA', 'True' or 'False'
     """
-    dataset_category = get_dataset_category(property_key, normalized_type, user_token, existing_data_dict, new_data_dict)
-    if equals(dataset_category[1], 'primary'):
+    _, dataset_category = get_dataset_category(property_key, normalized_type, user_token, existing_data_dict, new_data_dict)
+    if equals(dataset_category, 'primary'):
         match_case = "AND s.status = 'QA'"
-        results = schema_neo4j_queries.get_dataset_direct_descendants(schema_manager.get_neo4j_driver_instance(),
-                                                                      existing_data_dict['uuid'],
-                                                                      property_key=None,
-                                                                      match_case=match_case)
-        for r in results:
-            descendant_category = get_dataset_category(property_key, normalized_type, user_token, r, r)
-            if 'processed' in descendant_category[1]:
-                return property_key, "True"
-        return property_key, "False"
+        descendants = schema_neo4j_queries.get_dataset_direct_descendants(schema_manager.get_neo4j_driver_instance(),
+                                                                          existing_data_dict['uuid'],
+                                                                          property_keys=['uuid'],
+                                                                          match_case=match_case)
+        for d in descendants:
+            descendant_category = get_dataset_category(property_key, normalized_type, user_token, d, d)
+            if 'processed' in descendant_category:
+                return property_key, 'True'
+        return property_key, 'False'
     else:
-        return property_key, "False"
+        return property_key, 'False'
 
 
 def get_has_all_published_datasets(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
