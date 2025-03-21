@@ -1202,50 +1202,45 @@ Returns:
 def get_has_rui_information(neo4j_driver, entity_uuid):
     results = str(False)
 
-    # Check the source of the given entity and if the source is not Human then return "N/A"
-    source_query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(s:Source) "
-                    f"WHERE e.uuid='{entity_uuid}' AND s.source_type<>'Human' "
-                    f"RETURN 'N/A' as {record_field_name}")
-
     with neo4j_driver.session() as session:
-        record = session.read_transaction(execute_readonly_tx, source_query)
+        # Check the source of the given entity and if the source is not Human then return "N/A"
+        source_query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(s:Source) "
+                        f"WHERE e.uuid=$uuid AND s.source_type<>'Human' "
+                        f"RETURN 'N/A' as {record_field_name}")
 
+        record = session.read_transaction(execute_readonly_tx, source_query, uuid=entity_uuid)
         if record and record[record_field_name]:
             results = (record[record_field_name])
             return str(results)
 
-    # Check the ancestry of the given entity and if the origin sample is
-    # Adipose Tissue (AD), Blood (BD), Bone Marrow (BM), Breast (BS), Bone (BX), Muscle (MU), or Other (OT), then return "N/A"
-    organ_query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(o:Sample) "
-                   f"WHERE e.uuid='{entity_uuid}' AND o.sample_category='Organ' AND o.organ IN ['AD', 'BD', 'BM', 'BS', 'BX', 'MU', 'OT'] "
-                   f"RETURN 'N/A' as {record_field_name}")
+        # Check the ancestry of the given entity and if the origin sample is
+        # Adipose Tissue (AD), Blood (BD), Bone Marrow (BM), Breast (BS), Bone (BX), Muscle (MU), or Other (OT), then return "N/A"
+        organ_query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(o:Sample) "
+                       f"WHERE e.uuid=$uuid AND o.sample_category='Organ' AND o.organ IN ['AD', 'BD', 'BM', 'BS', 'BX', 'MU', 'OT'] "
+                       f"RETURN 'N/A' as {record_field_name}")
 
-    logger.info("======get_has_rui_information() organ_query======")
-    logger.info(organ_query)
+        logger.info("======get_has_rui_information() organ_query======")
+        logger.info(organ_query)
 
-    with neo4j_driver.session() as session:
-        record = session.read_transaction(execute_readonly_tx, organ_query)
-
+        record = session.read_transaction(execute_readonly_tx, organ_query, uuid=entity_uuid)
         if record and record[record_field_name]:
             results = (record[record_field_name])
             return str(results)
 
-    # If the first query fails to return then grab the ancestor Block and check if it contains rui_location
-    query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(s:Sample) "
-             f"WHERE e.uuid='{entity_uuid}' AND s.sample_category='Block' "
-             "RETURN COLLECT("
-             "CASE "
-             "WHEN s.rui_exemption = true THEN 'Exempt' "
-             "WHEN s.rui_location IS NOT NULL AND NOT TRIM(s.rui_location) = '' THEN 'True' "
-             "ELSE 'False' "
-             f"END) as {record_field_name}")
+        # If the first query fails to return then grab the ancestor Block and check if it contains rui_location
+        query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(s:Sample) "
+                 f"WHERE e.uuid=$uuid AND s.sample_category='Block' "
+                 "RETURN COLLECT("
+                 "CASE "
+                 "WHEN s.rui_exemption = true THEN 'Exempt' "
+                 "WHEN s.rui_location IS NOT NULL AND NOT TRIM(s.rui_location) = '' THEN 'True' "
+                 "ELSE 'False' "
+                 f"END) as {record_field_name}")
 
-    logger.info("======get_has_rui_information() query======")
-    logger.info(query)
+        logger.info("======get_has_rui_information() query======")
+        logger.info(query)
 
-    with neo4j_driver.session() as session:
-        record = session.read_transaction(execute_readonly_tx, query)
-
+        record = session.read_transaction(execute_readonly_tx, query, uuid=entity_uuid)
         if record and record[record_field_name]:
             values = (record[record_field_name])
             if "True" in values:
@@ -1253,7 +1248,7 @@ def get_has_rui_information(neo4j_driver, entity_uuid):
             elif "Exempt" in values:
                 results = "Exempt"
 
-    return str(results)
+        return str(results)
 
 
 ####################################################################################################
