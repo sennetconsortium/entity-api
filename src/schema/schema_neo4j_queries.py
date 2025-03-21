@@ -1537,8 +1537,8 @@ neo4j.Record or None
 """
 
 
-def execute_readonly_tx(tx, query):
-    result = tx.run(query)
+def execute_readonly_tx(tx, query, **kwargs):
+    result = tx.run(query, **kwargs)
     record = result.single()
     return record
 
