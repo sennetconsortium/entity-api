@@ -1,3 +1,4 @@
+import collections
 import logging
 import re
 from datetime import datetime
@@ -573,26 +574,27 @@ def validate_creation_action(property_key, normalized_entity_type, request, exis
                              f"The following entities belong to non-dataset entities: {entity_types_dict}")
 
 
-"""
-Validate the provided value of the activity creation action before updating direct ancestors. Certain values prohibited
-Parameters
-----------
-property_key : str
-    The target property key
-normalized_type : str
-    Submission
-request: Flask request object
-    The instance of Flask request passed in from application request
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    The json data in request body, already after the regular validations
-"""
 def validate_not_invalid_creation_action(property_key, normalized_entity_type, request, existing_data_dict, new_data_dict):
+    """
+    Validate the provided value of the activity creation action before updating direct ancestors. Certain values prohibited
+    Parameters
+    ----------
+    property_key : str
+        The target property key
+    normalized_entity_type : str
+        Submission
+    request: Flask request object
+        The instance of Flask request passed in from application request
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        The json data in request body, already after the regular validations
+    """
     prohibited_creation_action_values = ["Central Process", "Multi-Assay Split"]
     entity_uuid = existing_data_dict.get("uuid")
     creation_action = schema_neo4j_queries.get_entity_creation_action_activity(schema_manager.get_neo4j_driver_instance(), entity_uuid)
-    if creation_action and creation_action in prohibited_creation_action_values:
+    direct_ancestor_uuid_no_changes = collections.Counter(existing_data_dict['direct_ancestor_uuids']) == collections.Counter(new_data_dict['direct_ancestor_uuids'])
+    if creation_action and creation_action in prohibited_creation_action_values and not direct_ancestor_uuid_no_changes:
         raise ValueError(f"Cannot update {property_key} value if creation_action of parent activity is {', '.join(prohibited_creation_action_values)}")
 
 
