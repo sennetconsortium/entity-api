@@ -2093,6 +2093,9 @@ def get_previous_revision_uuid(property_key, normalized_type, user_token, existi
         str: The target property key
         str: The uuid string of previous revision entity or None if not found
     """
+    if existing_data_dict.get('status') != 'Published':
+        return property_key, None
+
     if 'uuid' not in existing_data_dict:
         msg = create_trigger_error_msg(
             "Missing 'uuid' key in 'existing_data_dict' during calling 'get_previous_revision_uuid()' trigger method.",
@@ -2130,6 +2133,9 @@ def get_next_revision_uuid(property_key, normalized_type, user_token, existing_d
         str: The target property key
         str: The uuid string of next version entity or None if not found
     """
+    if existing_data_dict.get('status') != 'Published':
+        return property_key, None
+
     if 'uuid' not in existing_data_dict:
         msg = create_trigger_error_msg(
             "Missing 'uuid' key in 'existing_data_dict' during calling 'get_next_revision_uuid()' trigger method.",
