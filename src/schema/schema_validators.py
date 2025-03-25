@@ -813,6 +813,20 @@ def validate_url(property_key, normalized_entity_type, request, existing_data_di
     except AttributeError:
         raise ValueError(f"Invalid {property_key} format, must be a valid URL")
 
+def validate_anticipated_month(property_key, normalized_entity_type, request, existing_data_dict, new_data_dict):
+    if 'anticipated_complete_upload_month' in new_data_dict:
+        supplied_date = new_data_dict['anticipated_complete_upload_month']
+        n = datetime.now()
+        try:
+            d = datetime.strptime(supplied_date, "%Y-%m")
+        except ValueError:
+            raise ValueError(f"Invalid {property_key} format. Please enter in the format YYYY-mm. ")
+        if (d.year < n.year) or (d.year == n.year and d.month < n.month):
+            raise ValueError(f"Invalid {property_key} format, cannot be a date in the past")
+        if (d.year == (n.year + 1) and d.month > n.month) or (d.year > (n.year + 1)):
+            raise ValueError(f"Invalid {property_key} format, too far into the future")
+
+
 
 ####################################################################################################
 ## Internal Functions

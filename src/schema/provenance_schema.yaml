@@ -1321,6 +1321,17 @@ ENTITIES:
         type: string
         description: 'The source type that the data contained in the upload will be registered/associated with.'
         required_on_create: true
+      anticipated_complete_upload_month:
+        type: string
+        description: The month and year of that this Upload will have all required data uploaded and be ready for reorganization into Datasets.
+        before_property_create_validators:
+          - validate_anticipated_month
+        before_property_update_validators:
+          - validate_anticipated_month
+      anticipated_dataset_count:
+        type: integer
+        description: The total number of datasets that this Upload will eventually contain.
+
 
 
   ############################################# EPICollection #############################################
