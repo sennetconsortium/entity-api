@@ -842,6 +842,29 @@ def validate_anticipated_month(property_key, normalized_entity_type, request, ex
         if d.year > (n.year + 5):
             raise ValueError(f"Invalid {property_key} format, too far into the future")
 
+def validate_positive_int(property_key, normalized_entity_type, request, existing_data_dict, new_data_dict):
+    """
+    Validate that the provided field is a positive number.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key
+    normalized_entity_type : str
+        Submission
+    request: Flask request object
+        The instance of Flask request passed in from application request
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        The json data in request body, already after the regular validations
+    """
+    if 'anticipated_dataset_count' in new_data_dict:
+        x = new_data_dict['anticipated_dataset_count']
+        if not isinstance(x, int) or x < 0:
+            raise ValueError(f"Invalid {property_key} format. Must be a positive integer")
+
+
 
 
 ####################################################################################################

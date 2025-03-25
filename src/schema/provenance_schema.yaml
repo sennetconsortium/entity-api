@@ -1331,6 +1331,10 @@ ENTITIES:
       anticipated_dataset_count:
         type: integer
         description: The total number of datasets that this Upload will eventually contain.
+        before_property_create_validators:
+          - validate_positive_int
+        before_property_update_validators:
+          - validate_positive_int
 
 
 
