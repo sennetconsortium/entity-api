@@ -814,6 +814,22 @@ def validate_url(property_key, normalized_entity_type, request, existing_data_di
         raise ValueError(f"Invalid {property_key} format, must be a valid URL")
 
 def validate_anticipated_month(property_key, normalized_entity_type, request, existing_data_dict, new_data_dict):
+    """
+    Validate that the provided field is a valid anticipated date; That is, not in the past, and not more than 5 years into the future.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key
+    normalized_entity_type : str
+        Submission
+    request: Flask request object
+        The instance of Flask request passed in from application request
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        The json data in request body, already after the regular validations
+    """
     if 'anticipated_complete_upload_month' in new_data_dict:
         supplied_date = new_data_dict['anticipated_complete_upload_month']
         n = datetime.now()
@@ -823,7 +839,7 @@ def validate_anticipated_month(property_key, normalized_entity_type, request, ex
             raise ValueError(f"Invalid {property_key} format. Please enter in the format YYYY-mm. ")
         if (d.year < n.year) or (d.year == n.year and d.month < n.month):
             raise ValueError(f"Invalid {property_key} format, cannot be a date in the past")
-        if (d.year == (n.year + 1) and d.month > n.month) or (d.year > (n.year + 1)):
+        if d.year > (n.year + 5):
             raise ValueError(f"Invalid {property_key} format, too far into the future")
 
 
