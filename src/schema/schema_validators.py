@@ -830,17 +830,20 @@ def validate_anticipated_month(property_key, normalized_entity_type, request, ex
     new_data_dict : dict
         The json data in request body, already after the regular validations
     """
+    current_anticipated_month = existing_data_dict.get('anticipated_complete_upload_month', '')
+
     if 'anticipated_complete_upload_month' in new_data_dict:
-        supplied_date = new_data_dict['anticipated_complete_upload_month']
-        n = datetime.now()
-        try:
-            d = datetime.strptime(supplied_date, "%Y-%m")
-        except ValueError:
-            raise ValueError(f"Invalid {property_key} format. Please enter in the format YYYY-mm. ")
-        if (d.year < n.year) or (d.year == n.year and d.month < n.month):
-            raise ValueError(f"Invalid {property_key} format, cannot be a date in the past")
-        if d.year > (n.year + 5):
-            raise ValueError(f"Invalid {property_key} format, too far into the future")
+        supplied_anticipated_month = new_data_dict['anticipated_complete_upload_month']
+        if current_anticipated_month != supplied_anticipated_month:
+            n = datetime.now()
+            try:
+                d = datetime.strptime(supplied_anticipated_month, "%Y-%m")
+            except ValueError:
+                raise ValueError(f"Invalid {property_key} format. Please enter in the format YYYY-mm. ")
+            if (d.year < n.year) or (d.year == n.year and d.month < n.month):
+                raise ValueError(f"Invalid {property_key} format, cannot be a date in the past")
+            if d.year > (n.year + 5):
+                raise ValueError(f"Invalid {property_key} format, too far into the future")
 
 def validate_positive_int(property_key, normalized_entity_type, request, existing_data_dict, new_data_dict):
     """
