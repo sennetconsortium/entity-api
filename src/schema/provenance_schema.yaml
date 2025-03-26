@@ -766,9 +766,17 @@ ENTITIES:
       volume:
         type: integer
         description: 'The volume number of a journal that it was published in.'
+        before_property_create_validators:
+          - validate_positive_int
+        before_property_update_validators:
+          - validate_positive_int
       issue:
         type: integer
         description: 'The issue number of the journal that it was published in.'
+        before_property_create_validators:
+          - validate_positive_int
+        before_property_update_validators:
+          - validate_positive_int
       pages_or_article_num:
         type: string
         description: 'The pages or the article number in the publication journal e.g., "23", "23-49", "e1003424".'
@@ -1325,6 +1333,21 @@ ENTITIES:
         type: string
         description: 'The source type that the data contained in the upload will be registered/associated with.'
         required_on_create: true
+      anticipated_complete_upload_month:
+        type: string
+        description: The month and year of that this Upload will have all required data uploaded and be ready for reorganization into Datasets.
+        before_property_create_validators:
+          - validate_anticipated_month
+        before_property_update_validators:
+          - validate_anticipated_month
+      anticipated_dataset_count:
+        type: integer
+        description: The total number of datasets that this Upload will eventually contain.
+        before_property_create_validators:
+          - validate_positive_int
+        before_property_update_validators:
+          - validate_positive_int
+
 
   ############################################# EPICollection #############################################
   Epicollection:
