@@ -859,8 +859,8 @@ def validate_positive_int(property_key, normalized_entity_type, request, existin
     new_data_dict : dict
         The json data in request body, already after the regular validations
     """
-    if 'anticipated_dataset_count' in new_data_dict:
-        x = new_data_dict['anticipated_dataset_count']
+    if property_key in new_data_dict:
+        x = new_data_dict[property_key]
         if not isinstance(x, int) or x < 0:
             raise ValueError(f"Invalid {property_key} format. Must be a positive integer")
 
