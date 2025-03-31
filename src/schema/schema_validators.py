@@ -1,4 +1,6 @@
+import collections
 import logging
+import re
 from datetime import datetime
 from urllib.parse import urlparse
 
@@ -572,26 +574,27 @@ def validate_creation_action(property_key, normalized_entity_type, request, exis
                              f"The following entities belong to non-dataset entities: {entity_types_dict}")
 
 
-"""
-Validate the provided value of the activity creation action before updating direct ancestors. Certain values prohibited
-Parameters
-----------
-property_key : str
-    The target property key
-normalized_type : str
-    Submission
-request: Flask request object
-    The instance of Flask request passed in from application request
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties
-new_data_dict : dict
-    The json data in request body, already after the regular validations
-"""
 def validate_not_invalid_creation_action(property_key, normalized_entity_type, request, existing_data_dict, new_data_dict):
+    """
+    Validate the provided value of the activity creation action before updating direct ancestors. Certain values prohibited
+    Parameters
+    ----------
+    property_key : str
+        The target property key
+    normalized_entity_type : str
+        Submission
+    request: Flask request object
+        The instance of Flask request passed in from application request
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        The json data in request body, already after the regular validations
+    """
     prohibited_creation_action_values = ["Central Process", "Multi-Assay Split"]
     entity_uuid = existing_data_dict.get("uuid")
     creation_action = schema_neo4j_queries.get_entity_creation_action_activity(schema_manager.get_neo4j_driver_instance(), entity_uuid)
-    if creation_action and creation_action in prohibited_creation_action_values:
+    direct_ancestor_uuid_no_changes = collections.Counter(existing_data_dict['direct_ancestor_uuids']) == collections.Counter(new_data_dict['direct_ancestor_uuids'])
+    if creation_action and creation_action in prohibited_creation_action_values and not direct_ancestor_uuid_no_changes:
         raise ValueError(f"Cannot update {property_key} value if creation_action of parent activity is {', '.join(prohibited_creation_action_values)}")
 
 
@@ -812,6 +815,86 @@ def validate_url(property_key, normalized_entity_type, request, existing_data_di
             raise ValueError(f"Invalid {property_key} format, must be a valid URL")
     except AttributeError:
         raise ValueError(f"Invalid {property_key} format, must be a valid URL")
+
+def validate_anticipated_month(property_key, normalized_entity_type, request, existing_data_dict, new_data_dict):
+    """
+    Validate that the provided field is a valid anticipated date; That is, not in the past, and not more than 5 years into the future.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key
+    normalized_entity_type : str
+        Submission
+    request: Flask request object
+        The instance of Flask request passed in from application request
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        The json data in request body, already after the regular validations
+    """
+    current_anticipated_month = existing_data_dict.get('anticipated_complete_upload_month', '')
+
+    if 'anticipated_complete_upload_month' in new_data_dict:
+        supplied_anticipated_month = new_data_dict['anticipated_complete_upload_month']
+        if current_anticipated_month != supplied_anticipated_month:
+            n = datetime.now()
+            try:
+                d = datetime.strptime(supplied_anticipated_month, "%Y-%m")
+            except ValueError:
+                raise ValueError(f"Invalid {property_key} format. Please enter in the format YYYY-mm. ")
+            if (d.year < n.year) or (d.year == n.year and d.month < n.month):
+                raise ValueError(f"Invalid {property_key} format, cannot be a date in the past")
+            if d.year > (n.year + 5):
+                raise ValueError(f"Invalid {property_key} format, too far into the future")
+
+def validate_positive_int(property_key, normalized_entity_type, request, existing_data_dict, new_data_dict):
+    """
+    Validate that the provided field is a positive number.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key
+    normalized_entity_type : str
+        Submission
+    request: Flask request object
+        The instance of Flask request passed in from application request
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        The json data in request body, already after the regular validations
+    """
+    if property_key in new_data_dict:
+        x = new_data_dict[property_key]
+        if not isinstance(x, int) or x < 0:
+            raise ValueError(f"Invalid {property_key} format. Must be a positive integer")
+
+
+
+
+DOI_URL_REGEX = re.compile(r"^(https?://)?(dx\.)?doi\.org/10.\d{4,9}/protocols.io\..+$")
+
+
+def validate_doi_url(property_key, normalized_entity_type, request, existing_data_dict, new_data_dict):
+    """
+    Validate that the provided field is a valid doi.org or dx.doi.org URL
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key
+    normalized_type : str
+        Submission
+    request: Flask request object
+        The instance of Flask request passed in from application request
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        The json data in request body, already after the regular validations
+    """
+    if not DOI_URL_REGEX.match(new_data_dict[property_key].strip()):
+        raise ValueError(f"Invalid {property_key} format, must be a valid doi.org or dx.doi.org URL")
 
 
 ####################################################################################################
