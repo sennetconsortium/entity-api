@@ -169,7 +169,7 @@ def get_origin_samples(neo4j_driver, uuids: List, is_bulk: bool = True):
                        "WITH e, COLLECT(x) as list return collect(apoc.map.fromPairs([['uuid', e.uuid], ['result', list]])) AS ")
 
     query = ("MATCH (e:Entity)-[:WAS_GENERATED_BY|USED*]->(s:Sample) "
-             f"WHERE e.uuid IN {uuids} and s.sample_category='Organ' "
+             f"WHERE e.uuid IN $uuids and s.sample_category='Organ' "
              "MATCH (e2:Entity)-[:WAS_GENERATED_BY]->(a:Activity) WHERE e2.uuid = s.uuid "
              f"{return_part} {record_field_name}")
 
@@ -177,7 +177,7 @@ def get_origin_samples(neo4j_driver, uuids: List, is_bulk: bool = True):
     logger.info(query)
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(_execute_readonly_tx, query)
+        record = session.read_transaction(_execute_readonly_tx, query, uuids=uuids)
         if record and record[record_field_name]:
             result = record[record_field_name]
 
