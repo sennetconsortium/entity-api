@@ -1,4 +1,5 @@
 import logging
+import re
 from datetime import datetime
 from urllib.parse import urlparse
 
@@ -812,6 +813,30 @@ def validate_url(property_key, normalized_entity_type, request, existing_data_di
             raise ValueError(f"Invalid {property_key} format, must be a valid URL")
     except AttributeError:
         raise ValueError(f"Invalid {property_key} format, must be a valid URL")
+
+
+DOI_URL_REGEX = re.compile(r"^(https?://)?(dx\.)?doi\.org/10.\d{4,9}/protocols.io\..+$")
+
+
+def validate_doi_url(property_key, normalized_entity_type, request, existing_data_dict, new_data_dict):
+    """
+    Validate that the provided field is a valid doi.org or dx.doi.org URL
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key
+    normalized_type : str
+        Submission
+    request: Flask request object
+        The instance of Flask request passed in from application request
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        The json data in request body, already after the regular validations
+    """
+    if not DOI_URL_REGEX.match(new_data_dict[property_key].strip()):
+        raise ValueError(f"Invalid {property_key} format, must be a valid doi.org or dx.doi.org URL")
 
 
 ####################################################################################################
