@@ -1,5 +1,5 @@
 # Parent image
-FROM sennet/api-base-image:1.0.0
+FROM sennet/api-base-image:1.2.1
 
 LABEL description="SenNet Entity API Service"
 
