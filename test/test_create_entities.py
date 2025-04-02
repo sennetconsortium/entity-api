@@ -1,6 +1,6 @@
 from test.helpers import GROUP, USER
 from test.helpers.auth import AUTH_TOKEN
-from test.helpers.database import create_provenance, generate_entity, get_entity
+from test.helpers.database import create_provenance, generate_entity, get_activity_for_entity, get_entity
 from test.helpers.response import mock_response
 
 
@@ -34,7 +34,7 @@ def test_create_source(app, requests, db_session):
             "description": "Testing lab notes",
             "group_uuid": GROUP["uuid"],
             "lab_source_id": "test_lab_source_id",
-            "protocol_url": "dx.doi.org/10.17504/protocols.io.3byl4j398lo5/v1",
+            "protocol_url": "https://dx.doi.org/10.17504/protocols.io.3byl4j398lo5/v1",
             "source_type": "Human",
         }
 
@@ -64,6 +64,10 @@ def test_create_source(app, requests, db_session):
         assert db_entity["group_uuid"] == data["group_uuid"]
         assert db_entity["lab_source_id"] == data["lab_source_id"]
         assert db_entity["source_type"] == data["source_type"]
+
+        # check protocol_url is normalized
+        db_activity = get_activity_for_entity(entities[0]["uuid"], db_session)
+        assert db_activity["protocol_url"] == data["protocol_url"].lstrip("https://")
 
 
 def test_create_source_no_auth(app):
@@ -181,6 +185,7 @@ def test_create_block_sample(db_session, app, requests):
         data = {
             "sample_category": "Block",
             "lab_tissue_sample_id": "test_lab_tissue_block_id",
+            "protocol_url": "dx.doi.org/10.17504/protocols.io.test1f9n",
             "direct_ancestor_uuid": test_entities["organ"]["uuid"],  # organ to link to
         }
 
@@ -197,6 +202,7 @@ def test_create_block_sample(db_session, app, requests):
 
         assert res.json["sample_category"] == data["sample_category"]
         assert res.json["lab_tissue_sample_id"] == data["lab_tissue_sample_id"]
+        assert res.json["protocol_url"] == data["protocol_url"]
 
         assert res.json["source"]["uuid"] == test_entities["source"]["uuid"]
         assert len(res.json["origin_samples"]) == 1

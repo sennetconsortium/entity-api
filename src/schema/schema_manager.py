@@ -126,22 +126,22 @@ def initialize(valid_yaml_file,
 ## Provenance yaml schema loading
 ####################################################################################################
 
-"""
-Load the schema yaml file
-
-Parameters
-----------
-valid_yaml_file : file
-    A valid yaml file
-
-Returns
--------
-dict
-    A dict containing the schema details
-"""
-
 
 def load_provenance_schema(valid_yaml_file):
+    """
+    Load the schema yaml file
+
+    Parameters
+    ----------
+    valid_yaml_file : file
+        A valid yaml file
+
+    Returns
+    -------
+    dict
+        A dict containing the schema details
+    """
+
     with open(valid_yaml_file) as file:
         schema_dict = yaml.safe_load(file)
 
@@ -203,17 +203,15 @@ def group_schema_properties_by_name():
 ## Helper functions
 ####################################################################################################
 
-"""
-Get a list of all the supported types in the schema yaml
-
-Returns
--------
-list
-    A list of types
-"""
-
-
 def get_all_types():
+    """
+    Get a list of all the supported types in the schema yaml
+
+    Returns
+    -------
+    list
+        A list of types
+    """
     global _schema
 
     entity_types = _schema['ENTITIES'].keys()
@@ -223,22 +221,20 @@ def get_all_types():
     return list(entity_types) + list(activity_types)
 
 
-"""
-Get the superclass (if defined) of the given entity class
-
-Parameters
-----------
-normalized_entity_class : str
-    The normalized target entity class
-
-Returns
--------
-string or None
-    One of the normalized entity classes if defined (currently only Publication has Dataset as superclass). None otherwise
-"""
-
-
 def get_entity_superclass(normalized_entity_class):
+    """
+    Get the superclass (if defined) of the given entity class
+
+    Parameters
+    ----------
+    normalized_entity_class : str
+        The normalized target entity class
+
+    Returns
+    -------
+    string or None
+        One of the normalized entity classes if defined (currently only Publication has Dataset as superclass). None otherwise
+    """
     normalized_superclass = None
 
     all_entity_types = get_all_entity_types()
@@ -294,17 +290,15 @@ def entity_instanceof(entity_uuid: str, entity_class: str) -> bool:
     return entity_type_instanceof(entity_type, entity_class)
 
 
-"""
-Extends to dicts together checking for None before extending
-
-Returns
--------
-dict
-    The extended dict
-"""
-
-
 def extend_dicts(dict1: dict, dict2: dict) -> dict:
+    """
+    Extends to dicts together checking for None before extending
+
+    Returns
+    -------
+    dict
+        The extended dict
+    """
     if dict1 is None:
         dict1 = {}
 
@@ -316,17 +310,15 @@ def extend_dicts(dict1: dict, dict2: dict) -> dict:
     return dict1
 
 
-"""
-Gets all properties by entity
-
-Returns
--------
-dict
-    The Entity properties dict
-"""
-
-
 def get_entity_properties(schema_section: dict, normalized_class: str) -> dict:
+    """
+    Gets all properties by entity
+
+    Returns
+    -------
+    dict
+        The Entity properties dict
+    """
     properties = schema_section[normalized_class]['properties']
     super_class = schema_section[normalized_class].get('superclass')
 
@@ -337,17 +329,15 @@ def get_entity_properties(schema_section: dict, normalized_class: str) -> dict:
     return dict(properties)
 
 
-"""
-Get a list of all the supported entity types in the schema yaml
-
-Returns
--------
-list
-    A list of entity types
-"""
-
-
 def get_all_entity_types():
+    """
+    Get a list of all the supported entity types in the schema yaml
+
+    Returns
+    -------
+    list
+        A list of entity types
+    """
     global _schema
 
     dict_keys = _schema['ENTITIES'].keys()
@@ -822,27 +812,25 @@ def remove_none_values(merged_dict):
     return filtered_dict
 
 
-"""
-Filter out the merged_dict by getting rid of the transitent properties (not to be stored)
-and properties with None value
-Meaning the returned target property key is different from the original key
-in the trigger method, e.g., Source.image_files_to_add
-
-Parameters
-----------
-merged_dict : dict
-    A merged dict that may contain properties with None values
-normalized_entity_type : str
-    One of the normalized entity types: Dataset, Collection, Sample, Source, Upload, Publication
-
-Returns
--------
-dict
-    A filtered dict that removed all transient properties and the ones with None values
-"""
-
-
 def remove_transient_and_none_values(provenance_type, merged_dict, normalized_entity_type):
+    """
+    Filter out the merged_dict by getting rid of the transitent properties (not to be stored)
+    and properties with None value
+    Meaning the returned target property key is different from the original key
+    in the trigger method, e.g., Source.image_files_to_add
+
+    Parameters
+    ----------
+    merged_dict : dict
+        A merged dict that may contain properties with None values
+    normalized_entity_type : str
+        One of the normalized entity types: Dataset, Collection, Sample, Source, Upload, Publication
+
+    Returns
+    -------
+    dict
+        A filtered dict that removed all transient properties and the ones with None values
+    """
     global _schema
 
     properties = get_entity_properties(_schema[provenance_type], normalized_entity_type)
@@ -864,26 +852,28 @@ def remove_transient_and_none_values(provenance_type, merged_dict, normalized_en
     return filtered_dict
 
 
-"""
-Generate the complete entity record as well as result filtering for response
-
-Parameters
-----------
-token: str
-    Either the user's globus nexus token or the internal token
-entity_dict : dict
-    The entity dict based on neo4j record
-properties_to_skip : list
-    Any properties to skip running triggers
-
-Returns
--------
-dict
-    A dictionary of complete entity with all the generated 'on_read_trigger' data
-"""
-
 
 def get_complete_entity_result(token, entity_dict, properties_to_filter = [], is_include_action=False, use_memcache=True, bulk_trigger_manager_instance:BulkTriggersManager=None):
+    """
+    Generate the complete entity record as well as result filtering for response
+
+    Parameters
+    ----------
+    token: str
+        Either the user's globus nexus token or the internal token
+    entity_dict : dict
+        The entity dict based on neo4j record
+    properties_to_filter : list
+        Any properties to skip running triggers
+    is_include_action : bool
+    use_memcache : bool
+    bulk_trigger_manager_instance : BulkTriggersManager
+
+    Returns
+    -------
+    dict
+        A dictionary of complete entity with all the generated 'on_read_trigger' data
+    """
     global _memcached_client
     global _memcached_prefix
 
@@ -951,54 +941,55 @@ def get_complete_entity_result(token, entity_dict, properties_to_filter = [], is
     return complete_entity
 
 
-"""
-Generate the entity metadata by reading Neo4j data and only running triggers for data which will go into an
-OpenSearch document. Any data from Neo4j which will not go into the OSS document must also be removed e.g.
-local_directory_rel_path.
-
-Parameters
-----------
-token: str
-    Either the user's globus nexus token or the internal token
-entity_dict : dict
-    The entity dict based on neo4j record
-properties_to_skip : list
-    Any properties to skip running triggers
-
-Returns
--------
-dict
-    A dictionary of metadata to be included in an OpenSearch index document for the entity.
-"""
 def get_index_metadata(token, entity_dict, properties_to_skip=[]):
+    """
+    Generate the entity metadata by reading Neo4j data and only running triggers for data which will go into an
+    OpenSearch document. Any data from Neo4j which will not go into the OSS document must also be removed e.g.
+    local_directory_rel_path.
+
+    Parameters
+    ----------
+    token: str
+        Either the user's globus nexus token or the internal token
+    entity_dict : dict
+        The entity dict based on neo4j record
+    properties_to_skip : list
+        Any properties to skip running triggers
+
+    Returns
+    -------
+    dict
+        A dictionary of metadata to be included in an OpenSearch index document for the entity.
+    """
     metadata_dict = _get_metadata_result(   token=token
                                             ,entity_dict=entity_dict
                                             ,metadata_scope=MetadataScopeEnum.INDEX
                                             ,properties_to_skip=properties_to_skip)
     return metadata_dict
 
-"""
-Generate the entity metadata by reading Neo4j data and appropriate triggers based upon the scope of
-metadata requested e.g. complete data for a another service, indexing data for an OpenSearch document, etc.
 
-Parameters
-----------
-token: str
-    Either the user's globus nexus token or the internal token
-entity_dict : dict
-    The entity dict based on neo4j record
-metadata_scope:
-    A recognized scope from the SchemaConstants, controlling the triggers which are fired and elements
-    from Neo4j which are retained.
-properties_to_skip : list
-    Any properties to skip running triggers
-
-Returns
--------
-dict
-    A dictionary of metadata appropriate for the metadata_scope argument value.
-"""
 def _get_metadata_result(token, entity_dict, metadata_scope:MetadataScopeEnum, properties_to_skip=[]):
+    """
+    Generate the entity metadata by reading Neo4j data and appropriate triggers based upon the scope of
+    metadata requested e.g. complete data for a another service, indexing data for an OpenSearch document, etc.
+
+    Parameters
+    ----------
+    token: str
+        Either the user's globus nexus token or the internal token
+    entity_dict : dict
+        The entity dict based on neo4j record
+    metadata_scope:
+        A recognized scope from the SchemaConstants, controlling the triggers which are fired and elements
+        from Neo4j which are retained.
+    properties_to_skip : list
+        Any properties to skip running triggers
+
+    Returns
+    -------
+    dict
+        A dictionary of metadata appropriate for the metadata_scope argument value.
+    """
     global _memcached_client
     global _memcached_prefix
 
@@ -1159,25 +1150,24 @@ def handle_bulk_triggers(token, entities_list, bulk_trigger_manager_instance:Bul
                 logger.exception(msg)
     return entities_list
 
-"""
-Normalize the activity result by filtering out properties that are not defined in the yaml schema
-and the ones that are marked as `exposed: false` prior to sending the response
-
-Parameters
-----------
-activity_dict : dict
-    A dictionary that contains all activity details
-properties_to_exclude : list
-    Any additional properties to exclude from the response
-
-Returns
--------
-dict
-    A dictionary of activity information with keys that are all normalized
-"""
-
 
 def normalize_activity_result_for_response(activity_dict, properties_to_exclude=[]):
+    """
+    Normalize the activity result by filtering out properties that are not defined in the yaml schema
+    and the ones that are marked as `exposed: false` prior to sending the response
+
+    Parameters
+    ----------
+    activity_dict : dict
+        A dictionary that contains all activity details
+    properties_to_exclude : list
+        Any additional properties to exclude from the response
+
+    Returns
+    -------
+    dict
+        A dictionary of activity information with keys that are all normalized
+    """
     global _schema
 
     properties = _schema['ACTIVITIES']['Activity']['properties']
@@ -1217,8 +1207,9 @@ def normalize_object_result_for_response(provenance_type='ENTITIES', entity_dict
     -------
 
     """
-    if entity_dict is None:
-        entity_dict = {}
+    if entity_dict is None or entity_dict == {}:
+        return {}
+
     global _schema
 
     normalized_entity = {}
@@ -1321,32 +1312,39 @@ def remove_unauthorized_fields_from_response(entities_list:List, unauthorized:bo
     -------
     List[dict]
     """
+    if len(entities_list) > 0 and isinstance(entities_list[0], str):
+        return entities_list
+
     if unauthorized:
         filtered_final_result = []
         for entity in entities_list:
-            entity_type = entity.get('entity_type')
-            fields_to_exclude = get_fields_to_exclude(entity_type)
-            filtered_entity = exclude_properties_from_response(fields_to_exclude, entity)
-            filtered_final_result.append(filtered_entity)
+            if isinstance(entity, dict):
+                entity_type = entity.get('entity_type')
+                fields_to_exclude = get_fields_to_exclude(entity_type)
+                filtered_entity = exclude_properties_from_response(fields_to_exclude, entity)
+                filtered_final_result.append(filtered_entity)
+            else:
+                filtered_final_result.append(entity)
         return filtered_final_result
     else:
         return entities_list
 
-"""
-Validate json data from user request against the schema
-
-Parameters
-----------
-json_data_dict : dict
-    The json data dict from user request
-normalized_entity_type : str
-    One of the normalized entity types: Dataset, Collection, Sample, Source, Upload, Publication
-existing_entity_dict : dict
-    Entity dict for creating new entity, otherwise pass in the existing entity dict for update validation
-"""
-
 
 def validate_json_data_against_schema(provenance_type, json_data_dict, normalized_entity_type, existing_entity_dict={}):
+    """
+    Validate json data from user request against the schema
+
+    Parameters
+    ----------
+    provenance_type : str
+    json_data_dict : dict
+        The json data dict from user request
+    normalized_entity_type : str
+        One of the normalized entity types: Dataset, Collection, Sample, Source, Upload, Publication
+    existing_entity_dict : dict
+        Entity dict for creating new entity, otherwise pass in the existing entity dict for update validation
+    """
+
     global _schema
 
     properties = get_entity_properties(_schema[provenance_type], normalized_entity_type)
@@ -1464,23 +1462,22 @@ def validate_json_data_against_schema(provenance_type, json_data_dict, normalize
             f"Keys in request json with invalid data types: {separator.join(invalid_data_type_keys)}")
 
 
-"""
-Execute the entity level validator of the given type defined in the schema yaml
-before entity creation via POST or entity update via PUT
-Only one validator defined per given validator type, no need to support multiple validators
-
-Parameters
-----------
-validator_type : str
-    One of the validator types: before_entity_create_validator
-normalized_entity_type : str
-    One of the normalized entity types defined in the schema yaml: Source, Sample, Dataset, Upload, Publication
-request: Flask request object
-    The instance of Flask request passed in from application request
-"""
-
 
 def execute_entity_level_validator(validator_type, normalized_entity_type, request):
+    """
+    Execute the entity level validator of the given type defined in the schema yaml
+    before entity creation via POST or entity update via PUT
+    Only one validator defined per given validator type, no need to support multiple validators
+
+    Parameters
+    ----------
+    validator_type : str
+        One of the validator types: before_entity_create_validator
+    normalized_entity_type : str
+        One of the normalized entity types defined in the schema yaml: Source, Sample, Dataset, Upload, Publication
+    request: Flask request object
+        The instance of Flask request passed in from application request
+    """
     global _schema
 
     # A bit validation
@@ -1513,27 +1510,26 @@ def execute_entity_level_validator(validator_type, normalized_entity_type, reque
                 logger.exception(msg)
 
 
-"""
-Execute the property level validators defined in the schema yaml
-before property update via PUT
-
-Parameters
-----------
-validator_type : str
-    before_property_create_validators|before_property_update_validators (support multiple validators)
-normalized_entity_type : str
-    One of the normalized entity types defined in the schema yaml: Source, Sample, Dataset, Upload, Publication
-request: Flask request object
-    The instance of Flask request passed in from application request
-existing_data_dict : dict
-    A dictionary that contains all existing entity properties, {} for before_property_create_validators
-new_data_dict : dict
-    The json data in request body, already after the regular validations
-"""
-
 
 def execute_property_level_validators(provenance_type, validator_type, normalized_entity_type, request,
                                       existing_data_dict, new_data_dict):
+    """
+    Execute the property level validators defined in the schema yaml
+    before property update via PUT
+
+    Parameters
+    ----------
+    validator_type : str
+        before_property_create_validators|before_property_update_validators (support multiple validators)
+    normalized_entity_type : str
+        One of the normalized entity types defined in the schema yaml: Source, Sample, Dataset, Upload, Publication
+    request: Flask request object
+        The instance of Flask request passed in from application request
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties, {} for before_property_create_validators
+    new_data_dict : dict
+        The json data in request body, already after the regular validations
+    """
     global _schema
 
     # A bit validation
@@ -1572,17 +1568,16 @@ def execute_property_level_validators(provenance_type, validator_type, normalize
                     logger.exception(f"{msg}. {str(e)}")
 
 
-"""
-Get a list of entity types that can be used as derivation source in the schema yaml
-
-Returns
--------
-list
-    A list of entity types
-"""
-
-
 def get_derivation_source_entity_types():
+    """
+    Get a list of entity types that can be used as derivation source in the schema yaml
+
+    Returns
+    -------
+    list
+        A list of entity types
+    """
+
     global _schema
 
     derivation_source_entity_types = []
@@ -1594,17 +1589,16 @@ def get_derivation_source_entity_types():
     return derivation_source_entity_types
 
 
-"""
-Get a list of entity types that can be used as derivation target in the schema yaml
-
-Returns
--------
-list
-    A list of entity types
-"""
-
 
 def get_derivation_target_entity_types():
+    """
+    Get a list of entity types that can be used as derivation target in the schema yaml
+
+    Returns
+    -------
+    list
+        A list of entity types
+    """
     global _schema
 
     derivation_target_entity_types = []
@@ -1616,44 +1610,39 @@ def get_derivation_target_entity_types():
     return derivation_target_entity_types
 
 
-"""
-Lowercase and captalize the entity type string
-
-Parameters
-----------
-normalized_entity_type : str
-    One of the normalized entity types: Dataset, Collection, Sample, Source, Upload, Publication
-id : str
-    The uuid of target entity
-
-Returns
--------
-string
-    One of the normalized entity types: Dataset, Collection, Sample, Source, Upload, Publication
-"""
-
 
 def normalize_entity_type(entity_type):
+    """
+    Lowercase and capitalize the entity type string
+
+    Parameters
+    ----------
+    entity_type : str
+        One of the normalized entity types: Dataset, Collection, Sample, Source, Upload, Publication
+
+    Returns
+    -------
+    string
+        One of the normalized entity types: Dataset, Collection, Sample, Source, Upload, Publication
+    """
     normalized_entity_type = entity_type.lower().capitalize()
     return normalized_entity_type
 
 
-"""
-Lowercase and capitalize the status string unless its "qa", then make it capitalized.
-
-Parameters
-----------
-status : str
-    One of the status types: New|Processing|QA|Published|Error|Hold|Invalid
-
-Returns
--------
-string
-    One of the normalized status types: New|Processing|QA|Published|Error|Hold|Invalid
-"""
-
-
 def normalize_status(status):
+    """
+    Lowercase and capitalize the status string unless its "qa", then make it capitalized.
+
+    Parameters
+    ----------
+    status : str
+        One of the status types: New|Processing|QA|Published|Error|Hold|Invalid
+
+    Returns
+    -------
+    string
+        One of the normalized status types: New|Processing|QA|Published|Error|Hold|Invalid
+    """
     if status.lower() == "qa":
         normalized_status = "QA"
     else:
@@ -1661,56 +1650,56 @@ def normalize_status(status):
     return normalized_status
 
 
-"""
-Normalize the entity result to got into the OpenSearch index by filtering out properties that are not defined in
-the yaml schema, properties marked as `exposed: false` in the yaml schema, and properties lacking `indexed: true`
-marking in the yaml schema.
-
-Parameters
-----------
-entity_dict : dict
-    Either a neo4j node converted dict or metadata dict generated from get_index_metadata()
-properties_to_exclude : list
-    Any additional properties to exclude from the response
-
-Returns
--------
-dict
-    An entity metadata dictionary with keys that are all normalized
-"""
 def normalize_document_result_for_response(entity_dict, properties_to_exclude=[], properties_to_include=[]):
+    """
+    Normalize the entity result to got into the OpenSearch index by filtering out properties that are not defined in
+    the yaml schema, properties marked as `exposed: false` in the yaml schema, and properties lacking `indexed: true`
+    marking in the yaml schema.
+
+    Parameters
+    ----------
+    entity_dict : dict
+        Either a neo4j node converted dict or metadata dict generated from get_index_metadata()
+    properties_to_exclude : list
+        Any additional properties to exclude from the response
+
+    Returns
+    -------
+    dict
+        An entity metadata dictionary with keys that are all normalized
+    """
     return _normalize_metadata( entity_dict=entity_dict
                                 , metadata_scope=MetadataScopeEnum.INDEX
                                 , properties_to_exclude=properties_to_exclude
                                 , properties_to_include=properties_to_include)
 
 
-"""
-Normalize the entity result by filtering the properties to those appropriate for the
-scope of metadata requested e.g. complete data for a another service, indexing data for an OpenSearch document, etc.
-
-Properties that are not defined in the yaml schema and properties marked as `exposed: false` in the yaml schema are
-removed. Properties are also filter based upon the metadata_scope argument e.g. properties lacking `indexed: true`
-marking in the yaml schema are removed when `metadata_scope` has a value of `MetadataScopeEnum.INDEX`.
-
-Parameters
-----------
-entity_dict : dict
-    Either a neo4j node converted dict or metadata dict generated from get_index_metadata()
-metadata_scope:
-    A recognized scope from the SchemaConstants, controlling the triggers which are fired and elements
-    from Neo4j which are retained.  Default is MetadataScopeEnum.INDEX.
-properties_to_exclude : list
-    Any additional properties to exclude from the response
-properties_to_include : list
-    Any additional properties to include in the response
-
-Returns
--------
-dict
-    An entity metadata dictionary with keys that are all normalized appropriately for the metadata_scope argument value.
-"""
 def _normalize_metadata(entity_dict, metadata_scope:MetadataScopeEnum, properties_to_exclude=[], properties_to_include=[]):
+    """
+    Normalize the entity result by filtering the properties to those appropriate for the
+    scope of metadata requested e.g. complete data for a another service, indexing data for an OpenSearch document, etc.
+
+    Properties that are not defined in the yaml schema and properties marked as `exposed: false` in the yaml schema are
+    removed. Properties are also filter based upon the metadata_scope argument e.g. properties lacking `indexed: true`
+    marking in the yaml schema are removed when `metadata_scope` has a value of `MetadataScopeEnum.INDEX`.
+
+    Parameters
+    ----------
+    entity_dict : dict
+        Either a neo4j node converted dict or metadata dict generated from get_index_metadata()
+    metadata_scope:
+        A recognized scope from the SchemaConstants, controlling the triggers which are fired and elements
+        from Neo4j which are retained.  Default is MetadataScopeEnum.INDEX.
+    properties_to_exclude : list
+        Any additional properties to exclude from the response
+    properties_to_include : list
+        Any additional properties to include in the response
+
+    Returns
+    -------
+    dict
+        An entity metadata dictionary with keys that are all normalized appropriately for the metadata_scope argument value.
+    """
     global _schema
 
     # When the entity_dict is unavailable or the entity was incorrectly created, do not
@@ -1772,17 +1761,15 @@ def _normalize_metadata(entity_dict, metadata_scope:MetadataScopeEnum, propertie
     return normalized_metadata
 
 
-"""
-Validate the provided trigger type
-
-Parameters
-----------
-trigger_type : str
-    One of the trigger types: on_create_trigger, on_update_trigger, on_read_trigger
-"""
-
-
 def validate_trigger_type(trigger_type:TriggerTypeEnum):
+    """
+    Validate the provided trigger type
+
+    Parameters
+    ----------
+    trigger_type : str
+        One of the trigger types: on_create_trigger, on_update_trigger, on_read_trigger
+    """
     separator = ', '
 
     if trigger_type not in TriggerTypeEnum:
@@ -1792,17 +1779,15 @@ def validate_trigger_type(trigger_type:TriggerTypeEnum):
         raise ValueError(msg)
 
 
-"""
-Validate the provided entity level validator type
-
-Parameters
-----------
-validator_type : str
-    One of the validator types: before_entity_create_validator
-"""
-
-
 def validate_entity_level_validator_type(validator_type):
+    """
+    Validate the provided entity level validator type
+
+    Parameters
+    ----------
+    validator_type : str
+        One of the validator types: before_entity_create_validator
+    """
     accepted_validator_types = ['before_entity_create_validator']
     separator = ', '
 
@@ -1813,17 +1798,15 @@ def validate_entity_level_validator_type(validator_type):
         raise ValueError(msg)
 
 
-"""
-Validate the provided property level validator type
-
-Parameters
-----------
-validator_type : str
-    One of the validator types: before_property_create_validators|before_property_update_validators
-"""
-
-
 def validate_property_level_validator_type(validator_type):
+    """
+    Validate the provided property level validator type
+
+    Parameters
+    ----------
+    validator_type : str
+        One of the validator types: before_property_create_validators|before_property_update_validators
+    """
     accepted_validator_types = ['before_property_create_validators', 'before_property_update_validators']
     separator = ', '
 
@@ -1834,17 +1817,15 @@ def validate_property_level_validator_type(validator_type):
         raise ValueError(msg)
 
 
-"""
-Validate the normalized entity class
-
-Parameters
-----------
-normalized_entity_type : str
-    The normalized entity class: Collection|Source|Sample|Dataset|Upload|Publication
-"""
-
-
 def validate_normalized_entity_type(normalized_entity_type):
+    """
+    Validate the normalized entity class
+
+    Parameters
+    ----------
+    normalized_entity_type : str
+        The normalized entity class: Collection|Source|Sample|Dataset|Upload|Publication
+    """
     separator = ', '
     accepted_entity_types = get_all_entity_types()
 
@@ -1856,17 +1837,16 @@ def validate_normalized_entity_type(normalized_entity_type):
         raise schema_errors.InvalidNormalizedEntityTypeException(msg)
 
 
-"""
-Validate the normalized class
-
-Parameters
-----------
-normalized_class : str
-    The normalized class: Activity|Collection|Source|Sample|Dataset
-"""
-
 
 def validate_normalized_class(normalized_class):
+    """
+    Validate the normalized class
+
+    Parameters
+    ----------
+    normalized_class : str
+        The normalized class: Activity|Collection|Source|Sample|Dataset
+    """
     separator = ', '
     accepted_types = get_all_types()
 
@@ -1878,17 +1858,16 @@ def validate_normalized_class(normalized_class):
         raise schema_errors.InvalidNormalizedTypeException(msg)
 
 
-"""
-Validate the source and target entity types for creating derived entity
-
-Parameters
-----------
-normalized_target_entity_type : str
-    The normalized target entity class
-"""
-
 
 def validate_target_entity_type_for_derivation(normalized_target_entity_type):
+    """
+    Validate the source and target entity types for creating derived entity
+
+    Parameters
+    ----------
+    normalized_target_entity_type : str
+        The normalized target entity class
+    """
     separator = ', '
     accepted_target_entity_types = get_derivation_target_entity_types()
 
@@ -1897,17 +1876,16 @@ def validate_target_entity_type_for_derivation(normalized_target_entity_type):
                       f" Accepted types: {separator.join(accepted_target_entity_types)}")
 
 
-"""
-Validate the source and target entity types for creating derived entity
-
-Parameters
-----------
-normalized_source_entity_type : str
-    The normalized source entity class
-"""
-
 
 def validate_source_entity_type_for_derivation(normalized_source_entity_type):
+    """
+    Validate the source and target entity types for creating derived entity
+
+    Parameters
+    ----------
+    normalized_source_entity_type : str
+        The normalized source entity class
+    """
     separator = ', '
     accepted_source_entity_types = get_derivation_source_entity_types()
 
@@ -1920,41 +1898,40 @@ def validate_source_entity_type_for_derivation(normalized_source_entity_type):
 ## Other functions used in conjuction with the trigger methods
 ####################################################################################################
 
-"""
-Get user infomation dict based on the http request(headers)
-The result will be used by the trigger methods
-
-Parameters
-----------
-request : Flask request object
-    The Flask request passed from the API endpoint
-
-Returns
--------
-dict
-    A dict containing all the user info
-
-    {
-        "scope": "urn:globus:auth:scope:nexus.api.globus.org:groups",
-        "name": "First Last",
-        "iss": "https://auth.globus.org",
-        "client_id": "21f293b0-5fa5-4ee1-9e0e-3cf88bd70114",
-        "active": True,
-        "nbf": 1603761442,
-        "token_type": "Bearer",
-        "aud": ["nexus.api.globus.org", "21f293b0-5fa5-4ee1-9e0e-3cf88bd70114"],
-        "iat": 1603761442,
-        "dependent_tokens_cache_id": "af2d5979090a97536619e8fbad1ebd0afa875c880a0d8058cddf510fc288555c",
-        "exp": 1603934242,
-        "sub": "c0f8907a-ec78-48a7-9c85-7da995b05446",
-        "email": "email@pitt.edu",
-        "username": "username@pitt.edu",
-        "snscopes": ["urn:globus:auth:scope:nexus.api.globus.org:groups"],
-    }
-"""
-
 
 def get_user_info(request):
+    """
+    Get user information dict based on the http request(headers)
+    The result will be used by the trigger methods
+
+    Parameters
+    ----------
+    request : Flask request object
+        The Flask request passed from the API endpoint
+
+    Returns
+    -------
+    dict
+        A dict containing all the user info
+
+        {
+            "scope": "urn:globus:auth:scope:nexus.api.globus.org:groups",
+            "name": "First Last",
+            "iss": "https://auth.globus.org",
+            "client_id": "21f293b0-5fa5-4ee1-9e0e-3cf88bd70114",
+            "active": True,
+            "nbf": 1603761442,
+            "token_type": "Bearer",
+            "aud": ["nexus.api.globus.org", "21f293b0-5fa5-4ee1-9e0e-3cf88bd70114"],
+            "iat": 1603761442,
+            "dependent_tokens_cache_id": "af2d5979090a97536619e8fbad1ebd0afa875c880a0d8058cddf510fc288555c",
+            "exp": 1603934242,
+            "sub": "c0f8907a-ec78-48a7-9c85-7da995b05446",
+            "email": "email@pitt.edu",
+            "username": "username@pitt.edu",
+            "snscopes": ["urn:globus:auth:scope:nexus.api.globus.org:groups"],
+        }
+    """
     global _auth_helper
 
     # `group_required` is a boolean, when True, 'hmgroupids' is in the output
@@ -1990,34 +1967,32 @@ def get_user_info(request):
     return user_info
 
 
-"""
-Retrive target uuid and sennet_id based on the given id
-
-Parameters
-----------
-id : str
-    Either the uuid or sennet_id of target entity
-
-Returns
--------
-dict
-    The dict returned by uuid-api that contains all the associated ids, e.g.:
-    {
-        "ancestor_id": "23c0ffa90648358e06b7ac0c5673ccd2",
-        "ancestor_ids":[
-            "23c0ffa90648358e06b7ac0c5673ccd2"
-        ],
-        "email": "marda@ufl.edu",
-        "sn_uuid": "1785aae4f0fb8f13a56d79957d1cbedf",
-        "sennet_id": "SN966.VNKN.965",
-        "time_generated": "2020-10-19 15:52:02",
-        "type": "SOURCE",
-        "user_id": "694c6f6a-1deb-41a6-880f-d1ad8af3705f"
-    }
-"""
-
-
 def get_sennet_ids(id):
+    """
+    Retrieve target uuid and sennet_id based on the given id
+
+    Parameters
+    ----------
+    id : str
+        Either the uuid or sennet_id of target entity
+
+    Returns
+    -------
+    dict
+        The dict returned by uuid-api that contains all the associated ids, e.g.:
+        {
+            "ancestor_id": "23c0ffa90648358e06b7ac0c5673ccd2",
+            "ancestor_ids":[
+                "23c0ffa90648358e06b7ac0c5673ccd2"
+            ],
+            "email": "marda@ufl.edu",
+            "sn_uuid": "1785aae4f0fb8f13a56d79957d1cbedf",
+            "sennet_id": "SN966.VNKN.965",
+            "time_generated": "2020-10-19 15:52:02",
+            "type": "SOURCE",
+            "user_id": "694c6f6a-1deb-41a6-880f-d1ad8af3705f"
+        }
+    """
     global _uuid_api_url
 
     target_url = _uuid_api_url + '/uuid/' + id
@@ -2048,47 +2023,46 @@ def get_sennet_ids(id):
         raise requests.exceptions.RequestException(response.text)
 
 
-"""
-Create a set of new ids for the new entity to be created
-
-Parameters
-----------
-normalized_class : str
-    One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
-json_data_dict: dict
-    The json request dict from user input, required when creating ids for Source/Sample/Dataset only
-user_token: str
-    The user's globus nexus token
-user_info_dict: dict
-    A dict containing all the user info, requried when creating ids for Source only:
-    {
-        "scope": "urn:globus:auth:scope:nexus.api.globus.org:groups",
-        "name": "First Last",
-        "iss": "https://auth.globus.org",
-        "client_id": "21f293b0-5fa5-4ee1-9e0e-3cf88bd70114",
-        "active": True,
-        "nbf": 1603761442,
-        "token_type": "Bearer",
-        "aud": ["nexus.api.globus.org", "21f293b0-5fa5-4ee1-9e0e-3cf88bd70114"],
-        "iat": 1603761442,
-        "dependent_tokens_cache_id": "af2d5979090a97536619e8fbad1ebd0afa875c880a0d8058cddf510fc288555c",
-        "exp": 1603934242,
-        "sub": "c0f8907a-ec78-48a7-9c85-7da995b05446",
-        "email": "email@pitt.edu",
-        "username": "username@pitt.edu",
-        "snscopes": ["urn:globus:auth:scope:nexus.api.globus.org:groups"],
-    }
-count : int
-    The optional number of ids to generate. If omitted, defaults to 1
-
-Returns
--------
-list
-    The list of new ids dicts, the number of dicts is based on the count
-"""
-
 
 def create_sennet_ids(normalized_class, json_data_dict, user_token, user_info_dict, count=1):
+    """
+    Create a set of new ids for the new entity to be created
+
+    Parameters
+    ----------
+    normalized_class : str
+        One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+    json_data_dict: dict
+        The json request dict from user input, required when creating ids for Source/Sample/Dataset only
+    user_token: str
+        The user's globus nexus token
+    user_info_dict: dict
+        A dict containing all the user info, requried when creating ids for Source only:
+        {
+            "scope": "urn:globus:auth:scope:nexus.api.globus.org:groups",
+            "name": "First Last",
+            "iss": "https://auth.globus.org",
+            "client_id": "21f293b0-5fa5-4ee1-9e0e-3cf88bd70114",
+            "active": True,
+            "nbf": 1603761442,
+            "token_type": "Bearer",
+            "aud": ["nexus.api.globus.org", "21f293b0-5fa5-4ee1-9e0e-3cf88bd70114"],
+            "iat": 1603761442,
+            "dependent_tokens_cache_id": "af2d5979090a97536619e8fbad1ebd0afa875c880a0d8058cddf510fc288555c",
+            "exp": 1603934242,
+            "sub": "c0f8907a-ec78-48a7-9c85-7da995b05446",
+            "email": "email@pitt.edu",
+            "username": "username@pitt.edu",
+            "snscopes": ["urn:globus:auth:scope:nexus.api.globus.org:groups"],
+        }
+    count : int
+        The optional number of ids to generate. If omitted, defaults to 1
+
+    Returns
+    -------
+    list
+        The list of new ids dicts, the number of dicts is based on the count
+    """
     global _uuid_api_url
 
     """
@@ -2230,22 +2204,22 @@ def create_sennet_ids(normalized_class, json_data_dict, user_token, user_info_di
         raise requests.exceptions.RequestException(response.text)
 
 
-"""
-Get the group info (group_uuid and group_name) based on user's hmgroupids list
-
-Parameters
-----------
-user_groupids_list : list
-    A list of globus group uuids that the user has access to
-
-Returns
--------
-dict
-    The group info (group_uuid and group_name)
-"""
-
 
 def get_entity_group_info(user_groupids_list, default_group=None):
+    """
+    Get the group info (group_uuid and group_name) based on user's hmgroupids list
+
+    Parameters
+    ----------
+    user_groupids_list : list
+        A list of globus group uuids that the user has access to
+
+    Returns
+    -------
+    dict
+        The group info (group_uuid and group_name)
+    """
+
     global _auth_helper
 
     # Default
@@ -2292,19 +2266,18 @@ def get_entity_group_info(user_groupids_list, default_group=None):
     return group_info
 
 
-"""
-Check if the given group uuid is valid
-
-Parameters
-----------
-group_uuid : str
-    The target group uuid string
-user_group_uuids: list
-    An optional list of group uuids to check against, a subset of all the data provider group uuids
-"""
-
 
 def validate_entity_group_uuid(group_uuid, user_group_uuids=None):
+    """
+    Check if the given group uuid is valid
+
+    Parameters
+    ----------
+    group_uuid : str
+        The target group uuid string
+    user_group_uuids: list
+        An optional list of group uuids to check against, a subset of all the data provider group uuids
+    """
     global _auth_helper
 
     # Get the globus groups info based on the groups json file in commons package
@@ -2328,22 +2301,22 @@ def validate_entity_group_uuid(group_uuid, user_group_uuids=None):
             raise schema_errors.UnmatchedDataProviderGroupException(msg)
 
 
-"""
-Get the group_name based on the given group_uuid
-
-Parameters
-----------
-group_uuid : str
-    UUID of the target group
-
-Returns
--------
-str
-    The group_name corresponding to this group_uuid
-"""
-
 
 def get_entity_group_name(group_uuid):
+    """
+    Get the group_name based on the given group_uuid
+
+    Parameters
+    ----------
+    group_uuid : str
+        UUID of the target group
+
+    Returns
+    -------
+    str
+        The group_name corresponding to this group_uuid
+    """
+
     global _auth_helper
 
     # Get the globus groups info based on the groups json file in commons package
@@ -2355,27 +2328,26 @@ def get_entity_group_name(group_uuid):
     return group_name
 
 
-"""
-Generate properties data of the target Activity node
-
-Parameters
-----------
-normalized_entity_type : str
-    One of the entity types defined in the schema yaml: Source, Sample, Dataset
-user_token: str
-    The user's globus nexus token
-user_info_dict : dict
-    A dictionary that contains all user info to be used to generate the related properties
-count : int
-    The number of Activities to be generated
-
-Returns
--------
-dict: A dict of gnerated Activity data
-"""
-
-
 def generate_activity_data(normalized_entity_type, user_token, user_info_dict, creation_action=None):
+    """
+    Generate properties data of the target Activity node
+
+    Parameters
+    ----------
+    normalized_entity_type : str
+        One of the entity types defined in the schema yaml: Source, Sample, Dataset
+    user_token: str
+        The user's globus nexus token
+    user_info_dict : dict
+        A dictionary that contains all user info to be used to generate the related properties
+    count : int
+        The number of Activities to be generated
+
+    Returns
+    -------
+    dict: A dict of gnerated Activity data
+    """
+
     # Activity is not an Entity
     normalized_activity_type = 'Activity'
 
@@ -2399,86 +2371,72 @@ def generate_activity_data(normalized_entity_type, user_token, user_info_dict, c
 
 
 
-
-
-
-
-
-"""
-Get the ingest-api URL to be used by trigger methods
-
-Returns
--------
-str
-    The ingest-api URL
-"""
-
-
 def get_ingest_api_url():
+    """
+    Get the ingest-api URL to be used by trigger methods
+
+    Returns
+    -------
+    str
+        The ingest-api URL
+    """
     global _ingest_api_url
 
     return _ingest_api_url
 
 
-"""
-Get the search-api URL to be used by trigger methods
-
-Returns
--------
-str
-    The search-api URL
-"""
-
-
 def get_search_api_url():
+    """
+    Get the search-api URL to be used by trigger methods
+
+    Returns
+    -------
+    str
+        The search-api URL
+    """
     global _search_api_url
 
     return _search_api_url
 
 
-"""
-Get the AUthHelper instance to be used by trigger methods
-
-Returns
--------
-AuthHelper
-    The AuthHelper instance
-"""
-
-
 def get_auth_helper_instance():
+    """
+    Get the AUthHelper instance to be used by trigger methods
+
+    Returns
+    -------
+    AuthHelper
+        The AuthHelper instance
+    """
     global _auth_helper
 
     return _auth_helper
 
 
-"""
-Get the neo4j.Driver instance to be used by trigger methods
-
-Returns
--------
-neo4j.Driver
-    The neo4j.Driver instance
-"""
-
-
 def get_neo4j_driver_instance():
+    """
+    Get the neo4j.Driver instance to be used by trigger methods
+
+    Returns
+    -------
+    neo4j.Driver
+        The neo4j.Driver instance
+    """
     global _neo4j_driver
 
     return _neo4j_driver
 
 
-"""
-Get the UBKG instance to be used by trigger methods
-
-Returns
--------
-ubkg
-    The UBKG instance
-"""
-
 
 def get_ubkg_instance():
+    """
+    Get the UBKG instance to be used by trigger methods
+
+    Returns
+    -------
+    ubkg
+        The UBKG instance
+    """
     global _ubkg
 
     return _ubkg
@@ -2488,22 +2446,21 @@ def get_ubkg_instance():
 ## Internal functions
 ####################################################################################################
 
-"""
-Create a dict of HTTP Authorization header with Bearer token for making calls to uuid-api
-
-Parameters
-----------
-user_token: str
-    The user's globus nexus token
-
-Returns
--------
-dict
-    The headers dict to be used by requests
-"""
-
 
 def _create_request_headers(user_token):
+    """
+    Create a dict of HTTP Authorization header with Bearer token for making calls to uuid-api
+
+    Parameters
+    ----------
+    user_token: str
+        The user's globus nexus token
+
+    Returns
+    -------
+    dict
+        The headers dict to be used by requests
+    """
     auth_header_name = 'Authorization'
     auth_scheme = 'Bearer'
 
@@ -2515,22 +2472,21 @@ def _create_request_headers(user_token):
     return headers_dict
 
 
-"""
-Cache the request response for the given URL with using function cache (memoization)
-
-Parameters
-----------
-target_url: str
-    The target URL
-
-Returns
--------
-flask.Response
-    The response object
-"""
-
 
 def make_request_get(target_url, internal_token_used=False):
+    """
+    Cache the request response for the given URL with using function cache (memoization)
+
+    Parameters
+    ----------
+    target_url: str
+        The target URL
+
+    Returns
+    -------
+    flask.Response
+        The response object
+    """
     global _memcached_client
     global _memcached_prefix
 
@@ -2567,17 +2523,16 @@ def make_request_get(target_url, internal_token_used=False):
     return response
 
 
-"""
-Delete the cached data for the given entity uuids
-
-Parameters
-----------
-uuids_list : list
-    A list of target uuids
-"""
-
 
 def delete_memcached_cache(uuids_list):
+    """
+    Delete the cached data for the given entity uuids
+
+    Parameters
+    ----------
+    uuids_list : list
+        A list of target uuids
+    """
     global _memcached_client
     global _memcached_prefix
 
@@ -2605,52 +2560,3 @@ def get_entity_api_url():
     return ensureTrailingSlashURL(_entity_api_url)
 
 
-"""
-Normalize the entity result by filtering out properties that are not defined in the yaml schema
-and the ones that are marked as `exposed: false` prior to sending the response
-
-Parameters
-----------
-entity_dict : dict
-    Either a neo4j node converted dict or complete dict generated from get_complete_entity_result()
-properties_to_exclude : list
-    Any additional properties to exclude from the response
-
-Returns
--------
-dict
-    A entity dictionary with keys that are all normalized
-"""
-def normalize_entity_result_for_response(entity_dict, properties_to_exclude = []):
-    global _schema
-
-    normalized_entity = {}
-
-    # In case entity_dict is None or
-    # an incorrectly created entity that doesn't have the `entity_type` property
-    if entity_dict and ('entity_type' in entity_dict):
-        normalized_entity_type = entity_dict['entity_type']
-        properties = _schema['ENTITIES'][normalized_entity_type]['properties']
-
-        for key in entity_dict:
-            # Only return the properties defined in the schema yaml
-            # Exclude additional properties if specified
-            if (key in properties) and (key not in properties_to_exclude):
-                # Skip properties with None value and the ones that are marked as not to be exposed.
-                # By default, all properties are exposed if not marked as `exposed: false`
-                # It's still possible to see `exposed: true` marked explicitly
-                if (entity_dict[key] is not None) and ('exposed' not in properties[key]) or (('exposed' in properties[key]) and properties[key]['exposed']):
-                    if entity_dict[key] and (properties[key]['type'] in ['list', 'json_string']):
-                        logger.info(f"Executing get_as_dict() on {normalized_entity_type}.{key} of uuid: {entity_dict['uuid']}")
-
-                        # Safely evaluate a string containing a json or list string
-                        entity_dict[key] = get_as_dict(entity_dict[key])
-
-                    # Add the target key with correct value of data type to the normalized_entity dict
-                    normalized_entity[key] = entity_dict[key]
-
-                    # Final step: remove properties with empty string value, empty dict {}, and empty list []
-                    if (isinstance(normalized_entity[key], (str, dict, list)) and (not normalized_entity[key])):
-                        normalized_entity.pop(key)
-
-    return normalized_entity

@@ -17,35 +17,33 @@ record_field_name = 'result'
 ## Directly called by schema_triggers.py
 ####################################################################################################
 
-"""
-Get the direct ancestors uuids of a given dataset by uuid
-
-Parameters
-----------
-neo4j_driver : neo4j.Driver object
-    The neo4j database connection pool
-uuid : str
-    The uuid of target entity 
-property_key : str
-    A target property key for result filtering
-
-Returns
--------
-list
-    A unique list of uuids of source entities
-"""
-
-
 def get_dataset_direct_ancestors(neo4j_driver, uuid, property_key=None):
+    """
+    Get the direct ancestors uuids of a given dataset by uuid
+
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    uuid : str
+        The uuid of target entity
+    property_key : str
+        A target property key for result filtering
+
+    Returns
+    -------
+    list
+        A unique list of uuids of source entities
+    """
     results = []
     if property_key:
-        query = (f"MATCH (s:Entity)<-[:USED]-(a:Activity)<-[:WAS_GENERATED_BY]-(t:Dataset) "
-                 f"WHERE t.uuid = '{uuid}' "
-                 f"RETURN apoc.coll.toSet(COLLECT(s.{property_key})) AS {record_field_name}")
+        query = (f"MATCH (t:Entity)<-[:USED]-(:Activity)<-[:WAS_GENERATED_BY]-(d:Dataset) "
+                 f"WHERE d.uuid = '{uuid}' "
+                 f"RETURN apoc.coll.toSet(COLLECT(t.{property_key})) AS {record_field_name}")
     else:
-        _activity_query_part = activity_query_part(only_map_part=True)
-        query = (f"MATCH (t:Entity)<-[:USED]-(a:Activity)<-[:WAS_GENERATED_BY]-(e:Dataset) "
-                 f"WHERE e.uuid = '{uuid}' "
+        _activity_query_part = activity_query_part(for_all_match=True)
+        query = (f"MATCH (t:Entity)<-[:USED]-(:Activity)<-[:WAS_GENERATED_BY]-(d:Dataset) "
+                 f"WHERE d.uuid = '{uuid}' "
                  f"{_activity_query_part} {record_field_name}")
 
     logger.info("======get_dataset_direct_ancestors() query======")
@@ -61,26 +59,26 @@ def get_dataset_direct_ancestors(neo4j_driver, uuid, property_key=None):
     return results
 
 
-"""
-Get the direct descendant uuids of a given dataset by uuid
-
-Parameters
-----------
-neo4j_driver : neo4j.Driver object
-    The neo4j database connection pool
-uuid : str
-    The uuid of target entity 
-property_key : str
-    A target property key for result filtering
-match_case : str
-    An additional match case query
-
-Returns
--------
-list
-    A unique list of entities
-"""
 def get_dataset_direct_descendants(neo4j_driver, uuid, property_key=None, match_case = ''):
+    """
+    Get the direct descendant uuids of a given dataset by uuid
+
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    uuid : str
+        The uuid of target entity
+    property_key : str
+        A target property key for result filtering
+    match_case : str
+        An additional match case query
+
+    Returns
+    -------
+    list
+        A unique list of entities
+    """
     results = []
     if property_key:
         query = (f"MATCH (s:Entity)-[:WAS_GENERATED_BY]->(a:Activity)-[:USED]->(t:Dataset) "
@@ -109,26 +107,25 @@ def get_dataset_direct_descendants(neo4j_driver, uuid, property_key=None, match_
     return results
 
 
-"""
-Get the uuids for each entity in a list that doesn't belong to a certain entity type. Uuids are ordered by type
-
-Parameters
-----------
-neo4j_driver : neo4j.Driver object
-    The neo4j database connection pool
-direct_ancestor_uuids : list
-    List of the uuids to be filtered
-entity_type : string
-    The entity to be excluded
-
-Returns
--------
-dict
-    A dictionary of entity uuids that don't pass the filter, grouped by entity_type
-"""
-
-
 def filter_ancestors_by_type(neo4j_driver, direct_ancestor_uuids, entity_type):
+    """
+    Get the uuids for each entity in a list that doesn't belong to a certain entity type. Uuids are ordered by type
+
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    direct_ancestor_uuids : list
+        List of the uuids to be filtered
+    entity_type : string
+        The entity to be excluded
+
+    Returns
+    -------
+    dict
+        A dictionary of entity uuids that don't pass the filter, grouped by entity_type
+    """
+
     query = (f"MATCH (e:Entity) "
              f"WHERE e.uuid in {direct_ancestor_uuids} AND toLower(e.entity_type) <> '{entity_type.lower()}' "
              f"RETURN e.entity_type AS entity_type, collect(e.uuid) AS uuids")
@@ -183,24 +180,24 @@ def get_origin_samples(neo4j_driver, uuids:List, is_bulk = True):
 
     return result
 
-"""
-Get the sample organ name and source metadata information of the given dataset uuid
-
-Parameters
-----------
-neo4j_driver : neo4j.Driver object
-    The neo4j database connection pool
-uuid : str
-    The uuid of target entity 
-
-Returns
--------
-str: The sample organ name
-str: The source metadata (string representation of a Python dict)
-"""
 
 
 def get_dataset_organ_and_source_info(neo4j_driver, uuid):
+    """
+    Get the sample organ name and source metadata information of the given dataset uuid
+
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    uuid : str
+        The uuid of target entity
+
+    Returns
+    -------
+    str: The sample organ name
+    str: The source metadata (string representation of a Python dict)
+    """
     organ_type = None
     source_metadata = None
     source_type = None
@@ -255,25 +252,25 @@ def get_entity_creation_action_activity(neo4j_driver, entity_uuid: str) -> str:
 
     return None
 
-"""
-Create or recreate one or more linkages
-between the target entity node and the collection nodes in neo4j
-
-Note: the size of direct_ancestor_uuids equals to that of activity_data_dict_list
-
-Parameters
-----------
-neo4j_driver : neo4j.Driver object
-    The neo4j database connection pool
-entity_uuid : str
-    The uuid of target child entity
-direct_ancestor_uuids : list
-    A list of uuids of direct ancestors
-
-"""
 
 
 def link_collection_to_entity(neo4j_driver, entity_uuid, direct_ancestor_uuids):
+    """
+    Create or recreate one or more linkages
+    between the target entity node and the collection nodes in neo4j
+
+    Note: the size of direct_ancestor_uuids equals to that of activity_data_dict_list
+
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    entity_uuid : str
+        The uuid of target child entity
+    direct_ancestor_uuids : list
+        A list of uuids of direct ancestors
+
+    """
     try:
         with neo4j_driver.session() as session:
             tx = session.begin_transaction()
@@ -295,27 +292,26 @@ def link_collection_to_entity(neo4j_driver, entity_uuid, direct_ancestor_uuids):
         raise TransactionError(msg)
 
 
-"""
-Link a Collection to all the Datasets it should contain per the provided
-argument.  First, all existing linkages are deleted, then a link between
-each entry of the dataset_uuid_list and collection_uuid is created in the
-correction direction with an IN_COLLECTION relationship.
-
-No Activity nodes are created in the relationship between a Collection and
-its Datasets.
-
-Parameters
-----------
-neo4j_driver : neo4j.Driver object
-    The neo4j database connection pool
-collection_uuid : str
-    The uuid of a Collection entity which is the target of an IN_COLLECTION relationship.
-dataset_uuid_list : list of str
-    A list of uuids of Dataset entities which are the source of an IN_COLLECTION relationship.
-"""
-
-
 def link_collection_to_entities(neo4j_driver, collection_uuid, entities_uuid_list):
+    """
+    Link a Collection to all the Datasets it should contain per the provided
+    argument.  First, all existing linkages are deleted, then a link between
+    each entry of the dataset_uuid_list and collection_uuid is created in the
+    correction direction with an IN_COLLECTION relationship.
+
+    No Activity nodes are created in the relationship between a Collection and
+    its Datasets.
+
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    collection_uuid : str
+        The uuid of a Collection entity which is the target of an IN_COLLECTION relationship.
+    entities_uuid_list : list of str
+        A list of uuids of Dataset entities which are the source of an IN_COLLECTION relationship.
+    """
+
     try:
         with neo4j_driver.session() as session:
             tx = session.begin_transaction()
@@ -346,24 +342,23 @@ def link_collection_to_entities(neo4j_driver, collection_uuid, entities_uuid_lis
         raise TransactionError(msg)
 
 
-"""
-Create or recreate one or more linkages
-between the target entity node and the agent nodes in neo4j
-
-
-Parameters
-----------
-neo4j_driver : neo4j.Driver object
-    The neo4j database connection pool
-entity_uuid : str
-    The uuid of target child entity
-direct_ancestor_uuids : list
-    A list of uuids of direct ancestors
-
-"""
-
 
 def link_entity_to_agent(neo4j_driver, entity_uuid, direct_ancestor_uuids, activity_data_dict):
+    """
+    Create or recreate one or more linkages
+    between the target entity node and the agent nodes in neo4j
+
+
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    entity_uuid : str
+        The uuid of target child entity
+    direct_ancestor_uuids : list
+        A list of uuids of direct ancestors
+
+    """
     try:
         with neo4j_driver.session() as session:
             tx = session.begin_transaction()
@@ -399,24 +394,22 @@ def link_entity_to_agent(neo4j_driver, entity_uuid, direct_ancestor_uuids, activ
         raise TransactionError(msg)
 
 
-"""
-Create or recreate one or more linkages
-between the target entity node and another entity nodes in neo4j
-
-
-Parameters
-----------
-neo4j_driver : neo4j.Driver object
-    The neo4j database connection pool
-entity_uuid : str
-    The uuid of target child entity
-direct_ancestor_uuids : list
-    A list of uuids of direct ancestors
-
-"""
-
-
 def link_entity_to_entity_via_activity(neo4j_driver, entity_uuid, direct_ancestor_uuids, activity_data_dict):
+    """
+    Create or recreate one or more linkages
+    between the target entity node and another entity nodes in neo4j
+
+
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    entity_uuid : str
+        The uuid of target child entity
+    direct_ancestor_uuids : list
+        A list of uuids of direct ancestors
+
+    """
     try:
         with neo4j_driver.session() as session:
             tx = session.begin_transaction()
@@ -451,24 +444,23 @@ def link_entity_to_entity_via_activity(neo4j_driver, entity_uuid, direct_ancesto
         raise TransactionError(msg)
 
 
-"""
-Create or recreate one or more linkages
-between the target entity node and another entity nodes in neo4j
-
-
-Parameters
-----------
-neo4j_driver : neo4j.Driver object
-    The neo4j database connection pool
-entity_uuid : str
-    The uuid of target child entity
-direct_ancestor_uuids : list
-    A list of uuids of direct ancestors
-
-"""
-
 
 def link_entity_to_entity(neo4j_driver, entity_uuid, direct_ancestor_uuids, activity_data_dict):
+    """
+    Create or recreate one or more linkages
+    between the target entity node and another entity nodes in neo4j
+
+
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    entity_uuid : str
+        The uuid of target child entity
+    direct_ancestor_uuids : list
+        A list of uuids of direct ancestors
+
+    """
     try:
         with neo4j_driver.session() as session:
             tx = session.begin_transaction()
@@ -494,22 +486,21 @@ def link_entity_to_entity(neo4j_driver, entity_uuid, direct_ancestor_uuids, acti
         raise TransactionError(msg)
 
 
-"""
-Create a revision linkage from the target entity node to the entity node 
-of the previous revision in neo4j
-
-Parameters
-----------
-neo4j_driver : neo4j.Driver object
-    The neo4j database connection pool
-entity_uuid : str
-    The uuid of target entity
-previous_revision_entity_uuid : str
-    The uuid of previous revision entity
-"""
-
 
 def link_entity_to_previous_revision(neo4j_driver, entity_uuid, previous_revision_entity_uuid):
+    """
+    Create a revision linkage from the target entity node to the entity node
+    of the previous revision in neo4j
+
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    entity_uuid : str
+        The uuid of target entity
+    previous_revision_entity_uuid : str
+        The uuid of previous revision entity
+    """
     try:
         with neo4j_driver.session() as session:
             tx = session.begin_transaction()
@@ -530,24 +521,23 @@ def link_entity_to_previous_revision(neo4j_driver, entity_uuid, previous_revisio
 
         raise TransactionError(msg)
 
-"""
-Get the uuids of previous revision entities for a given entity
-
-Parameters
-----------
-neo4j_driver : neo4j.Driver object
-    The neo4j database connection pool
-uuid : str
-    The uuid of previous revision entity 
-
-Returns
--------
-dict
-    The list of previous revision ids
-"""
-
 
 def get_previous_revision_uuids(neo4j_driver, uuid):
+    """
+    Get the uuids of previous revision entities for a given entity
+
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    uuid : str
+        The uuid of previous revision entity
+
+    Returns
+    -------
+    dict
+        The list of previous revision ids
+    """
     results = []
 
     # Don't use [r:REVISION_OF] because
@@ -569,24 +559,23 @@ def get_previous_revision_uuids(neo4j_driver, uuid):
     return results
 
 
-"""
-Get the list of uuids of next revision entities for a given entity
-
-Parameters
-----------
-neo4j_driver : neo4j.Driver object
-    The neo4j database connection pool
-uuid : str
-    The uuid of previous revision entity 
-
-Returns
--------
-dict
-    The list of next revision ids
-"""
-
 
 def get_next_revision_uuids(neo4j_driver, uuid):
+    """
+    Get the list of uuids of next revision entities for a given entity
+
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    uuid : str
+        The uuid of previous revision entity
+
+    Returns
+    -------
+    dict
+        The list of next revision ids
+    """
     result = []
 
     # Don't use [r:REVISION_OF] because
@@ -608,24 +597,24 @@ def get_next_revision_uuids(neo4j_driver, uuid):
     return result
 
 
-"""
-Get the uuid of previous revision entity for a given entity
-
-Parameters
-----------
-neo4j_driver : neo4j.Driver object
-    The neo4j database connection pool
-uuid : str
-    The uuid of previous revision entity 
-
-Returns
--------
-dict
-    The parent dict, can either be a Sample or Source
-"""
-
 
 def get_previous_revision_uuid(neo4j_driver, uuid):
+    """
+    Get the uuid of previous revision entity for a given entity
+
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    uuid : str
+        The uuid of previous revision entity
+
+    Returns
+    -------
+    dict
+        The parent dict, can either be a Sample or Source
+    """
+
     result = None
 
     # Don't use [r:REVISION_OF] because 
@@ -646,24 +635,23 @@ def get_previous_revision_uuid(neo4j_driver, uuid):
     return result
 
 
-"""
-Get the uuid of next revision entity for a given entity
-
-Parameters
-----------
-neo4j_driver : neo4j.Driver object
-    The neo4j database connection pool
-uuid : str
-    The uuid of previous revision entity 
-
-Returns
--------
-dict
-    The parent dict, can either be a Sample or Source
-"""
-
 
 def get_next_revision_uuid(neo4j_driver, uuid):
+    """
+    Get the uuid of next revision entity for a given entity
+
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    uuid : str
+        The uuid of previous revision entity
+
+    Returns
+    -------
+    dict
+        The parent dict, can either be a Sample or Source
+    """
     result = None
 
     # Don't use [r:REVISION_OF] because 
@@ -684,26 +672,24 @@ def get_next_revision_uuid(neo4j_driver, uuid):
     return result
 
 
-"""
-Get a list of associated collection uuids for a given entity
-
-Parameters
-----------
-neo4j_driver : neo4j.Driver object
-    The neo4j database connection pool
-uuid : str
-    The uuid of entity
-property_key : str
-    A target property key for result filtering
-
-Returns
--------
-list
-    A list of collection uuids
-"""
-
-
 def get_entity_collections(neo4j_driver, uuid, property_key=None):
+    """
+    Get a list of associated collection uuids for a given entity
+
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    uuid : str
+        The uuid of entity
+    property_key : str
+        A target property key for result filtering
+
+    Returns
+    -------
+    list
+        A list of collection uuids
+    """
     results = []
 
     if property_key:
@@ -732,26 +718,23 @@ def get_entity_collections(neo4j_driver, uuid, property_key=None):
     return results
 
 
-"""
-Get the associated Upload for a given dataset
 
-Parameters
-----------
-neo4j_driver : neo4j.Driver object
-    The neo4j database connection pool
-uuid : str
-    The uuid of dataset
-property_key : str
-    A target property key for result filtering
+def get_dataset_upload(neo4j_driver, uuid):
+    """
+    Get the associated Upload for a given dataset
 
-Returns
--------
-dict
-    A Upload dict
-"""
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    uuid : str
+        The uuid of dataset
 
-
-def get_dataset_upload(neo4j_driver, uuid, property_key=None):
+    Returns
+    -------
+    dict
+        A Upload dict
+    """
     result = {}
 
     query = (f"MATCH (e:Entity)-[:IN_UPLOAD]->(s:Upload) "
@@ -771,24 +754,25 @@ def get_dataset_upload(neo4j_driver, uuid, property_key=None):
     return result
 
 
-"""
-Get a list of associated dataset dicts for a given collection
-
-Parameters
-----------
-neo4j_driver : neo4j.Driver object
-    The neo4j database connection pool
-uuid : str
-    The uuid of collection
-
-Returns
--------
-list
-    The list containing associated dataset dicts
-"""
-
 
 def get_collection_entities(neo4j_driver, uuid, properties: Union[PropertyGroups, List[str]] = None, is_include_action: bool = True):
+    """
+    Get a list of associated dataset dicts for a given collection
+
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    uuid : str
+        The uuid of collection
+    properties : Union[PropertyGroups, List[str]]
+    is_include_action : bool
+
+    Returns
+    -------
+    list
+        The list containing associated dataset dicts
+    """
     results = []
 
     query = (f"MATCH (t:Entity)-[:IN_COLLECTION]->(c:Collection|Epicollection) "
@@ -808,26 +792,25 @@ def get_collection_entities(neo4j_driver, uuid, properties: Union[PropertyGroups
     return results
 
 
-"""
-Get a dictionary with an entry for each Dataset in a Collection. The dictionary is
-keyed by Dataset uuid and contains the Dataset data_access_level.
-
-Parameters
-----------
-neo4j_driver : neo4j.Driver object
-    The neo4j database connection pool
-uuid : str
-    The uuid of a Collection
-
-Returns
--------
-dict
-     A dictionary with an entry for each Dataset in a Collection. The dictionary is
-     keyed by Dataset uuid and contains the Dataset data_access_level.
-"""
-
 
 def get_collection_datasets_data_access_levels(neo4j_driver, uuid):
+    """
+    Get a dictionary with an entry for each Dataset in a Collection. The dictionary is
+    keyed by Dataset uuid and contains the Dataset data_access_level.
+
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    uuid : str
+        The uuid of a Collection
+
+    Returns
+    -------
+    dict
+         A dictionary with an entry for each Dataset in a Collection. The dictionary is
+         keyed by Dataset uuid and contains the Dataset data_access_level.
+    """
     results = []
 
     query = (f"MATCH (d:Dataset)-[:IN_COLLECTION]->(c:Collection) "
@@ -847,26 +830,27 @@ def get_collection_datasets_data_access_levels(neo4j_driver, uuid):
     return results
 
 
-"""
-Get a dictionary with an entry for each Dataset in a Collection. The dictionary is
-keyed by Dataset uuid and contains the Dataset data_access_level.
 
-Parameters
-----------
-neo4j_driver : neo4j.Driver object
-    The neo4j database connection pool
-uuid : str
-    The uuid of a Collection
-
-Returns
--------
-dict
-     A dictionary with an entry for each Dataset in a Collection. The dictionary is
-     keyed by Dataset uuid and contains the Dataset data_access_level.
-"""
 
 
 def get_collection_datasets_statuses(neo4j_driver, uuid):
+    """
+    Get a dictionary with an entry for each Dataset in a Collection. The dictionary is
+    keyed by Dataset uuid and contains the Dataset data_access_level.
+
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    uuid : str
+        The uuid of a Collection
+
+    Returns
+    -------
+    dict
+         A dictionary with an entry for each Dataset in a Collection. The dictionary is
+         keyed by Dataset uuid and contains the Dataset data_access_level.
+    """
     results = []
 
     query = (f"MATCH (d: Dataset)-[:IN_COLLECTION]->(c:Collection) "
@@ -888,21 +872,21 @@ def get_collection_datasets_statuses(neo4j_driver, uuid):
     return results
 
 
-"""
-Link the dataset nodes to the target Upload node
-
-Parameters
-----------
-neo4j_driver : neo4j.Driver object
-    The neo4j database connection pool
-upload_uuid : str
-    The uuid of target Upload 
-dataset_uuids_list : list
-    A list of dataset uuids to be linked to Upload
-"""
-
 
 def link_datasets_to_upload(neo4j_driver, upload_uuid, dataset_uuids_list):
+    """
+    Link the dataset nodes to the target Upload node
+
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    upload_uuid : str
+        The uuid of target Upload
+    dataset_uuids_list : list
+        A list of dataset uuids to be linked to Upload
+    """
+
     # Join the list of uuids and wrap each string in single quote
     joined_str = ', '.join("'{0}'".format(dataset_uuid) for dataset_uuid in dataset_uuids_list)
     # Format a string to be used in Cypher query.
@@ -939,21 +923,21 @@ def link_datasets_to_upload(neo4j_driver, upload_uuid, dataset_uuids_list):
         raise TransactionError(msg)
 
 
-"""
-Unlink the dataset nodes from the target Upload node
-
-Parameters
-----------
-neo4j_driver : neo4j.Driver object
-    The neo4j database connection pool
-upload_uuid : str
-    The uuid of target Upload 
-dataset_uuids_list : list
-    A list of dataset uuids to be unlinked from Upload
-"""
-
 
 def unlink_datasets_from_upload(neo4j_driver, upload_uuid, dataset_uuids_list):
+    """
+    Unlink the dataset nodes from the target Upload node
+
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    upload_uuid : str
+        The uuid of target Upload
+    dataset_uuids_list : list
+        A list of dataset uuids to be unlinked from Upload
+    """
+
     # Join the list of uuids and wrap each string in single quote
     joined_str = ', '.join("'{0}'".format(dataset_uuid) for dataset_uuid in dataset_uuids_list)
     # Format a string to be used in Cypher query.
@@ -988,27 +972,10 @@ def unlink_datasets_from_upload(neo4j_driver, upload_uuid, dataset_uuids_list):
         raise TransactionError(msg)
 
 
-"""
-Get a list of associated dataset dicts for a given Upload
-
-Parameters
-----------
-neo4j_driver : neo4j.Driver object
-    The neo4j database connection pool
-uuid : str
-    The uuid of Upload
-property_key : str
-    A target property key for result filtering
-
-Returns
--------
-list
-    The list containing associated dataset dicts
-"""
-
 
 def get_upload_datasets(neo4j_driver, uuid, query_filter='', properties: Union[PropertyGroups, List[str]] = None, is_include_action: bool = True):
     """
+    Get a list of associated dataset dicts for a given Upload
 
     Parameters
     ----------
@@ -1022,7 +989,11 @@ def get_upload_datasets(neo4j_driver, uuid, query_filter='', properties: Union[P
         A list of property keys to filter in or out from the normalized results, default is []
     is_include_action : bool
         Whether to include or exclude the listed properties
-    :return:
+
+    Returns
+    -------
+    list
+        The list containing associated dataset dicts
     """
     results = []
 
@@ -1050,27 +1021,27 @@ def get_upload_datasets(neo4j_driver, uuid, query_filter='', properties: Union[P
     return results
 
 
-"""
-Get count of published Dataset in the provenance hierarchy for a given Sample/Source
-
-Parameters
-----------
-neo4j_driver : neo4j.Driver object
-    The neo4j database connection pool
-entity_type : str
-    One of the normalized entity types: Sample, Source
-uuid : str
-    The uuid of target entity 
-
-Returns
--------
-int
-    The count of published Dataset in the provenance hierarchy 
-    below the target entity (Source, Sample and Collection)
-"""
-
 
 def count_attached_published_datasets(neo4j_driver, entity_type, uuid):
+    """
+    Get count of published Dataset in the provenance hierarchy for a given Sample/Source
+
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    entity_type : str
+        One of the normalized entity types: Sample, Source
+    uuid : str
+        The uuid of target entity
+
+    Returns
+    -------
+    int
+        The count of published Dataset in the provenance hierarchy
+        below the target entity (Source, Sample and Collection)
+    """
+
     query = (f"MATCH (e:{entity_type})<-[:USED|WAS_GENERATED_BY*]-(d:Dataset) "
              # Use the string function toLower() to avoid case-sensetivity issue
              f"WHERE e.uuid='{uuid}' AND toLower(d.status) = 'published' "
@@ -1146,24 +1117,23 @@ def get_sample_direct_ancestor(neo4j_driver, uuid, property_key=None):
     return result
 
 
-"""
-Get target entity dict
-
-Parameters
-----------
-neo4j_driver : neo4j.Driver object
-    The neo4j database connection pool
-uuid : str
-    The uuid of target entity 
-
-Returns
--------
-dict
-    A dictionary of entity details returned from the Cypher query
-"""
-
-
 def get_entity(neo4j_driver, uuid):
+    """
+    Get target entity dict
+
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    uuid : str
+        The uuid of target entity
+
+    Returns
+    -------
+    dict
+        A dictionary of entity details returned from the Cypher query
+    """
+
     result = {}
 
     query = (f"MATCH (e:Entity) "
@@ -1183,22 +1153,24 @@ def get_entity(neo4j_driver, uuid):
     return result
 
 
-"""
-Retrieve a boolean value for if an ancestor of this entity contains RUI location information
-
-Parameters
-----------
-neo4j_driver : neo4j.Driver object
-    The neo4j database connection pool
-uuid : str
-    The uuid of target entity
-
-Returns:
-    Boolean: If an ancestor contains RUI location information
-"""
-
 
 def get_has_rui_information(neo4j_driver, entity_uuid):
+    """
+    Retrieve a boolean value for if an ancestor of this entity contains RUI location information
+
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    entity_uuid : str
+        The uuid of target entity
+
+    Returns
+    --------
+        bool str
+        If an ancestor contains RUI location information
+    """
+
     results = str(False)
 
     # Check the source of the given entity and if the source is not Human then return "N/A"
@@ -1231,8 +1203,13 @@ def get_has_rui_information(neo4j_driver, entity_uuid):
 
     # If the first query fails to return then grab the ancestor Block and check if it contains rui_location
     query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(s:Sample) "
-             f"WHERE e.uuid='{entity_uuid}' AND s.rui_location IS NOT NULL AND NOT TRIM(s.rui_location) = '' "
-             f"RETURN COUNT(s) > 0 as {record_field_name}")
+             f"WHERE e.uuid='{entity_uuid}' AND s.sample_category='Block' "
+             "RETURN COLLECT("
+             "CASE "
+             "WHEN s.rui_exemption = true THEN 'Exempt' "
+             "WHEN s.rui_location IS NOT NULL AND NOT TRIM(s.rui_location) = '' THEN 'True' "
+             "ELSE 'False' "
+             f"END) as {record_field_name}")
 
     logger.info("======get_has_rui_information() query======")
     logger.info(query)
@@ -1241,7 +1218,11 @@ def get_has_rui_information(neo4j_driver, entity_uuid):
         record = session.read_transaction(execute_readonly_tx, query)
 
         if record and record[record_field_name]:
-            results = (record[record_field_name])
+            values = (record[record_field_name])
+            if "True" in values:
+                results = "True"
+            elif "Exempt" in values:
+                results = "Exempt"
 
     return str(results)
 
@@ -1251,47 +1232,44 @@ def get_has_rui_information(neo4j_driver, entity_uuid):
 ####################################################################################################
 
 
-"""
-Execute a unit of work in a managed read transaction
-
-Parameters
-----------
-tx : transaction_function
-    a function that takes a transaction as an argument and does work with the transaction
-query : str
-    The target cypher query to run
-
-Returns
--------
-neo4j.Record or None
-    A single record returned from the Cypher query
-"""
-
-
 def _execute_readonly_tx(tx, query):
+    """
+    Execute a unit of work in a managed read transaction
+
+    Parameters
+    ----------
+    tx : transaction_function
+        a function that takes a transaction as an argument and does work with the transaction
+    query : str
+        The target cypher query to run
+
+    Returns
+    -------
+    neo4j.Record or None
+        A single record returned from the Cypher query
+    """
+
     result = tx.run(query)
     record = result.single()
     return record
 
 
-"""
-Create a new activity node in neo4j
-
-Parameters
-----------
-tx : neo4j.Transaction object
-    The neo4j.Transaction object instance
-activity_data_dict : dict
-    The dict containing properties of the Activity node to be created
-
-Returns
--------
-neo4j.node
-    A neo4j node instance of the newly created entity node
-"""
-
-
 def _create_activity_tx(tx, activity_data_dict):
+    """
+    Create a new activity node in neo4j
+
+    Parameters
+    ----------
+    tx : neo4j.Transaction object
+        The neo4j.Transaction object instance
+    activity_data_dict : dict
+        The dict containing properties of the Activity node to be created
+
+    Returns
+    -------
+    neo4j.node
+        A neo4j node instance of the newly created entity node
+    """
     parameterized_str, parameterized_data = build_parameterized_map(activity_data_dict)
 
     query = (f"CREATE (e:Activity) "
@@ -1308,19 +1286,18 @@ def _create_activity_tx(tx, activity_data_dict):
     return node
 
 
-"""
-Delete the Activity node and linkages between an entity and its direct ancestors
-
-Parameters
-----------
-tx : neo4j.Transaction object
-    The neo4j.Transaction object instance
-uuid : str
-    The uuid to target entity (child of those direct ancestors)
-"""
-
-
 def _delete_activity_node_and_linkages_tx(tx, uuid):
+    """
+    Delete the Activity node and linkages between an entity and its direct ancestors
+
+    Parameters
+    ----------
+    tx : neo4j.Transaction object
+        The neo4j.Transaction object instance
+    uuid : str
+        The uuid to target entity (child of those direct ancestors)
+    """
+
     query = (f"MATCH (s:Entity)-[in:WAS_GENERATED_BY]->(a:Activity)-[out:USED]->(t:Entity) "
              f"WHERE s.uuid = '{uuid}' "
              f"DELETE in, a, out")
@@ -1331,19 +1308,18 @@ def _delete_activity_node_and_linkages_tx(tx, uuid):
     result = tx.run(query)
 
 
-"""
-Delete linkages between a publication and its associated collection
-
-Parameters
-----------
-tx : neo4j.Transaction object
-    The neo4j.Transaction object instance
-uuid : str
-    The uuid to target publication
-"""
-
-
 def _delete_publication_associated_collection_linkages_tx(tx, uuid):
+    """
+    Delete linkages between a publication and its associated collection
+
+    Parameters
+    ----------
+    tx : neo4j.Transaction object
+        The neo4j.Transaction object instance
+    uuid : str
+        The uuid to target publication
+    """
+
     query = (f"MATCH (p:Publication)-[r:USES_DATA]->(c:Collection) "
              f"WHERE p.uuid = '{uuid}' "
              f"DELETE r")
@@ -1354,19 +1330,18 @@ def _delete_publication_associated_collection_linkages_tx(tx, uuid):
     result = tx.run(query)
 
 
-"""
-Delete the linkages between a Collection and its member Datasets
-
-Parameters
-----------
-tx : neo4j.Transaction object
-    The neo4j.Transaction object instance
-uuid : str
-    The uuid of the Collection, related to Datasets by an IN_COLLECTION relationship
-"""
-
-
 def _delete_collection_linkages_tx(tx, uuid):
+    """
+    Delete the linkages between a Collection and its member Datasets
+
+    Parameters
+    ----------
+    tx : neo4j.Transaction object
+        The neo4j.Transaction object instance
+    uuid : str
+        The uuid of the Collection, related to Datasets by an IN_COLLECTION relationship
+    """
+
     query = (f"MATCH (e:Entity)-[in:IN_COLLECTION]->(c:Collection)"
              f" WHERE c.uuid = '{uuid}' "
              f" DELETE in")
@@ -1377,19 +1352,17 @@ def _delete_collection_linkages_tx(tx, uuid):
     result = tx.run(query)
 
 
-"""
-Delete the linkage between an entity and another entity
-
-Parameters
-----------
-tx : neo4j.Transaction object
-    The neo4j.Transaction object instance
-uuid : str
-    The uuid to target entity (child of those direct ancestors)
-"""
-
-
 def _delete_entity_entity_linkages_tx(tx, uuid):
+    """
+    Delete the linkage between an entity and another entity
+
+    Parameters
+    ----------
+    tx : neo4j.Transaction object
+        The neo4j.Transaction object instance
+    uuid : str
+        The uuid to target entity (child of those direct ancestors)
+    """
     query = (f"MATCH (s:Entity)-[out:WAS_DERIVED_FROM]->(t:Entity) "
              f"WHERE s.uuid = '{uuid}' "
              f"DELETE out")
@@ -1400,19 +1373,17 @@ def _delete_entity_entity_linkages_tx(tx, uuid):
     result = tx.run(query)
 
 
-"""
-Delete the linkage between an entity and agent
-
-Parameters
-----------
-tx : neo4j.Transaction object
-    The neo4j.Transaction object instance
-uuid : str
-    The uuid to target entity (child of those direct ancestors)
-"""
-
-
 def _delete_entity_agent_linkages_tx(tx, uuid):
+    """
+    Delete the linkage between an entity and agent
+
+    Parameters
+    ----------
+    tx : neo4j.Transaction object
+        The neo4j.Transaction object instance
+    uuid : str
+        The uuid to target entity (child of those direct ancestors)
+    """
     query = (f"MATCH (s:Entity)-[out:WAS_ATTRIBUTED_TO]->(t:Entity) "
              f"WHERE s.uuid = '{uuid}' "
              f"DELETE out")
@@ -1423,26 +1394,24 @@ def _delete_entity_agent_linkages_tx(tx, uuid):
     result = tx.run(query)
 
 
-"""
-Create a relationship from the source node to the target node in neo4j
-
-Parameters
-----------
-tx : neo4j.Transaction object
-    The neo4j.Transaction object instance
-source_node_uuid : str
-    The uuid of source node
-target_node_uuid : str
-    The uuid of target node
-relationship : str
-    The relationship type to be created
-direction: str
-    The relationship direction from source node to target node: outgoing `->` or incoming `<-`
-    Neo4j CQL CREATE command supports only directional relationships
-"""
-
-
 def _create_relationship_tx(tx, source_node_uuid, target_node_uuid, relationship, direction):
+    """
+    Create a relationship from the source node to the target node in neo4j
+
+    Parameters
+    ----------
+    tx : neo4j.Transaction object
+        The neo4j.Transaction object instance
+    source_node_uuid : str
+        The uuid of source node
+    target_node_uuid : str
+        The uuid of target node
+    relationship : str
+        The relationship type to be created
+    direction: str
+        The relationship direction from source node to target node: outgoing `->` or incoming `<-`
+        Neo4j CQL CREATE command supports only directional relationships
+    """
     incoming = "-"
     outgoing = "-"
 
@@ -1466,22 +1435,21 @@ def _create_relationship_tx(tx, source_node_uuid, target_node_uuid, relationship
     result = tx.run(query)
 
 
-"""
-Convert the neo4j node into Python dict
-
-Parameters
-----------
-entity_node : neo4j.node
-    The target neo4j node to be converted
-
-Returns
--------
-dict
-    A dictionary of target entity containing all property key/value pairs
-"""
-
-
 def _node_to_dict(entity_node):
+    """
+    Convert the neo4j node into Python dict
+
+    Parameters
+    ----------
+    entity_node : neo4j.node
+        The target neo4j node to be converted
+
+    Returns
+    -------
+    dict
+        A dictionary of target entity containing all property key/value pairs
+    """
+
     entity_dict = {}
 
     for key, value in entity_node._properties.items():
@@ -1490,22 +1458,20 @@ def _node_to_dict(entity_node):
     return entity_dict
 
 
-"""
-Convert the list of neo4j nodes into a list of Python dicts
-
-Parameters
-----------
-nodes : list
-    The list of neo4j node to be converted
-
-Returns
--------
-list
-    A list of target entity dicts containing all property key/value pairs
-"""
-
-
 def _nodes_to_dicts(nodes):
+    """
+    Convert the list of neo4j nodes into a list of Python dicts
+
+    Parameters
+    ----------
+    nodes : list
+        The list of neo4j node to be converted
+
+    Returns
+    -------
+    list
+        A list of target entity dicts containing all property key/value pairs
+    """
     dicts = []
 
     for node in nodes:
@@ -1515,45 +1481,42 @@ def _nodes_to_dicts(nodes):
     return dicts
 
 
-"""
-Execute a unit of work in a managed read transaction
-
-Parameters
-----------
-tx : transaction_function
-    a function that takes a transaction as an argument and does work with the transaction
-query : str
-    The target cypher query to run
-
-Returns
--------
-neo4j.Record or None
-    A single record returned from the Cypher query
-"""
-
-
 def execute_readonly_tx(tx, query):
+    """
+    Execute a unit of work in a managed read transaction
+
+    Parameters
+    ----------
+    tx : transaction_function
+        a function that takes a transaction as an argument and does work with the transaction
+    query : str
+        The target cypher query to run
+
+    Returns
+    -------
+    neo4j.Record or None
+        A single record returned from the Cypher query
+    """
     result = tx.run(query)
     record = result.single()
     return record
 
 
-"""
-Convert the neo4j node into Python dict
-
-Parameters
-----------
-entity_node : neo4j.node
-    The target neo4j node to be converted
-
-Returns
--------
-dict
-    A dictionary of target entity containing all property key/value pairs
-"""
-
-
 def node_to_dict(entity_node):
+    """
+    Convert the neo4j node into Python dict
+
+    Parameters
+    ----------
+    entity_node : neo4j.node
+        The target neo4j node to be converted
+
+    Returns
+    -------
+    dict
+        A dictionary of target entity containing all property key/value pairs
+    """
+
     entity_dict = {}
 
     for key, value in entity_node._properties.items():
@@ -1562,22 +1525,22 @@ def node_to_dict(entity_node):
     return entity_dict
 
 
-"""
-Convert the list of neo4j nodes into a list of Python dicts
-
-Parameters
-----------
-nodes : list
-    The list of neo4j node to be converted
-
-Returns
--------
-list
-    A list of target entity dicts containing all property key/value pairs
-"""
-
 
 def nodes_to_dicts(nodes):
+    """
+    Convert the list of neo4j nodes into a list of Python dicts
+
+    Parameters
+    ----------
+    nodes : list
+        The list of neo4j node to be converted
+
+    Returns
+    -------
+    list
+        A list of target entity dicts containing all property key/value pairs
+    """
+
     dicts = []
 
     for node in nodes:
@@ -1587,22 +1550,21 @@ def nodes_to_dicts(nodes):
     return dicts
 
 
-"""
-Create or recreate linkage 
-between the publication node and the associated collection node in neo4j
-
-Parameters
-----------
-neo4j_driver : neo4j.Driver object
-    The neo4j database connection pool
-entity_uuid : str
-    The uuid of the publication
-associated_collection_uuid : str
-    the uuid of the associated collection
-"""
-
 
 def link_publication_to_associated_collection(neo4j_driver, entity_uuid, associated_collection_uuid):
+    """
+    Create or recreate linkage
+    between the publication node and the associated collection node in neo4j
+
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    entity_uuid : str
+        The uuid of the publication
+    associated_collection_uuid : str
+        the uuid of the associated collection
+    """
     try:
         with neo4j_driver.session() as session:
             tx = session.begin_transaction()
@@ -1627,26 +1589,26 @@ def link_publication_to_associated_collection(neo4j_driver, entity_uuid, associa
         raise TransactionError(msg)
 
 
-"""
-Get a list of associated Datasets and Publications (subclass of Dataset) uuids for a given collection
-
-Parameters
-----------
-neo4j_driver : neo4j.Driver object
-    The neo4j database connection pool
-uuid : str
-    The uuid of collection
-property_key : str
-    A target property key for result filtering
-
-Returns
--------
-list
-    A list of datasets and publications
-"""
-
 
 def get_collection_associated_datasets(neo4j_driver, uuid, property_key=None):
+    """
+    Get a list of associated Datasets and Publications (subclass of Dataset) uuids for a given collection
+
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    uuid : str
+        The uuid of collection
+    property_key : str
+        A target property key for result filtering
+
+    Returns
+    -------
+    list
+        A list of datasets and publications
+    """
+
     results = []
 
     if property_key:
@@ -1675,26 +1637,23 @@ def get_collection_associated_datasets(neo4j_driver, uuid, property_key=None):
     return results
 
 
-"""
-Get the associated collection for a given publication
-
-Parameters
-----------
-neo4j_driver : neo4j.Driver object
-    The neo4j database connection pool
-uuid : str
-    The uuid of publication
-property_key : str
-    A target property key for result filtering
-
-Returns
--------
-dict
-    A dictionary representation of the collection
-"""
-
-
 def get_publication_associated_collection(neo4j_driver, uuid):
+    """
+    Get the associated collection for a given publication
+
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    uuid : str
+        The uuid of publication
+
+    Returns
+    -------
+    dict
+        A dictionary representation of the collection
+    """
+
     result = {}
 
     query = (f"MATCH (p:Publication)-[:USES_DATA]->(c:Collection) "
@@ -1785,26 +1744,28 @@ def build_parameterized_map(entity_data_dict):
     return parametered_str, data
 
 
-"""
-Update the properties of an existing entity node in neo4j
 
-Parameters
-----------
-neo4j_driver : neo4j.Driver object
-    The neo4j database connection pool
-entity_type : str
-    One of the normalized entity types: Dataset, Collection, Sample, Donor
-entity_data_dict : dict
-    The target entity with properties to be updated
-uuid : str
-    The uuid of target entity 
-
-Returns
--------
-dict
-    A dictionary of updated entity details returned from the Cypher query
-"""
 def update_entity(neo4j_driver, entity_type, entity_data_dict, uuid):
+    """
+    Update the properties of an existing entity node in neo4j
+
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    entity_type : str
+        One of the normalized entity types: Dataset, Collection, Sample, Donor
+    entity_data_dict : dict
+        The target entity with properties to be updated
+    uuid : str
+        The uuid of target entity
+
+    Returns
+    -------
+    dict
+        A dictionary of updated entity details returned from the Cypher query
+    """
+
     parameterized_str, parameterized_data = build_parameterized_map(entity_data_dict)
 
     query = (f"MATCH (e:{entity_type}) "
@@ -1846,24 +1807,26 @@ def update_entity(neo4j_driver, entity_type, entity_data_dict, uuid):
         raise TransactionError(msg)
 
 
-"""
-Get all siblings by uuid
 
-Parameters
-----------
-neo4j_driver : neo4j.Driver object
-    The neo4j database connection pool
-uuid : str
-    The uuid of target entity
-property_key : str
-    A target property key for result filtering
-
-Returns
--------
-dict
-    A list of unique sibling dictionaries returned from the Cypher query
-"""
 def get_siblings(neo4j_driver, uuid, property_key=None):
+    """
+    Get all siblings by uuid
+
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    uuid : str
+        The uuid of target entity
+    property_key : str
+        A target property key for result filtering
+
+    Returns
+    -------
+    dict
+        A list of unique sibling dictionaries returned from the Cypher query
+    """
+
     results = []
 
     if property_key:
@@ -1902,24 +1865,25 @@ def get_siblings(neo4j_driver, uuid, property_key=None):
     return results
 
 
-"""
-Get all tuplets by uuid
-
-Parameters
-----------
-neo4j_driver : neo4j.Driver object
-    The neo4j database connection pool
-uuid : str
-    The uuid of target entity
-property_key : str
-    A target property key for result filtering
-
-Returns
--------
-dict
-    A list of unique tuplet dictionaries returned from the Cypher query
-"""
 def get_tuplets(neo4j_driver, uuid, property_key=None):
+    """
+    Get all tuplets by uuid
+
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    uuid : str
+        The uuid of target entity
+    property_key : str
+        A target property key for result filtering
+
+    Returns
+    -------
+    dict
+        A list of unique tuplet dictionaries returned from the Cypher query
+    """
+
     results = []
 
     if property_key:
@@ -1958,24 +1922,25 @@ def get_tuplets(neo4j_driver, uuid, property_key=None):
     return results
 
 
-"""
-Get all collections by for a given entity uuid
 
-Parameters
-----------
-neo4j_driver : neo4j.Driver object
-    The neo4j database connection pool
-uuid : str
-    The uuid of target entity 
-property_key : str
-    A target property key for result filtering
-
-Returns
--------
-list
-    A list of unique collection dictionaries returned from the Cypher query
-"""
 def get_collections(neo4j_driver, uuid, property_key = None):
+    """
+    Get all collections by for a given entity uuid
+
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    uuid : str
+        The uuid of target entity
+    property_key : str
+        A target property key for result filtering
+
+    Returns
+    -------
+    list
+        A list of unique collection dictionaries returned from the Cypher query
+    """
     results = []
 
     if property_key:
@@ -2008,23 +1973,23 @@ def get_collections(neo4j_driver, uuid, property_key = None):
     return results
 
 
-
-"""
-Get all uploads by uuid
-Parameters
-----------
-neo4j_driver : neo4j.Driver object
-    The neo4j database connection pool
-uuid : str
-    The uuid of target entity 
-property_key : str
-    A target property key for result filtering
-Returns
--------
-list
-    A list of unique upload dictionaries returned from the Cypher query
-"""
 def get_uploads(neo4j_driver, uuid, property_key = None):
+    """
+    Get all uploads by uuid
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    uuid : str
+        The uuid of target entity
+    property_key : str
+        A target property key for result filtering
+    Returns
+    -------
+    list
+        A list of unique upload dictionaries returned from the Cypher query
+    """
+
     results = []
     if property_key:
         query = (f"MATCH (u:Upload)<-[:IN_UPLOAD]-(ds:Dataset) "
@@ -2054,26 +2019,26 @@ def get_uploads(neo4j_driver, uuid, property_key = None):
 
     return results
 
-"""
-Get the associated sources for a given entity (dataset/publication)
-
-Parameters
-----------
-neo4j_driver : neo4j.Driver object
-    The neo4j database connection pool
-uuid : str
-    The uuid of entity
-filter_out : list 
-    Any sources that should not be returned
-
-Returns
--------
-list
-    A list of sources associated with an entity
-"""
-
 
 def get_sources_associated_entity(neo4j_driver, uuid, filter_out = None):
+    """
+    Get the associated sources for a given entity (dataset/publication)
+
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    uuid : str
+        The uuid of entity
+    filter_out : list
+        Any sources that should not be returned
+
+    Returns
+    -------
+    list
+        A list of sources associated with an entity
+    """
+
     results = []
 
     query_filter = ''
@@ -2113,9 +2078,9 @@ def activity_query_part(properties = None, for_all_match = False, only_map_part 
     properties : PropertyGroups
         The properties that will be used to build additional query parts
     for_all_match : bool
-        Whether to return a query part used for grabbing the entire nodes list
+        Whether to return a query part used for grabbing the entire node's properties
     only_map_part : bool
-        whether to return just the part that creates the map the activity properties
+        whether to return just the part that creates the map of the activity properties
 
     Returns
     -------
@@ -2169,6 +2134,7 @@ def activity_query_part(properties = None, for_all_match = False, only_map_part 
     else:
         return '', '', ''
 
+
 def property_type_query_part(properties:PropertyGroups, is_include_action = True):
     """
     Builds property type query part(s) for parsing properties of certain types
@@ -2198,6 +2164,7 @@ def property_type_query_part(properties:PropertyGroups, is_include_action = True
 
     return map_parts
 
+
 def build_additional_query_parts(properties:PropertyGroups, is_include_action = True):
     """
     Builds additional query parts to be concatenated with other query
@@ -2218,6 +2185,7 @@ def build_additional_query_parts(properties:PropertyGroups, is_include_action = 
     _property_type_query_part = property_type_query_part(properties, is_include_action)
 
     return _activity_query_part[0], _activity_query_part[1] + _property_type_query_part, _activity_query_part[2]
+
 
 def exclude_include_query_part(properties:Union[PropertyGroups, List[str]], is_include_action = True, target_entity_type = 'Any'):
     """

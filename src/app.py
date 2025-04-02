@@ -3,7 +3,7 @@ import collections
 from datetime import datetime
 from typing import List
 
-from flask import Flask, Response, abort, g, jsonify, make_response, request
+from flask import Flask, Response, abort, current_app, g, jsonify, make_response, request
 from neo4j.exceptions import TransactionError
 import os
 import re
@@ -366,30 +366,86 @@ json
 """
 @app.route('/status', methods=['GET'])
 def get_status():
+    response_code = 200
     try:
         file_version_content = (Path(__file__).absolute().parent.parent / 'VERSION').read_text().strip()
     except Exception as e:
         file_version_content = str(e)
+        response_code = 500
 
     try:
         file_build_content = (Path(__file__).absolute().parent.parent / 'BUILD').read_text().strip()
     except Exception as e:
         file_build_content = str(e)
+        response_code = 500
 
     status_data = {
-        # Use strip() to remove leading and trailing spaces, newlines, and tabs
         'version': file_version_content,
         'build': file_build_content,
-        'neo4j_connection': False
+        'services': []
     }
 
-    # Don't use try/except here
-    is_connected = app_neo4j_queries.check_connection(neo4j_driver_instance)
+    # check the neo4j connection
+    service = {'name': 'neo4j', 'status': True}
+    try:
+        is_connected = app_neo4j_queries.check_connection(neo4j_driver_instance)
+        if is_connected is False:
+            raise Exception(f"Cannot connect to Neo4j server at {current_app.config['NEO4J_URI']}")
+    except Exception as e:
+        service['status'] = False
+        service['message'] = str(e).replace("'", "")
+        response_code = 500
+    status_data['services'].append(service)
 
-    if is_connected:
-        status_data['neo4j_connection'] = True
+    # check the memcached connection
+    if current_app.config.get("MEMCACHED_MODE"):
+        try:
+            service = {'name': 'memcached', 'status': True}
+            memcached_client_instance.stats()
+        except Exception as e:
+            service['status'] = False
+            service['message'] = str(e).replace("'", "")
+            response_code = 500
+        status_data['services'].append(service)
 
-    return jsonify(status_data)
+    if file_build_content.startswith('main'):
+        # assume production build
+
+        # check the entity-url doi redirect
+        try:
+            service = {'name': 'doi-redirect', 'status': True}
+            entity_ws_url = current_app.config['ENTITY_API_URL'].strip().rstrip('/')
+            res = requests.get(entity_ws_url + '/doi/redirect/SNT577.KHFG.572', verify=False, allow_redirects=False)
+            if res.status_code != 307:
+                raise Exception(f"Entity API DOI redirect URL {entity_ws_url} failed with status code {res.status_code}")
+            redirect_url = res.headers['Location']
+            res = requests.get(redirect_url, allow_redirects=True, timeout=2)
+            if res.status_code not in range(200, 300):
+                raise Exception(f"Entity API DOI redirect URL {redirect_url} failed with status code {res.status_code}")
+        except Exception as e:
+            service['status'] = False
+            service['message'] = str(e).replace("'", "")
+            response_code = 500
+        status_data['services'].append(service)
+
+        # check the doi.org redirect
+        try:
+            service = {'name': 'doi.org', 'status': True}
+            doi_org_url = 'https://doi.org/10.60586/SNT577.KHFG.572'
+            res = requests.get(doi_org_url, allow_redirects=False)
+            if res.status_code != 302:
+                raise Exception(f"DOI redirect URL {doi_org_url} failed with status code {res.status_code}")
+            redirect_url = res.headers['Location']
+            res = requests.get(redirect_url, allow_redirects=True, timeout=2)
+            if res.status_code not in range(200, 300):
+                raise Exception(f"DOI redirect URL {redirect_url} failed with status code {res.status_code}")
+        except Exception as e:
+            service['status'] = False
+            service['message'] = str(e).replace("'", "")
+            response_code = 500
+        status_data['services'].append(service)
+
+    return jsonify(status_data), response_code
 
 
 """
@@ -1595,7 +1651,7 @@ def update_entity(id: str, user_token: str, json_data_dict: dict):
     complete_dict = schema_manager.get_complete_entity_result(user_token, merged_updated_dict, properties_to_skip, use_memcache=True)
 
     # Will also filter the result based on schema
-    normalized_complete_dict = schema_manager.normalize_entity_result_for_response(complete_dict)
+    normalized_complete_dict = schema_manager.normalize_object_result_for_response(entity_dict=complete_dict)
 
     # Update the activity data if necessary
     if 'protocol_url' in json_data_dict or (
