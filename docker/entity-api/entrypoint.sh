@@ -26,7 +26,7 @@ chown -R codcc:codcc /var/run/nginx.pid
 chown -R codcc:codcc /var/cache/nginx
 chown -R codcc:codcc /var/log/nginx
 
-# Lastly we use gosu to execute our process "$@" as that user
+# Lastly we use su-exec to execute our process "$@" as that user
 # Remember CMD from a Dockerfile of child image gets passed to the entrypoint.sh as command line arguments
 # "$@" is a shell variable that means "all the arguments"
-exec /usr/local/bin/gosu codcc "$@"
+exec /usr/local/bin/su-exec codcc "$@"
