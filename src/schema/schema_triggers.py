@@ -3802,7 +3802,7 @@ def get_has_qa_derived_dataset(property_key, normalized_type, user_token, existi
                                                                           property_keys=['uuid'],
                                                                           match_case=match_case)
         for d in descendants:
-            descendant_category = get_dataset_category(property_key, normalized_type, user_token, d, d)
+            _, descendant_category = get_dataset_category(property_key, normalized_type, user_token, d, d)
             if 'processed' in descendant_category:
                 return property_key, 'True'
         return property_key, 'False'
