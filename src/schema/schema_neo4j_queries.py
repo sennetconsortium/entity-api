@@ -59,7 +59,7 @@ def get_dataset_direct_ancestors(neo4j_driver, uuid, property_key=None):
     return results
 
 
-def get_dataset_direct_descendants(neo4j_driver, uuid, property_key=None, match_case = ''):
+def get_dataset_direct_descendants(neo4j_driver, uuid, property_keys=None, match_case=''):
     """
     Get the direct descendant uuids of a given dataset by uuid
 
@@ -80,29 +80,30 @@ def get_dataset_direct_descendants(neo4j_driver, uuid, property_key=None, match_
         A unique list of entities
     """
     results = []
-    if property_key:
-        query = (f"MATCH (s:Entity)-[:WAS_GENERATED_BY]->(a:Activity)-[:USED]->(t:Dataset) "
-                 f"WHERE t.uuid = '{uuid}' {match_case}"
-                 f"RETURN apoc.coll.toSet(COLLECT(s.{property_key})) AS {record_field_name}")
+    if property_keys:
+        with_str = ', '.join([f's.{key} AS {key}' for key in property_keys])
+        return_str = ', '.join([f'{key}: {key}' for key in property_keys])
+        query = (
+            f"MATCH (t:Dataset)<-[:USED]-(a:Activity)<-[:WAS_GENERATED_BY]-(s:Entity) "
+            f"WHERE t.uuid = $uuid {match_case} "
+            f"WITH {with_str}, a.creation_action AS creation_action "
+            f"RETURN COLLECT(apoc.map.merge({{{return_str}}}, {{creation_action: creation_action}})) AS {record_field_name}"
+        )
     else:
-        query = (f"MATCH (s:Entity)-[:WAS_GENERATED_BY]->(a:Activity)-[:USED]->(t:Dataset) "
-                 f"WHERE t.uuid = '{uuid}' {match_case}"
-                 f"RETURN apoc.coll.toSet(COLLECT(s)) AS {record_field_name}")
-
+        query = (
+            f"MATCH (t:Dataset)<-[:USED]-(a:Activity)<-[:WAS_GENERATED_BY]-(s:Entity) "
+            f"WHERE t.uuid = $uuid {match_case} "
+            f"WITH s, a.creation_action AS creation_action "
+            f"RETURN COLLECT(apoc.map.merge(s, {{creation_action: creation_action}})) AS {record_field_name}"
+        )
     logger.info("======get_dataset_direct_descendants() query======")
     logger.info(query)
 
     # Sessions will often be created and destroyed using a with block context
     with neo4j_driver.session() as session:
-        record = session.read_transaction(_execute_readonly_tx, query)
-
+        record = session.read_transaction(_execute_readonly_tx, query, uuid=uuid)
         if record and record[record_field_name]:
-            if property_key:
-                # Just return the list of property values from each entity node
-                results = record[record_field_name]
-            else:
-                # Convert the list of nodes to a list of dicts
-                results = _nodes_to_dicts(record[record_field_name])
+            results = record[record_field_name]
 
     return results
 
@@ -138,7 +139,7 @@ def filter_ancestors_by_type(neo4j_driver, direct_ancestor_uuids, entity_type):
     return records if records else None
 
 
-def get_origin_samples(neo4j_driver, uuids:List, is_bulk = True):
+def get_origin_samples(neo4j_driver, uuids: List, is_bulk: bool = True):
     """
     Get the origin (organ) sample ancestor of a given entities by uuids
 
@@ -158,15 +159,14 @@ def get_origin_samples(neo4j_driver, uuids:List, is_bulk = True):
     """
     result = {}
 
-
-    activity_grab_part = f"WITH e, s, apoc.map.fromPairs([['protocol_url', a.protocol_url], ['creation_action', a.creation_action]]) as a2 WITH e, apoc.map.merge(s,a2) as x  "
+    activity_grab_part = "WITH e, s, apoc.map.fromPairs([['protocol_url', a.protocol_url], ['creation_action', a.creation_action]]) as a2 WITH e, apoc.map.merge(s,a2) as x  "
     return_part = f"{activity_grab_part} RETURN apoc.coll.toSet(COLLECT(x)) AS "
     if is_bulk:
         return_part = (f"{activity_grab_part} "
                        "WITH e, COLLECT(x) as list return collect(apoc.map.fromPairs([['uuid', e.uuid], ['result', list]])) AS ")
 
-    query = (f"MATCH (e:Entity)-[:WAS_GENERATED_BY|USED*]->(s:Sample) "
-             f"WHERE e.uuid IN {uuids} and s.sample_category='Organ' "
+    query = ("MATCH (e:Entity)-[:WAS_GENERATED_BY|USED*]->(s:Sample) "
+             f"WHERE e.uuid IN $uuids and s.sample_category='Organ' "
              "MATCH (e2:Entity)-[:WAS_GENERATED_BY]->(a:Activity) WHERE e2.uuid = s.uuid "
              f"{return_part} {record_field_name}")
 
@@ -174,7 +174,7 @@ def get_origin_samples(neo4j_driver, uuids:List, is_bulk = True):
     logger.info(query)
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(_execute_readonly_tx, query)
+        record = session.read_transaction(_execute_readonly_tx, query, uuids=uuids)
         if record and record[record_field_name]:
             result = record[record_field_name]
 
@@ -1173,50 +1173,45 @@ def get_has_rui_information(neo4j_driver, entity_uuid):
 
     results = str(False)
 
-    # Check the source of the given entity and if the source is not Human then return "N/A"
-    source_query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(s:Source) "
-                    f"WHERE e.uuid='{entity_uuid}' AND s.source_type<>'Human' "
-                    f"RETURN 'N/A' as {record_field_name}")
-
     with neo4j_driver.session() as session:
-        record = session.read_transaction(execute_readonly_tx, source_query)
+        # Check the source of the given entity and if the source is not Human then return "N/A"
+        source_query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(s:Source) "
+                        f"WHERE e.uuid=$uuid AND s.source_type<>'Human' "
+                        f"RETURN 'N/A' as {record_field_name}")
 
+        record = session.read_transaction(execute_readonly_tx, source_query, uuid=entity_uuid)
         if record and record[record_field_name]:
             results = (record[record_field_name])
             return str(results)
 
-    # Check the ancestry of the given entity and if the origin sample is
-    # Adipose Tissue (AD), Blood (BD), Bone Marrow (BM), Breast (BS), Bone (BX), Muscle (MU), or Other (OT), then return "N/A"
-    organ_query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(o:Sample) "
-                   f"WHERE e.uuid='{entity_uuid}' AND o.sample_category='Organ' AND o.organ IN ['AD', 'BD', 'BM', 'BS', 'BX', 'MU', 'OT'] "
-                   f"RETURN 'N/A' as {record_field_name}")
+        # Check the ancestry of the given entity and if the origin sample is
+        # Adipose Tissue (AD), Blood (BD), Bone Marrow (BM), Breast (BS), Bone (BX), Muscle (MU), or Other (OT), then return "N/A"
+        organ_query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(o:Sample) "
+                       f"WHERE e.uuid=$uuid AND o.sample_category='Organ' AND o.organ IN ['AD', 'BD', 'BM', 'BS', 'BX', 'MU', 'OT'] "
+                       f"RETURN 'N/A' as {record_field_name}")
 
-    logger.info("======get_has_rui_information() organ_query======")
-    logger.info(organ_query)
+        logger.info("======get_has_rui_information() organ_query======")
+        logger.info(organ_query)
 
-    with neo4j_driver.session() as session:
-        record = session.read_transaction(execute_readonly_tx, organ_query)
-
+        record = session.read_transaction(execute_readonly_tx, organ_query, uuid=entity_uuid)
         if record and record[record_field_name]:
             results = (record[record_field_name])
             return str(results)
 
-    # If the first query fails to return then grab the ancestor Block and check if it contains rui_location
-    query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(s:Sample) "
-             f"WHERE e.uuid='{entity_uuid}' AND s.sample_category='Block' "
-             "RETURN COLLECT("
-             "CASE "
-             "WHEN s.rui_exemption = true THEN 'Exempt' "
-             "WHEN s.rui_location IS NOT NULL AND NOT TRIM(s.rui_location) = '' THEN 'True' "
-             "ELSE 'False' "
-             f"END) as {record_field_name}")
+        # If the first query fails to return then grab the ancestor Block and check if it contains rui_location
+        query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(s:Sample) "
+                 f"WHERE e.uuid=$uuid AND s.sample_category='Block' "
+                 "RETURN COLLECT("
+                 "CASE "
+                 "WHEN s.rui_exemption = true THEN 'Exempt' "
+                 "WHEN s.rui_location IS NOT NULL AND NOT TRIM(s.rui_location) = '' THEN 'True' "
+                 "ELSE 'False' "
+                 f"END) as {record_field_name}")
 
-    logger.info("======get_has_rui_information() query======")
-    logger.info(query)
+        logger.info("======get_has_rui_information() query======")
+        logger.info(query)
 
-    with neo4j_driver.session() as session:
-        record = session.read_transaction(execute_readonly_tx, query)
-
+        record = session.read_transaction(execute_readonly_tx, query, uuid=entity_uuid)
         if record and record[record_field_name]:
             values = (record[record_field_name])
             if "True" in values:
@@ -1224,7 +1219,7 @@ def get_has_rui_information(neo4j_driver, entity_uuid):
             elif "Exempt" in values:
                 results = "Exempt"
 
-    return str(results)
+        return str(results)
 
 
 ####################################################################################################
@@ -1249,7 +1244,9 @@ def _execute_readonly_tx(tx, query):
         A single record returned from the Cypher query
     """
 
-    result = tx.run(query)
+
+def _execute_readonly_tx(tx, query, **kwargs):
+    result = tx.run(query, **kwargs)
     record = result.single()
     return record
 
@@ -1492,12 +1489,15 @@ def execute_readonly_tx(tx, query):
     query : str
         The target cypher query to run
 
-    Returns
-    -------
-    neo4j.Record or None
-        A single record returned from the Cypher query
-    """
-    result = tx.run(query)
+Returns
+-------
+neo4j.Record or None
+    A single record returned from the Cypher query
+"""
+
+
+def execute_readonly_tx(tx, query, **kwargs):
+    result = tx.run(query, **kwargs)
     record = result.single()
     return record
 

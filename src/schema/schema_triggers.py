@@ -1650,6 +1650,13 @@ def get_dataset_title(property_key, normalized_type, user_token, existing_data_d
     return property_key, generated_title
 
 
+dataset_category_map = {
+    "Create Dataset Activity": "primary",
+    "Multi-Assay Split": "component",
+    "Central Process": "codcc-processed",
+    "Lab Process": "lab-processed",
+}
+
 def get_dataset_category(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     """Trigger event method of auto generating the dataset category.
 
@@ -1672,13 +1679,10 @@ def get_dataset_category(property_key, normalized_type, user_token, existing_dat
         str: The target property key
         str: The generated dataset category
     """
-    creation_action = dict([get_creation_action_activity("creation_action_activity", normalized_type, user_token, existing_data_dict, new_data_dict)]).get('creation_action_activity')
-    dataset_category_map = {
-        "Create Dataset Activity": "primary",
-        "Multi-Assay Split": "component",
-        "Central Process": "codcc-processed",
-        "Lab Process": "lab-processed",
-    }
+    creation_action = existing_data_dict.get('creation_action')
+    if creation_action is None:
+        creation_action = dict([get_creation_action_activity("creation_action_activity", normalized_type, user_token, existing_data_dict, new_data_dict)]).get('creation_action_activity')
+
     if dataset_category := dataset_category_map.get(creation_action):
         return property_key, dataset_category
 
@@ -1849,7 +1853,8 @@ def get_origin_samples(property_key, normalized_type, user_token, existing_data_
         origin_samples = None
         if normalized_type in ["Sample", "Dataset", "Publication"]:
             origin_samples = schema_neo4j_queries.get_origin_samples(schema_manager.get_neo4j_driver_instance(),
-                                                                   [existing_data_dict['uuid']], is_bulk=False)
+                                                                     [existing_data_dict['uuid']],
+                                                                     is_bulk=False)
 
             for origin_sample in origin_samples:
                 _get_organ_hierarchy(origin_sample)
@@ -2088,6 +2093,9 @@ def get_previous_revision_uuid(property_key, normalized_type, user_token, existi
         str: The target property key
         str: The uuid string of previous revision entity or None if not found
     """
+    if existing_data_dict.get('status') != 'Published':
+        return property_key, None
+
     if 'uuid' not in existing_data_dict:
         msg = create_trigger_error_msg(
             "Missing 'uuid' key in 'existing_data_dict' during calling 'get_previous_revision_uuid()' trigger method.",
@@ -2125,6 +2133,9 @@ def get_next_revision_uuid(property_key, normalized_type, user_token, existing_d
         str: The target property key
         str: The uuid string of next version entity or None if not found
     """
+    if existing_data_dict.get('status') != 'Published':
+        return property_key, None
+
     if 'uuid' not in existing_data_dict:
         msg = create_trigger_error_msg(
             "Missing 'uuid' key in 'existing_data_dict' during calling 'get_next_revision_uuid()' trigger method.",
@@ -3687,13 +3698,14 @@ def get_organ_hierarchy(property_key, normalized_type, user_token, existing_data
     organ_hierarchy = None
     if equals(existing_data_dict['sample_category'], 'organ'):
         organ_types_categories = Ontology.ops(as_data_dict=True, key='rui_code', val_key='category').organ_types()
+
         organ_hierarchy = existing_data_dict['organ']
-        if existing_data_dict['organ'] in organ_types_categories and organ_types_categories[existing_data_dict['organ']] is not None:
-            return property_key, organ_types_categories[existing_data_dict['organ']]['term']
+        if organ_types_categories.get(organ_hierarchy) is not None:
+            return property_key, organ_types_categories[organ_hierarchy]['term']
 
         organ_types = Ontology.ops(as_data_dict=True, key='rui_code', val_key='term').organ_types()
         if existing_data_dict['organ'] in organ_types:
-            organ_name = organ_types[existing_data_dict['organ']]
+            organ_name = organ_types[organ_hierarchy]
             organ_hierarchy = organ_name
 
             # Deprecated. For backwards compatibility. Can eventually remove this regex on the text.
@@ -3790,20 +3802,20 @@ def get_has_qa_derived_dataset(property_key, normalized_type, user_token, existi
         str: The target property key
         str: Whether a primary dataset has at least one processed dataset with a status of 'QA', 'True' or 'False'
     """
-    dataset_category = get_dataset_category(property_key, normalized_type, user_token, existing_data_dict, new_data_dict)
-    if equals(dataset_category[1], 'primary'):
+    _, dataset_category = get_dataset_category(property_key, normalized_type, user_token, existing_data_dict, new_data_dict)
+    if equals(dataset_category, 'primary'):
         match_case = "AND s.status = 'QA'"
-        results = schema_neo4j_queries.get_dataset_direct_descendants(schema_manager.get_neo4j_driver_instance(),
-                                                                      existing_data_dict['uuid'],
-                                                                      property_key=None,
-                                                                      match_case=match_case)
-        for r in results:
-            descendant_category = get_dataset_category(property_key, normalized_type, user_token, r, r)
-            if 'processed' in descendant_category[1]:
-                return property_key, "True"
-        return property_key, "False"
+        descendants = schema_neo4j_queries.get_dataset_direct_descendants(schema_manager.get_neo4j_driver_instance(),
+                                                                          existing_data_dict['uuid'],
+                                                                          property_keys=['uuid'],
+                                                                          match_case=match_case)
+        for d in descendants:
+            _, descendant_category = get_dataset_category(property_key, normalized_type, user_token, d, d)
+            if 'processed' in descendant_category:
+                return property_key, 'True'
+        return property_key, 'False'
     else:
-        return property_key, "False"
+        return property_key, 'False'
 
 
 def get_has_all_published_datasets(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
