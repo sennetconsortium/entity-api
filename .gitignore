@@ -43,6 +43,7 @@ venv
 
 # ignore vscode files
 .vscode/
+.ignore
 
 #ignore test venv
 **/testenv/
