@@ -1781,9 +1781,9 @@ def get_sankey_info(neo4j_driver, data_access_level=None):
         ds_predicate = "{status: 'Published'}"
         organ_predicate = f", data_access_level: '{data_access_level}'"
 
-    query = (f"MATCH (ds:Dataset {ds_predicate})-[]->(a)-[]->(:Sample)"
-             f"MATCH (source)<-[:USED]-(oa)<-[:WAS_GENERATED_BY]-(organ:Sample {{sample_category:'{Ontology.ops().specimen_categories().ORGAN}'{organ_predicate}}})<-[*]-(ds)"
-             f"RETURN distinct ds.group_name, organ.organ, ds.dataset_type, ds.status, ds.uuid order by ds.group_name")
+    query = (f"MATCH (ds:Dataset {ds_predicate})-[]->(a)-[]->(:Sample) "
+             f"MATCH (source:Source)<-[:USED]-(oa)<-[:WAS_GENERATED_BY]-(organ:Sample {{sample_category:'{Ontology.ops().specimen_categories().ORGAN}'{organ_predicate}}})<-[*]-(ds) "
+             f"RETURN distinct ds.group_name, organ.organ, ds.dataset_type, ds.status, ds.uuid, source.source_type order by ds.group_name")
     logger.info("======get_sankey_info() query======")
     logger.info(query)
     with neo4j_driver.session() as session:
@@ -1801,6 +1801,7 @@ def get_sankey_info(neo4j_driver, data_access_level=None):
             record_dict['organ_type'] = record_contents[1]
             record_dict['dataset_dataset_type'] = record_contents[2]
             record_dict['dataset_status'] = record_contents[3]
+            record_dict['dataset_source_type'] = record_contents[5]
             list_of_dictionaries.append(record_dict)
         return list_of_dictionaries
 

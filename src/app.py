@@ -3910,6 +3910,7 @@ def sankey_data():
     HEADER_DATASET_DATASET_TYPE = 'dataset_dataset_type'
     HEADER_DATASET_STATUS = 'dataset_status'
     ORGAN_TYPES = Ontology.ops(as_data_dict=True, data_as_val=True, val_key='rui_code').organ_types()
+    HEADER_DATASET_SOURCE_TYPE = 'dataset_source_type'
     with open('sankey_mapping.json') as f:
         mapping_dict = json.load(f)
 
@@ -3936,6 +3937,8 @@ def sankey_data():
         internal_dict[HEADER_DATASET_STATUS] = dataset['dataset_status']
         if internal_dict[HEADER_DATASET_GROUP_NAME] in mapping_dict.keys():
             internal_dict[HEADER_DATASET_GROUP_NAME] = mapping_dict[internal_dict[HEADER_DATASET_GROUP_NAME]]
+
+        internal_dict[HEADER_DATASET_SOURCE_TYPE] = dataset[HEADER_DATASET_SOURCE_TYPE]
 
         # Each dataset's dictionary is added to the list to be returned
         dataset_sankey_list.append(internal_dict)
