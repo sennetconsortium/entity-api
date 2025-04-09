@@ -3929,11 +3929,12 @@ def sankey_data():
     for dataset in sankey_info:
         internal_dict = collections.OrderedDict()
         internal_dict[HEADER_DATASET_GROUP_NAME] = dataset[HEADER_DATASET_GROUP_NAME]
-        # TODO: Need to update this code once Ontology Organ Types endpoint is update
+        internal_dict[HEADER_ORGAN_TYPE] = []
         for organ_type in ORGAN_TYPES:
-            if ORGAN_TYPES[organ_type]['rui_code'] == dataset[HEADER_ORGAN_TYPE]:
-                internal_dict[HEADER_ORGAN_TYPE] = ORGAN_TYPES[organ_type]['term']
-                break
+            for organ in dataset[HEADER_ORGAN_TYPE]:
+                if ORGAN_TYPES[organ_type]['rui_code'] == organ:
+                    internal_dict[HEADER_ORGAN_TYPE].append(ORGAN_TYPES[organ_type]['term'])
+                    break
 
         internal_dict[HEADER_DATASET_DATASET_TYPE] = dataset[HEADER_DATASET_DATASET_TYPE]
 
