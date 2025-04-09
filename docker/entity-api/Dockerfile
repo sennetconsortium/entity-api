@@ -1,4 +1,4 @@
-FROM sennet/api-base-image:1.3.0
+FROM sennet/api-base-image:1.3.0-alpha1
 
 LABEL description="SenNet Entity API Service"
 
