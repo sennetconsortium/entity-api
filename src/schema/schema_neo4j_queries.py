@@ -218,7 +218,7 @@ def get_dataset_organ_and_source_info(neo4j_driver, uuid):
             record = session.read_transaction(_execute_readonly_tx, sample_query)
 
             if record and record[record_field_name]:
-                source_metadata = [d['source_metadata'] for d in record[record_field_name]]
+                source_metadata = set([d['source_metadata'] for d in record[record_field_name]])
                 source_type = next(iter(set([d['source_type'] for d in record[record_field_name]])))
                 organ_type = set([d['organ_type'] for d in record[record_field_name]])
 
