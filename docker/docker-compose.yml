@@ -1,8 +1,5 @@
-version: "3.7"
-
 # Will use the hostname when talking between services on the same network
 services:
-  
   entity-api:
     hostname: entity-api
     container_name: entity-api

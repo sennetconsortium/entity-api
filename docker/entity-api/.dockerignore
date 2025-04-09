@@ -10,3 +10,5 @@ README.md
 # Ignore the flask instance folder
 src/instance
 
+**/__pycache__/
+**/.DS_Store
