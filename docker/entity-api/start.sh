@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # Start nginx in background
 # 'daemon off;' is nginx configuration directive

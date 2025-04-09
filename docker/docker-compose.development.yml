@@ -1,7 +1,4 @@
-version: "3.7"
-
 services:
-  
   entity-api:
     build: 
       context: ./entity-api
