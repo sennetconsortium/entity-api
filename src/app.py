@@ -3936,9 +3936,25 @@ def sankey_data():
                     internal_dict[HEADER_ORGAN_TYPE].append(ORGAN_TYPES[organ_type]['term'])
                     break
 
+        # If the status is QA or Published then grab the 'modality' from UBKG
+        # Otherwise just return dataset_type
         internal_dict[HEADER_DATASET_DATASET_TYPE] = dataset[HEADER_DATASET_DATASET_TYPE]
+        try:
+            if dataset['dataset_status'] in ['QA', 'Published']:
+                def prop_callback(d):
+                    return d["dataset_type"]["dataset_type"]
 
-        # Replace applicable Group Name and Data type with the value needed for the sankey via the mapping_dict
+                def val_callback(d):
+                    return d["dataset_type"]["fig2"]["modality"]
+
+                assay_classes = Ontology.ops(prop_callback=prop_callback, val_callback=val_callback,
+                                             as_data_dict=True).assay_classes()
+                if assay_classes[dataset[HEADER_DATASET_DATASET_TYPE]] in assay_classes:
+                    internal_dict[HEADER_DATASET_DATASET_TYPE] = assay_classes[dataset[HEADER_DATASET_DATASET_TYPE]]
+        except KeyError as e:
+            logger.error(dataset[HEADER_DATASET_DATASET_TYPE])
+
+        # Replace applicable Group Name with the value needed for the sankey via the mapping_dict
         internal_dict[HEADER_DATASET_STATUS] = dataset['dataset_status']
         if internal_dict[HEADER_DATASET_GROUP_NAME] in mapping_dict.keys():
             internal_dict[HEADER_DATASET_GROUP_NAME] = mapping_dict[internal_dict[HEADER_DATASET_GROUP_NAME]]
