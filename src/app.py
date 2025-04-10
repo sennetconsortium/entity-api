@@ -3945,7 +3945,7 @@ def sankey_data():
 
                 assay_classes = Ontology.ops(prop_callback=prop_callback, val_callback=val_callback,
                                              as_data_dict=True).assay_classes()
-                if assay_classes[dataset[HEADER_DATASET_DATASET_TYPE]] in assay_classes:
+                if dataset[HEADER_DATASET_DATASET_TYPE] in assay_classes:
                     internal_dict[HEADER_DATASET_DATASET_TYPE] = assay_classes[dataset[HEADER_DATASET_DATASET_TYPE]]
         except KeyError as e:
             logger.error(dataset[HEADER_DATASET_DATASET_TYPE])
