@@ -1785,6 +1785,7 @@ def get_sankey_info(neo4j_driver, data_access_level=None):
 
     query = (f"MATCH (ds:Dataset {ds_predicate})-[]->(a:Activity {creation_action})-[*]->(:Sample) "
              f"MATCH (source:Source)<-[:USED]-(oa)<-[:WAS_GENERATED_BY]-(organ:Sample {{sample_category:'{Ontology.ops().specimen_categories().ORGAN}'{organ_predicate}}})<-[*]-(ds) "
+             f"WHERE NOT EXISTS((ds)<-[:REVISION_OF*]-(:Entity)) " # We want to exclude previous revisions since we hide those on the portal search
              f"RETURN distinct ds.group_name, COLLECT(DISTINCT organ.organ), ds.dataset_type, ds.status, ds.uuid, source.source_type order by ds.group_name")
     logger.info("======get_sankey_info() query======")
     logger.info(query)
