@@ -18,7 +18,6 @@ USER root
 # Update outdated packages and install nginx
 RUN apk update && \
     apk upgrade && \
-    apk add --no-cache --virtual .tmp-build-deps curl ca-certificates && \
     printf "%s%s%s%s\n" \
         "@nginx " \
         "http://nginx.org/packages/mainline/alpine/v" \
@@ -27,8 +26,7 @@ RUN apk update && \
         | tee -a /etc/apk/repositories && \
     curl -o /tmp/nginx_signing.rsa.pub https://nginx.org/keys/nginx_signing.rsa.pub && \
     mv /tmp/nginx_signing.rsa.pub /etc/apk/keys/ && \
-    apk add nginx@nginx && \
-    apk del .tmp-build-deps
+    apk add nginx@nginx
 
 # Copy from host to image
 COPY . .
