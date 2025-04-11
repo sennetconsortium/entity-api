@@ -1,19 +1,15 @@
-FROM sennet/api-base-image:1.3.0-alpha1
+FROM sennet/api-base-image:1.3.0-alpha3
 
 LABEL description="SenNet Entity API Service"
 
 # The commons branch to be used in requirements.txt during image build
 # Default is master branch specified in docker-compose.yml if not set before the build
 ARG COMMONS_BRANCH
-
-ENV HOST_GID=1002
-ENV HOST_UID=1002
+ARG HOST_GID
+ARG HOST_UID
 
 # Change to directory that contains the Dockerfile
 WORKDIR /usr/src/app
-
-# Copy from host to image
-COPY . .
 
 EXPOSE 5000 8080
 
@@ -34,6 +30,10 @@ RUN apk update && \
     apk add nginx@nginx && \
     apk del .tmp-build-deps
 
+# Copy from host to image
+COPY . .
+COPY ./entrypoint.sh /usr/local/bin/entrypoint.sh
+
 # Update Python packages. uwsgi is installed by the base image.
 RUN pip install --upgrade pip setuptools wheel && \
     pip install -r src/requirements.txt
@@ -53,9 +53,10 @@ RUN touch /var/run/nginx.pid && \
     mv nginx/nginx.conf /etc/nginx/nginx.conf && \
     chown -R codcc:codcc /etc/nginx && \
     rm -rf nginx && \
-    chmod +x start.sh && \
+    rm ./entrypoint.sh && \
+    chmod +x /usr/local/bin/entrypoint.sh && \
     chown -R codcc:codcc /usr/src/app
 
 USER codcc
 
-CMD ["./start.sh"]
+CMD ["/usr/local/bin/entrypoint.sh"]
