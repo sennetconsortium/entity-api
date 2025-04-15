@@ -1763,52 +1763,6 @@ def get_individual_prov_info(neo4j_driver, dataset_uuid):
 
 
 """
-Returns group_name, dataset_type, and status for every primary dataset. Also returns the organ type for the closest
-sample above the dataset in the provenance where {sample_category: '{Ontology.ops().specimen_categories().ORGAN}'}.
-
-Parameters
-----------
-neo4j_driver : neo4j.Driver object
-    The neo4j database connection pool
-"""
-
-
-def get_sankey_info(neo4j_driver, data_access_level=None):
-    ds_predicate = ''
-    organ_predicate = ''
-    # We want to get primary datasets for this response
-    creation_action = "{creation_action: 'Create Dataset Activity'}"
-
-    if data_access_level:
-        ds_predicate = "{status: 'Published'}"
-        organ_predicate = f", data_access_level: '{data_access_level}'"
-
-    query = (f"MATCH (ds:Dataset {ds_predicate})-[]->(a:Activity {creation_action})-[*]->(:Sample) "
-             f"MATCH (source:Source)<-[:USED]-(oa)<-[:WAS_GENERATED_BY]-(organ:Sample {{sample_category:'{Ontology.ops().specimen_categories().ORGAN}'{organ_predicate}}})<-[*]-(ds) "
-             f"RETURN distinct ds.group_name, COLLECT(DISTINCT organ.organ), ds.dataset_type, ds.status, ds.uuid, source.source_type order by ds.group_name")
-    logger.info("======get_sankey_info() query======")
-    logger.info(query)
-    with neo4j_driver.session() as session:
-        # Because we're returning multiple things, we use session.run rather than session.read_transaction
-        result = session.run(query)
-        list_of_dictionaries = []
-        for record in result:
-            record_dict = {}
-            record_contents = []
-            # Individual items within a record are non subscriptable. By putting then in a small list, we can address
-            # Each item in a record.
-            for item in record:
-                record_contents.append(item)
-            record_dict['dataset_group_name'] = record_contents[0]
-            record_dict['organ_type'] = record_contents[1]
-            record_dict['dataset_dataset_type'] = record_contents[2]
-            record_dict['dataset_status'] = record_contents[3]
-            record_dict['dataset_source_type'] = record_contents[5]
-            list_of_dictionaries.append(record_dict)
-        return list_of_dictionaries
-
-
-"""
 Returns sample uuid, sample rui location, sample metadata, sample group name, sample created_by_email, sample ancestor
 uuid, sample ancestor entity type, organ uuid, organ type, lab tissue sample id, source uuid, source
 metadata, sample_sennet_id, organ_sennet_id, source_sennet_id, and sample_type all in a dictionary
