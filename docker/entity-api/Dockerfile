@@ -33,7 +33,7 @@ COPY . .
 COPY ./entrypoint.sh /usr/local/bin/entrypoint.sh
 
 # Update Python packages. uwsgi is installed by the base image.
-RUN pip install --upgrade pip setuptools wheel && \
+RUN pip install --upgrade pip setuptools wheel uwsgi && \
     pip install -r src/requirements.txt
 
 # Modify the UID and GID of codcc to match the host
