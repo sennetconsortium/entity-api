@@ -86,16 +86,16 @@ def get_dataset_direct_descendants(neo4j_driver, uuid, property_keys=None, match
         with_str = ', '.join([f's.{key} AS {key}' for key in property_keys])
         return_str = ', '.join([f'{key}: {key}' for key in property_keys])
         query = (
-            f"MATCH (t:Dataset)<-[:USED]-(a:Activity)<-[:WAS_GENERATED_BY]-(s:Entity) "
+            "MATCH (t:Dataset)<-[:USED]-(a:Activity)<-[:WAS_GENERATED_BY]-(s:Entity) "
             f"WHERE t.uuid = $uuid {match_case} "
             f"WITH {with_str}, a.creation_action AS creation_action "
             f"RETURN COLLECT(apoc.map.merge({{{return_str}}}, {{creation_action: creation_action}})) AS {record_field_name}"
         )
     else:
         query = (
-            f"MATCH (t:Dataset)<-[:USED]-(a:Activity)<-[:WAS_GENERATED_BY]-(s:Entity) "
+            "MATCH (t:Dataset)<-[:USED]-(a:Activity)<-[:WAS_GENERATED_BY]-(s:Entity) "
             f"WHERE t.uuid = $uuid {match_case} "
-            f"WITH s, a.creation_action AS creation_action "
+            "WITH s, a.creation_action AS creation_action "
             f"RETURN COLLECT(apoc.map.merge(s, {{creation_action: creation_action}})) AS {record_field_name}"
         )
     logger.info("======get_dataset_direct_descendants() query======")
@@ -168,7 +168,7 @@ def get_origin_samples(neo4j_driver, uuids: List, is_bulk: bool = True):
                        "WITH e, COLLECT(x) as list return collect(apoc.map.fromPairs([['uuid', e.uuid], ['result', list]])) AS ")
 
     query = ("MATCH (e:Entity)-[:WAS_GENERATED_BY|USED*]->(s:Sample) "
-             f"WHERE e.uuid IN $uuids and s.sample_category='Organ' "
+             "WHERE e.uuid IN $uuids and s.sample_category='Organ' "
              "MATCH (e2:Entity)-[:WAS_GENERATED_BY]->(a:Activity) WHERE e2.uuid = s.uuid "
              f"{return_part} {record_field_name}")
 
@@ -181,7 +181,6 @@ def get_origin_samples(neo4j_driver, uuids: List, is_bulk: bool = True):
             result = record[record_field_name]
 
     return result
-
 
 
 def get_dataset_organ_and_source_info(neo4j_driver, uuid):
@@ -257,7 +256,6 @@ def get_entity_creation_action_activity(neo4j_driver, entity_uuid: str) -> str:
     return None
 
 
-
 def link_collection_to_entity(neo4j_driver, entity_uuid, direct_ancestor_uuids):
     """
     Create or recreate one or more linkages
@@ -284,11 +282,11 @@ def link_collection_to_entity(neo4j_driver, entity_uuid, direct_ancestor_uuids):
 
             tx.commit()
     except TransactionError as te:
-        msg = "TransactionError from calling link_collection_to_entity(): "
+        msg = f"TransactionError from calling link_collection_to_entity(): {te}"
         # Log the full stack trace, prepend a line with our message
         logger.exception(msg)
 
-        if tx.closed() == False:
+        if tx.closed() is False:
             # Log the full stack trace, prepend a line with our message
             logger.info("Failed to commit link_collection_to_entity() transaction, rollback")
             tx.rollback()
@@ -321,30 +319,25 @@ def link_collection_to_entities(neo4j_driver, collection_uuid, entities_uuid_lis
             tx = session.begin_transaction()
 
             # First delete all the old linkages between this Collection and its member Entities
-            _delete_collection_linkages_tx(tx=tx
-                                           , uuid=collection_uuid)
+            _delete_collection_linkages_tx(tx=tx, uuid=collection_uuid)
 
             # Create relationship from each member Entity node to this Collection node
             for entity_uuid in entities_uuid_list:
-                _create_relationship_tx(tx=tx
-                                        , source_node_uuid=entity_uuid
-                                        , direction='->'
-                                        , target_node_uuid=collection_uuid
-                                        , relationship='IN_COLLECTION')
+                _create_relationship_tx(tx=tx, source_node_uuid=entity_uuid, direction='->',
+                                        target_node_uuid=collection_uuid, relationship='IN_COLLECTION')
 
             tx.commit()
     except TransactionError as te:
-        msg = "TransactionError from calling link_collection_to_entities(): "
+        msg = f"TransactionError from calling link_collection_to_entities(): {te}"
         # Log the full stack trace, prepend a line with our message
         logger.exception(msg)
 
-        if tx.closed() == False:
+        if tx.closed() is False:
             # Log the full stack trace, prepend a line with our message
             logger.info("Failed to commit link_collection_to_entities() transaction, rollback")
             tx.rollback()
 
         raise TransactionError(msg)
-
 
 
 def link_entity_to_agent(neo4j_driver, entity_uuid, direct_ancestor_uuids, activity_data_dict):
@@ -386,11 +379,11 @@ def link_entity_to_agent(neo4j_driver, entity_uuid, direct_ancestor_uuids, activ
 
             tx.commit()
     except TransactionError as te:
-        msg = "TransactionError from calling link_entity_to_agent(): "
+        msg = f"TransactionError from calling link_entity_to_agent(): {te}"
         # Log the full stack trace, prepend a line with our message
         logger.exception(msg)
 
-        if tx.closed() == False:
+        if tx.closed() is False:
             # Log the full stack trace, prepend a line with our message
             logger.info("Failed to commit link_entity_to_agent() transaction, rollback")
             tx.rollback()
@@ -436,17 +429,16 @@ def link_entity_to_entity_via_activity(neo4j_driver, entity_uuid, direct_ancesto
 
             tx.commit()
     except TransactionError as te:
-        msg = "TransactionError from calling link_entity_to_entity_via_activity(): "
+        msg = f"TransactionError from calling link_entity_to_entity_via_activity(): {te}"
         # Log the full stack trace, prepend a line with our message
         logger.exception(msg)
 
-        if tx.closed() == False:
+        if tx.closed() is False:
             # Log the full stack trace, prepend a line with our message
             logger.info("Failed to commit link_entity_to_entity_via_activity() transaction, rollback")
             tx.rollback()
 
         raise TransactionError(msg)
-
 
 
 def link_entity_to_entity(neo4j_driver, entity_uuid, direct_ancestor_uuids, activity_data_dict):
@@ -478,17 +470,16 @@ def link_entity_to_entity(neo4j_driver, entity_uuid, direct_ancestor_uuids, acti
 
             tx.commit()
     except TransactionError as te:
-        msg = "TransactionError from calling link_entity_to_entity(): "
+        msg = f"TransactionError from calling link_entity_to_entity(): {te}"
         # Log the full stack trace, prepend a line with our message
         logger.exception(msg)
 
-        if tx.closed() == False:
+        if tx.closed() is False:
             # Log the full stack trace, prepend a line with our message
             logger.info("Failed to commit link_entity_to_entity() transaction, rollback")
             tx.rollback()
 
         raise TransactionError(msg)
-
 
 
 def link_entity_to_previous_revision(neo4j_driver, entity_uuid, previous_revision_entity_uuid):
@@ -514,11 +505,11 @@ def link_entity_to_previous_revision(neo4j_driver, entity_uuid, previous_revisio
 
             tx.commit()
     except TransactionError as te:
-        msg = "TransactionError from calling link_entity_to_previous_revision(): "
+        msg = f"TransactionError from calling link_entity_to_previous_revision(): {te}"
         # Log the full stack trace, prepend a line with our message
         logger.exception(msg)
 
-        if tx.closed() == False:
+        if tx.closed() is False:
             # Log the full stack trace, prepend a line with our message
             logger.info("Failed to commit link_entity_to_previous_revision() transaction, rollback")
             tx.rollback()
@@ -563,7 +554,6 @@ def get_previous_revision_uuids(neo4j_driver, uuid):
     return results
 
 
-
 def get_next_revision_uuids(neo4j_driver, uuid):
     """
     Get the list of uuids of next revision entities for a given entity
@@ -601,7 +591,6 @@ def get_next_revision_uuids(neo4j_driver, uuid):
     return result
 
 
-
 def get_previous_revision_uuid(neo4j_driver, uuid):
     """
     Get the uuid of previous revision entity for a given entity
@@ -618,7 +607,6 @@ def get_previous_revision_uuid(neo4j_driver, uuid):
     dict
         The parent dict, can either be a Sample or Source
     """
-
     result = None
 
     # Don't use [r:REVISION_OF] because
@@ -637,7 +625,6 @@ def get_previous_revision_uuid(neo4j_driver, uuid):
             result = record[record_field_name]
 
     return result
-
 
 
 def get_next_revision_uuid(neo4j_driver, uuid):
@@ -722,7 +709,6 @@ def get_entity_collections(neo4j_driver, uuid, property_key=None):
     return results
 
 
-
 def get_dataset_upload(neo4j_driver, uuid):
     """
     Get the associated Upload for a given dataset
@@ -756,7 +742,6 @@ def get_dataset_upload(neo4j_driver, uuid):
             result = _node_to_dict(record[record_field_name])
 
     return result
-
 
 
 def get_collection_entities(neo4j_driver, uuid, properties: Union[PropertyGroups, List[str]] = None, is_include_action: bool = True):
@@ -795,7 +780,6 @@ def get_collection_entities(neo4j_driver, uuid, properties: Union[PropertyGroups
     return results
 
 
-
 def get_collection_datasets_data_access_levels(neo4j_driver, uuid):
     """
     Get a dictionary with an entry for each Dataset in a Collection. The dictionary is
@@ -831,9 +815,6 @@ def get_collection_datasets_data_access_levels(neo4j_driver, uuid):
             results = record[record_field_name]
 
     return results
-
-
-
 
 
 def get_collection_datasets_statuses(neo4j_driver, uuid):
@@ -875,7 +856,6 @@ def get_collection_datasets_statuses(neo4j_driver, uuid):
     return results
 
 
-
 def link_datasets_to_upload(neo4j_driver, upload_uuid, dataset_uuids_list):
     """
     Link the dataset nodes to the target Upload node
@@ -909,17 +889,16 @@ def link_datasets_to_upload(neo4j_driver, upload_uuid, dataset_uuids_list):
             tx.run(query, upload_uuid=upload_uuid, dataset_uuids_list=dataset_uuids_list)
             tx.commit()
     except TransactionError as te:
-        msg = f"TransactionError from calling link_datasets_to_upload(): {te.value}"
+        msg = f"TransactionError from calling link_datasets_to_upload(): {te}"
         # Log the full stack trace, prepend a line with our message
         logger.exception(msg)
 
-        if tx.closed() == False:
+        if tx.closed() is False:
             logger.info("Failed to commit link_datasets_to_upload() transaction, rollback")
 
             tx.rollback()
 
         raise TransactionError(msg)
-
 
 
 def unlink_datasets_from_upload(neo4j_driver, upload_uuid, dataset_uuids_list):
@@ -951,17 +930,16 @@ def unlink_datasets_from_upload(neo4j_driver, upload_uuid, dataset_uuids_list):
             tx.run(query, upload_uuid=upload_uuid, dataset_uuids_list=dataset_uuids_list)
             tx.commit()
     except TransactionError as te:
-        msg = f"TransactionError from calling unlink_datasets_from_upload(): {te.value}"
+        msg = f"TransactionError from calling unlink_datasets_from_upload(): {te}"
         # Log the full stack trace, prepend a line with our message
         logger.exception(msg)
 
-        if tx.closed() == False:
+        if tx.closed() is False:
             logger.info("Failed to commit unlink_datasets_from_upload() transaction, rollback")
 
             tx.rollback()
 
         raise TransactionError(msg)
-
 
 
 def get_upload_datasets(neo4j_driver, uuid, query_filter='', properties: Union[PropertyGroups, List[str]] = None, is_include_action: bool = True):
@@ -1010,7 +988,6 @@ def get_upload_datasets(neo4j_driver, uuid, query_filter='', properties: Union[P
             results = record[record_field_name]
 
     return results
-
 
 
 def count_attached_published_datasets(neo4j_driver, entity_type, uuid):
@@ -1139,7 +1116,6 @@ def get_entity(neo4j_driver, uuid):
             result = _node_to_dict(record[record_field_name])
 
     return result
-
 
 
 def get_has_rui_information(neo4j_driver, entity_uuid):
@@ -1503,7 +1479,6 @@ def node_to_dict(entity_node):
     return entity_dict
 
 
-
 def nodes_to_dicts(nodes):
     """
     Convert the list of neo4j nodes into a list of Python dicts
@@ -1526,7 +1501,6 @@ def nodes_to_dicts(nodes):
         dicts.append(entity_dict)
 
     return dicts
-
 
 
 def link_publication_to_associated_collection(neo4j_driver, entity_uuid, associated_collection_uuid):
@@ -1555,17 +1529,16 @@ def link_publication_to_associated_collection(neo4j_driver, entity_uuid, associa
 
             tx.commit()
     except TransactionError as te:
-        msg = "TransactionError from calling link_publication_to_associated_collection(): "
+        msg = f"TransactionError from calling link_publication_to_associated_collection(): {te}"
         # Log the full stack trace, prepend a line with our message
         logger.exception(msg)
 
-        if tx.closed() == False:
+        if tx.closed() is False:
             # Log the full stack trace, prepend a line with our message
             logger.info("Failed to commit link_publication_to_associated_collection() transaction, rollback")
             tx.rollback()
 
         raise TransactionError(msg)
-
 
 
 def get_collection_associated_datasets(neo4j_driver, uuid, property_key=None):
@@ -1720,7 +1693,6 @@ def build_parameterized_map(entity_data_dict):
     return parametered_str, data
 
 
-
 def update_entity(neo4j_driver, entity_type, entity_data_dict, uuid):
     """
     Update the properties of an existing entity node in neo4j
@@ -1770,17 +1742,16 @@ def update_entity(neo4j_driver, entity_type, entity_data_dict, uuid):
 
             return entity_dict
     except TransactionError as te:
-        msg = f"TransactionError from calling create_entity(): {te.value}"
+        msg = f"TransactionError from calling create_entity(): {te}"
         # Log the full stack trace, prepend a line with our message
         logger.exception(msg)
 
-        if tx.closed() == False:
+        if tx.closed() is False:
             logger.info("Failed to commit update_entity() transaction, rollback")
 
             tx.rollback()
 
         raise TransactionError(msg)
-
 
 
 def get_siblings(neo4j_driver, uuid, property_key=None):
@@ -2039,7 +2010,7 @@ def get_sources_associated_entity(neo4j_driver, uuid, filter_out=None):
     return results
 
 
-def activity_query_part(properties = None, for_all_match = False, only_map_part = False):
+def activity_query_part(properties=None, for_all_match=False, only_map_part=False):
     """
     Builds activity query part(s) for grabbing properties like protocol_url from Activity
 
@@ -2059,7 +2030,7 @@ def activity_query_part(properties = None, for_all_match = False, only_map_part 
         tuple for exclude_include_query_part with [0] Additional MATCH, [1] map pair query parts for apoc.map.fromPairs, [2] and 'a' variable to use in WITH statements
     """
 
-    query_match_part = f"MATCH (e2:Entity)-[:WAS_GENERATED_BY]->(a:Activity) WHERE e2.uuid = t.uuid"
+    query_match_part = "MATCH (e2:Entity)-[:WAS_GENERATED_BY]->(a:Activity) WHERE e2.uuid = t.uuid"
 
     build_part = " WITH t, apoc.map.fromPairs([['protocol_url', a.protocol_url], ['creation_action', a.creation_action]]) as a2 WITH apoc.map.merge(t,a2) as x RETURN apoc.coll.toSet(COLLECT(x)) AS "
 
@@ -2105,7 +2076,7 @@ def activity_query_part(properties = None, for_all_match = False, only_map_part 
         return '', '', ''
 
 
-def property_type_query_part(properties:PropertyGroups, is_include_action = True):
+def property_type_query_part(properties: PropertyGroups, is_include_action=True):
     """
     Builds property type query part(s) for parsing properties of certain types
 
@@ -2135,7 +2106,7 @@ def property_type_query_part(properties:PropertyGroups, is_include_action = True
     return map_parts
 
 
-def build_additional_query_parts(properties:PropertyGroups, is_include_action = True):
+def build_additional_query_parts(properties: PropertyGroups, is_include_action=True):
     """
     Builds additional query parts to be concatenated with other query
 
@@ -2157,7 +2128,7 @@ def build_additional_query_parts(properties:PropertyGroups, is_include_action = 
     return _activity_query_part[0], _activity_query_part[1] + _property_type_query_part, _activity_query_part[2]
 
 
-def exclude_include_query_part(properties:Union[PropertyGroups, List[str]], is_include_action = True, target_entity_type = 'Any'):
+def exclude_include_query_part(properties: Union[PropertyGroups, List[str]], is_include_action=True, target_entity_type='Any'):
     """
     Builds a cypher query part that can be used to include or exclude certain properties.
     The preceding MATCH query part should have a label 't'. E.g. MATCH (t:Entity)-[*]->(s:Source)
@@ -2194,20 +2165,20 @@ def exclude_include_query_part(properties:Union[PropertyGroups, List[str]], is_i
     map_pairs_part = more_to_grab_query_part[1] if isinstance(more_to_grab_query_part, tuple) else ''
     match_part = more_to_grab_query_part[0] if isinstance(more_to_grab_query_part, tuple) else ''
 
-                   # unwind the keys of the results from target/t
+                  # unwind the keys of the results from target/t
     query_part = (f"WITH keys(t) AS k1, t{a} unwind k1 AS k2 "
                   # filter by a list[] of properties
                   f"WITH t{a}, k2 WHERE {action} k2 IN {_properties} "
                   # everything is unwinded as separate rows, so let's build it back up by uuid to form: {prop: val, uuid:uuidVal}
                   f"WITH t{a}, apoc.map.fromPairs([[k2, t[k2]], ['uuid', t.uuid]{map_pairs_part}]) AS dict "
-                  # collect all these individual dicts as a list[], and then group them by uuids, 
-                  # which forms a dict with uuid as keys and list of dicts as values: 
+                  # collect all these individual dicts as a list[], and then group them by uuids,
+                  # which forms a dict with uuid as keys and list of dicts as values:
                   # {uuidVal: [{prop: val, uuid:uuidVal}, {prop2: val2, uuid:uuidVal}, ... {propN: valN, uuid:uuidVal}], uuidVal2: [...]}
-                  f"WITH collect(dict) as list WITH apoc.map.groupByMulti(list, 'uuid') AS groups "
+                  "WITH collect(dict) as list WITH apoc.map.groupByMulti(list, 'uuid') AS groups "
                   # use the keys of groups dict, and unwind to get uuids as individual rows
-                  f"unwind keys(groups) AS uuids "
+                  "unwind keys(groups) AS uuids "
                   # now merge these individual dicts under their respective uuid
-                  f"WITH apoc.map.mergeList(groups[uuids]) AS rows "
+                  "WITH apoc.map.mergeList(groups[uuids]) AS rows "
                   # collect each row to form a list[] and return
                   f"RETURN collect(rows) AS {record_field_name}")
 
