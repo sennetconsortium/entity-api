@@ -1493,14 +1493,7 @@ def nodes_to_dicts(nodes):
     list
         A list of target entity dicts containing all property key/value pairs
     """
-
-    dicts = []
-
-    for node in nodes:
-        entity_dict = node_to_dict(node)
-        dicts.append(entity_dict)
-
-    return dicts
+    return [node_to_dict(node) for node in nodes]
 
 
 def link_publication_to_associated_collection(neo4j_driver, entity_uuid, associated_collection_uuid):
