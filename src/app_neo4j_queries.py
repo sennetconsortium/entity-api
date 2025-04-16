@@ -304,8 +304,10 @@ def dataset_has_component_children(neo4j_driver, dataset_uuid):
     query = ("MATCH p=(ds1:Dataset)-[:WAS_GENERATED_BY]->(a:Activity)-[:USED]->(ds2:Dataset) "
              "WHERE ds2.uuid = $dataset_uuid AND a.creation_action = 'Multi-Assay Split' "
              "RETURN (COUNT(p) > 0)")
+
     with neo4j_driver.session() as session:
         value = session.run(query, dataset_uuid=dataset_uuid).value()
+
     return value[0]
 
 
@@ -399,7 +401,7 @@ def create_entity(neo4j_driver, entity_type, entity_data_dict, superclass=None):
 
             return entity_dict
     except TransactionError as te:
-        msg = f"TransactionError from calling create_entity(): {te.value}"
+        msg = f"TransactionError from calling create_entity(): {te}"
         # Log the full stack trace, prepend a line with our message
         logger.exception(msg)
 
@@ -457,7 +459,7 @@ def create_multiple_samples(neo4j_driver, samples_dict_list, activity_data_dict,
             # Then
             tx.commit()
     except TransactionError as te:
-        msg = f"TransactionError from calling create_multiple_samples(): {te.value}"
+        msg = f"TransactionError from calling create_multiple_samples(): {te}"
         # Log the full stack trace, prepend a line with our message
         logger.exception(msg)
 
@@ -518,7 +520,7 @@ def update_entity(neo4j_driver, entity_type, entity_data_dict, uuid):
 
             return entity_dict
     except TransactionError as te:
-        msg = f"TransactionError from calling create_entity(): {te.value}"
+        msg = f"TransactionError from calling create_entity(): {te}"
         # Log the full stack trace, prepend a line with our message
         logger.exception(msg)
 
@@ -633,7 +635,6 @@ def get_descendants(neo4j_driver, uuid, data_access_level=None, entity_type=None
             results = record[record_field_name]
 
             schema.schema_manager.rearrange_datasets(results, entity_type)
-
 
     return results
 
@@ -811,8 +812,7 @@ def get_source_samples(neo4j_driver, uuid, property_keys=None):
     return []
 
 
-
-def get_parents(neo4j_driver, uuid, properties: Union[PropertyGroups, List[str]]  = None, is_include_action: bool = True):
+def get_parents(neo4j_driver, uuid, properties: Union[PropertyGroups, List[str]] = None, is_include_action: bool = True):
     """
     Get all parents by uuid
 
@@ -835,7 +835,7 @@ def get_parents(neo4j_driver, uuid, properties: Union[PropertyGroups, List[str]]
 
     results = []
 
-    is_filtered = isinstance(properties, PropertyGroups) or  isinstance(properties, list)
+    is_filtered = isinstance(properties, PropertyGroups) or isinstance(properties, list)
     if is_filtered:
         query = ("MATCH (e:Entity)-[:WAS_GENERATED_BY]->(:Activity)-[:USED]->(t:Entity) "
                  # Filter out the Lab entities
@@ -1027,6 +1027,7 @@ def get_all_dataset_samples(neo4j_driver, dataset_uuid):
                     if node["entity_type"] == 'Sample':
                         if not node["uuid"] in dataset_sample_list:
                             dataset_sample_list[node["uuid"]] = {'sample_category': node["sample_category"]}
+
     return dataset_sample_list
 
 
@@ -1249,7 +1250,7 @@ def add_entities_to_collection(neo4j_driver, collection_uuid, entity_uuids_list)
             tx.run(query, collection_uuid=collection_uuid, entity_uuids_list=entity_uuids_list)
             tx.commit()
     except TransactionError as te:
-        msg = f"TransactionError from calling add_entities_to_collection(): {te.value}"
+        msg = f"TransactionError from calling add_entities_to_collection(): {te}"
         # Log the full stack trace, prepend a line with our message
         logger.exception(msg)
 
@@ -1627,22 +1628,23 @@ def get_individual_prov_info(neo4j_driver, dataset_uuid):
         the uuid of the desired dataset
     """
     query = (
-        f"MATCH (ds:Dataset {{uuid: '{dataset_uuid}'}})-[:WAS_GENERATED_BY]->(a)-[:USED]->(firstSample:Sample)-[*]->(source:Source)"
-        f" WITH ds, COLLECT(distinct source) AS SOURCE, COLLECT(distinct firstSample) AS FIRSTSAMPLE"
-        f" OPTIONAL MATCH (ds)-[*]->(metaSample:Sample)"
-        f" WHERE NOT metaSample.metadata IS NULL AND NOT TRIM(metaSample.metadata) = ''"
-        f" WITH ds, FIRSTSAMPLE, SOURCE, COLLECT(distinct metaSample) AS METASAMPLE"
-        f" OPTIONAL MATCH (ds)-[*]->(ruiSample:Sample)"
-        f" WHERE NOT ruiSample.rui_location IS NULL AND NOT TRIM(ruiSample.rui_location) = ''"
-        f" WITH ds, FIRSTSAMPLE, SOURCE, METASAMPLE, COLLECT(distinct ruiSample) AS RUISAMPLE"
-        f" OPTIONAL match (source)<-[:USED]-(oa)<-[:WAS_GENERATED_BY]-(organ:Sample {{sample_category:'{Ontology.ops().specimen_categories().ORGAN}'}})<-[*]-(ds)"
-        f" WITH ds, FIRSTSAMPLE, SOURCE, METASAMPLE, RUISAMPLE, COLLECT(distinct organ) AS ORGAN "
-        f" OPTIONAL MATCH (ds)<-[:USED]-(a3)<-[:WAS_GENERATED_BY]-(processed_dataset:Dataset)"
-        f" WHERE toLower(a3.creation_action) ENDS WITH 'process'"
-        f" WITH ds, FIRSTSAMPLE, SOURCE, METASAMPLE, RUISAMPLE, ORGAN, COLLECT(distinct processed_dataset) AS PROCESSED_DATASET"
-        f" RETURN ds.uuid, FIRSTSAMPLE, SOURCE, RUISAMPLE, ORGAN, ds.sennet_id, ds.status, ds.group_name,"
-        f" ds.group_uuid, ds.created_timestamp, ds.created_by_user_email, ds.last_modified_timestamp, "
-        f" ds.last_modified_user_email, ds.lab_dataset_id, ds.dataset_type, METASAMPLE, PROCESSED_DATASET")
+        "MATCH (ds:Dataset {uuid: $dataset_uuid})-[:WAS_GENERATED_BY]->(a)-[:USED]->(firstSample:Sample)-[*]->(source:Source)"
+        " WITH ds, COLLECT(distinct source) AS SOURCE, COLLECT(distinct firstSample) AS FIRSTSAMPLE"
+        " OPTIONAL MATCH (ds)-[*]->(metaSample:Sample)"
+        " WHERE NOT metaSample.metadata IS NULL AND NOT TRIM(metaSample.metadata) = ''"
+        " WITH ds, FIRSTSAMPLE, SOURCE, COLLECT(distinct metaSample) AS METASAMPLE"
+        " OPTIONAL MATCH (ds)-[*]->(ruiSample:Sample)"
+        " WHERE NOT ruiSample.rui_location IS NULL AND NOT TRIM(ruiSample.rui_location) = ''"
+        " WITH ds, FIRSTSAMPLE, SOURCE, METASAMPLE, COLLECT(distinct ruiSample) AS RUISAMPLE"
+        " OPTIONAL match (source)<-[:USED]-(oa)<-[:WAS_GENERATED_BY]-(organ:Sample {sample_category: 'Organ'})<-[*]-(ds)"
+        " WITH ds, FIRSTSAMPLE, SOURCE, METASAMPLE, RUISAMPLE, COLLECT(distinct organ) AS ORGAN "
+        " OPTIONAL MATCH (ds)<-[:USED]-(a3)<-[:WAS_GENERATED_BY]-(processed_dataset:Dataset)"
+        " WHERE toLower(a3.creation_action) ENDS WITH 'process'"
+        " WITH ds, FIRSTSAMPLE, SOURCE, METASAMPLE, RUISAMPLE, ORGAN, COLLECT(distinct processed_dataset) AS PROCESSED_DATASET"
+        " RETURN ds.uuid, FIRSTSAMPLE, SOURCE, RUISAMPLE, ORGAN, ds.sennet_id, ds.status, ds.group_name,"
+        " ds.group_uuid, ds.created_timestamp, ds.created_by_user_email, ds.last_modified_timestamp, "
+        " ds.last_modified_user_email, ds.lab_dataset_id, ds.dataset_type, METASAMPLE, PROCESSED_DATASET"
+    )
 
     logger.info("======get_prov_info() query======")
     logger.info(query)
@@ -1650,7 +1652,7 @@ def get_individual_prov_info(neo4j_driver, dataset_uuid):
     record_contents = []
     record_dict = {}
     with neo4j_driver.session() as session:
-        result = session.run(query)
+        result = session.run(query, dataset_uuid=dataset_uuid)
         if result.peek() is None:
             return
         for record in result:
@@ -1776,6 +1778,7 @@ def get_sample_prov_info(neo4j_driver, param_dict):
             record_dict['source_sennet_id'] = record_contents[18]
 
             list_of_dictionaries.append(record_dict)
+
     return list_of_dictionaries
 
 
@@ -1857,7 +1860,7 @@ def _create_relationship_tx(tx, source_node_uuid, target_node_uuid, relationship
         outgoing = direction
 
     query = ("MATCH (s), (t) "
-             f"WHERE s.uuid = $source_node_uuid AND t.uuid = $target_node_uuid "
+             "WHERE s.uuid = $source_node_uuid AND t.uuid = $target_node_uuid "
              f"CREATE (s){incoming}[r:{relationship}]{outgoing}(t) "
              f"RETURN type(r) AS {record_field_name}")
 
@@ -1930,7 +1933,7 @@ def _create_activity_tx(tx, activity_data_dict):
     """
     parameterized_str, parameterized_data = build_parameterized_map(activity_data_dict)
 
-    query = (f"CREATE (e:Activity) "
+    query = ("CREATE (e:Activity) "
              f"SET e = {parameterized_str} "
              f"RETURN e AS {record_field_name}")
 
@@ -1981,11 +1984,11 @@ def create_multiple_datasets(neo4j_driver, datasets_dict_list, activity_data_dic
                 parameterized_str, parameterized_data = build_parameterized_map(dataset_dict)
                 parameterized_data['activity_uuid'] = activity_uuid
 
-                query = (f"MATCH (a:Activity) "
-                         f"WHERE a.uuid = $activity_uuid "
+                query = ("MATCH (a:Activity) "
+                         "WHERE a.uuid = $activity_uuid "
                          # Always define the Entity label in addition to the target `entity_type` label
                          f"CREATE (e:Entity:Dataset {parameterized_str}) "
-                         f"CREATE (a)<-[:WAS_GENERATED_BY]-(e) "
+                         "CREATE (a)<-[:WAS_GENERATED_BY]-(e) "
                          f"RETURN e AS {record_field_name}")
 
                 logger.info("======create_multiple_samples() individual query======")
@@ -2002,7 +2005,7 @@ def create_multiple_datasets(neo4j_driver, datasets_dict_list, activity_data_dic
             return output_dicts_list
 
     except TransactionError as te:
-        msg = f"TransactionError from calling create_multiple_samples(): {te.value}"
+        msg = f"TransactionError from calling create_multiple_samples(): {te}"
         # Log the full stack trace, prepend a line with our message
         logger.exception(msg)
 
@@ -2060,6 +2063,7 @@ def get_siblings(neo4j_driver, uuid, status, prop_key, include_revisions):
             else:
                 # Convert the list of nodes to a list of dicts
                 results = schema_neo4j_queries.nodes_to_dicts(record[record_field_name])
+
     return results
 
 
@@ -2106,4 +2110,5 @@ def get_tuplets(neo4j_driver, uuid, status, prop_key):
             else:
                 # Convert the list of nodes to a list of dicts
                 results = schema_neo4j_queries.nodes_to_dicts(record[record_field_name])
+
     return results
