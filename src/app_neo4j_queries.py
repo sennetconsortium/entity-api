@@ -74,15 +74,15 @@ dict
 def get_activity_was_generated_by(neo4j_driver, uuid):
     result = {}
 
-    query = (f"MATCH (e:Entity)-[:WAS_GENERATED_BY]->(a:Activity)"
-             f"WHERE e.uuid = '{uuid}' "
+    query = ("MATCH (e:Entity)-[:WAS_GENERATED_BY]->(a:Activity) "
+             "WHERE e.uuid = $uuid "
              f"RETURN a AS {record_field_name}")
 
     logger.debug("======get_activity() query======")
     logger.debug(query)
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(_execute_readonly_tx, query)
+        record = session.read_transaction(_execute_readonly_tx, query, uuid=uuid)
 
         if record and record[record_field_name]:
             # Convert the neo4j node into Python dict
@@ -111,15 +111,15 @@ dict
 def get_activity(neo4j_driver, uuid):
     result = {}
 
-    query = (f"MATCH (e:Activity) "
-             f"WHERE e.uuid = '{uuid}' "
+    query = ("MATCH (e:Activity) "
+             "WHERE e.uuid = $uuid "
              f"RETURN e AS {record_field_name}")
 
     logger.debug("======get_activity() query======")
     logger.debug(query)
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(_execute_readonly_tx, query)
+        record = session.read_transaction(_execute_readonly_tx, query, uuid=uuid)
 
         if record and record[record_field_name]:
             # Convert the neo4j node into Python dict
@@ -149,20 +149,19 @@ def get_entity(neo4j_driver, uuid):
     result = {}
 
     _activity_query_part = schema_neo4j_queries.activity_query_part(for_all_match=True)
-    query = (f"MATCH (t:Entity) "
-             f"WHERE t.uuid = '{uuid}' "
+    query = ("MATCH (t:Entity) "
+             "WHERE t.uuid = $uuid "
              f"{_activity_query_part} {record_field_name}")
 
     logger.info("======get_entity() query======")
     logger.info(query)
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(_execute_readonly_tx, query)
+        record = session.read_transaction(_execute_readonly_tx, query, uuid=uuid)
 
         if record and record[record_field_name] and len(record[record_field_name]) > 0:
             # Convert the neo4j node into Python dict
             result = record[record_field_name][0]
-
 
     return result
 
@@ -273,24 +272,24 @@ def get_entities_for_dashboard(neo4j_driver, entity_uuids, entity_type):
     query = ''
 
     if entity_type.upper() == Ontology.ops().entities().SAMPLE.upper():
-        query = (f"Match (e:Sample) "
-                 f"WHERE e.uuid in {entity_uuids} "
-                 f"OPTIONAL MATCH (e:Sample)-[*]->(o:Sample {{sample_category: 'Organ'}}) "
-                 f"return apoc.coll.toSet(COLLECT({{sennet_id: e.sennet_id, uuid: e.uuid, "
-                 f"lab_tissue_sample_id: e.lab_tissue_sample_id, sample_category: e.sample_category,"
+        query = ("Match (e:Sample) "
+                 "WHERE e.uuid in $entity_uuids "
+                 "OPTIONAL MATCH (e:Sample)-[*]->(o:Sample {sample_category: 'Organ'}) "
+                 "return apoc.coll.toSet(COLLECT({sennet_id: e.sennet_id, uuid: e.uuid, "
+                 "lab_tissue_sample_id: e.lab_tissue_sample_id, sample_category: e.sample_category,"
                  f"organ_type: COALESCE(o.organ, e.organ), group_name: e.group_name}})) as {record_field_name}")
 
     if entity_type.upper() == Ontology.ops().entities().SOURCE.upper():
-        query = (f"Match (e:Source) "
-                 f"WHERE e.uuid in {entity_uuids} "
-                 f"return apoc.coll.toSet(COLLECT({{sennet_id: e.sennet_id, uuid: e.uuid, "
+        query = ("Match (e:Source) "
+                 "WHERE e.uuid in $entity_uuids "
+                 "return apoc.coll.toSet(COLLECT({sennet_id: e.sennet_id, uuid: e.uuid, "
                  f"lab_source_id: e.lab_source_id, source_type: e.source_type, group_name: e.group_name}})) as {record_field_name}")
 
     logger.info("======get_entities_for_dashboard() query======")
     logger.info(query)
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(_execute_readonly_tx, query)
+        record = session.read_transaction(_execute_readonly_tx, query, entity_uuids=entity_uuids)
         if record and record[record_field_name]:
             results = record[record_field_name]
 
@@ -340,7 +339,7 @@ list
 def get_ancestor_organs(neo4j_driver, entity_uuid):
     results = []
 
-    query = (f"MATCH (e:Entity {{uuid:'{entity_uuid}'}})-[*]->(organ:Sample {{sample_category:'{Ontology.ops().specimen_categories().ORGAN}'}}) "
+    query = ("MATCH (e:Entity {uuid: $entity_uuid})-[*]->(organ:Sample {sample_category: 'Organ'}) "
              # COLLECT() returns a list
              # apoc.coll.toSet() reruns a set containing unique nodes
              f"RETURN apoc.coll.toSet(COLLECT(organ)) AS {record_field_name}")
@@ -349,7 +348,7 @@ def get_ancestor_organs(neo4j_driver, entity_uuid):
     logger.info(query)
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(_execute_readonly_tx, query)
+        record = session.read_transaction(_execute_readonly_tx, query, entity_uuid=entity_uuid)
 
         if record and record[record_field_name]:
             results = _nodes_to_dicts(record[record_field_name])
@@ -460,11 +459,11 @@ def create_multiple_samples(neo4j_driver, samples_dict_list, activity_data_dict,
                 parameterized_str, parameterized_data = build_parameterized_map(sample_dict)
                 parameterized_data['activity_uuid'] = activity_uuid
 
-                query = (f"MATCH (a:Activity) "
-                         f"WHERE a.uuid = $activity_uuid "
+                query = ("MATCH (a:Activity) "
+                         "WHERE a.uuid = $activity_uuid "
                          # Always define the Entity label in addition to the target `entity_type` label
                          f"CREATE (e:Entity:Sample {parameterized_str}) "
-                         f"CREATE (e)-[:WAS_GENERATED_BY]->(a)")
+                         "CREATE (e)-[:WAS_GENERATED_BY]->(a)")
 
                 logger.info("======create_multiple_samples() individual query======")
                 logger.info(query)
@@ -511,7 +510,7 @@ def update_entity(neo4j_driver, entity_type, entity_data_dict, uuid):
     parameterized_str, parameterized_data = build_parameterized_map(entity_data_dict)
 
     query = (f"MATCH (e:{entity_type}) "
-             f"WHERE e.uuid = $uuid "
+             "WHERE e.uuid = $uuid "
              f"SET e += {parameterized_str} "
              f"RETURN e AS {record_field_name}")
 
@@ -572,27 +571,27 @@ def get_ancestors(neo4j_driver, uuid, data_access_level=None, properties: Union[
     """
     results = []
 
-    predicate = ''
+    predicate = ""
     if data_access_level:
-        predicate = f"AND (t.status='Published' OR t.data_access_level = '{data_access_level}') "
+        predicate = "AND (t.status = 'Published' OR t.data_access_level = $data_access_level) "
 
     is_filtered = isinstance(properties, PropertyGroups) or  isinstance(properties, list)
     if is_filtered:
-        query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(t:Entity) "
-                 f"WHERE e.uuid = '{uuid}' AND t.entity_type <> 'Lab' {predicate} "
+        query = ("MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(t:Entity) "
+                 f"WHERE e.uuid = $uuid AND t.entity_type <> 'Lab' {predicate} "
                  f"{schema_neo4j_queries.exclude_include_query_part(properties, is_include_action)}")
     else:
         _activity_query_part = schema_neo4j_queries.activity_query_part(for_all_match=True)
-        query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(t:Entity) "
+        query = ("MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(t:Entity) "
                  # Filter out the Lab entities
-                 f"WHERE e.uuid='{uuid}' AND t.entity_type <> 'Lab' {predicate}"
+                 f"WHERE e.uuid = $uuid AND t.entity_type <> 'Lab' {predicate}"
                  f"{_activity_query_part} {record_field_name}")
 
     logger.info("======get_ancestors() query======")
     logger.info(query)
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(_execute_readonly_tx, query)
+        record = session.read_transaction(_execute_readonly_tx, query, uuid=uuid, data_access_level=data_access_level)
 
         if record and record[record_field_name]:
             results = record[record_field_name]
@@ -625,28 +624,28 @@ def get_descendants(neo4j_driver, uuid, data_access_level=None, entity_type=None
     """
     results = []
 
-    predicate = ''
+    predicate = ""
     if data_access_level:
-        predicate = f"AND (t.status='Published' OR t.data_access_level = '{data_access_level}') "
+        predicate = "AND (t.status='Published' OR t.data_access_level = $data_access_level) "
 
     is_filtered = isinstance(properties, PropertyGroups) or isinstance(properties, list)
     if is_filtered:
-        query = (f"MATCH (e:Entity)<-[:USED|WAS_GENERATED_BY*]-(t:Entity) "
+        query = ("MATCH (e:Entity)<-[:USED|WAS_GENERATED_BY*]-(t:Entity) "
                  # The target entity can't be a Lab
-                 f"WHERE e.uuid=$uuid AND e.entity_type <> 'Lab' {predicate} "
+                 f"WHERE e.uuid = $uuid AND e.entity_type <> 'Lab' {predicate} "
                  f"{schema_neo4j_queries.exclude_include_query_part(properties, is_include_action)}")
     else:
         _activity_query_part = schema_neo4j_queries.activity_query_part(for_all_match=True)
-        query = (f"MATCH (e:Entity)<-[:USED|WAS_GENERATED_BY*]-(t:Entity) "
+        query = ("MATCH (e:Entity)<-[:USED|WAS_GENERATED_BY*]-(t:Entity) "
                  # The target entity can't be a Lab
-                 f"WHERE e.uuid=$uuid AND e.entity_type <> 'Lab' {predicate}"
+                 f"WHERE e.uuid = $uuid AND e.entity_type <> 'Lab' {predicate}"
                  f"{_activity_query_part} {record_field_name}")
 
     logger.info("======get_descendants() query======")
     logger.info(query)
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(_execute_readonly_tx, query, uuid=uuid)
+        record = session.read_transaction(_execute_readonly_tx, query, uuid=uuid, data_access_level=data_access_level)
 
         if record and record[record_field_name]:
             results = record[record_field_name]
@@ -677,17 +676,17 @@ def get_descendant_datasets(neo4j_driver, uuid, property_key=None):
     results = []
 
     if property_key:
-        query = (f"MATCH (e:Entity)<-[:USED|WAS_GENERATED_BY*]-(descendant:Dataset) "
+        query = ("MATCH (e:Entity)<-[:USED|WAS_GENERATED_BY*]-(descendant:Dataset) "
                  # The target entity can't be a Lab
-                 f"WHERE e.uuid=$uuid AND e.entity_type <> 'Lab' "
+                 "WHERE e.uuid = $uuid AND e.entity_type <> 'Lab' "
                  # COLLECT() returns a list
                  # apoc.coll.toSet() reruns a set containing unique nodes
                  f"RETURN apoc.coll.toSet(COLLECT(descendant.{property_key})) AS {record_field_name}")
     else:
         _activity_query_part = schema_neo4j_queries.activity_query_part(for_all_match=True)
-        query = (f"MATCH (e:Entity)<-[:USED|WAS_GENERATED_BY*]-(t:Dataset) "
+        query = ("MATCH (e:Entity)<-[:USED|WAS_GENERATED_BY*]-(t:Dataset) "
                  # The target entity can't be a Lab
-                 f"WHERE e.uuid=$uuid AND e.entity_type <> 'Lab' "
+                 "WHERE e.uuid = $uuid AND e.entity_type <> 'Lab' "
                  f"{_activity_query_part} {record_field_name}")
 
     logger.info("======get_descendant_datasets() query======")
@@ -725,9 +724,9 @@ def get_ancestors_by_type(neo4j_driver, uuid, ancestor_type, property_keys=None)
         The list of ancestor entities as a dictionary
     """
     if ancestor_type in Ontology.ops(as_arr=True, cb=enum_val).entities():
-        predicate = f"a.entity_type='{ancestor_type}'"
+        predicate = "a.entity_type = $ancestor_type"
     elif ancestor_type in Ontology.ops(as_arr=True, cb=enum_val).specimen_categories():
-        predicate = f"a.sample_category='{ancestor_type}'"
+        predicate = "a.sample_category = $ancestor_type"
     else:
         raise ValueError(f'Unsupported entity type: {ancestor_type}')
 
@@ -741,7 +740,7 @@ def get_ancestors_by_type(neo4j_driver, uuid, ancestor_type, property_keys=None)
              f"RETURN {return_statement} AS {record_field_name}")
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(_execute_readonly_tx, query, uuid=uuid)
+        record = session.read_transaction(_execute_readonly_tx, query, uuid=uuid, ancestor_type=ancestor_type)
 
         if record and record[record_field_name]:
             return list(record[record_field_name])
@@ -771,9 +770,9 @@ def get_descendants_by_type(neo4j_driver, uuid, descendant_type, property_keys=N
         The list of descendant entities as a dictionary
     """
     if descendant_type in Ontology.ops(as_arr=True, cb=enum_val).entities():
-        predicate = f"AND d.entity_type='{descendant_type}'"
+        predicate = "AND d.entity_type = $descendant_type"
     elif descendant_type in Ontology.ops(as_arr=True, cb=enum_val).specimen_categories():
-        predicate = f"AND d.sample_category='{descendant_type}'"
+        predicate = "AND d.sample_category = $descendant_type"
     else:
         raise ValueError(f'Unsupported entity type: {descendant_type}')
 
@@ -787,7 +786,7 @@ def get_descendants_by_type(neo4j_driver, uuid, descendant_type, property_keys=N
              f"RETURN {return_statement} AS {record_field_name}")
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(_execute_readonly_tx, query, uuid=uuid)
+        record = session.read_transaction(_execute_readonly_tx, query, uuid=uuid, descendant_type=descendant_type)
 
         if record and record[record_field_name]:
             return list(record[record_field_name])
@@ -817,8 +816,8 @@ def get_source_samples(neo4j_driver, uuid, property_keys=None):
         joined_props = ', '.join([f'{key}: s.{key}' for key in property_keys])
         return_statement = f'COLLECT({{ {joined_props} }})'
 
-    query = (f"MATCH (d:Dataset)-[:WAS_GENERATED_BY|USED*]->(s:Sample) "
-             f"WHERE d.uuid='{uuid}' "
+    query = ("MATCH (d:Dataset)-[:WAS_GENERATED_BY|USED*]->(s:Sample) "
+             "WHERE d.uuid = $uuid "
              f"RETURN {return_statement} AS {record_field_name}")
 
     with neo4j_driver.session() as session:
@@ -856,22 +855,22 @@ def get_parents(neo4j_driver, uuid, properties: Union[PropertyGroups, List[str]]
 
     is_filtered = isinstance(properties, PropertyGroups) or  isinstance(properties, list)
     if is_filtered:
-        query = (f"MATCH (e:Entity)-[:WAS_GENERATED_BY]->(:Activity)-[:USED]->(t:Entity) "
+        query = ("MATCH (e:Entity)-[:WAS_GENERATED_BY]->(:Activity)-[:USED]->(t:Entity) "
                  # Filter out the Lab entities
-                 f"WHERE e.uuid='{uuid}' AND t.entity_type <> 'Lab' "
+                 "WHERE e.uuid = $uuid AND t.entity_type <> 'Lab' "
                  f"{schema_neo4j_queries.exclude_include_query_part(properties, is_include_action)}")
     else:
         _activity_query_part = schema_neo4j_queries.activity_query_part(for_all_match=True)
-        query = (f"MATCH (e:Entity)-[:WAS_GENERATED_BY]->(:Activity)-[:USED]->(t:Entity) "
+        query = ("MATCH (e:Entity)-[:WAS_GENERATED_BY]->(:Activity)-[:USED]->(t:Entity) "
                  # Filter out the Lab entities
-                 f"WHERE e.uuid='{uuid}' AND t.entity_type <> 'Lab' "
+                 "WHERE e.uuid = $uuid AND t.entity_type <> 'Lab' "
                  f"{_activity_query_part} {record_field_name}")
 
     logger.info("======get_parents() query======")
     logger.info(query)
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(_execute_readonly_tx, query)
+        record = session.read_transaction(_execute_readonly_tx, query, uuid=uuid)
 
         if record and record[record_field_name]:
             results = record[record_field_name]
@@ -899,17 +898,19 @@ def get_source_organ_count(neo4j_driver, uuid: str, organ: str, case_uuid: str =
     int
         The result count
     """
-    match_case = ''
+    match_case = ""
     if case_uuid is not None:
-        match_case = f"AND s.uuid <> '{case_uuid}' "
+        match_case = "AND s.uuid <> $case_uuid "
 
-    query = f"MATCH (s:Sample)-[:WAS_GENERATED_BY]->(a)-[:USED]->(sr:Source) where sr.uuid='{uuid}' " \
-            f"and s.organ='{organ}' {match_case}return count(s) AS {record_field_name}"
+    query = (
+        "MATCH (s:Sample)-[:WAS_GENERATED_BY]->(a)-[:USED]->(sr:Source) where sr.uuid=$uuid "
+        f"and s.organ=$organ {match_case}return count(s) AS {record_field_name}"
+    )
 
     logger.info("======get_source_organ_count() query======")
     logger.info(query)
     with neo4j_driver.session() as session:
-        record = session.read_transaction(_execute_readonly_tx, query)
+        record = session.read_transaction(_execute_readonly_tx, query, uuid=uuid, organ=organ, case_uuid=case_uuid)
 
         if record and record[record_field_name]:
             return record[record_field_name]
@@ -937,20 +938,20 @@ dict
 def get_sorted_revisions(neo4j_driver, uuid):
     results = []
 
-    query = (f"MATCH (prev:Dataset)<-[:REVISION_OF *0..]-(e:Dataset)<-[:REVISION_OF *0..]-(next:Dataset) "
-             f"WHERE e.uuid='{uuid}' "
+    query = ("MATCH (prev:Dataset)<-[:REVISION_OF *0..]-(e:Dataset)<-[:REVISION_OF *0..]-(next:Dataset) "
+             "WHERE e.uuid=$uuid "
              # COLLECT() returns a list
              # apoc.coll.toSet() reruns a set containing unique nodes
-             f"WITH apoc.coll.toSet(COLLECT(next) + COLLECT(e) + COLLECT(prev)) AS collection "
-             f"UNWIND collection as node "
-             f"WITH node ORDER BY node.created_timestamp DESC "
+             "WITH apoc.coll.toSet(COLLECT(next) + COLLECT(e) + COLLECT(prev)) AS collection "
+             "UNWIND collection as node "
+             "WITH node ORDER BY node.created_timestamp DESC "
              f"RETURN COLLECT(node) AS {record_field_name}")
 
     logger.info("======get_sorted_revisions() query======")
     logger.info(query)
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(_execute_readonly_tx, query)
+        record = session.read_transaction(_execute_readonly_tx, query, uuid=uuid)
 
         if record and record[record_field_name]:
             # Convert the list of nodes to a list of dicts
@@ -987,9 +988,9 @@ def get_sorted_multi_revisions(neo4j_driver, uuid, fetch_all=True, property_key=
 
     query = (
         "MATCH (e:Dataset), (next:Dataset), (prev:Dataset),"
-        f"p = (e)-[:REVISION_OF *0..]->(prev),"
-        f"n = (e)<-[:REVISION_OF *0..]-(next) "
-        f"WHERE e.uuid='{uuid}' {match_case}"
+        "p = (e)-[:REVISION_OF *0..]->(prev),"
+        "n = (e)<-[:REVISION_OF *0..]-(next) "
+        f"WHERE e.uuid=$uuid {match_case}"
         "WITH length(p) AS p_len, prev, length(n) AS n_len, next "
         "ORDER BY prev.created_timestamp, next.created_timestamp DESC "
         f"WITH p_len, collect(distinct prev{collect_prop}) AS prev_revisions, n_len, collect(distinct next{collect_prop}) AS next_revisions "
@@ -1000,7 +1001,7 @@ def get_sorted_multi_revisions(neo4j_driver, uuid, fetch_all=True, property_key=
     logger.info(query)
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(_execute_readonly_tx, query)
+        record = session.read_transaction(_execute_readonly_tx, query, uuid=uuid)
 
         if record and record[record_field_name] and len(record[record_field_name]) > 0:
             record[record_field_name][0].pop()  # the target will appear twice, pop it from the next list
@@ -1032,14 +1033,14 @@ dataset_uuid : string
     the uuid of the desired dataset
 """
 def get_all_dataset_samples(neo4j_driver, dataset_uuid):
-    query = f"MATCH p = (ds:Dataset {{uuid: '{dataset_uuid}'}})-[*]->(s:Source) return p"
+    query = "MATCH p = (ds:Dataset {uuid: $dataset_uuid})-[*]->(s:Source) return p"
     logger.info("======get_all_dataset_samples() query======")
     logger.info(query)
 
     # Dictionary of Dictionaries, keyed by UUID, containing each Sample returned in the Neo4j Path
     dataset_sample_list = {}
     with neo4j_driver.session() as session:
-        result = session.run(query)
+        result = session.run(query, dataset_uuid=dataset_uuid)
         if result.peek() is None:
             return
         for record in result:
@@ -1074,8 +1075,8 @@ def get_previous_multi_revisions(neo4j_driver, uuid, property_key=None):
     results = []
 
     collect_prop = f".{property_key}" if property_key else ''
-    query = (f"MATCH p=(e:Entity)-[:REVISION_OF*]->(prev:Entity) "
-             f"WHERE e.uuid='{uuid}' "
+    query = ("MATCH p=(e:Entity)-[:REVISION_OF*]->(prev:Entity) "
+             "WHERE e.uuid = $uuid "
              f"WITH length(p) as p_len, collect(distinct prev{collect_prop}) as prev_revisions "
              f"RETURN collect(distinct prev_revisions) AS {record_field_name}")
 
@@ -1083,7 +1084,7 @@ def get_previous_multi_revisions(neo4j_driver, uuid, property_key=None):
     logger.info(query)
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(_execute_readonly_tx, query)
+        record = session.read_transaction(_execute_readonly_tx, query, uuid=uuid)
 
         if record and record[record_field_name]:
             if property_key:
@@ -1120,8 +1121,8 @@ def get_next_multi_revisions(neo4j_driver, uuid, property_key=None):
     results = []
 
     collect_prop = f".{property_key}" if property_key else ''
-    query = (f"MATCH n=(e:Entity)<-[:REVISION_OF*]-(next:Entity) "
-             f"WHERE e.uuid='{uuid}' "
+    query = ("MATCH n=(e:Entity)<-[:REVISION_OF*]-(next:Entity) "
+             "WHERE e.uuid = $uuid "
              f"WITH length(n) as n_len, collect(distinct next{collect_prop}) as next_revisions "
              f"RETURN collect(distinct next_revisions) AS {record_field_name}")
 
@@ -1129,7 +1130,7 @@ def get_next_multi_revisions(neo4j_driver, uuid, property_key=None):
     logger.info(query)
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(_execute_readonly_tx, query)
+        record = session.read_transaction(_execute_readonly_tx, query, uuid=uuid)
 
         if record and record[record_field_name]:
             if property_key:
@@ -1167,13 +1168,13 @@ def get_previous_revisions(neo4j_driver, uuid, property_key=None):
 
     if property_key:
         query = (f"MATCH (e:Entity)-[:REVISION_OF*]->(prev:Entity) "
-                 f"WHERE e.uuid='{uuid}' "
+                 f"WHERE e.uuid = $uuid "
                  # COLLECT() returns a list
                  # apoc.coll.toSet() reruns a set containing unique nodes
                  f"RETURN apoc.coll.toSet(COLLECT(prev.{property_key})) AS {record_field_name}")
     else:
         query = (f"MATCH (e:Entity)-[:REVISION_OF*]->(prev:Entity) "
-                 f"WHERE e.uuid='{uuid}' "
+                 f"WHERE e.uuid = $uuid "
                  # COLLECT() returns a list
                  # apoc.coll.toSet() reruns a set containing unique nodes
                  f"RETURN apoc.coll.toSet(COLLECT(prev)) AS {record_field_name}")
@@ -1182,7 +1183,7 @@ def get_previous_revisions(neo4j_driver, uuid, property_key=None):
     logger.info(query)
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(_execute_readonly_tx, query)
+        record = session.read_transaction(_execute_readonly_tx, query, uuid=uuid)
 
         if record and record[record_field_name]:
             if property_key:
@@ -1219,13 +1220,13 @@ def get_next_revisions(neo4j_driver, uuid, property_key=None):
 
     if property_key:
         query = (f"MATCH (e:Entity)<-[:REVISION_OF*]-(next:Entity) "
-                 f"WHERE e.uuid='{uuid}' "
+                 f"WHERE e.uuid = $uuid "
                  # COLLECT() returns a list
                  # apoc.coll.toSet() reruns a set containing unique nodes
                  f"RETURN apoc.coll.toSet(COLLECT(next.{property_key})) AS {record_field_name}")
     else:
         query = (f"MATCH (e:Entity)<-[:REVISION_OF*]-(next:Entity) "
-                 f"WHERE e.uuid='{uuid}' "
+                 f"WHERE e.uuid = $uuid "
                  # COLLECT() returns a list
                  # apoc.coll.toSet() reruns a set containing unique nodes
                  f"RETURN apoc.coll.toSet(COLLECT(next)) AS {record_field_name}")
@@ -1234,7 +1235,7 @@ def get_next_revisions(neo4j_driver, uuid, property_key=None):
     logger.info(query)
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(_execute_readonly_tx, query)
+        record = session.read_transaction(_execute_readonly_tx, query, uuid=uuid)
 
         if record and record[record_field_name]:
             if property_key:
@@ -1256,34 +1257,28 @@ neo4j_driver : neo4j.Driver object
     The neo4j database connection pool
 collection_uuid : str
     The uuid of target collection
-entitiy_uuids_list : list
+entity_uuids_list : list
     A list of entity uuids to be linked to collection
 """
 
 
-def add_entities_to_collection(neo4j_driver, collection_uuid, entitiy_uuids_list):
-    # Join the list of uuids and wrap each string in single quote
-    joined_str = ', '.join("'{0}'".format(dataset_uuid) for dataset_uuid in entitiy_uuids_list)
-    # Format a string to be used in Cypher query.
-    # E.g., ['fb6757b606ac35be7fa85062fde9c2e1', 'ku0gd44535be7fa85062fde98gt5']
-    entitiy_uuids_list = '[' + joined_str + ']'
-
+def add_entities_to_collection(neo4j_driver, collection_uuid, entity_uuids_list):
     try:
         with neo4j_driver.session() as session:
             tx = session.begin_transaction()
 
             logger.info("Create relationships between the target Collection and the given Entities")
 
-            query = (f"MATCH (c:Collection), (e:Entity) "
-                     f"WHERE c.uuid = '{collection_uuid}' AND e.uuid IN {entitiy_uuids_list} "
+            query = ("MATCH (c:Collection), (e:Entity) "
+                     "WHERE c.uuid = $collection_uuid AND e.uuid IN $entity_uuids_list "
                      # Use MERGE instead of CREATE to avoid creating the relationship multiple times
                      # MERGE creates the relationship only if there is no existing relationship
-                     f"MERGE (c)<-[r:IN_COLLECTION]-(e)")
+                     "MERGE (c)<-[r:IN_COLLECTION]-(e)")
 
             logger.info("======add_entities_to_collection() query======")
             logger.info(query)
 
-            tx.run(query)
+            tx.run(query, collection_uuid=collection_uuid, entity_uuids_list=entity_uuids_list)
             tx.commit()
     except TransactionError as te:
         msg = f"TransactionError from calling add_entities_to_collection(): {te.value}"
@@ -1299,7 +1294,7 @@ def add_entities_to_collection(neo4j_driver, collection_uuid, entitiy_uuids_list
 
 
 """
-Retrive the full tree above the given entity
+Retrieve the full tree above the given entity
 
 Parameters
 ----------
@@ -1316,7 +1311,7 @@ def get_provenance(neo4j_driver, uuid, depth, return_descendants=None, data_acce
     # max_level_str is the string used to put a limit on the number of levels to traverse
     max_level_str = ''
     if depth is not None and len(str(depth)) > 0:
-        max_level_str = f"maxLevel: {depth}, "
+        max_level_str = "maxLevel: $depth, "
 
     relationship_filter = 'USED>|WAS_GENERATED_BY>'
     if return_descendants:
@@ -1327,16 +1322,16 @@ def get_provenance(neo4j_driver, uuid, depth, return_descendants=None, data_acce
     if data_access_level:
         allow_nodes = ', allowlistNodes: allowlistNodes'
         predicate = ("MATCH(allowedEntity:Entity)-[:WAS_GENERATED_BY]->(allowedActivity:Activity) "
-                     f"WHERE (allowedEntity.data_access_level = '{data_access_level}' OR allowedEntity.status = 'Published')  "
+                     "WHERE (allowedEntity.data_access_level = $data_access_level OR allowedEntity.status = 'Published')  "
                      "WITH n, collect(allowedEntity)+collect(allowedActivity) AS allowlistNodes ")
 
     # More info on apoc.path.subgraphAll() procedure: https://neo4j.com/labs/apoc/4.0/graph-querying/expand-subgraph/
-    query = (f"MATCH (n:Entity) "
-             f"WHERE n.uuid = '{uuid}' {predicate} "
+    query = ("MATCH (n:Entity) "
+             f"WHERE n.uuid = $uuid {predicate} "
              f"CALL apoc.path.subgraphAll(n, {{ {max_level_str} relationshipFilter:'{relationship_filter}' {allow_nodes} }}) "
-             f"YIELD nodes, relationships "
-             f"WITH [rel in relationships | rel {{ .*, fromNode: {{ label:labels(startNode(rel))[0], uuid:startNode(rel).uuid }}, toNode: {{ label:labels(endNode(rel))[0], uuid:endNode(rel).uuid }}, rel_data: {{ type: type(rel) }} }} ] as rels, "
-             f"[node in nodes | node {{ .*, label:labels(node)[0] }} ] as nodes "
+             "YIELD nodes, relationships "
+             "WITH [rel in relationships | rel { .*, fromNode: { label:labels(startNode(rel))[0], uuid:startNode(rel).uuid }, toNode: { label:labels(endNode(rel))[0], uuid:endNode(rel).uuid }, rel_data: { type: type(rel) } } ] as rels, "
+             "[node in nodes | node { .*, label:labels(node)[0] } ] as nodes "
              "WITH rels, nodes, [x in nodes WHERE x.label = 'Entity' | x] as entities "
              # let's call a sub procedure in order to get the associated protocol_url and creation_action properties
              "CALL { "
@@ -1349,14 +1344,14 @@ def get_provenance(neo4j_driver, uuid, depth, return_descendants=None, data_acce
              "WITH [x in nodes WHERE x.label <> 'Entity' | x] as activities, collect(x) as x2 "
              "RETURN apoc.coll.union(x2, activities) as n2 "
              "} "
-             f"WITH {{ nodes:n2, relationships:rels }} as json "
+             "WITH { nodes:n2, relationships:rels } as json "
              f"RETURN json")
 
     logger.info("======get_provenance() query======")
     logger.info(query)
 
     with neo4j_driver.session() as session:
-        return session.read_transaction(_execute_readonly_tx, query)
+        return session.read_transaction(_execute_readonly_tx, query, uuid=uuid, depth=depth, data_access_level=data_access_level)
 
 
 """
@@ -1380,21 +1375,21 @@ def get_dataset_latest_revision(neo4j_driver, uuid, public=False):
     if public:
         # Don't use [r:REVISION_OF] because
         # Binding a variable length relationship pattern to a variable ('r') is deprecated
-        query = (f"MATCH (e:Dataset)<-[:REVISION_OF*]-(next:Dataset) "
-                 f"WHERE e.uuid='{uuid}' AND next.status='Published' "
-                 f"WITH LAST(COLLECT(next)) as latest "
+        query = ("MATCH (e:Dataset)<-[:REVISION_OF*]-(next:Dataset) "
+                 "WHERE e.uuid = $uuid AND next.status='Published' "
+                 "WITH LAST(COLLECT(next)) as latest "
                  f"RETURN latest AS {record_field_name}")
     else:
-        query = (f"MATCH (e:Dataset)<-[:REVISION_OF*]-(next:Dataset) "
-                 f"WHERE e.uuid='{uuid}' "
-                 f"WITH LAST(COLLECT(next)) as latest "
+        query = ("MATCH (e:Dataset)<-[:REVISION_OF*]-(next:Dataset) "
+                 "WHERE e.uuid = $uuid "
+                 "WITH LAST(COLLECT(next)) as latest "
                  f"RETURN latest AS {record_field_name}")
 
     logger.info("======get_dataset_latest_revision() query======")
     logger.info(query)
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(_execute_readonly_tx, query)
+        record = session.read_transaction(_execute_readonly_tx, query, uuid=uuid)
 
         # Only convert when record[record_field_name] is not None (namely the cypher result is not null)
         if record and record[record_field_name]:
@@ -1422,14 +1417,14 @@ def get_dataset_revision_number(neo4j_driver, uuid):
     # Don't use [r:REVISION_OF] because
     # Binding a variable length relationship pattern to a variable ('r') is deprecated
     query = (f"MATCH (e:Dataset)-[:REVISION_OF*]->(prev:Dataset) "
-             f"WHERE e.uuid='{uuid}' "
+             f"WHERE e.uuid = $uuid "
              f"RETURN COUNT(prev) AS {record_field_name}")
 
     logger.info("======get_dataset_revision_number() query======")
     logger.info(query)
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(_execute_readonly_tx, query)
+        record = session.read_transaction(_execute_readonly_tx, query, uuid=uuid)
 
         if record and record[record_field_name]:
             # The revision number is the count of previous revisions plus 1
@@ -1452,15 +1447,15 @@ uuid : str
 
 def get_associated_organs_from_dataset(neo4j_driver, dataset_uuid):
     results = []
-    query = (f"MATCH (ds:Dataset)-[*]->(organ:Sample {{sample_category:'{Ontology.ops().specimen_categories().ORGAN}'}}) "
-             f"WHERE ds.uuid='{dataset_uuid}'"
+    query = ("MATCH (ds:Dataset)-[*]->(organ:Sample {sample_category: 'Organ'}) "
+             "WHERE ds.uuid = $dataset_uuid "
              f"RETURN apoc.coll.toSet(COLLECT(organ)) AS {record_field_name}")
 
     logger.info("======get_associated_organs_from_dataset() query======")
     logger.info(query)
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(_execute_readonly_tx, query)
+        record = session.read_transaction(_execute_readonly_tx, query, dataset_uuid=dataset_uuid)
 
         if record and record[record_field_name]:
             results = _nodes_to_dicts(record[record_field_name])
@@ -1468,7 +1463,7 @@ def get_associated_organs_from_dataset(neo4j_driver, dataset_uuid):
     return results
 
 
-""" Retrieve the list of samples associated with a given dataset
+""" Retrieve the list of samples associated with a given dataset, excluding organs
 
 Args:
     neo4j_driver (neo4j.Driver):
@@ -1485,15 +1480,15 @@ def get_associated_samples_from_dataset(neo4j_driver, dataset_uuid):
     results = []
 
     # specimen_type -> sample_category 12/15/2022
-    query = (f"MATCH (ds:Dataset)-[*]->(sample:Sample) "
-             f"WHERE ds.uuid='{dataset_uuid}' AND NOT sample.sample_category = 'organ' "
+    query = ("MATCH (ds:Dataset)-[*]->(sample:Sample) "
+             "WHERE ds.uuid = $dataset_uuid AND NOT sample.sample_category = 'Organ' "
              f"RETURN apoc.coll.toSet(COLLECT(sample)) AS {record_field_name}")
 
     logger.info("======get_associated_samples_from_dataset() query======")
     logger.info(query)
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(schema_neo4j_queries.execute_readonly_tx, query)
+        record = session.read_transaction(schema_neo4j_queries.execute_readonly_tx, query, dataset_uuid=dataset_uuid)
 
         if record and record[record_field_name]:
             results = schema_neo4j_queries.nodes_to_dicts(record[record_field_name])
@@ -1518,15 +1513,15 @@ def get_associated_sources_from_dataset(neo4j_driver, dataset_uuid):
     results = []
 
     # specimen_type -> sample_category 12/15/2022
-    query = (f"MATCH (ds:Dataset)-[*]->(source:Source) "
-             f"WHERE ds.uuid='{dataset_uuid}'"
+    query = ("MATCH (ds:Dataset)-[*]->(source:Source) "
+             "WHERE ds.uuid = $dataset_uuid "
              f"RETURN apoc.coll.toSet(COLLECT(source)) AS {record_field_name}")
 
     logger.info("======get_associated_sources_from_dataset() query======")
     logger.info(query)
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(schema_neo4j_queries.execute_readonly_tx, query)
+        record = session.read_transaction(schema_neo4j_queries.execute_readonly_tx, query, dataset_uuid=dataset_uuid)
 
         if record and record[record_field_name]:
             results = schema_neo4j_queries.nodes_to_dicts(record[record_field_name])
@@ -1778,23 +1773,26 @@ param_dict : dictionary
 
 def get_sample_prov_info(neo4j_driver, param_dict):
     group_uuid_query_string = ''
+    group_uuid = None
     if 'group_uuid' in param_dict:
-        group_uuid_query_string = f" WHERE toUpper(s.group_uuid) = '{param_dict['group_uuid'].upper()}'"
+        group_uuid_query_string = "WHERE toUpper(s.group_uuid) = $group_uuid "
+        group_uuid = param_dict['group_uuid'].upper()
+
     query = (
-        f" MATCH (s:Sample)-[*]->(d:Source)"
-        f" {group_uuid_query_string}"
-        f" WITH s, d"
-        f" OPTIONAL MATCH (s)-[*]->(organ:Sample{{sample_category: '{Ontology.ops().specimen_categories().ORGAN}'}})"
-        f" WITH s, organ, d"
-        f" MATCH (s)-[:WAS_GENERATED_BY]->(:Activity)-[:USED]->(da)"
-        f" RETURN s.uuid, s.lab_tissue_sample_id, s.group_name, s.created_by_user_email, s.metadata, s.rui_location,"
-        f" d.uuid, d.metadata, organ.uuid, organ.sample_category, organ.metadata, da.uuid, da.entity_type, "
-        f"s.sample_category, organ.organ, s.organ, s.sennet_id, organ.sennet_id, "
-        f"d.sennet_id"
+        "MATCH (s:Sample)-[*]->(d:Source) "
+        f"{group_uuid_query_string}"
+        "WITH s, d "
+        "OPTIONAL MATCH (s)-[*]->(organ:Sample{sample_category: 'Organ'}) "
+        "WITH s, organ, d "
+        "MATCH (s)-[:WAS_GENERATED_BY]->(:Activity)-[:USED]->(da) "
+        "RETURN s.uuid, s.lab_tissue_sample_id, s.group_name, s.created_by_user_email, s.metadata, s.rui_location, "
+        "d.uuid, d.metadata, organ.uuid, organ.sample_category, organ.metadata, da.uuid, da.entity_type, "
+        "s.sample_category, organ.organ, s.organ, s.sennet_id, organ.sennet_id, "
+        "d.sennet_id"
     )
 
     logger.info("======get_sample_prov_info() query======")
-    logger.info(query)
+    logger.info(query, group_uuid=group_uuid)
 
     with neo4j_driver.session() as session:
         # Because we're returning multiple things, we use session.run rather than session.read_transaction
@@ -1913,14 +1911,14 @@ def _create_relationship_tx(tx, source_node_uuid, target_node_uuid, relationship
         outgoing = direction
 
     query = ("MATCH (s), (t) "
-             f"WHERE s.uuid = '{source_node_uuid}' AND t.uuid = '{target_node_uuid}' "
+             f"WHERE s.uuid = $source_node_uuid AND t.uuid = $target_node_uuid "
              f"CREATE (s){incoming}[r:{relationship}]{outgoing}(t) "
              f"RETURN type(r) AS {record_field_name}")
 
     logger.info("======_create_relationship_tx() query======")
     logger.info(query)
 
-    tx.run(query)
+    tx.run(query, source_node_uuid=source_node_uuid, target_node_uuid=target_node_uuid)
 
 
 """
@@ -2095,25 +2093,25 @@ dict
 """
 def get_siblings(neo4j_driver, uuid, status, prop_key, include_revisions):
     sibling_uuids = schema_neo4j_queries.get_siblings(neo4j_driver, uuid, property_key='uuid')
-    sibling_uuids_string = str(sibling_uuids)
+
     revision_query_string = "AND NOT (e)<-[:REVISION_OF]-(:Entity) "
     status_query_string = ""
     prop_query_string = f"RETURN apoc.coll.toSet(COLLECT(e)) AS {record_field_name}"
     if include_revisions:
         revision_query_string = ""
     if status is not None:
-        status_query_string = f"AND (NOT e:Dataset OR TOLOWER(e.status) = '{status}') "
+        status_query_string = "AND (NOT e:Dataset OR TOLOWER(e.status) = $status) "
     if prop_key is not None:
         prop_query_string = f"RETURN apoc.coll.toSet(COLLECT(e.{prop_key})) AS {record_field_name}"
     results = []
     query = ("MATCH (e:Entity) "
-             f"WHERE e.uuid IN {sibling_uuids_string} "
+             "WHERE e.uuid IN $sibling_uuids "
              f"{revision_query_string}"
              f"{status_query_string}"
              f"{prop_query_string}")
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(schema_neo4j_queries.execute_readonly_tx, query)
+        record = session.read_transaction(schema_neo4j_queries.execute_readonly_tx, query, status=status, sibling_uuids=sibling_uuids)
 
         if record and record[record_field_name]:
             if prop_key:
@@ -2144,21 +2142,22 @@ dict
 """
 def get_tuplets(neo4j_driver, uuid, status, prop_key):
     tuplet_uuids = schema_neo4j_queries.get_tuplets(neo4j_driver, uuid, property_key='uuid')
-    tuplets_uuids_string = str(tuplet_uuids)
+
     status_query_string = ""
     prop_query_string = f"RETURN apoc.coll.toSet(COLLECT(e)) AS {record_field_name}"
     if status is not None:
-        status_query_string = f"AND (NOT e:Dataset OR TOLOWER(e.status) = '{status}') "
+        status_query_string = "AND (NOT e:Dataset OR TOLOWER(e.status) = $status) "
     if prop_key is not None:
         prop_query_string = f"RETURN apoc.coll.toSet(COLLECT(e.{prop_key})) AS {record_field_name}"
+
     results = []
     query = ("MATCH (e:Entity) "
-             f"WHERE e.uuid IN {tuplets_uuids_string} "
+             "WHERE e.uuid IN $tuplet_uuids "
              f"{status_query_string}"
              f"{prop_query_string}")
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(schema_neo4j_queries.execute_readonly_tx, query)
+        record = session.read_transaction(schema_neo4j_queries.execute_readonly_tx, query, status=status, tuplet_uuids=tuplet_uuids)
 
         if record and record[record_field_name]:
             if prop_key:
