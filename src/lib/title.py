@@ -71,7 +71,11 @@ def get_attributes_from_source_metadata(source_type: str, source_metadata: dict)
                 if data["grouping_concept_preferred_term"].lower() == "age":
                     # The actual value of age stored in "data_value" instead of "preferred_term"
                     source_grouping_concepts_dict["age"] = data["data_value"]
-                    source_grouping_concepts_dict["age_units"] = data["units"][0:-1].lower()
+                    units = data["units"].lower()
+                    if units[-1] == "s":
+                        # Make sure the units are singular
+                        units = units[0:-1]
+                    source_grouping_concepts_dict["age_units"] = units
                 elif data["grouping_concept_preferred_term"].lower() == "race":
                     source_grouping_concepts_dict["race"] = data["preferred_term"].lower()
                 elif data["grouping_concept_preferred_term"].lower() == "sex":
