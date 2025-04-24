@@ -11,11 +11,13 @@ from schema import schema_manager
 logger = logging.getLogger(__name__)
 
 # The filed name of the single result record
-record_field_name = 'result'
+record_field_name = "result"
+
 
 ####################################################################################################
 ## Directly called by schema_triggers.py
 ####################################################################################################
+
 
 def get_dataset_direct_ancestors(neo4j_driver, uuid, property_key=None):
     """
@@ -37,13 +39,13 @@ def get_dataset_direct_ancestors(neo4j_driver, uuid, property_key=None):
     """
     results = []
     if property_key:
-        query = (f"MATCH (t:Entity)<-[:USED]-(:Activity)<-[:WAS_GENERATED_BY]-(d:Dataset) "
-                 f"WHERE d.uuid = '{uuid}' "
+        query = ("MATCH (t:Entity)<-[:USED]-(:Activity)<-[:WAS_GENERATED_BY]-(d:Dataset) "
+                 "WHERE d.uuid = $uuid "
                  f"RETURN apoc.coll.toSet(COLLECT(t.{property_key})) AS {record_field_name}")
     else:
         _activity_query_part = activity_query_part(for_all_match=True)
-        query = (f"MATCH (t:Entity)<-[:USED]-(:Activity)<-[:WAS_GENERATED_BY]-(d:Dataset) "
-                 f"WHERE d.uuid = '{uuid}' "
+        query = ("MATCH (t:Entity)<-[:USED]-(:Activity)<-[:WAS_GENERATED_BY]-(d:Dataset) "
+                 "WHERE d.uuid = $uuid "
                  f"{_activity_query_part} {record_field_name}")
 
     logger.info("======get_dataset_direct_ancestors() query======")
@@ -51,7 +53,7 @@ def get_dataset_direct_ancestors(neo4j_driver, uuid, property_key=None):
 
     # Sessions will often be created and destroyed using a with block context
     with neo4j_driver.session() as session:
-        record = session.read_transaction(_execute_readonly_tx, query)
+        record = session.read_transaction(_execute_readonly_tx, query, uuid=uuid)
 
         if record and record[record_field_name]:
             results = record[record_field_name]
@@ -84,16 +86,16 @@ def get_dataset_direct_descendants(neo4j_driver, uuid, property_keys=None, match
         with_str = ', '.join([f's.{key} AS {key}' for key in property_keys])
         return_str = ', '.join([f'{key}: {key}' for key in property_keys])
         query = (
-            f"MATCH (t:Dataset)<-[:USED]-(a:Activity)<-[:WAS_GENERATED_BY]-(s:Entity) "
+            "MATCH (t:Dataset)<-[:USED]-(a:Activity)<-[:WAS_GENERATED_BY]-(s:Entity) "
             f"WHERE t.uuid = $uuid {match_case} "
             f"WITH {with_str}, a.creation_action AS creation_action "
             f"RETURN COLLECT(apoc.map.merge({{{return_str}}}, {{creation_action: creation_action}})) AS {record_field_name}"
         )
     else:
         query = (
-            f"MATCH (t:Dataset)<-[:USED]-(a:Activity)<-[:WAS_GENERATED_BY]-(s:Entity) "
+            "MATCH (t:Dataset)<-[:USED]-(a:Activity)<-[:WAS_GENERATED_BY]-(s:Entity) "
             f"WHERE t.uuid = $uuid {match_case} "
-            f"WITH s, a.creation_action AS creation_action "
+            "WITH s, a.creation_action AS creation_action "
             f"RETURN COLLECT(apoc.map.merge(s, {{creation_action: creation_action}})) AS {record_field_name}"
         )
     logger.info("======get_dataset_direct_descendants() query======")
@@ -127,14 +129,14 @@ def filter_ancestors_by_type(neo4j_driver, direct_ancestor_uuids, entity_type):
         A dictionary of entity uuids that don't pass the filter, grouped by entity_type
     """
 
-    query = (f"MATCH (e:Entity) "
-             f"WHERE e.uuid in {direct_ancestor_uuids} AND toLower(e.entity_type) <> '{entity_type.lower()}' "
-             f"RETURN e.entity_type AS entity_type, collect(e.uuid) AS uuids")
+    query = ("MATCH (e:Entity) "
+             "WHERE e.uuid in $direct_ancestor_uuids AND toLower(e.entity_type) <> $entity_type "
+             "RETURN e.entity_type AS entity_type, collect(e.uuid) AS uuids")
     logger.info("======filter_ancestors_by_type======")
     logger.info(query)
 
     with neo4j_driver.session() as session:
-        records = session.run(query).data()
+        records = session.run(query, direct_ancestor_uuids=direct_ancestor_uuids, entity_type=entity_type.lower()).data()
 
     return records if records else None
 
@@ -166,7 +168,7 @@ def get_origin_samples(neo4j_driver, uuids: List, is_bulk: bool = True):
                        "WITH e, COLLECT(x) as list return collect(apoc.map.fromPairs([['uuid', e.uuid], ['result', list]])) AS ")
 
     query = ("MATCH (e:Entity)-[:WAS_GENERATED_BY|USED*]->(s:Sample) "
-             f"WHERE e.uuid IN $uuids and s.sample_category='Organ' "
+             "WHERE e.uuid IN $uuids and s.sample_category='Organ' "
              "MATCH (e2:Entity)-[:WAS_GENERATED_BY]->(a:Activity) WHERE e2.uuid = s.uuid "
              f"{return_part} {record_field_name}")
 
@@ -181,58 +183,52 @@ def get_origin_samples(neo4j_driver, uuids: List, is_bulk: bool = True):
     return result
 
 
-
-def get_dataset_organ_and_source_info(neo4j_driver, uuid):
+def get_dataset_source_organs_info(neo4j_driver, dataset_uuid: str) -> List[dict]:
     """
-    Get the sample organ name and source metadata information of the given dataset uuid
+    For every Sample organ associated with the given dataset_uuid, retrieve the
+    organ information and organ source information for use in composing a title for the Dataset.
 
     Parameters
     ----------
     neo4j_driver : neo4j.Driver object
         The neo4j database connection pool
-    uuid : str
-        The uuid of target entity
+    dataset_uuid : str
+        The UUID of a Dataset
 
     Returns
     -------
-    str: The sample organ name
-    str: The source metadata (string representation of a Python dict)
+    list : List of dicts that contain 'source_uuid', 'source_type', 'organ_type' and 'source_metadata'
     """
-    organ_type = None
-    source_metadata = None
-    source_type = None
-
     with neo4j_driver.session() as session:
-        sample_query = ("MATCH (e:Dataset)-[:USED|WAS_GENERATED_BY*]->(s:Sample) WHERE "
-                 f"e.uuid='{uuid}' AND s.sample_category is not null and s.sample_category='Organ' "
-                 "MATCH (s2:Sample)-[:USED|WAS_GENERATED_BY*]->(d:Source) WHERE s2.uuid=s.uuid AND s2.sample_category is not null "
-                 "RETURN COLLECT({source_metadata: d.metadata, source_type: d.source_type, "
-                 "organ_type: CASE WHEN s.organ is not null THEN s.organ "
-                 "ELSE s.sample_category END}) "
-                 f"AS {record_field_name}")
+        ds_sources_organs_query = (
+            "MATCH (d:Dataset)-[:USED|WAS_GENERATED_BY*]->(org:Sample)-[:USED|WAS_GENERATED_BY*]->(s:Source) "
+            "WHERE d.uuid = $dataset_uuid "
+            "AND org.sample_category = 'Organ' "
+            "AND org.organ IS NOT NULL "
+            "RETURN apoc.coll.toSet(COLLECT("
+            "{source_uuid: s.uuid, source_type: s.source_type, "
+            "source_metadata: CASE WHEN s.metadata IS NOT NULL THEN apoc.convert.fromJsonMap(s.metadata) ELSE {} END, "
+            "organ_type: org.organ}"
+            ")) AS source_organ_set"
+        )
 
-        logger.info("======get_dataset_organ_and_source_info() sample_query======")
-        logger.info(sample_query)
+        logger.info("======get_dataset_source_organs_info() ds_sources_organs_query======")
+        logger.info(ds_sources_organs_query)
 
         with neo4j_driver.session() as session:
-            record = session.read_transaction(_execute_readonly_tx, sample_query)
+            record = session.read_transaction(execute_readonly_tx, ds_sources_organs_query, dataset_uuid=dataset_uuid)
 
-            if record and record[record_field_name]:
-                source_metadata = set([d['source_metadata'] for d in record[record_field_name]])
-                source_type = next(iter(set([d['source_type'] for d in record[record_field_name]])))
-                organ_type = set([d['organ_type'] for d in record[record_field_name]])
-
-    return organ_type, source_metadata, source_type
+    return record["source_organ_set"] if record and record["source_organ_set"] else []
 
 
 def get_entity_type(neo4j_driver, entity_uuid: str) -> str:
-    query: str = f"Match (ent {{uuid: '{entity_uuid}'}}) return ent.entity_type"
+    query: str = "Match (ent {uuid: $entity_uuid}) return ent.entity_type"
 
     logger.info("======get_entity_type() query======")
     logger.info(query)
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(_execute_readonly_tx, query)
+        record = session.read_transaction(_execute_readonly_tx, query, entity_uuid=entity_uuid)
         if record and len(record) == 1:
             return record[0]
 
@@ -240,18 +236,17 @@ def get_entity_type(neo4j_driver, entity_uuid: str) -> str:
 
 
 def get_entity_creation_action_activity(neo4j_driver, entity_uuid: str) -> str:
-    query: str = f"MATCH (ds {{uuid:'{entity_uuid}'}})-[:WAS_GENERATED_BY]->(a:Activity) RETURN a.creation_action"
+    query: str = "MATCH (ds {uuid: $entity_uuid})-[:WAS_GENERATED_BY]->(a:Activity) RETURN a.creation_action"
 
     logger.info("======get_entity_creation_action() query======")
     logger.info(query)
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(execute_readonly_tx, query)
+        record = session.read_transaction(execute_readonly_tx, query, entity_uuid=entity_uuid)
         if record and len(record) == 1:
             return record[0]
 
     return None
-
 
 
 def link_collection_to_entity(neo4j_driver, entity_uuid, direct_ancestor_uuids):
@@ -280,11 +275,11 @@ def link_collection_to_entity(neo4j_driver, entity_uuid, direct_ancestor_uuids):
 
             tx.commit()
     except TransactionError as te:
-        msg = "TransactionError from calling link_collection_to_entity(): "
+        msg = f"TransactionError from calling link_collection_to_entity(): {te}"
         # Log the full stack trace, prepend a line with our message
         logger.exception(msg)
 
-        if tx.closed() == False:
+        if tx.closed() is False:
             # Log the full stack trace, prepend a line with our message
             logger.info("Failed to commit link_collection_to_entity() transaction, rollback")
             tx.rollback()
@@ -317,30 +312,25 @@ def link_collection_to_entities(neo4j_driver, collection_uuid, entities_uuid_lis
             tx = session.begin_transaction()
 
             # First delete all the old linkages between this Collection and its member Entities
-            _delete_collection_linkages_tx(tx=tx
-                                           , uuid=collection_uuid)
+            _delete_collection_linkages_tx(tx=tx, uuid=collection_uuid)
 
             # Create relationship from each member Entity node to this Collection node
             for entity_uuid in entities_uuid_list:
-                _create_relationship_tx(tx=tx
-                                        , source_node_uuid=entity_uuid
-                                        , direction='->'
-                                        , target_node_uuid=collection_uuid
-                                        , relationship='IN_COLLECTION')
+                _create_relationship_tx(tx=tx, source_node_uuid=entity_uuid, direction='->',
+                                        target_node_uuid=collection_uuid, relationship='IN_COLLECTION')
 
             tx.commit()
     except TransactionError as te:
-        msg = "TransactionError from calling link_collection_to_entities(): "
+        msg = f"TransactionError from calling link_collection_to_entities(): {te}"
         # Log the full stack trace, prepend a line with our message
         logger.exception(msg)
 
-        if tx.closed() == False:
+        if tx.closed() is False:
             # Log the full stack trace, prepend a line with our message
             logger.info("Failed to commit link_collection_to_entities() transaction, rollback")
             tx.rollback()
 
         raise TransactionError(msg)
-
 
 
 def link_entity_to_agent(neo4j_driver, entity_uuid, direct_ancestor_uuids, activity_data_dict):
@@ -382,11 +372,11 @@ def link_entity_to_agent(neo4j_driver, entity_uuid, direct_ancestor_uuids, activ
 
             tx.commit()
     except TransactionError as te:
-        msg = "TransactionError from calling link_entity_to_agent(): "
+        msg = f"TransactionError from calling link_entity_to_agent(): {te}"
         # Log the full stack trace, prepend a line with our message
         logger.exception(msg)
 
-        if tx.closed() == False:
+        if tx.closed() is False:
             # Log the full stack trace, prepend a line with our message
             logger.info("Failed to commit link_entity_to_agent() transaction, rollback")
             tx.rollback()
@@ -432,17 +422,16 @@ def link_entity_to_entity_via_activity(neo4j_driver, entity_uuid, direct_ancesto
 
             tx.commit()
     except TransactionError as te:
-        msg = "TransactionError from calling link_entity_to_entity_via_activity(): "
+        msg = f"TransactionError from calling link_entity_to_entity_via_activity(): {te}"
         # Log the full stack trace, prepend a line with our message
         logger.exception(msg)
 
-        if tx.closed() == False:
+        if tx.closed() is False:
             # Log the full stack trace, prepend a line with our message
             logger.info("Failed to commit link_entity_to_entity_via_activity() transaction, rollback")
             tx.rollback()
 
         raise TransactionError(msg)
-
 
 
 def link_entity_to_entity(neo4j_driver, entity_uuid, direct_ancestor_uuids, activity_data_dict):
@@ -474,17 +463,16 @@ def link_entity_to_entity(neo4j_driver, entity_uuid, direct_ancestor_uuids, acti
 
             tx.commit()
     except TransactionError as te:
-        msg = "TransactionError from calling link_entity_to_entity(): "
+        msg = f"TransactionError from calling link_entity_to_entity(): {te}"
         # Log the full stack trace, prepend a line with our message
         logger.exception(msg)
 
-        if tx.closed() == False:
+        if tx.closed() is False:
             # Log the full stack trace, prepend a line with our message
             logger.info("Failed to commit link_entity_to_entity() transaction, rollback")
             tx.rollback()
 
         raise TransactionError(msg)
-
 
 
 def link_entity_to_previous_revision(neo4j_driver, entity_uuid, previous_revision_entity_uuid):
@@ -510,11 +498,11 @@ def link_entity_to_previous_revision(neo4j_driver, entity_uuid, previous_revisio
 
             tx.commit()
     except TransactionError as te:
-        msg = "TransactionError from calling link_entity_to_previous_revision(): "
+        msg = f"TransactionError from calling link_entity_to_previous_revision(): {te}"
         # Log the full stack trace, prepend a line with our message
         logger.exception(msg)
 
-        if tx.closed() == False:
+        if tx.closed() is False:
             # Log the full stack trace, prepend a line with our message
             logger.info("Failed to commit link_entity_to_previous_revision() transaction, rollback")
             tx.rollback()
@@ -542,8 +530,8 @@ def get_previous_revision_uuids(neo4j_driver, uuid):
 
     # Don't use [r:REVISION_OF] because
     # Binding a variable length relationship pattern to a variable ('r') is deprecated
-    query = (f"MATCH p=(e:Entity)-[:REVISION_OF*]->(previous_revision:Entity) "
-             f"WHERE e.uuid = '{uuid}' "
+    query = ("MATCH p=(e:Entity)-[:REVISION_OF*]->(previous_revision:Entity) "
+             "WHERE e.uuid = $uuid "
              "WITH length(p) as p_len, collect(distinct previous_revision.uuid) AS prev_revisions "
              f"RETURN collect(distinct prev_revisions) AS {record_field_name}")
 
@@ -551,13 +539,12 @@ def get_previous_revision_uuids(neo4j_driver, uuid):
     logger.info(query)
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(_execute_readonly_tx, query)
+        record = session.read_transaction(_execute_readonly_tx, query, uuid=uuid)
 
         if record and record[record_field_name]:
             results = record[record_field_name]
 
     return results
-
 
 
 def get_next_revision_uuids(neo4j_driver, uuid):
@@ -580,8 +567,8 @@ def get_next_revision_uuids(neo4j_driver, uuid):
 
     # Don't use [r:REVISION_OF] because
     # Binding a variable length relationship pattern to a variable ('r') is deprecated
-    query = (f"MATCH n=(e:Entity)<-[:REVISION_OF*]-(next_revision:Entity) "
-             f"WHERE e.uuid = '{uuid}' "
+    query = ("MATCH n=(e:Entity)<-[:REVISION_OF*]-(next_revision:Entity) "
+             "WHERE e.uuid = $uuid "
              "WITH length(n) as n_len, collect(distinct next_revision.uuid) AS next_revisions "
              f"RETURN collect(distinct next_revisions) AS {record_field_name}")
 
@@ -589,13 +576,12 @@ def get_next_revision_uuids(neo4j_driver, uuid):
     logger.info(query)
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(_execute_readonly_tx, query)
+        record = session.read_transaction(_execute_readonly_tx, query, uuid=uuid)
 
         if record and record[record_field_name]:
             result = record[record_field_name]
 
     return result
-
 
 
 def get_previous_revision_uuid(neo4j_driver, uuid):
@@ -614,26 +600,24 @@ def get_previous_revision_uuid(neo4j_driver, uuid):
     dict
         The parent dict, can either be a Sample or Source
     """
-
     result = None
 
-    # Don't use [r:REVISION_OF] because 
+    # Don't use [r:REVISION_OF] because
     # Binding a variable length relationship pattern to a variable ('r') is deprecated
-    query = (f"MATCH (e:Entity)-[:REVISION_OF]->(previous_revision:Entity) "
-             f"WHERE e.uuid = '{uuid}' "
+    query = ("MATCH (e:Entity)-[:REVISION_OF]->(previous_revision:Entity) "
+             "WHERE e.uuid = $uuid "
              f"RETURN previous_revision.uuid AS {record_field_name}")
 
     logger.info("======get_previous_revision_uuid() query======")
     logger.info(query)
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(_execute_readonly_tx, query)
+        record = session.read_transaction(_execute_readonly_tx, query, uuid=uuid)
 
         if record and record[record_field_name]:
             result = record[record_field_name]
 
     return result
-
 
 
 def get_next_revision_uuid(neo4j_driver, uuid):
@@ -654,17 +638,17 @@ def get_next_revision_uuid(neo4j_driver, uuid):
     """
     result = None
 
-    # Don't use [r:REVISION_OF] because 
+    # Don't use [r:REVISION_OF] because
     # Binding a variable length relationship pattern to a variable ('r') is deprecated
-    query = (f"MATCH (e:Entity)<-[:REVISION_OF]-(next_revision:Entity) "
-             f"WHERE e.uuid = '{uuid}' "
+    query = ("MATCH (e:Entity)<-[:REVISION_OF]-(next_revision:Entity) "
+             "WHERE e.uuid = $uuid "
              f"RETURN next_revision.uuid AS {record_field_name}")
 
     logger.info("======get_next_revision_uuid() query======")
     logger.info(query)
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(_execute_readonly_tx, query)
+        record = session.read_transaction(_execute_readonly_tx, query, uuid=uuid)
 
         if record and record[record_field_name]:
             result = record[record_field_name]
@@ -693,19 +677,19 @@ def get_entity_collections(neo4j_driver, uuid, property_key=None):
     results = []
 
     if property_key:
-        query = (f"MATCH (e:Entity)-[:IN_COLLECTION]->(c:Collection) "
-                 f"WHERE e.uuid = '{uuid}' "
+        query = ("MATCH (e:Entity)-[:IN_COLLECTION]->(c:Collection) "
+                 "WHERE e.uuid = $uuid "
                  f"RETURN apoc.coll.toSet(COLLECT(c.{property_key})) AS {record_field_name}")
     else:
-        query = (f"MATCH (e:Entity)-[:IN_COLLECTION]->(c:Collection) "
-                 f"WHERE e.uuid = '{uuid}' "
+        query = ("MATCH (e:Entity)-[:IN_COLLECTION]->(c:Collection) "
+                 "WHERE e.uuid = $uuid "
                  f"RETURN apoc.coll.toSet(COLLECT(c)) AS {record_field_name}")
 
     logger.info("======get_entity_collections() query======")
     logger.info(query)
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(_execute_readonly_tx, query)
+        record = session.read_transaction(_execute_readonly_tx, query, uuid=uuid)
 
         if record and record[record_field_name]:
             if property_key:
@@ -716,7 +700,6 @@ def get_entity_collections(neo4j_driver, uuid, property_key=None):
                 results = _nodes_to_dicts(record[record_field_name])
 
     return results
-
 
 
 def get_dataset_upload(neo4j_driver, uuid):
@@ -737,22 +720,21 @@ def get_dataset_upload(neo4j_driver, uuid):
     """
     result = {}
 
-    query = (f"MATCH (e:Entity)-[:IN_UPLOAD]->(s:Upload) "
-             f"WHERE e.uuid = '{uuid}' "
+    query = ("MATCH (e:Entity)-[:IN_UPLOAD]->(s:Upload) "
+             "WHERE e.uuid = $uuid "
              f"RETURN s AS {record_field_name}")
 
     logger.info("======get_dataset_upload() query======")
     logger.info(query)
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(_execute_readonly_tx, query)
+        record = session.read_transaction(_execute_readonly_tx, query, uuid=uuid)
 
         if record and record[record_field_name]:
             # Convert the node to a dict
             result = _node_to_dict(record[record_field_name])
 
     return result
-
 
 
 def get_collection_entities(neo4j_driver, uuid, properties: Union[PropertyGroups, List[str]] = None, is_include_action: bool = True):
@@ -775,22 +757,20 @@ def get_collection_entities(neo4j_driver, uuid, properties: Union[PropertyGroups
     """
     results = []
 
-    query = (f"MATCH (t:Entity)-[:IN_COLLECTION]->(c:Collection|Epicollection) "
-             f"WHERE c.uuid = '{uuid}' "
+    query = ("MATCH (t:Entity)-[:IN_COLLECTION]->(c:Collection|Epicollection) "
+             "WHERE c.uuid = $uuid "
              f"{exclude_include_query_part(properties, is_include_action)}")
-
 
     logger.info("======get_collection_entities() query======")
     logger.info(query)
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(_execute_readonly_tx, query)
+        record = session.read_transaction(_execute_readonly_tx, query, uuid=uuid)
 
         if record and record[record_field_name]:
             results = record[record_field_name]
 
     return results
-
 
 
 def get_collection_datasets_data_access_levels(neo4j_driver, uuid):
@@ -813,24 +793,21 @@ def get_collection_datasets_data_access_levels(neo4j_driver, uuid):
     """
     results = []
 
-    query = (f"MATCH (d:Dataset)-[:IN_COLLECTION]->(c:Collection) "
-             f"WHERE c.uuid = '{uuid}' "
+    query = ("MATCH (d:Dataset)-[:IN_COLLECTION]->(c:Collection) "
+             "WHERE c.uuid = $uuid "
              f"RETURN COLLECT(DISTINCT d.data_access_level) AS {record_field_name}")
 
     logger.info("======get_collection_datasets_data_access_levels() query======")
     logger.info(query)
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(_execute_readonly_tx, query)
+        record = session.read_transaction(_execute_readonly_tx, query, uuid=uuid)
 
         if record and record[record_field_name]:
             # Just return the list of values
             results = record[record_field_name]
 
     return results
-
-
-
 
 
 def get_collection_datasets_statuses(neo4j_driver, uuid):
@@ -853,15 +830,15 @@ def get_collection_datasets_statuses(neo4j_driver, uuid):
     """
     results = []
 
-    query = (f"MATCH (d: Dataset)-[:IN_COLLECTION]->(c:Collection) "
-             f"WHERE c.uuid = '{uuid}' "
+    query = ("MATCH (d: Dataset)-[:IN_COLLECTION]->(c:Collection) "
+             "WHERE c.uuid = $uuid "
              f"RETURN COLLECT(DISTINCT d.status) AS {record_field_name}")
 
     logger.info("======get_collection_datasets_statuses() query======")
     logger.info(query)
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(_execute_readonly_tx, query)
+        record = session.read_transaction(_execute_readonly_tx, query, uuid=uuid)
 
         if record and record[record_field_name]:
             # Just return the list of values
@@ -870,7 +847,6 @@ def get_collection_datasets_statuses(neo4j_driver, uuid):
             results = []
 
     return results
-
 
 
 def link_datasets_to_upload(neo4j_driver, upload_uuid, dataset_uuids_list):
@@ -886,42 +862,36 @@ def link_datasets_to_upload(neo4j_driver, upload_uuid, dataset_uuids_list):
     dataset_uuids_list : list
         A list of dataset uuids to be linked to Upload
     """
-
-    # Join the list of uuids and wrap each string in single quote
-    joined_str = ', '.join("'{0}'".format(dataset_uuid) for dataset_uuid in dataset_uuids_list)
-    # Format a string to be used in Cypher query.
-    # E.g., ['fb6757b606ac35be7fa85062fde9c2e1', 'ku0gd44535be7fa85062fde98gt5']
-    dataset_uuids_list_str = '[' + joined_str + ']'
-
     try:
         with neo4j_driver.session() as session:
             tx = session.begin_transaction()
 
             logger.info("Create relationships between the target Upload and the given Datasets")
 
-            query = (f"MATCH (s:Upload), (d:Dataset) "
-                     f"WHERE s.uuid = '{upload_uuid}' AND d.uuid IN {dataset_uuids_list_str} "
-                     # Use MERGE instead of CREATE to avoid creating the existing relationship multiple times
-                     # MERGE creates the relationship only if there is no existing relationship
-                     f"MERGE (s)<-[r:IN_UPLOAD]-(d)")
+            query = (
+                "MATCH (s:Upload), (d:Dataset) "
+                "WHERE s.uuid = $upload_uuid AND d.uuid IN $dataset_uuids_list "
+                # Use MERGE instead of CREATE to avoid creating the existing relationship multiple times
+                # MERGE creates the relationship only if there is no existing relationship
+                "MERGE (s)<-[r:IN_UPLOAD]-(d)"
+            )
 
             logger.info("======link_datasets_to_upload() query======")
             logger.info(query)
 
-            tx.run(query)
+            tx.run(query, upload_uuid=upload_uuid, dataset_uuids_list=dataset_uuids_list)
             tx.commit()
     except TransactionError as te:
-        msg = f"TransactionError from calling link_datasets_to_upload(): {te.value}"
+        msg = f"TransactionError from calling link_datasets_to_upload(): {te}"
         # Log the full stack trace, prepend a line with our message
         logger.exception(msg)
 
-        if tx.closed() == False:
+        if tx.closed() is False:
             logger.info("Failed to commit link_datasets_to_upload() transaction, rollback")
 
             tx.rollback()
 
         raise TransactionError(msg)
-
 
 
 def unlink_datasets_from_upload(neo4j_driver, upload_uuid, dataset_uuids_list):
@@ -937,40 +907,32 @@ def unlink_datasets_from_upload(neo4j_driver, upload_uuid, dataset_uuids_list):
     dataset_uuids_list : list
         A list of dataset uuids to be unlinked from Upload
     """
-
-    # Join the list of uuids and wrap each string in single quote
-    joined_str = ', '.join("'{0}'".format(dataset_uuid) for dataset_uuid in dataset_uuids_list)
-    # Format a string to be used in Cypher query.
-    # E.g., ['fb6757b606ac35be7fa85062fde9c2e1', 'ku0gd44535be7fa85062fde98gt5']
-    dataset_uuids_list_str = '[' + joined_str + ']'
-
     try:
         with neo4j_driver.session() as session:
             tx = session.begin_transaction()
 
             logger.info("Delete relationships between the target Upload and the given Datasets")
 
-            query = (f"MATCH (s:Upload)<-[r:IN_UPLOAD]-(d:Dataset) "
-                     f"WHERE s.uuid = '{upload_uuid}' AND d.uuid IN {dataset_uuids_list_str} "
-                     f"DELETE r")
+            query = ("MATCH (s:Upload)<-[r:IN_UPLOAD]-(d:Dataset) "
+                     "WHERE s.uuid = $upload_uuid AND d.uuid IN $dataset_uuids_list "
+                     "DELETE r")
 
             logger.info("======unlink_datasets_from_upload() query======")
             logger.info(query)
 
-            tx.run(query)
+            tx.run(query, upload_uuid=upload_uuid, dataset_uuids_list=dataset_uuids_list)
             tx.commit()
     except TransactionError as te:
-        msg = f"TransactionError from calling unlink_datasets_from_upload(): {te.value}"
+        msg = f"TransactionError from calling unlink_datasets_from_upload(): {te}"
         # Log the full stack trace, prepend a line with our message
         logger.exception(msg)
 
-        if tx.closed() == False:
+        if tx.closed() is False:
             logger.info("Failed to commit unlink_datasets_from_upload() transaction, rollback")
 
             tx.rollback()
 
         raise TransactionError(msg)
-
 
 
 def get_upload_datasets(neo4j_driver, uuid, query_filter='', properties: Union[PropertyGroups, List[str]] = None, is_include_action: bool = True):
@@ -997,29 +959,28 @@ def get_upload_datasets(neo4j_driver, uuid, query_filter='', properties: Union[P
     """
     results = []
 
-    is_filtered = isinstance(properties, PropertyGroups) or  isinstance(properties, list)
+    is_filtered = isinstance(properties, PropertyGroups) or isinstance(properties, list)
     if is_filtered:
-        query = (f"MATCH (t:Dataset)-[:IN_UPLOAD]->(s:Upload) "
-                 f"WHERE s.uuid = '{uuid}' {query_filter} "
+        query = ("MATCH (t:Dataset)-[:IN_UPLOAD]->(s:Upload) "
+                 f"WHERE s.uuid = $uuid {query_filter} "
                  f"{exclude_include_query_part(properties, is_include_action, target_entity_type = 'Dataset')}")
     else:
         _activity_query_part = activity_query_part(for_all_match=True)
-        query = (f"MATCH (t:Dataset)-[:IN_UPLOAD]->(s:Upload) "
-                 f"WHERE s.uuid = '{uuid}' {query_filter} "
+        query = ("MATCH (t:Dataset)-[:IN_UPLOAD]->(s:Upload) "
+                 f"WHERE s.uuid = $uuid {query_filter} "
                  f"{_activity_query_part} {record_field_name}")
 
     logger.info("======get_upload_datasets() query======")
     logger.info(query)
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(execute_readonly_tx, query)
+        record = session.read_transaction(execute_readonly_tx, query, uuid=uuid)
 
         if record and record[record_field_name]:
             # Just return the list of property values from each entity node
             results = record[record_field_name]
 
     return results
-
 
 
 def count_attached_published_datasets(neo4j_driver, entity_type, uuid):
@@ -1041,10 +1002,9 @@ def count_attached_published_datasets(neo4j_driver, entity_type, uuid):
         The count of published Dataset in the provenance hierarchy
         below the target entity (Source, Sample and Collection)
     """
-
-    query = (f"MATCH (e:{entity_type})<-[:USED|WAS_GENERATED_BY*]-(d:Dataset) "
+    query = (f"MATCH (e: {entity_type})<-[:USED|WAS_GENERATED_BY*]-(d:Dataset) "
              # Use the string function toLower() to avoid case-sensetivity issue
-             f"WHERE e.uuid='{uuid}' AND toLower(d.status) = 'published' "
+             "WHERE e.uuid = $uuid AND toLower(d.status) = 'published' "
              # COLLECT() returns a list
              # apoc.coll.toSet() reruns a set containing unique nodes
              f"RETURN COUNT(d) AS {record_field_name}")
@@ -1053,7 +1013,7 @@ def count_attached_published_datasets(neo4j_driver, entity_type, uuid):
     logger.info(query)
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(_execute_readonly_tx, query)
+        record = session.read_transaction(_execute_readonly_tx, query, uuid=uuid)
 
         count = record[record_field_name]
 
@@ -1063,40 +1023,39 @@ def count_attached_published_datasets(neo4j_driver, entity_type, uuid):
         return count
 
 
-"""
-Get the parent of a given Sample entity
-
-Parameters
-----------
-neo4j_driver : neo4j.Driver object
-    The neo4j database connection pool
-uuid : str
-    The uuid of target entity 
-property_key : str
-    A target property key for result filtering
-
-Returns
--------
-dict
-    The parent dict, can either be a Sample or Source
-"""
-
-
 def get_sample_direct_ancestor(neo4j_driver, uuid, property_key=None):
+    """
+    Get the parent of a given Sample entity
+
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    uuid : str
+        The uuid of target entity
+    property_key : str
+        A target property key for result filtering
+
+    Returns
+    -------
+    dict
+        The parent dict, can either be a Sample or Source
+    """
+
     result = {}
 
     if property_key:
-        query = (f"MATCH (e:Entity)-[:WAS_GENERATED_BY]->(:Activity)-[:USED]->(parent:Entity) "
+        query = ("MATCH (e:Entity)-[:WAS_GENERATED_BY]->(:Activity)-[:USED]->(parent:Entity) "
                  # Filter out the Lab entity if it's the ancestor
-                 f"WHERE e.uuid='{uuid}' AND parent.entity_type <> 'Lab' "
+                 "WHERE e.uuid = $uuid AND parent.entity_type <> 'Lab' "
                  # COLLECT() returns a list
                  # apoc.coll.toSet() reruns a set containing unique nodes
                  f"RETURN parent.{property_key} AS {record_field_name}")
     else:
         _activity_query_part = activity_query_part(for_all_match=True)
-        query = (f"MATCH (e:Entity)-[:WAS_GENERATED_BY]->(:Activity)-[:USED]->(t:Entity) "
+        query = ("MATCH (e:Entity)-[:WAS_GENERATED_BY]->(:Activity)-[:USED]->(t:Entity) "
                  # Filter out the Lab entity if it's the ancestor
-                 f"WHERE e.uuid='{uuid}' AND t.entity_type <> 'Lab' "
+                 "WHERE e.uuid = $uuid AND t.entity_type <> 'Lab' "
                  # COLLECT() returns a list
                  # apoc.coll.toSet() reruns a set containing unique nodes
                  f"{_activity_query_part} {record_field_name}")
@@ -1105,7 +1064,7 @@ def get_sample_direct_ancestor(neo4j_driver, uuid, property_key=None):
     logger.info(query)
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(_execute_readonly_tx, query)
+        record = session.read_transaction(_execute_readonly_tx, query, uuid=uuid)
 
         if record and record[record_field_name]:
             if property_key:
@@ -1133,25 +1092,23 @@ def get_entity(neo4j_driver, uuid):
     dict
         A dictionary of entity details returned from the Cypher query
     """
-
     result = {}
 
-    query = (f"MATCH (e:Entity) "
-             f"WHERE e.uuid = '{uuid}' "
+    query = ("MATCH (e:Entity) "
+             "WHERE e.uuid = $uuid "
              f"RETURN e AS {record_field_name}")
 
     logger.info("======get_entity() query======")
     logger.info(query)
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(_execute_readonly_tx, query)
+        record = session.read_transaction(_execute_readonly_tx, query, uuid=uuid)
 
         if record and record[record_field_name]:
             # Convert the neo4j node into Python dict
             result = _node_to_dict(record[record_field_name])
 
     return result
-
 
 
 def get_has_rui_information(neo4j_driver, entity_uuid):
@@ -1170,37 +1127,36 @@ def get_has_rui_information(neo4j_driver, entity_uuid):
         bool str
         If an ancestor contains RUI location information
     """
-
     results = str(False)
 
     with neo4j_driver.session() as session:
         # Check the source of the given entity and if the source is not Human then return "N/A"
-        source_query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(s:Source) "
-                        f"WHERE e.uuid=$uuid AND s.source_type<>'Human' "
+        source_query = ("MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(s:Source) "
+                        "WHERE e.uuid = $entity_uuid AND s.source_type <> 'Human' "
                         f"RETURN 'N/A' as {record_field_name}")
 
-        record = session.read_transaction(execute_readonly_tx, source_query, uuid=entity_uuid)
+        record = session.read_transaction(execute_readonly_tx, source_query, entity_uuid=entity_uuid)
         if record and record[record_field_name]:
             results = (record[record_field_name])
             return str(results)
 
         # Check the ancestry of the given entity and if the origin sample is
         # Adipose Tissue (AD), Blood (BD), Bone Marrow (BM), Breast (BS), Bone (BX), Muscle (MU), or Other (OT), then return "N/A"
-        organ_query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(o:Sample) "
-                       f"WHERE e.uuid=$uuid AND o.sample_category='Organ' AND o.organ IN ['AD', 'BD', 'BM', 'BS', 'BX', 'MU', 'OT'] "
+        organ_query = ("MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(o:Sample) "
+                       "WHERE e.uuid = $entity_uuid AND o.sample_category = 'Organ' AND o.organ IN ['AD', 'BD', 'BM', 'BS', 'BX', 'MU', 'OT'] "
                        f"RETURN 'N/A' as {record_field_name}")
 
         logger.info("======get_has_rui_information() organ_query======")
         logger.info(organ_query)
 
-        record = session.read_transaction(execute_readonly_tx, organ_query, uuid=entity_uuid)
+        record = session.read_transaction(execute_readonly_tx, organ_query, entity_uuid=entity_uuid)
         if record and record[record_field_name]:
             results = (record[record_field_name])
             return str(results)
 
         # If the first query fails to return then grab the ancestor Block and check if it contains rui_location
-        query = (f"MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(s:Sample) "
-                 f"WHERE e.uuid=$uuid AND s.sample_category='Block' "
+        query = ("MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(s:Sample) "
+                 "WHERE e.uuid = $entity_uuid AND s.sample_category = 'Block' "
                  "RETURN COLLECT("
                  "CASE "
                  "WHEN s.rui_exemption = true THEN 'Exempt' "
@@ -1211,7 +1167,7 @@ def get_has_rui_information(neo4j_driver, entity_uuid):
         logger.info("======get_has_rui_information() query======")
         logger.info(query)
 
-        record = session.read_transaction(execute_readonly_tx, query, uuid=entity_uuid)
+        record = session.read_transaction(execute_readonly_tx, query, entity_uuid=entity_uuid)
         if record and record[record_field_name]:
             values = (record[record_field_name])
             if "True" in values:
@@ -1227,7 +1183,7 @@ def get_has_rui_information(neo4j_driver, entity_uuid):
 ####################################################################################################
 
 
-def _execute_readonly_tx(tx, query):
+def _execute_readonly_tx(tx, query, **kwargs):
     """
     Execute a unit of work in a managed read transaction
 
@@ -1243,9 +1199,6 @@ def _execute_readonly_tx(tx, query):
     neo4j.Record or None
         A single record returned from the Cypher query
     """
-
-
-def _execute_readonly_tx(tx, query, **kwargs):
     result = tx.run(query, **kwargs)
     record = result.single()
     return record
@@ -1269,7 +1222,7 @@ def _create_activity_tx(tx, activity_data_dict):
     """
     parameterized_str, parameterized_data = build_parameterized_map(activity_data_dict)
 
-    query = (f"CREATE (e:Activity) "
+    query = ("CREATE (e:Activity) "
              f"SET e = {parameterized_str} "
              f"RETURN e AS {record_field_name}")
 
@@ -1294,15 +1247,14 @@ def _delete_activity_node_and_linkages_tx(tx, uuid):
     uuid : str
         The uuid to target entity (child of those direct ancestors)
     """
-
-    query = (f"MATCH (s:Entity)-[in:WAS_GENERATED_BY]->(a:Activity)-[out:USED]->(t:Entity) "
-             f"WHERE s.uuid = '{uuid}' "
-             f"DELETE in, a, out")
+    query = ("MATCH (s:Entity)-[in:WAS_GENERATED_BY]->(a:Activity)-[out:USED]->(t:Entity) "
+             "WHERE s.uuid = $uuid "
+             "DELETE in, a, out")
 
     logger.info("======_delete_activity_node_and_linkages_tx() query======")
     logger.info(query)
 
-    result = tx.run(query)
+    tx.run(query, uuid=uuid)
 
 
 def _delete_publication_associated_collection_linkages_tx(tx, uuid):
@@ -1316,15 +1268,14 @@ def _delete_publication_associated_collection_linkages_tx(tx, uuid):
     uuid : str
         The uuid to target publication
     """
-
-    query = (f"MATCH (p:Publication)-[r:USES_DATA]->(c:Collection) "
-             f"WHERE p.uuid = '{uuid}' "
-             f"DELETE r")
+    query = ("MATCH (p:Publication)-[r:USES_DATA]->(c:Collection) "
+             "WHERE p.uuid = $uuid "
+             "DELETE r")
 
     logger.info("======_delete_publication_associated_collection_linkages_tx() query======")
     logger.info(query)
 
-    result = tx.run(query)
+    tx.run(query, uuid=uuid)
 
 
 def _delete_collection_linkages_tx(tx, uuid):
@@ -1338,15 +1289,14 @@ def _delete_collection_linkages_tx(tx, uuid):
     uuid : str
         The uuid of the Collection, related to Datasets by an IN_COLLECTION relationship
     """
-
-    query = (f"MATCH (e:Entity)-[in:IN_COLLECTION]->(c:Collection)"
-             f" WHERE c.uuid = '{uuid}' "
-             f" DELETE in")
+    query = ("MATCH (e:Entity)-[in:IN_COLLECTION]->(c:Collection) "
+             "WHERE c.uuid = $uuid "
+             "DELETE in")
 
     logger.info("======_delete_collection_linkages_tx() query======")
     logger.info(query)
 
-    result = tx.run(query)
+    tx.run(query, uuid=uuid)
 
 
 def _delete_entity_entity_linkages_tx(tx, uuid):
@@ -1360,14 +1310,14 @@ def _delete_entity_entity_linkages_tx(tx, uuid):
     uuid : str
         The uuid to target entity (child of those direct ancestors)
     """
-    query = (f"MATCH (s:Entity)-[out:WAS_DERIVED_FROM]->(t:Entity) "
-             f"WHERE s.uuid = '{uuid}' "
-             f"DELETE out")
+    query = ("MATCH (s:Entity)-[out:WAS_DERIVED_FROM]->(t:Entity) "
+             "WHERE s.uuid = $uuid "
+             "DELETE out")
 
     logger.debug("======_delete_entity_entity_linkages_tx() query======")
     logger.debug(query)
 
-    result = tx.run(query)
+    tx.run(query, uuid=uuid)
 
 
 def _delete_entity_agent_linkages_tx(tx, uuid):
@@ -1381,14 +1331,14 @@ def _delete_entity_agent_linkages_tx(tx, uuid):
     uuid : str
         The uuid to target entity (child of those direct ancestors)
     """
-    query = (f"MATCH (s:Entity)-[out:WAS_ATTRIBUTED_TO]->(t:Entity) "
-             f"WHERE s.uuid = '{uuid}' "
-             f"DELETE out")
+    query = ("MATCH (s:Entity)-[out:WAS_ATTRIBUTED_TO]->(t:Entity) "
+             "WHERE s.uuid = $uuid "
+             "DELETE out")
 
     logger.debug("======_delete_entity_agent_linkages_tx() query======")
     logger.debug(query)
 
-    result = tx.run(query)
+    tx.run(query, uuid=uuid)
 
 
 def _create_relationship_tx(tx, source_node_uuid, target_node_uuid, relationship, direction):
@@ -1418,8 +1368,8 @@ def _create_relationship_tx(tx, source_node_uuid, target_node_uuid, relationship
     if direction == "->":
         outgoing = direction
 
-    match_case_source = f" IN {source_node_uuid}" if type(source_node_uuid) is list else f" = '{source_node_uuid}'"
-    match_case_target = f" IN {target_node_uuid}" if type(target_node_uuid) is list else f" = '{target_node_uuid}'"
+    match_case_source = " IN $source_node_uuid" if type(source_node_uuid) is list else " = $source_node_uuid"
+    match_case_target = " IN $target_node_uuid" if type(target_node_uuid) is list else " = $target_node_uuid"
 
     query = (f"MATCH (s), (t) "
              f"WHERE s.uuid {match_case_source} AND t.uuid {match_case_target} "
@@ -1429,7 +1379,7 @@ def _create_relationship_tx(tx, source_node_uuid, target_node_uuid, relationship
     logger.info("======_create_relationship_tx() query======")
     logger.info(query)
 
-    result = tx.run(query)
+    tx.run(query, source_node_uuid=source_node_uuid, target_node_uuid=target_node_uuid)
 
 
 def _node_to_dict(entity_node):
@@ -1478,7 +1428,7 @@ def _nodes_to_dicts(nodes):
     return dicts
 
 
-def execute_readonly_tx(tx, query):
+def execute_readonly_tx(tx, query, **kwargs):
     """
     Execute a unit of work in a managed read transaction
 
@@ -1489,14 +1439,11 @@ def execute_readonly_tx(tx, query):
     query : str
         The target cypher query to run
 
-Returns
--------
-neo4j.Record or None
-    A single record returned from the Cypher query
-"""
-
-
-def execute_readonly_tx(tx, query, **kwargs):
+    Returns
+    -------
+    neo4j.Record or None
+        A single record returned from the Cypher query
+    """
     result = tx.run(query, **kwargs)
     record = result.single()
     return record
@@ -1525,7 +1472,6 @@ def node_to_dict(entity_node):
     return entity_dict
 
 
-
 def nodes_to_dicts(nodes):
     """
     Convert the list of neo4j nodes into a list of Python dicts
@@ -1540,15 +1486,7 @@ def nodes_to_dicts(nodes):
     list
         A list of target entity dicts containing all property key/value pairs
     """
-
-    dicts = []
-
-    for node in nodes:
-        entity_dict = node_to_dict(node)
-        dicts.append(entity_dict)
-
-    return dicts
-
+    return [node_to_dict(node) for node in nodes]
 
 
 def link_publication_to_associated_collection(neo4j_driver, entity_uuid, associated_collection_uuid):
@@ -1577,17 +1515,16 @@ def link_publication_to_associated_collection(neo4j_driver, entity_uuid, associa
 
             tx.commit()
     except TransactionError as te:
-        msg = "TransactionError from calling link_publication_to_associated_collection(): "
+        msg = f"TransactionError from calling link_publication_to_associated_collection(): {te}"
         # Log the full stack trace, prepend a line with our message
         logger.exception(msg)
 
-        if tx.closed() == False:
+        if tx.closed() is False:
             # Log the full stack trace, prepend a line with our message
             logger.info("Failed to commit link_publication_to_associated_collection() transaction, rollback")
             tx.rollback()
 
         raise TransactionError(msg)
-
 
 
 def get_collection_associated_datasets(neo4j_driver, uuid, property_key=None):
@@ -1608,23 +1545,22 @@ def get_collection_associated_datasets(neo4j_driver, uuid, property_key=None):
     list
         A list of datasets and publications
     """
-
     results = []
 
     if property_key:
-        query = (f"MATCH (e:Entity)-[:IN_COLLECTION|:USES_DATA]->(c:Collection) "
-                 f"WHERE c.uuid = '{uuid}' "
+        query = ("MATCH (e:Entity)-[:IN_COLLECTION|:USES_DATA]->(c:Collection) "
+                 "WHERE c.uuid = $uuid "
                  f"RETURN apoc.coll.toSet(COLLECT(e.{property_key})) AS {record_field_name}")
     else:
-        query = (f"MATCH (e:Entity)-[:IN_COLLECTION|:USES_DATA]->(c:Collection) "
-                 f"WHERE c.uuid = '{uuid}' "
+        query = ("MATCH (e:Entity)-[:IN_COLLECTION|:USES_DATA]->(c:Collection) "
+                 "WHERE c.uuid = $uuid "
                  f"RETURN apoc.coll.toSet(COLLECT(e)) AS {record_field_name}")
 
     logger.info("======get_collection_associated_datasets() query======")
     logger.info(query)
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(execute_readonly_tx, query)
+        record = session.read_transaction(execute_readonly_tx, query, uuid=uuid)
 
         if record and record[record_field_name]:
             if property_key:
@@ -1653,18 +1589,17 @@ def get_publication_associated_collection(neo4j_driver, uuid):
     dict
         A dictionary representation of the collection
     """
-
     result = {}
 
-    query = (f"MATCH (p:Publication)-[:USES_DATA]->(c:Collection) "
-             f"WHERE p.uuid = '{uuid}' "
+    query = ("MATCH (p:Publication)-[:USES_DATA]->(c:Collection) "
+             "WHERE p.uuid = $uuid "
              f"RETURN c as {record_field_name}")
 
     logger.info("=====get_publication_associated_collection() query======")
     logger.info(query)
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(execute_readonly_tx, query)
+        record = session.read_transaction(execute_readonly_tx, query, uuid=uuid)
 
         if record and record[record_field_name]:
             # Convert the neo4j node into Python dict
@@ -1673,7 +1608,7 @@ def get_publication_associated_collection(neo4j_driver, uuid):
     return result
 
 
-def get_children(neo4j_driver, uuid, properties: Union[PropertyGroups, List[str]]  = None, is_include_action: bool = True):
+def get_children(neo4j_driver, uuid, properties: Union[PropertyGroups, List[str]] = None, is_include_action: bool = True):
     """
     Get all children by uuid
 
@@ -1695,24 +1630,24 @@ def get_children(neo4j_driver, uuid, properties: Union[PropertyGroups, List[str]
     """
     results = []
 
-    is_filtered = isinstance(properties, PropertyGroups) or  isinstance(properties, list)
+    is_filtered = isinstance(properties, PropertyGroups) or isinstance(properties, list)
     if is_filtered:
-        query = (f"MATCH (e:Entity)<-[:USED]-(:Activity)<-[:WAS_GENERATED_BY]-(t:Entity) "
+        query = ("MATCH (e:Entity)<-[:USED]-(:Activity)<-[:WAS_GENERATED_BY]-(t:Entity) "
                  # The target entity can't be a Lab
-                 f"WHERE e.uuid='{uuid}' AND e.entity_type <> 'Lab' "
+                 "WHERE e.uuid = $uuid AND e.entity_type <> 'Lab' "
                  f"{exclude_include_query_part(properties, is_include_action)}")
     else:
         _activity_query_part = activity_query_part(for_all_match=True)
-        query = (f"MATCH (e:Entity)<-[:USED]-(:Activity)<-[:WAS_GENERATED_BY]-(t:Entity) "
+        query = ("MATCH (e:Entity)<-[:USED]-(:Activity)<-[:WAS_GENERATED_BY]-(t:Entity) "
                  # The target entity can't be a Lab
-                 f"WHERE e.uuid='{uuid}' AND e.entity_type <> 'Lab' "
+                 "WHERE e.uuid = $uuid AND e.entity_type <> 'Lab' "
                  f"{_activity_query_part} {record_field_name}")
 
     logger.info("======get_children() query======")
     logger.info(query)
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(_execute_readonly_tx, query)
+        record = session.read_transaction(_execute_readonly_tx, query, uuid=uuid)
 
         if record and record[record_field_name]:
             results = record[record_field_name]
@@ -1744,7 +1679,6 @@ def build_parameterized_map(entity_data_dict):
     return parametered_str, data
 
 
-
 def update_entity(neo4j_driver, entity_type, entity_data_dict, uuid):
     """
     Update the properties of an existing entity node in neo4j
@@ -1765,11 +1699,10 @@ def update_entity(neo4j_driver, entity_type, entity_data_dict, uuid):
     dict
         A dictionary of updated entity details returned from the Cypher query
     """
-
     parameterized_str, parameterized_data = build_parameterized_map(entity_data_dict)
 
-    query = (f"MATCH (e:{entity_type}) "
-             f"WHERE e.uuid = $uuid "
+    query = (f"MATCH (e: {entity_type}) "
+             "WHERE e.uuid = $uuid "
              f"SET e += {parameterized_str} "
              f"RETURN e AS {record_field_name}")
 
@@ -1795,17 +1728,16 @@ def update_entity(neo4j_driver, entity_type, entity_data_dict, uuid):
 
             return entity_dict
     except TransactionError as te:
-        msg = f"TransactionError from calling create_entity(): {te.value}"
+        msg = f"TransactionError from calling create_entity(): {te}"
         # Log the full stack trace, prepend a line with our message
         logger.exception(msg)
 
-        if tx.closed() == False:
+        if tx.closed() is False:
             logger.info("Failed to commit update_entity() transaction, rollback")
 
             tx.rollback()
 
         raise TransactionError(msg)
-
 
 
 def get_siblings(neo4j_driver, uuid, property_key=None):
@@ -1826,24 +1758,23 @@ def get_siblings(neo4j_driver, uuid, property_key=None):
     dict
         A list of unique sibling dictionaries returned from the Cypher query
     """
-
     results = []
 
     if property_key:
-        query = (f"MATCH (e:Entity)-[:WAS_GENERATED_BY]->(:Activity)-[:USED]->(parent:Entity) "
+        query = ("MATCH (e:Entity)-[:WAS_GENERATED_BY]->(:Activity)-[:USED]->(parent:Entity) "
                  # filter out the Lab entities
-                 f"WHERE e.uuid='{uuid}' AND parent.entity_type <> 'LAB' "
-                 f"MATCH (sibling:Entity)-[:WAS_GENERATED_BY]->(:Activity)-[:USED]->(parent) "
-                 f"WHERE sibling <> e "
+                 "WHERE e.uuid = $uuid AND parent.entity_type <> 'LAB' "
+                 "MATCH (sibling:Entity)-[:WAS_GENERATED_BY]->(:Activity)-[:USED]->(parent) "
+                 "WHERE sibling <> e "
                  # COLLECT() returns a list
                  # apoc.coll.toSet() returns a set containing unique nodes
                  f"RETURN apoc.coll.toSet(COLLECT(sibling.{property_key})) AS {record_field_name}")
     else:
-        query = (f"MATCH (e:Entity)-[:WAS_GENERATED_BY]->(:Activity)-[:USED]->(parent:Entity) "
+        query = ("MATCH (e:Entity)-[:WAS_GENERATED_BY]->(:Activity)-[:USED]->(parent:Entity) "
                  # filter out the Lab entities
-                 f"WHERE e.uuid='{uuid}' AND parent.entity_type <> 'LAB' "
-                 f"MATCH (sibling:Entity)-[:WAS_GENERATED_BY]->(:Activity)-[:USED]->(parent) "
-                 f"WHERE sibling <> e "
+                 "WHERE e.uuid = $uuid AND parent.entity_type <> 'LAB' "
+                 "MATCH (sibling:Entity)-[:WAS_GENERATED_BY]->(:Activity)-[:USED]->(parent) "
+                 "WHERE sibling <> e "
                  # COLLECT() returns a list
                  # apoc.coll.toSet() returns a set containing unique nodes
                  f"RETURN apoc.coll.toSet(COLLECT(sibling)) AS {record_field_name}")
@@ -1852,7 +1783,7 @@ def get_siblings(neo4j_driver, uuid, property_key=None):
     logger.info(query)
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(execute_readonly_tx, query)
+        record = session.read_transaction(execute_readonly_tx, query, uuid=uuid)
 
         if record and record[record_field_name]:
             if property_key:
@@ -1883,24 +1814,23 @@ def get_tuplets(neo4j_driver, uuid, property_key=None):
     dict
         A list of unique tuplet dictionaries returned from the Cypher query
     """
-
     results = []
 
     if property_key:
-        query = (f"MATCH (e:Entity)-[:WAS_GENERATED_BY]->(a:Activity)-[:USED]->(parent:Entity) "
+        query = ("MATCH (e:Entity)-[:WAS_GENERATED_BY]->(a:Activity)-[:USED]->(parent:Entity) "
                  # filter out the Lab entities
-                 f"WHERE e.uuid='{uuid}' AND parent.entity_type <> 'Lab' "
-                 f"MATCH (tuplet:Entity)-[:WAS_GENERATED_BY]->(a) "
-                 f"WHERE tuplet <> e "
+                 "WHERE e.uuid = $uuid AND parent.entity_type <> 'Lab' "
+                 "MATCH (tuplet:Entity)-[:WAS_GENERATED_BY]->(a) "
+                 "WHERE tuplet <> e "
                  # COLLECT() returns a list
                  # apoc.coll.toSet() returns a set containing unique nodes
                  f"RETURN apoc.coll.toSet(COLLECT(tuplet.{property_key})) AS {record_field_name}")
     else:
-        query = (f"MATCH (e:Entity)-[:WAS_GENERATED_BY]->(a:Activity)-[:USED]->(parent:Entity) "
+        query = ("MATCH (e:Entity)-[:WAS_GENERATED_BY]->(a:Activity)-[:USED]->(parent:Entity) "
                  # filter out the Lab entities
-                 f"WHERE e.uuid='{uuid}' AND parent.entity_type <> 'Lab' "
-                 f"MATCH (tuplet:Entity)-[:WAS_GENERATED_BY]->(a) "
-                 f"WHERE tuplet <> e "
+                 "WHERE e.uuid = $uuid AND parent.entity_type <> 'Lab' "
+                 "MATCH (tuplet:Entity)-[:WAS_GENERATED_BY]->(a) "
+                 "WHERE tuplet <> e "
                  # COLLECT() returns a list
                  # apoc.coll.toSet() returns a set containing unique nodes
                  f"RETURN apoc.coll.toSet(COLLECT(tuplet)) AS {record_field_name}")
@@ -1909,7 +1839,7 @@ def get_tuplets(neo4j_driver, uuid, property_key=None):
     logger.info(query)
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(execute_readonly_tx, query)
+        record = session.read_transaction(execute_readonly_tx, query, uuid=uuid)
 
         if record and record[record_field_name]:
             if property_key:
@@ -1922,8 +1852,7 @@ def get_tuplets(neo4j_driver, uuid, property_key=None):
     return results
 
 
-
-def get_collections(neo4j_driver, uuid, property_key = None):
+def get_collections(neo4j_driver, uuid, property_key=None):
     """
     Get all collections by for a given entity uuid
 
@@ -1944,14 +1873,14 @@ def get_collections(neo4j_driver, uuid, property_key = None):
     results = []
 
     if property_key:
-        query = (f"MATCH (c:Collection)<-[:IN_COLLECTION]-(e:Entity) "
-                 f"WHERE e.uuid='{uuid}' "
+        query = ("MATCH (c:Collection)<-[:IN_COLLECTION]-(e:Entity) "
+                 "WHERE e.uuid = $uuid "
                  # COLLECT() returns a list
                  # apoc.coll.toSet() reruns a set containing unique nodes
                  f"RETURN apoc.coll.toSet(COLLECT(c.{property_key})) AS {record_field_name}")
     else:
-        query = (f"MATCH (c:Collection)<-[:IN_COLLECTION]-(e:Entity) "
-                 f"WHERE e.uuid='{uuid}' "
+        query = ("MATCH (c:Collection)<-[:IN_COLLECTION]-(e:Entity) "
+                 "WHERE e.uuid = $uuid "
                  # COLLECT() returns a list
                  # apoc.coll.toSet() reruns a set containing unique nodes
                  f"RETURN apoc.coll.toSet(COLLECT(c)) AS {record_field_name}")
@@ -1960,7 +1889,7 @@ def get_collections(neo4j_driver, uuid, property_key = None):
     logger.info(query)
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(execute_readonly_tx, query)
+        record = session.read_transaction(execute_readonly_tx, query, uuid=uuid)
 
         if record and record[record_field_name]:
             if property_key:
@@ -1973,7 +1902,7 @@ def get_collections(neo4j_driver, uuid, property_key = None):
     return results
 
 
-def get_uploads(neo4j_driver, uuid, property_key = None):
+def get_uploads(neo4j_driver, uuid, property_key=None):
     """
     Get all uploads by uuid
     Parameters
@@ -1989,17 +1918,16 @@ def get_uploads(neo4j_driver, uuid, property_key = None):
     list
         A list of unique upload dictionaries returned from the Cypher query
     """
-
     results = []
     if property_key:
-        query = (f"MATCH (u:Upload)<-[:IN_UPLOAD]-(ds:Dataset) "
-                 f"WHERE ds.uuid='{uuid}' "
+        query = ("MATCH (u:Upload)<-[:IN_UPLOAD]-(ds:Dataset) "
+                 "WHERE ds.uuid = $uuid "
                  # COLLECT() returns a list
                  # apoc.coll.toSet() reruns a set containing unique nodes
                  f"RETURN apoc.coll.toSet(COLLECT(u.{property_key})) AS {record_field_name}")
     else:
-        query = (f"MATCH (u:Upload)<-[:IN_UPLOAD]-(ds:Dataset) "
-                 f"WHERE ds.uuid='{uuid}' "
+        query = ("MATCH (u:Upload)<-[:IN_UPLOAD]-(ds:Dataset) "
+                 "WHERE ds.uuid = $uuid "
                  # COLLECT() returns a list
                  # apoc.coll.toSet() reruns a set containing unique nodes
                  f"RETURN apoc.coll.toSet(COLLECT(u)) AS {record_field_name}")
@@ -2008,7 +1936,7 @@ def get_uploads(neo4j_driver, uuid, property_key = None):
     logger.info(query)
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(execute_readonly_tx, query)
+        record = session.read_transaction(execute_readonly_tx, query, uuid=uuid)
         if record and record[record_field_name]:
             if property_key:
                 # Just return the list of property values from each entity node
@@ -2020,7 +1948,7 @@ def get_uploads(neo4j_driver, uuid, property_key = None):
     return results
 
 
-def get_sources_associated_entity(neo4j_driver, uuid, filter_out = None):
+def get_sources_associated_entity(neo4j_driver, uuid, filter_out=None):
     """
     Get the associated sources for a given entity (dataset/publication)
 
@@ -2038,23 +1966,22 @@ def get_sources_associated_entity(neo4j_driver, uuid, filter_out = None):
     list
         A list of sources associated with an entity
     """
-
     results = []
 
-    query_filter = ''
+    query_filter = ""
     if filter_out is not None:
-        query_filter = f" and not t.uuid in {filter_out}"
+        query_filter = " and not t.uuid in $filter_out"
 
     _activity_query_part = activity_query_part(for_all_match=True)
-    query = (f"MATCH (e:Entity)-[*]->(t:Source) "
-             f"WHERE e.uuid = '{uuid}' {query_filter} "
+    query = ("MATCH (e:Entity)-[*]->(t:Source) "
+             f"WHERE e.uuid = $uuid {query_filter} "
              f"{_activity_query_part} {record_field_name}")
 
     logger.info("=====get_sources_associated_dataset() query======")
     logger.info(query)
 
     with neo4j_driver.session() as session:
-        record = session.read_transaction(execute_readonly_tx, query)
+        record = session.read_transaction(execute_readonly_tx, query, uuid=uuid, filter_out=filter_out)
 
         if record and record[record_field_name]:
             # Convert the neo4j node into Python dict
@@ -2069,7 +1996,7 @@ def get_sources_associated_entity(neo4j_driver, uuid, filter_out = None):
     return results
 
 
-def activity_query_part(properties = None, for_all_match = False, only_map_part = False):
+def activity_query_part(properties=None, for_all_match=False, only_map_part=False):
     """
     Builds activity query part(s) for grabbing properties like protocol_url from Activity
 
@@ -2089,7 +2016,7 @@ def activity_query_part(properties = None, for_all_match = False, only_map_part 
         tuple for exclude_include_query_part with [0] Additional MATCH, [1] map pair query parts for apoc.map.fromPairs, [2] and 'a' variable to use in WITH statements
     """
 
-    query_match_part = f"MATCH (e2:Entity)-[:WAS_GENERATED_BY]->(a:Activity) WHERE e2.uuid = t.uuid"
+    query_match_part = "MATCH (e2:Entity)-[:WAS_GENERATED_BY]->(a:Activity) WHERE e2.uuid = t.uuid"
 
     build_part = " WITH t, apoc.map.fromPairs([['protocol_url', a.protocol_url], ['creation_action', a.creation_action]]) as a2 WITH apoc.map.merge(t,a2) as x RETURN apoc.coll.toSet(COLLECT(x)) AS "
 
@@ -2135,7 +2062,7 @@ def activity_query_part(properties = None, for_all_match = False, only_map_part 
         return '', '', ''
 
 
-def property_type_query_part(properties:PropertyGroups, is_include_action = True):
+def property_type_query_part(properties: PropertyGroups, is_include_action=True):
     """
     Builds property type query part(s) for parsing properties of certain types
 
@@ -2165,7 +2092,7 @@ def property_type_query_part(properties:PropertyGroups, is_include_action = True
     return map_parts
 
 
-def build_additional_query_parts(properties:PropertyGroups, is_include_action = True):
+def build_additional_query_parts(properties: PropertyGroups, is_include_action=True):
     """
     Builds additional query parts to be concatenated with other query
 
@@ -2187,7 +2114,7 @@ def build_additional_query_parts(properties:PropertyGroups, is_include_action = 
     return _activity_query_part[0], _activity_query_part[1] + _property_type_query_part, _activity_query_part[2]
 
 
-def exclude_include_query_part(properties:Union[PropertyGroups, List[str]], is_include_action = True, target_entity_type = 'Any'):
+def exclude_include_query_part(properties: Union[PropertyGroups, List[str]], is_include_action=True, target_entity_type='Any'):
     """
     Builds a cypher query part that can be used to include or exclude certain properties.
     The preceding MATCH query part should have a label 't'. E.g. MATCH (t:Entity)-[*]->(s:Source)
@@ -2224,20 +2151,20 @@ def exclude_include_query_part(properties:Union[PropertyGroups, List[str]], is_i
     map_pairs_part = more_to_grab_query_part[1] if isinstance(more_to_grab_query_part, tuple) else ''
     match_part = more_to_grab_query_part[0] if isinstance(more_to_grab_query_part, tuple) else ''
 
-                   # unwind the keys of the results from target/t
+                  # unwind the keys of the results from target/t
     query_part = (f"WITH keys(t) AS k1, t{a} unwind k1 AS k2 "
                   # filter by a list[] of properties
                   f"WITH t{a}, k2 WHERE {action} k2 IN {_properties} "
                   # everything is unwinded as separate rows, so let's build it back up by uuid to form: {prop: val, uuid:uuidVal}
                   f"WITH t{a}, apoc.map.fromPairs([[k2, t[k2]], ['uuid', t.uuid]{map_pairs_part}]) AS dict "
-                  # collect all these individual dicts as a list[], and then group them by uuids, 
-                  # which forms a dict with uuid as keys and list of dicts as values: 
+                  # collect all these individual dicts as a list[], and then group them by uuids,
+                  # which forms a dict with uuid as keys and list of dicts as values:
                   # {uuidVal: [{prop: val, uuid:uuidVal}, {prop2: val2, uuid:uuidVal}, ... {propN: valN, uuid:uuidVal}], uuidVal2: [...]}
-                  f"WITH collect(dict) as list WITH apoc.map.groupByMulti(list, 'uuid') AS groups "
+                  "WITH collect(dict) as list WITH apoc.map.groupByMulti(list, 'uuid') AS groups "
                   # use the keys of groups dict, and unwind to get uuids as individual rows
-                  f"unwind keys(groups) AS uuids "
+                  "unwind keys(groups) AS uuids "
                   # now merge these individual dicts under their respective uuid
-                  f"WITH apoc.map.mergeList(groups[uuids]) AS rows "
+                  "WITH apoc.map.mergeList(groups[uuids]) AS rows "
                   # collect each row to form a list[] and return
                   f"RETURN collect(rows) AS {record_field_name}")
 
