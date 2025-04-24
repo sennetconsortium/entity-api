@@ -3,6 +3,7 @@ import logging
 import re
 from datetime import datetime
 from urllib.parse import urlparse
+from flask import g
 
 # Local modules
 from schema import schema_manager
@@ -101,7 +102,7 @@ def collection_entities_are_existing_entities(property_key, normalized_entity_ty
             entity_uuid = entity_detail['uuid']
 
             # If the uuid exists per the uuid-api, make sure it also exists as a Neo4j entity.
-            entity_dict = schema_neo4j_queries.get_entity(schema_manager.get_neo4j_driver_instance(), entity_uuid)
+            entity_dict = schema_neo4j_queries.get_entity(g.neo4j_session, entity_uuid)
 
             # If dataset_uuid is not found in Neo4j fail the validation.
             if not entity_dict:
@@ -168,7 +169,7 @@ def halt_DOI_if_unpublished_dataset(property_key, normalized_entity_type, reques
     if 'doi_url' not in new_data_dict or 'registered_doi' not in new_data_dict:
         return
 
-    neo4j_driver_instance = schema_manager.get_neo4j_driver_instance()
+    neo4j_session = g.neo4j_session
 
     distinct_dataset_levels = []
     if 'dataset_uuids' in new_data_dict:
@@ -178,19 +179,17 @@ def halt_DOI_if_unpublished_dataset(property_key, normalized_entity_type, reques
         collection_datasets = []
         for dataset_uuid in dataset_uuids:
             try:
-                ds = schema_neo4j_queries.get_entity(neo4j_driver_instance
-                                                     , dataset_uuid)
+                ds = schema_neo4j_queries.get_entity(neo4j_session, dataset_uuid)
                 if ds['data_access_level'] not in distinct_dataset_levels:
                     distinct_dataset_levels.append(ds['data_access_level'])
-            except Exception as nfe:
+            except Exception:
                 raise ValueError(f"Unable to modify existing {new_data_dict['entity_type']}"
                                  f" {new_data_dict['uuid']} since"
                                  f" Dataset {dataset_uuid} could not be found to verify.")
     else:
         # For an Update PUT request without 'dataset_uuids' specified,
         # simply get the existing, distinct 'data_access_level' setting for all the Datasets in the Collection
-        distinct_dataset_statuses = schema_neo4j_queries.get_collection_datasets_statuses(neo4j_driver_instance
-                                                                                          , existing_data_dict['uuid'])
+        distinct_dataset_statuses = schema_neo4j_queries.get_collection_datasets_statuses(neo4j_session, existing_data_dict['uuid'])
     if len(distinct_dataset_statuses) != 1 or \
             distinct_dataset_statuses[0].lower() != SchemaConstants.DATASET_STATUS_PUBLISHED:
         raise ValueError(f"Unable to modify existing {existing_data_dict['entity_type']}"
@@ -264,8 +263,8 @@ def collection_entities_are_existing_datasets(property_key, normalized_entity_ty
 
             # If the uuid exists per the uuid-api, make sure it also exists as a Neo4j entity.
             uuid = dataset_uuid_entity['uuid']
-            schema_neo4j_queries.get_entity(schema_manager.get_neo4j_driver_instance(), dataset_uuid)
-            entity_dict = schema_neo4j_queries.get_entity(schema_manager.get_neo4j_driver_instance(), dataset_uuid)
+            schema_neo4j_queries.get_entity(g.neo4j_session, dataset_uuid)
+            entity_dict = schema_neo4j_queries.get_entity(g.neo4j_session, dataset_uuid)
 
             # If dataset_uuid is not found in Neo4j or is not for a Dataset, fail the validation.
             if not entity_dict:
@@ -568,7 +567,7 @@ def validate_creation_action(property_key, normalized_entity_type, request, exis
 
     if creation_action == 'external process':
         direct_ancestor_uuids = new_data_dict.get('direct_ancestor_uuids')
-        entity_types_dict = schema_neo4j_queries.filter_ancestors_by_type(schema_manager.get_neo4j_driver_instance(), direct_ancestor_uuids, "dataset")
+        entity_types_dict = schema_neo4j_queries.filter_ancestors_by_type(g.neo4j_session, direct_ancestor_uuids, "dataset")
         if entity_types_dict:
             raise ValueError("If 'creation_action' field is given and is 'external process', all ancestor uuids must belong to datasets. "
                              f"The following entities belong to non-dataset entities: {entity_types_dict}")
@@ -592,7 +591,7 @@ def validate_not_invalid_creation_action(property_key, normalized_entity_type, r
     """
     prohibited_creation_action_values = ["Central Process", "Multi-Assay Split"]
     entity_uuid = existing_data_dict.get("uuid")
-    creation_action = schema_neo4j_queries.get_entity_creation_action_activity(schema_manager.get_neo4j_driver_instance(), entity_uuid)
+    creation_action = schema_neo4j_queries.get_entity_creation_action_activity(g.neo4j_session, entity_uuid)
     direct_ancestor_uuid_no_changes = collections.Counter(existing_data_dict['direct_ancestor_uuids']) == collections.Counter(new_data_dict['direct_ancestor_uuids'])
     if creation_action and creation_action in prohibited_creation_action_values and not direct_ancestor_uuid_no_changes:
         raise ValueError(f"Cannot update {property_key} value if creation_action of parent activity is {', '.join(prohibited_creation_action_values)}")
@@ -711,9 +710,8 @@ def validate_dataset_not_component(property_key, normalized_entity_type, request
     """
     headers = request.headers
     if headers.get(SchemaConstants.INTERNAL_TRIGGER) != SchemaConstants.COMPONENT_DATASET:
-        neo4j_driver_instance = schema_manager.get_neo4j_driver_instance()
         uuid = existing_data_dict['uuid']
-        creation_action = schema_neo4j_queries.get_entity_creation_action_activity(neo4j_driver_instance, uuid)
+        creation_action = schema_neo4j_queries.get_entity_creation_action_activity(g.neo4j_session, uuid)
         if creation_action == 'Multi-Assay Split':
             raise ValueError(f"Unable to modify existing {existing_data_dict['entity_type']} "
                              f"{existing_data_dict['uuid']}. Can not change status on component datasets directly. Status "
@@ -772,7 +770,7 @@ def validate_source_types_match(property_key, normalized_entity_type, request, e
     sources = []
     uuids = []
     for uuid in new_data_dict['direct_ancestor_uuids']:
-        _sources = schema_neo4j_queries.get_sources_associated_entity(schema_manager.get_neo4j_driver_instance(),
+        _sources = schema_neo4j_queries.get_sources_associated_entity(g.neo4j_session,
                                                                       uuid, filter_out=uuids)
         for _source in _sources:
             uuids.append(_source['uuid'])

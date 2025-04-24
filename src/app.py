@@ -9,7 +9,6 @@ import os
 import re
 import csv
 import requests
-import urllib.request
 from io import StringIO
 # Don't confuse urllib (Python native library) with urllib3 (3rd-party library, requests also uses urllib3)
 from urllib3.exceptions import InsecureRequestWarning
@@ -28,20 +27,13 @@ from pymemcache import serde
 # Local modules
 import app_neo4j_queries
 import provenance
-from schema import schema_manager, schema_validators, schema_triggers
-from schema import schema_errors
-from schema import schema_neo4j_queries
-from schema.schema_constants import SchemaConstants
-from schema.schema_constants import DataVisibilityEnum
-from schema.schema_constants import MetadataScopeEnum
-from schema.schema_constants import TriggerTypeEnum
+from schema import schema_errors, schema_manager, schema_neo4j_queries, schema_validators, schema_triggers
+from schema.schema_constants import DataVisibilityEnum, MetadataScopeEnum, SchemaConstants, TriggerTypeEnum
 
 # HuBMAP commons
-from hubmap_commons import string_helper
-from hubmap_commons import file_helper as hm_file_helper
-from hubmap_commons import neo4j_driver
-from hubmap_commons.hm_auth import AuthHelper
+from hubmap_commons import file_helper as hm_file_helper, neo4j_driver, string_helper
 from hubmap_commons.exceptions import HTTPException
+from hubmap_commons.hm_auth import AuthHelper
 
 # Atlas Consortia commons
 from atlas_consortia_commons.ubkg import initialize_ubkg
@@ -54,6 +46,8 @@ from atlas_consortia_commons.string import equals
 from atlas_consortia_commons.ubkg.ubkg_sdk import init_ontology
 from atlas_consortia_commons.decorator import require_data_admin, require_json, require_valid_token
 from lib.ontology import Ontology
+
+
 # Root logger configuration
 global logger
 
@@ -184,16 +178,23 @@ if MEMCACHED_MODE:
         MEMCACHED_MODE = False
 
 
-"""
-Close the current neo4j connection at the end of every request
-"""
-@app.teardown_appcontext
-def close_neo4j_driver(error):
-    if hasattr(g, 'neo4j_driver_instance'):
-        # Close the driver instance
-        neo4j_driver.close()
-        # Also remove neo4j_driver_instance from Flask's application context
-        g.neo4j_driver_instance = None
+@app.before_request
+def open_neo4j_session():
+    """
+    Open a Neo4j session and store it in the `g` object at the beginning of the request.
+    """
+    if not hasattr(g, 'neo4j_session'):
+        g.neo4j_session = neo4j_driver_instance.session()
+
+
+@app.teardown_request
+def close_neo4j_session(exception=None):
+    """
+    Close the Neo4j session stored in the `g` object at the end of the request.
+    """
+    neo4j_session = getattr(g, 'neo4j_session', None)
+    if neo4j_session:
+        neo4j_session.close()
 
 
 ####################################################################################################
@@ -210,7 +211,6 @@ try:
         ingest_api_url=app.config['INGEST_API_URL'],
         search_api_url=app.config['SEARCH_API_URL'],
         auth_helper_instance=auth_helper_instance,
-        neo4j_driver_instance=neo4j_driver_instance,
         ubkg_instance=app.ubkg,
         memcached_client_instance=memcached_client_instance,
         memcached_prefix=app.config['MEMCACHED_PREFIX']
@@ -388,7 +388,7 @@ def get_status():
     # check the neo4j connection
     service = {'name': 'neo4j', 'status': True}
     try:
-        is_connected = app_neo4j_queries.check_connection(neo4j_driver_instance)
+        is_connected = app_neo4j_queries.check_connection(g.neo4j_session)
         if is_connected is False:
             raise Exception(f"Cannot connect to Neo4j server at {current_app.config['NEO4J_URI']}")
     except Exception as e:
@@ -525,7 +525,7 @@ def get_ancestor_organs(id):
             public_entity = False
 
     # By now, either the entity is public accessible or the user token has the correct access level
-    organs = app_neo4j_queries.get_ancestor_organs(neo4j_driver_instance, entity_dict['uuid'])
+    organs = app_neo4j_queries.get_ancestor_organs(g.neo4j_session, entity_dict['uuid'])
     excluded_fields = schema_manager.get_fields_to_exclude('Sample')
 
     # Skip executing the trigger method to get Sample.direct_ancestor
@@ -563,8 +563,7 @@ def _get_entity_visibility(normalized_entity_type, entity_dict):
             len(entity_dict['contributors'].strip()) > 0:
 
         # Get the data_access_level for each Dataset in the Collection from Neo4j
-        collection_dataset_statuses = schema_neo4j_queries.get_collection_datasets_statuses(neo4j_driver_instance,
-                                                                                            entity_dict['uuid'])
+        collection_dataset_statuses = schema_neo4j_queries.get_collection_datasets_statuses(g.neo4j_session, entity_dict['uuid'])
         # If the list of distinct statuses for Datasets in the Collection only has one entry, and
         # it is 'published', the Collection is public
         if len(collection_dataset_statuses) == 1 and \
@@ -722,7 +721,7 @@ def get_entity_pipeline_validation_message(id: str):
 
         property = path.replace('-', '_')
         property_keys = [property]
-        entity_dict = app_neo4j_queries.get_entity_by_id(neo4j_driver_instance, uuid, property_keys)
+        entity_dict = app_neo4j_queries.get_entity_by_id(g.neo4j_session, uuid, property_keys)
         if entity_dict is None:
             abort_not_found(f'Entity of id: {id} not found in Neo4j')
 
@@ -776,7 +775,7 @@ def get_entities_by_ids_for_dashboard(entity_type: str, json_data_dict: dict):
     try:
         entity_uuids = json_data_dict['entity_uuids']
 
-        neo4j_result = app_neo4j_queries.get_entities_for_dashboard(neo4j_driver_instance, entity_uuids, entity_type)
+        neo4j_result = app_neo4j_queries.get_entities_for_dashboard(g.neo4j_session, entity_uuids, entity_type)
         return jsonify(neo4j_result)
     except requests.exceptions.RequestException as e:
         # Due to the use of response.raise_for_status() in schema_manager.get_sennet_ids()
@@ -880,7 +879,7 @@ def get_entity_provenance(id):
     data_access_level = 'public' if authorized is False else None
 
     # Convert neo4j json to dict
-    neo4j_result = app_neo4j_queries.get_provenance(neo4j_driver_instance, uuid, depth, data_access_level=data_access_level)
+    neo4j_result = app_neo4j_queries.get_provenance(g.neo4j_session, uuid, depth, data_access_level=data_access_level)
     raw_provenance_dict = dict(neo4j_result['json'])
 
     raw_descendants_dict = None
@@ -889,8 +888,8 @@ def get_entity_provenance(id):
         return_descendants = request.args.get('return_descendants')
 
         if (return_descendants is not None) and (return_descendants.lower() == 'true'):
-            neo4j_result_descendants = app_neo4j_queries.get_provenance(neo4j_driver_instance, uuid, depth, True,
-                                                                         data_access_level=data_access_level)
+            neo4j_result_descendants = app_neo4j_queries.get_provenance(g.neo4j_session, uuid, depth, True,
+                                                                        data_access_level=data_access_level)
             raw_descendants_dict = dict(neo4j_result_descendants['json'])
 
     # Normalize the raw provenance nodes based on the yaml schema
@@ -1025,7 +1024,7 @@ def get_entities_by_type(entity_type):
                               f"{COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}")
 
             # Only return a list of the filtered property value of each entity
-            property_list = app_neo4j_queries.get_entities_by_type(neo4j_driver_instance,
+            property_list = app_neo4j_queries.get_entities_by_type(g.neo4j_session,
                                                                    normalized_entity_type,
                                                                    property_key)
             # Final result
@@ -1056,7 +1055,7 @@ def get_entities_by_type(entity_type):
         token = get_user_token(request)
 
         # Get back a list of entity dicts for the given entity type
-        entities_list = app_neo4j_queries.get_entities_by_type(neo4j_driver_instance, normalized_entity_type)
+        entities_list = app_neo4j_queries.get_entities_by_type(g.neo4j_session, normalized_entity_type)
 
         complete_entities_list = schema_manager.get_complete_entities_list(token, entities_list, properties_to_skip, use_memcache=True)
 
@@ -1170,7 +1169,7 @@ def create_entity(entity_type: str, user_token: str, json_data_dict: dict):
             # Also need to validate if the given 'previous_revision_uuid' has already had
             # an exisiting next revision
             # Only return a list of the uuids, no need to get back the list of dicts
-            next_revisions_list = app_neo4j_queries.get_next_revisions(neo4j_driver_instance, previous_version_dict['uuid'], 'uuid')
+            next_revisions_list = app_neo4j_queries.get_next_revisions(g.neo4j_session, previous_version_dict['uuid'], 'uuid')
 
             # As long as the list is not empty, tell the users to use a different 'previous_revision_uuid'
             if next_revisions_list:
@@ -1520,8 +1519,7 @@ def update_entity(id: str, user_token: str, json_data_dict: dict):
         # A bit more validation for updating the sample and the linkage to existing source entity
         has_direct_ancestor_uuid = False
         if ('direct_ancestor_uuid' in json_data_dict) and json_data_dict['direct_ancestor_uuid']:
-            existing_direct_ancestor_uuid = schema_neo4j_queries.get_sample_direct_ancestor(schema_manager.get_neo4j_driver_instance(),
-                                                                                   entity_dict['uuid'], property_key='uuid')
+            existing_direct_ancestor_uuid = schema_neo4j_queries.get_sample_direct_ancestor(g.neo4j_session, entity_dict['uuid'], property_key='uuid')
             if not existing_direct_ancestor_uuid == json_data_dict['direct_ancestor_uuid']:
                 abort_bad_req('The field `direct_ancestor_uuid` can not be changed after the entity has been registered.')
 
@@ -1535,7 +1533,7 @@ def update_entity(id: str, user_token: str, json_data_dict: dict):
 
     elif normalized_entity_type in ['Dataset', 'Publication']:
         if 'direct_ancestor_uuids' in json_data_dict:
-            existing_direct_ancestor_uuids = schema_neo4j_queries.get_dataset_direct_ancestors(neo4j_driver_instance, entity_dict['uuid'], property_key='uuid')
+            existing_direct_ancestor_uuids = schema_neo4j_queries.get_dataset_direct_ancestors(g.neo4j_session, entity_dict['uuid'], property_key='uuid')
             if not collections.Counter(existing_direct_ancestor_uuids) == collections.Counter(json_data_dict['direct_ancestor_uuids']):
                 abort_bad_req('The field `direct_ancestor_uuids` can not be changed after the entity has been registered.')
 
@@ -1675,7 +1673,7 @@ def update_entity(id: str, user_token: str, json_data_dict: dict):
 
     if equals(normalized_entity_type, Ontology.ops().entities().SOURCE) and 'metadata' in json_data_dict:
         # Reindex all the descendant datasets if metadata is updated
-        datasets = app_neo4j_queries.get_descendant_datasets(neo4j_driver_instance, entity_dict['uuid'], 'uuid')
+        datasets = app_neo4j_queries.get_descendant_datasets(g.neo4j_session, entity_dict['uuid'], 'uuid')
         for dataset in datasets:
             if MEMCACHED_MODE:
                 delete_cache(dataset)
@@ -1760,7 +1758,7 @@ def get_ancestors(id):
                 abort_bad_req(_property_key_filtering_notice(result_filtering_accepted_property_keys))
 
             # Only return a list of the filtered property value of each entity
-            property_list = app_neo4j_queries.get_ancestors(neo4j_driver_instance, uuid, data_access_level, properties=result_filtering_accepted_property_keys)
+            property_list = app_neo4j_queries.get_ancestors(g.neo4j_session, uuid, data_access_level, properties=result_filtering_accepted_property_keys)
 
             # Final result
             final_result = property_list
@@ -1774,7 +1772,7 @@ def get_ancestors(id):
             if 'filter_properties' in filtering_dict:
                 properties_action = filtering_dict.get('is_include', True)
                 segregated_properties = schema_manager.group_verify_properties_list(properties=filtering_dict['filter_properties'])
-                property_list = app_neo4j_queries.get_ancestors(neo4j_driver_instance, uuid, data_access_level, properties=segregated_properties, is_include_action=properties_action)
+                property_list = app_neo4j_queries.get_ancestors(g.neo4j_session, uuid, data_access_level, properties=segregated_properties, is_include_action=properties_action)
                 complete_entities_list = schema_manager.get_complete_entities_list(token, property_list, segregated_properties.trigger, is_include_action=properties_action, use_memcache=False)
                 # Final result
                 _final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list, segregated_properties, is_include_action=properties_action, is_strict=True)
@@ -1782,7 +1780,7 @@ def get_ancestors(id):
 
     # Return all the details if no property filtering
     else:
-        ancestors_list = app_neo4j_queries.get_ancestors(neo4j_driver_instance, uuid, data_access_level)
+        ancestors_list = app_neo4j_queries.get_ancestors(g.neo4j_session, uuid, data_access_level)
 
         # Generate trigger data
         # Skip some of the properties that are time-consuming to generate via triggers
@@ -1876,7 +1874,7 @@ def get_descendants(id):
                 abort_bad_req(_property_key_filtering_notice(result_filtering_accepted_property_keys))
 
             # Only return a list of the filtered property value of each entity
-            property_list = app_neo4j_queries.get_descendants(neo4j_driver_instance, uuid, data_access_level,
+            property_list = app_neo4j_queries.get_descendants(g.neo4j_session, uuid, data_access_level,
                                                               properties=result_filtering_accepted_property_keys, entity_type=entity_dict['entity_type'])
 
             # Final result
@@ -1891,14 +1889,14 @@ def get_descendants(id):
             if 'filter_properties' in filtering_dict:
                 properties_action = filtering_dict.get('is_include', True)
                 segregated_properties = schema_manager.group_verify_properties_list(properties=filtering_dict['filter_properties'])
-                property_list = app_neo4j_queries.get_descendants(neo4j_driver_instance, uuid, data_access_level, properties=segregated_properties, is_include_action=properties_action)
+                property_list = app_neo4j_queries.get_descendants(g.neo4j_session, uuid, data_access_level, properties=segregated_properties, is_include_action=properties_action)
                 complete_entities_list = schema_manager.get_complete_entities_list(token, property_list, segregated_properties.trigger, is_include_action=properties_action, use_memcache=False)
                 # Final result
                 _final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list, segregated_properties, is_include_action=properties_action, is_strict=True)
                 final_result = schema_manager.remove_unauthorized_fields_from_response(_final_result, unauthorized=not authorized)
     # Return all the details if no property filtering
     else:
-        descendants_list = app_neo4j_queries.get_descendants(neo4j_driver_instance, uuid, data_access_level,
+        descendants_list = app_neo4j_queries.get_descendants(g.neo4j_session, uuid, data_access_level,
                                                              entity_type=entity_dict['entity_type'])
 
         # Generate trigger data and merge into a big dict
@@ -1999,7 +1997,7 @@ def get_parents(id):
                 abort_bad_req(_property_key_filtering_notice(result_filtering_accepted_property_keys))
 
             # Only return a list of the filtered property value of each entity
-            property_list = app_neo4j_queries.get_parents(neo4j_driver_instance, uuid, properties=result_filtering_accepted_property_keys)
+            property_list = app_neo4j_queries.get_parents(g.neo4j_session, uuid, properties=result_filtering_accepted_property_keys)
 
             # Final result
             final_result = property_list
@@ -2014,14 +2012,14 @@ def get_parents(id):
             if 'filter_properties' in filtering_dict:
                 properties_action = filtering_dict.get('is_include', True)
                 segregated_properties = schema_manager.group_verify_properties_list(properties=filtering_dict['filter_properties'])
-                property_list = app_neo4j_queries.get_parents(neo4j_driver_instance, uuid, properties=segregated_properties, is_include_action=properties_action)
+                property_list = app_neo4j_queries.get_parents(g.neo4j_session, uuid, properties=segregated_properties, is_include_action=properties_action)
                 complete_entities_list = schema_manager.get_complete_entities_list(token, property_list, segregated_properties.trigger, is_include_action=properties_action, use_memcache=False)
                 # Final result
                 _final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list, segregated_properties, is_include_action=properties_action, is_strict=True)
                 final_result = schema_manager.remove_unauthorized_fields_from_response(_final_result, unauthorized=not user_in_sennet_read_group(request))
     # Return all the details if no property filtering
     else:
-        parents_list = app_neo4j_queries.get_parents(neo4j_driver_instance, uuid)
+        parents_list = app_neo4j_queries.get_parents(g.neo4j_session, uuid)
 
         # Generate trigger data
         # Skip some of the properties that are time-consuming to generate via triggers
@@ -2096,7 +2094,7 @@ def get_children(id):
                 abort_bad_req(_property_key_filtering_notice(result_filtering_accepted_property_keys))
 
             # Only return a list of the filtered property value of each entity
-            property_list = schema_neo4j_queries.get_children(neo4j_driver_instance, uuid, properties=result_filtering_accepted_property_keys)
+            property_list = schema_neo4j_queries.get_children(g.neo4j_session, uuid, properties=result_filtering_accepted_property_keys)
 
             # Final result
             final_result = property_list
@@ -2110,14 +2108,14 @@ def get_children(id):
             if 'filter_properties' in filtering_dict:
                 properties_action = filtering_dict.get('is_include', True)
                 segregated_properties = schema_manager.group_verify_properties_list(properties=filtering_dict['filter_properties'])
-                property_list = schema_neo4j_queries.get_children(neo4j_driver_instance, uuid, properties=segregated_properties, is_include_action=properties_action)
+                property_list = schema_neo4j_queries.get_children(g.neo4j_session, uuid, properties=segregated_properties, is_include_action=properties_action)
                 complete_entities_list = schema_manager.get_complete_entities_list(user_token, property_list, segregated_properties.trigger, is_include_action=properties_action, use_memcache=False)
                 # Final result
                 _final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list, segregated_properties, is_include_action=properties_action, is_strict=True)
                 final_result = schema_manager.remove_unauthorized_fields_from_response(_final_result, unauthorized=not user_in_sennet_read_group(request))
     # Return all the details if no property filtering
     else:
-        children_list = schema_neo4j_queries.get_children(neo4j_driver_instance, uuid)
+        children_list = schema_neo4j_queries.get_children(g.neo4j_session, uuid)
 
         # Generate trigger data and merge into a big dict
         # and skip some of the properties that are time-consuming to generate via triggers
@@ -2233,7 +2231,7 @@ def get_siblings(id):
                 include_revisions = True
             else:
                 include_revisions = False
-    sibling_list = app_neo4j_queries.get_siblings(neo4j_driver_instance, uuid, status, property_key, include_revisions)
+    sibling_list = app_neo4j_queries.get_siblings(g.neo4j_session, uuid, status, property_key, include_revisions)
     if property_key is not None:
         return jsonify(sibling_list)
     # Generate trigger data
@@ -2344,7 +2342,7 @@ def get_tuplets(id):
             result_filtering_accepted_property_keys = ['uuid']
             if property_key not in result_filtering_accepted_property_keys:
                 abort_bad_req(f"Only the following property keys are supported in the query string: {COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}")
-    tuplet_list = app_neo4j_queries.get_tuplets(neo4j_driver_instance, uuid, status, property_key)
+    tuplet_list = app_neo4j_queries.get_tuplets(g.neo4j_session, uuid, status, property_key)
     if property_key is not None:
         return jsonify(tuplet_list)
     # Generate trigger data
@@ -2416,8 +2414,8 @@ def get_previous_revisions(id):
                 abort_bad_req(f"Only the following property keys are supported in the query string: {COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}")
 
             # Only return a list of the filtered property value of each entity
-            # property_list = app_neo4j_queries.get_previous_revisions(neo4j_driver_instance, uuid, property_key)
-            property_multi_list = app_neo4j_queries.get_previous_multi_revisions(neo4j_driver_instance, uuid, property_key)
+            # property_list = app_neo4j_queries.get_previous_revisions(g.neo4j_session, uuid, property_key)
+            property_multi_list = app_neo4j_queries.get_previous_multi_revisions(g.neo4j_session, uuid, property_key)
 
             # Final result
             # final_result = property_list
@@ -2428,8 +2426,8 @@ def get_previous_revisions(id):
         return jsonify(final_result)
     # Return all the details if no property filtering
     else:
-        # descendants_list = app_neo4j_queries.get_previous_revisions(neo4j_driver_instance, uuid)
-        descendants_multi_list = app_neo4j_queries.get_previous_multi_revisions(neo4j_driver_instance, uuid)
+        # descendants_list = app_neo4j_queries.get_previous_revisions(g.neo4j_session, uuid)
+        descendants_multi_list = app_neo4j_queries.get_previous_multi_revisions(g.neo4j_session, uuid)
 
         # Generate trigger data and merge into a big dict
         # and skip some of the properties that are time-consuming to generate via triggers
@@ -2489,8 +2487,8 @@ def get_next_revisions(id):
                 abort_bad_req(f"Only the following property keys are supported in the query string: {COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}")
 
             # Only return a list of the filtered property value of each entity
-            # property_list = app_neo4j_queries.get_next_revisions(neo4j_driver_instance, uuid, property_key)
-            property_multi_list = app_neo4j_queries.get_next_multi_revisions(neo4j_driver_instance, uuid, property_key)
+            # property_list = app_neo4j_queries.get_next_revisions(g.neo4j_session, uuid, property_key)
+            property_multi_list = app_neo4j_queries.get_next_multi_revisions(g.neo4j_session, uuid, property_key)
 
             # Final result
             final_result = property_multi_list
@@ -2500,8 +2498,8 @@ def get_next_revisions(id):
         return jsonify(final_result)
     # Return all the details if no property filtering
     else:
-        # descendants_list = app_neo4j_queries.get_next_revisions(neo4j_driver_instance, uuid)
-        descendants_multi_list = app_neo4j_queries.get_next_multi_revisions(neo4j_driver_instance, uuid)
+        # descendants_list = app_neo4j_queries.get_next_revisions(g.neo4j_session, uuid)
+        descendants_multi_list = app_neo4j_queries.get_next_multi_revisions(g.neo4j_session, uuid)
 
         # Generate trigger data and merge into a big dict
         # and skip some of the properties that are time-consuming to generate via triggers
@@ -2779,15 +2777,15 @@ def get_dataset_latest_revision(id):
         # Token is required and the user must belong to SenNet-READ group
         token = get_user_token(request, non_public_access_required=True)
         public_entity = False
-        latest_revision_dict = app_neo4j_queries.get_dataset_latest_revision(neo4j_driver_instance, uuid)
+        latest_revision_dict = app_neo4j_queries.get_dataset_latest_revision(g.neo4j_session, uuid)
     else:
         # Default to the latest "public" revision dataset
         # when no token or not a valid SenNet-Read token
-        latest_revision_dict = app_neo4j_queries.get_dataset_latest_revision(neo4j_driver_instance, uuid, public=True)
+        latest_revision_dict = app_neo4j_queries.get_dataset_latest_revision(g.neo4j_session, uuid, public=True)
 
         # Send back the real latest revision dataset if a valid SenNet-Read token presents
         if user_in_globus_read_group(request):
-            latest_revision_dict = app_neo4j_queries.get_dataset_latest_revision(neo4j_driver_instance, uuid)
+            latest_revision_dict = app_neo4j_queries.get_dataset_latest_revision(g.neo4j_session, uuid)
 
     # We'll need to return all the properties including those
     # generated by `on_read_trigger` to have a complete result
@@ -2860,7 +2858,7 @@ def get_dataset_revision_number(id):
 
     # By now, either the entity is public accessible or
     # the user token has the correct access level
-    revision_number = app_neo4j_queries.get_dataset_revision_number(neo4j_driver_instance, entity_dict['uuid'])
+    revision_number = app_neo4j_queries.get_dataset_revision_number(g.neo4j_session, entity_dict['uuid'])
 
     # Response with the integer
     return jsonify(revision_number)
@@ -3015,7 +3013,7 @@ def get_revisions_list(id):
     # By now, either the entity is public accessible or
     # the user token has the correct access level
     # Get the all the sorted (DESC based on creation timestamp) revisions
-    sorted_revisions_list = app_neo4j_queries.get_sorted_revisions(neo4j_driver_instance, entity_dict['uuid'])
+    sorted_revisions_list = app_neo4j_queries.get_sorted_revisions(g.neo4j_session, entity_dict['uuid'])
 
     # Skip some of the properties that are time-consuming to generate via triggers
     properties_to_skip = [
@@ -3116,7 +3114,7 @@ list
 #     # By now, either the entity is public accessible or
 #     # the user token has the correct access level
 #     # Get the all the sorted (DESC based on creation timestamp) revisions
-#     sorted_revisions_list = app_neo4j_queries.get_sorted_multi_revisions(neo4j_driver_instance, entity_dict['uuid'],
+#     sorted_revisions_list = app_neo4j_queries.get_sorted_multi_revisions(g.neo4j_session, entity_dict['uuid'],
 #                                                                          fetch_all=user_in_globus_read_group(request),
 #                                                                          property_key=property_key)
 #
@@ -3197,7 +3195,7 @@ def get_associated_organs_from_dataset(id):
 
     # By now, either the entity is public accessible or
     # the user token has the correct access level
-    associated_organs = app_neo4j_queries.get_associated_organs_from_dataset(neo4j_driver_instance, entity_dict['uuid'])
+    associated_organs = app_neo4j_queries.get_associated_organs_from_dataset(g.neo4j_session, entity_dict['uuid'])
 
     # If there are zero items in the list associated organs, then there are no associated
     # Organs and a 404 will be returned.
@@ -3260,7 +3258,7 @@ def get_associated_samples_from_dataset(id):
         public_entity = False
 
     # By now, either the entity is public accessible or the user token has the correct access level
-    associated_samples = app_neo4j_queries.get_associated_samples_from_dataset(neo4j_driver_instance, entity_dict['uuid'])
+    associated_samples = app_neo4j_queries.get_associated_samples_from_dataset(g.neo4j_session, entity_dict['uuid'])
 
     # If there are zero items in the list associated_samples, then there are no associated
     # samples and a 404 will be returned.
@@ -3318,7 +3316,7 @@ def get_associated_sources_from_dataset(id):
         public_entity = False
 
     # By now, either the entity is public accessible or the user token has the correct access level
-    associated_sources = app_neo4j_queries.get_associated_sources_from_dataset(neo4j_driver_instance, entity_dict['uuid'])
+    associated_sources = app_neo4j_queries.get_associated_sources_from_dataset(g.neo4j_session, entity_dict['uuid'])
 
     # If there are zero items in the list associated_sources, then there are no associated
     # sources and a 404 will be returned.
@@ -3477,7 +3475,7 @@ def get_prov_info():
     dataset_prov_list = []
 
     # Call to app_neo4j_queries to prepare and execute the database query
-    prov_info = app_neo4j_queries.get_prov_info(neo4j_driver_instance, param_dict, published_only)
+    prov_info = app_neo4j_queries.get_prov_info(g.neo4j_session, param_dict, published_only)
 
     # Each dataset's provinence info is placed into a dictionary
     for dataset in prov_info:
@@ -3739,7 +3737,7 @@ def get_prov_info_for_dataset(id):
 
     # Get the target uuid if all good
     uuid = sennet_ids['hm_uuid']
-    dataset = app_neo4j_queries.get_individual_prov_info(neo4j_driver_instance, uuid)
+    dataset = app_neo4j_queries.get_individual_prov_info(g.neo4j_session, uuid)
     if dataset is None:
         abort_bad_req("Query For this Dataset Returned no Records. Make sure this is a Primary Dataset")
     internal_dict = collections.OrderedDict()
@@ -3859,7 +3857,7 @@ def get_prov_info_for_dataset(id):
 
     if include_samples:
         headers.append(HEADER_DATASET_SAMPLES)
-        dataset_samples = app_neo4j_queries.get_all_dataset_samples(neo4j_driver_instance, uuid)
+        dataset_samples = app_neo4j_queries.get_all_dataset_samples(g.neo4j_session, uuid)
         logger.debug(f"dataset_samples={str(dataset_samples)}")
 
         if 'all' in include_samples:
@@ -3946,7 +3944,7 @@ def get_sample_prov_info():
     sample_prov_list = []
 
     # Call to app_neo4j_queries to prepare and execute database query
-    prov_info = app_neo4j_queries.get_sample_prov_info(neo4j_driver_instance, param_dict)
+    prov_info = app_neo4j_queries.get_sample_prov_info(g.neo4j_session, param_dict)
 
     for sample in prov_info:
 
@@ -4372,7 +4370,7 @@ def create_entity_details(request, normalized_entity_type, user_token, json_data
         # Important: `entity_dict` is the resulting neo4j dict, Python list and dicts are stored
         # as string expression literals in it. That's why properties like entity_dict['direct_ancestor_uuid']
         # will need to use ast.literal_eval() in the schema_triggers.py
-        entity_dict = app_neo4j_queries.create_entity(neo4j_driver_instance, normalized_entity_type, filtered_merged_dict, superclass)
+        entity_dict = app_neo4j_queries.create_entity(g.neo4j_session, normalized_entity_type, filtered_merged_dict, superclass)
     except TransactionError:
         msg = "Failed to create the new " + normalized_entity_type
         # Log the full stack trace, prepend a line with our message
@@ -4528,7 +4526,7 @@ def create_multiple_samples_details(request, normalized_entity_type, user_token,
     # Create new sample nodes and needed relationships as well as activity node in one transaction
     try:
         # No return value
-        app_neo4j_queries.create_multiple_samples(neo4j_driver_instance, samples_dict_list, activity_data_dict, json_data_dict['direct_ancestor_uuid'][0])
+        app_neo4j_queries.create_multiple_samples(g.neo4j_session, samples_dict_list, activity_data_dict, json_data_dict['direct_ancestor_uuid'][0])
     except TransactionError:
         msg = "Failed to create multiple samples"
         # Log the full stack trace, prepend a line with our message
@@ -4605,7 +4603,7 @@ def multiple_components(user_token: str, json_data_dict: dict):
         if direct_ancestor_dict.get('entity_type').lower() != "dataset":
             abort_bad_req(f"Direct ancestor is of type: {direct_ancestor_dict.get('entity_type')}. Must be of type 'dataset'.")
 
-    dataset_has_component_children = app_neo4j_queries.dataset_has_component_children(neo4j_driver_instance, direct_ancestor_uuid)
+    dataset_has_component_children = app_neo4j_queries.dataset_has_component_children(g.neo4j_session, direct_ancestor_uuid)
     if dataset_has_component_children:
         abort_bad_req(f"The dataset with uuid {direct_ancestor_uuid} already has component children dataset(s)")
 
@@ -4745,7 +4743,7 @@ def get_collections(id):
                 abort_bad_req(f"Only the following property keys are supported in the query string: {COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}")
 
             # Only return a list of the filtered property value of each entity
-            property_list = schema_neo4j_queries.get_collections(neo4j_driver_instance, uuid, property_key)
+            property_list = schema_neo4j_queries.get_collections(g.neo4j_session, uuid, property_key)
 
             # Final result
             final_result = property_list
@@ -4753,7 +4751,7 @@ def get_collections(id):
             abort_bad_req("The specified query string is not supported. Use '?property=<key>' to filter the result")
     # Return all the details if no property filtering
     else:
-        collection_list = schema_neo4j_queries.get_collections(neo4j_driver_instance, uuid)
+        collection_list = schema_neo4j_queries.get_collections(g.neo4j_session, uuid)
 
         # Generate trigger data
         # Skip some of the properties that are time-consuming to generate via triggers
@@ -4854,7 +4852,7 @@ def get_uploads(id):
                 abort_bad_req(f"Only the following property keys are supported in the query string: {COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}")
 
             # Only return a list of the filtered property value of each entity
-            property_list = schema_neo4j_queries.get_uploads(neo4j_driver_instance, uuid, property_key)
+            property_list = schema_neo4j_queries.get_uploads(g.neo4j_session, uuid, property_key)
 
             # Final result
             final_result = property_list
@@ -4862,7 +4860,7 @@ def get_uploads(id):
             abort_bad_req("The specified query string is not supported. Use '?property=<key>' to filter the result")
     # Return all the details if no property filtering
     else:
-        uploads_list = schema_neo4j_queries.get_uploads(neo4j_driver_instance, uuid)
+        uploads_list = schema_neo4j_queries.get_uploads(g.neo4j_session, uuid)
 
         # Generate trigger data
         # Skip some of the properties that are time-consuming to generate via triggers
@@ -4991,7 +4989,7 @@ def create_multiple_component_details(request, normalized_entity_type, user_toke
     activity_data_dict = schema_manager.generate_activity_data(normalized_entity_type, user_token, user_info_dict, creation_action)
     # activity_data_dict['creation_action'] = creation_action
     try:
-        created_datasets = app_neo4j_queries.create_multiple_datasets(neo4j_driver_instance, datasets_dict_list, activity_data_dict, direct_ancestor)
+        created_datasets = app_neo4j_queries.create_multiple_datasets(g.neo4j_session, datasets_dict_list, activity_data_dict, direct_ancestor)
     except TransactionError:
         msg = "Failed to create multiple samples"
         # Log the full stack trace, prepend a line with our message
@@ -5056,7 +5054,7 @@ def get_datasets_for_upload(id: str):
                 properties_to_filter = filtering_dict['filter_properties']
                 segregated_properties = schema_manager.group_verify_properties_list(Ontology.ops().entities().DATASET, properties_to_filter)
                 properties_action = filtering_dict.get('is_include', True)
-                datasets_list = schema_neo4j_queries.get_upload_datasets(neo4j_driver_instance, uuid=uuid, properties=segregated_properties, is_include_action=properties_action)
+                datasets_list = schema_neo4j_queries.get_upload_datasets(g.neo4j_session, uuid=uuid, properties=segregated_properties, is_include_action=properties_action)
                 complete_list = schema_manager.get_complete_entities_list(token, datasets_list, properties_to_filter=segregated_properties.trigger, is_include_action=properties_action, use_memcache=False)
                 _final_result = schema_manager.normalize_entities_list_for_response(complete_list, segregated_properties, is_include_action=properties_action, is_strict=True)
 
@@ -5140,7 +5138,7 @@ def get_entities_for_collection(id: str):
                 properties_to_filter = filtering_dict['filter_properties']
                 segregated_properties = schema_manager.group_verify_properties_list(properties=properties_to_filter)
                 properties_action = filtering_dict.get('is_include', True)
-                entities_list = schema_neo4j_queries.get_collection_entities(neo4j_driver_instance, uuid=uuid, properties=segregated_properties, is_include_action=properties_action)
+                entities_list = schema_neo4j_queries.get_collection_entities(g.neo4j_session, uuid=uuid, properties=segregated_properties, is_include_action=properties_action)
                 complete_list = schema_manager.get_complete_entities_list(token, entities_list, properties_to_filter=segregated_properties.trigger, is_include_action=properties_action, use_memcache=False)
                 _final_result = schema_manager.normalize_entities_list_for_response(complete_list, segregated_properties, is_include_action=properties_action, is_strict=True)
     else:
@@ -5249,7 +5247,7 @@ def update_object_details(provenance_type, request, normalized_entity_type, user
 
     # Update the exisiting entity
     try:
-        updated_entity_dict = app_neo4j_queries.update_entity(neo4j_driver_instance, normalized_entity_type, filtered_merged_dict, existing_entity_dict['uuid'])
+        updated_entity_dict = app_neo4j_queries.update_entity(g.neo4j_session, normalized_entity_type, filtered_merged_dict, existing_entity_dict['uuid'])
     except TransactionError:
         msg = "Failed to update the entity with id " + id
         # Log the full stack trace, prepend a line with our message
@@ -5333,7 +5331,7 @@ def query_target_activity(id):
 
         # Get the target uuid if all good
         uuid = sennet_ids['uuid']
-        entity_dict = app_neo4j_queries.get_activity(neo4j_driver_instance, uuid)
+        entity_dict = app_neo4j_queries.get_activity(g.neo4j_session, uuid)
 
         # The uuid exists via uuid-api doesn't mean it's also in Neo4j
         if not entity_dict:
@@ -5395,7 +5393,7 @@ def query_target_entity(id: str, properties_to_exclude: List[str] = [], properti
 
             # Get the target uuid if all good
             uuid = sennet_ids['uuid']
-            entity_dict = app_neo4j_queries.get_entity(neo4j_driver_instance, uuid)
+            entity_dict = app_neo4j_queries.get_entity(g.neo4j_session, uuid)
 
             # The uuid exists via uuid-api doesn't mean it's also in Neo4j
             if not entity_dict:
@@ -5438,7 +5436,7 @@ def query_activity_was_generated_by(id: str):
 
         # Get the target uuid if all good
         uuid = sennet_ids['uuid']
-        activity_dict = app_neo4j_queries.get_activity_was_generated_by(neo4j_driver_instance, uuid)
+        activity_dict = app_neo4j_queries.get_activity_was_generated_by(g.neo4j_session, uuid)
 
         # The uuid exists via uuid-api doesn't mean it's also in Neo4j
         if not activity_dict:
@@ -5722,7 +5720,7 @@ def check_multiple_organs_constraint(current_entity: dict, ancestor_entity: dict
         if equals(current_entity['sample_category'], Ontology.ops().specimen_categories().ORGAN):
             organ_code = current_entity['organ']
             if organ_code not in app.config['MULTIPLE_ALLOWED_ORGANS']:
-                count = app_neo4j_queries.get_source_organ_count(neo4j_driver_instance, ancestor_entity['uuid'],
+                count = app_neo4j_queries.get_source_organ_count(g.neo4j_session, ancestor_entity['uuid'],
                                                                  organ_code, case_uuid=case_uuid)
                 if count >= 1:
                     organ_codes = Ontology.ops(as_data_dict=True, val_key='term', key='rui_code').organ_types()
@@ -5790,19 +5788,19 @@ def delete_cache(id):
 
         # If the target entity is Sample (`direct_ancestor`) or Dataset/Publication (`direct_ancestors`)
         # Delete the cache of all the direct descendants (children)
-        child_uuids = schema_neo4j_queries.get_children(neo4j_driver_instance, entity_uuid , properties=['uuid'])
+        child_uuids = schema_neo4j_queries.get_children(g.neo4j_session, entity_uuid , properties=['uuid'])
 
         # If the target entity is Collection, delete the cache for each of its associated
         # Datasets and Publications (via [:IN_COLLECTION] relationship) as well as just Publications (via [:USES_DATA] relationship)
-        collection_dataset_uuids = schema_neo4j_queries.get_collection_associated_datasets(neo4j_driver_instance, entity_uuid , 'uuid')
+        collection_dataset_uuids = schema_neo4j_queries.get_collection_associated_datasets(g.neo4j_session, entity_uuid , 'uuid')
 
         # If the target entity is Upload, delete the cache for each of its associated Datasets (via [:IN_UPLOAD] relationship)
-        upload_dataset_uuids = schema_neo4j_queries.get_upload_datasets(neo4j_driver_instance, entity_uuid , properties=['uuid'])
+        upload_dataset_uuids = schema_neo4j_queries.get_upload_datasets(g.neo4j_session, entity_uuid , properties=['uuid'])
 
         # If the target entity is Datasets/Publication, delete the associated Collections cache, Upload cache
-        collection_uuids = schema_neo4j_queries.get_entity_collections(neo4j_driver_instance, entity_uuid , 'uuid')
-        collection_dict = schema_neo4j_queries.get_publication_associated_collection(neo4j_driver_instance, entity_uuid)
-        upload_dict = schema_neo4j_queries.get_dataset_upload(neo4j_driver_instance, entity_uuid)
+        collection_uuids = schema_neo4j_queries.get_entity_collections(g.neo4j_session, entity_uuid , 'uuid')
+        collection_dict = schema_neo4j_queries.get_publication_associated_collection(g.neo4j_session, entity_uuid)
+        upload_dict = schema_neo4j_queries.get_dataset_upload(g.neo4j_session, entity_uuid)
 
         # We only use uuid in the cache key acorss all the cache types
         uuids_list = [entity_uuid] + child_uuids + collection_dataset_uuids + upload_dataset_uuids + collection_uuids

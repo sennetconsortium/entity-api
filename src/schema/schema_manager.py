@@ -3,12 +3,11 @@ import logging
 import requests
 from datetime import datetime
 
-from flask import Response
+from flask import Response, g
 from hubmap_commons.file_helper import ensureTrailingSlashURL
 
 # Don't confuse urllib (Python native library) with urllib3 (3rd-party library, requests also uses urllib3)
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
-
 
 from lib.commons import get_as_dict
 from lib.property_groups import PropertyGroups
@@ -47,7 +46,6 @@ _entity_api_url = None
 _ingest_api_url = None
 _search_api_url = None
 _auth_helper = None
-_neo4j_driver = None
 _ubkg = None
 _memcached_client = None
 _memcached_prefix = None
@@ -79,7 +77,6 @@ def initialize(valid_yaml_file,
                ingest_api_url,
                search_api_url,
                auth_helper_instance,
-               neo4j_driver_instance,
                ubkg_instance,
                memcached_client_instance,
                memcached_prefix):
@@ -91,7 +88,6 @@ def initialize(valid_yaml_file,
     global _ingest_api_url
     global _search_api_url
     global _auth_helper
-    global _neo4j_driver
     global _ubkg
     global _memcached_client
     global _memcached_prefix
@@ -115,7 +111,6 @@ def initialize(valid_yaml_file,
 
     # Get the helper instances
     _auth_helper = auth_helper_instance
-    _neo4j_driver = neo4j_driver_instance
     _ubkg = ubkg_instance
 
     _memcached_client = memcached_client_instance
@@ -150,6 +145,7 @@ def load_provenance_schema(valid_yaml_file):
         for entity in schema_dict['ENTITIES']:
             schema_dict['ENTITIES'][entity]['properties'] = remove_none_values(schema_dict['ENTITIES'][entity]['properties'])
         return schema_dict
+
 
 def get_schema_properties():
     global _schema_properties
@@ -285,8 +281,7 @@ def entity_instanceof(entity_uuid: str, entity_class: str) -> bool:
     :param entity_class: found in .yaml file
     :return: True or False
     """
-    entity_type: str = \
-        schema_neo4j_queries.get_entity_type(get_neo4j_driver_instance(), entity_uuid)
+    entity_type: str = schema_neo4j_queries.get_entity_type(g.neo4j_session, entity_uuid)
     return entity_type_instanceof(entity_type, entity_class)
 
 
@@ -1668,13 +1663,13 @@ def normalize_document_result_for_response(entity_dict, properties_to_exclude=[]
     dict
         An entity metadata dictionary with keys that are all normalized
     """
-    return _normalize_metadata( entity_dict=entity_dict
-                                , metadata_scope=MetadataScopeEnum.INDEX
-                                , properties_to_exclude=properties_to_exclude
-                                , properties_to_include=properties_to_include)
+    return _normalize_metadata(entity_dict=entity_dict,
+                               metadata_scope=MetadataScopeEnum.INDEX,
+                               properties_to_exclude=properties_to_exclude,
+                               properties_to_include=properties_to_include)
 
 
-def _normalize_metadata(entity_dict, metadata_scope:MetadataScopeEnum, properties_to_exclude=[], properties_to_include=[]):
+def _normalize_metadata(entity_dict, metadata_scope: MetadataScopeEnum, properties_to_exclude=[], properties_to_include=[]):
     """
     Normalize the entity result by filtering the properties to those appropriate for the
     scope of metadata requested e.g. complete data for a another service, indexing data for an OpenSearch document, etc.
@@ -2371,7 +2366,6 @@ def generate_activity_data(normalized_entity_type, user_token, user_info_dict, c
     return generated_activity_data_dict
 
 
-
 def get_ingest_api_url():
     """
     Get the ingest-api URL to be used by trigger methods
@@ -2412,21 +2406,6 @@ def get_auth_helper_instance():
     global _auth_helper
 
     return _auth_helper
-
-
-def get_neo4j_driver_instance():
-    """
-    Get the neo4j.Driver instance to be used by trigger methods
-
-    Returns
-    -------
-    neo4j.Driver
-        The neo4j.Driver instance
-    """
-    global _neo4j_driver
-
-    return _neo4j_driver
-
 
 
 def get_ubkg_instance():

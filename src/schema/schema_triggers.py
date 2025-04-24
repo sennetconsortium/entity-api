@@ -8,6 +8,7 @@ import requests
 from atlas_consortia_commons.string import equals
 from neo4j.exceptions import TransactionError
 import re
+from flask import g
 
 # Local modules
 import app_neo4j_queries
@@ -311,8 +312,9 @@ def set_data_access_level(property_key, normalized_type, user_token, existing_da
 
         # public if any dataset below it in the provenance hierarchy is published
         # (i.e. Dataset.status == "Published")
-        count = schema_neo4j_queries.count_attached_published_datasets(schema_manager.get_neo4j_driver_instance(),
-                                                                       normalized_type, new_data_dict['uuid'])
+        count = schema_neo4j_queries.count_attached_published_datasets(g.neo4j_session,
+                                                                       normalized_type,
+                                                                       new_data_dict['uuid'])
 
         if count > 0:
             data_access_level = SchemaConstants.ACCESS_LEVEL_PUBLIC
@@ -673,8 +675,7 @@ def get_normalized_collection_entities(uuid: str, token: str, skip_completion: b
         str: The target property key
         list: A list of associated entity dicts with all the normalized information
     """
-    db = schema_manager.get_neo4j_driver_instance()
-    entities_list = schema_neo4j_queries.get_collection_entities(db, uuid)
+    entities_list = schema_neo4j_queries.get_collection_entities(g.neo4j_session, uuid)
 
     if skip_completion:
         complete_entities_list = entities_list
@@ -720,8 +721,7 @@ def get_publication_associated_collection(property_key, normalized_type, user_to
     logger.info(
         f"Executing 'get_publication_associated_collection()' trigger method on uuid: {existing_data_dict['uuid']}")
 
-    collection_dict = schema_neo4j_queries.get_publication_associated_collection(
-        schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'])
+    collection_dict = schema_neo4j_queries.get_publication_associated_collection(g.neo4j_session, existing_data_dict['uuid'])
 
     # Get rid of the entity node properties that are not defined in the yaml schema
     # as well as the ones defined as `exposed: false` in the yaml schema
@@ -765,7 +765,7 @@ def link_publication_to_associated_collection(property_key, normalized_type, use
     try:
         # Create a linkage
         # between the Publication node and the Collection node in neo4j
-        schema_neo4j_queries.link_publication_to_associated_collection(schema_manager.get_neo4j_driver_instance(),
+        schema_neo4j_queries.link_publication_to_associated_collection(g.neo4j_session,
                                                                        existing_data_dict['uuid'],
                                                                        associated_collection_uuid)
 
@@ -839,7 +839,7 @@ def get_entity_collections(property_key, normalized_type, user_token, existing_d
 
     # No property key needs to filter the result
     # Get back the list of collection dicts
-    collections_list = schema_neo4j_queries.get_entity_collections(schema_manager.get_neo4j_driver_instance(),
+    collections_list = schema_neo4j_queries.get_entity_collections(g.neo4j_session,
                                                                    existing_data_dict['uuid'])
     if collections_list:
         # Exclude datasets from each resulting collection
@@ -884,7 +884,7 @@ def get_dataset_upload(property_key, normalized_type, user_token, existing_data_
         raise KeyError(msg)
 
     # It could be None if the dataset doesn't in any Upload
-    upload_dict = schema_neo4j_queries.get_dataset_upload(schema_manager.get_neo4j_driver_instance(),
+    upload_dict = schema_neo4j_queries.get_dataset_upload(g.neo4j_session,
                                                           existing_data_dict['uuid'])
 
     if upload_dict:
@@ -931,7 +931,7 @@ def link_collection_to_entities(property_key, normalized_type, user_token, exist
 
     try:
         # Create a linkage (without an Activity node) between the Collection node and each Entity it contains.
-        schema_neo4j_queries.link_collection_to_entities(neo4j_driver=schema_manager.get_neo4j_driver_instance(),
+        schema_neo4j_queries.link_collection_to_entities(neo4j_driver=g.neo4j_session,
                                                          collection_uuid=existing_data_dict['uuid'],
                                                          entities_uuid_list=entity_uuids)
 
@@ -975,7 +975,7 @@ def get_dataset_direct_ancestors(property_key, normalized_type, user_token, exis
 
     # No property key needs to filter the result
     # Get back the list of ancestor dicts
-    driver = schema_manager.get_neo4j_driver_instance()
+    driver = g.neo4j_session
     direct_ancestors_list = schema_neo4j_queries.get_dataset_direct_ancestors(driver,
                                                                               existing_data_dict['uuid'])
 
@@ -1023,7 +1023,7 @@ def get_sample_section_descendant_datasets(property_key, normalized_type, user_t
     # Check if the entity is a Sample Section, skip otherwise
     if equals(Ontology.ops().entities().SAMPLE, normalized_type):
         if equals(Ontology.ops().specimen_categories().SECTION, existing_data_dict['sample_category']):
-            driver = schema_manager.get_neo4j_driver_instance()
+            driver = g.neo4j_session
             uuid = existing_data_dict['uuid']
 
             # HRA EUI only requires the 'dataset_type' field
@@ -1070,7 +1070,7 @@ def get_ancestor_blocks(property_key, normalized_type, user_token, existing_data
         (equals(entity_types.SAMPLE, normalized_type) and equals(sample_categories.SECTION, existing_data_dict['sample_category']))
         or equals(entity_types.DATASET, normalized_type)
     ):
-        driver = schema_manager.get_neo4j_driver_instance()
+        driver = g.neo4j_session
         uuid = existing_data_dict['uuid']
 
         # HRA EUI only requires the 'rui_location' field
@@ -1115,7 +1115,7 @@ def get_sample_section_ancestor_ids(property_key, normalized_type, user_token, e
     # Check if the entity is a Sample Section, skip otherwise
     if equals(Ontology.ops().entities().SAMPLE, normalized_type):
         if equals(Ontology.ops().specimen_categories().SECTION, existing_data_dict['sample_category']):
-            driver = schema_manager.get_neo4j_driver_instance()
+            driver = g.neo4j_session
             uuid = existing_data_dict['uuid']
             ancestor_ids = app_neo4j_queries.get_ancestors(driver, uuid, properties=['uuid'], is_include_action=True)
             if len(ancestor_ids) > 0:
@@ -1153,7 +1153,7 @@ def get_source_samples(property_key, normalized_type, user_token, existing_data_
         )
         raise KeyError(msg)
 
-    driver = schema_manager.get_neo4j_driver_instance()
+    driver = g.neo4j_session
     uuid = existing_data_dict['uuid']
     properties = ['uuid', 'sample_category']
     samples = app_neo4j_queries.get_source_samples(driver, uuid, properties)
@@ -1258,7 +1258,7 @@ def link_to_previous_revisions(property_key, normalized_type, user_token, existi
 
     # Create a revision reltionship from this new Dataset node and its previous revision of dataset node in neo4j
     try:
-        schema_neo4j_queries.link_entity_to_previous_revision(schema_manager.get_neo4j_driver_instance(),
+        schema_neo4j_queries.link_entity_to_previous_revision(g.neo4j_session,
                                                               existing_data_dict['uuid'],
                                                               existing_data_dict['previous_revision_uuids'])
     except TransactionError:
@@ -1298,7 +1298,7 @@ def link_to_previous_revision(property_key, normalized_type, user_token, existin
 
     # Create a revision reltionship from this new Dataset node and its previous revision of dataset node in neo4j
     try:
-        schema_neo4j_queries.link_entity_to_previous_revision(schema_manager.get_neo4j_driver_instance(),
+        schema_neo4j_queries.link_entity_to_previous_revision(g.neo4j_session,
                                                               existing_data_dict['uuid'],
                                                               existing_data_dict['previous_revision_uuid'])
     except TransactionError:
@@ -1564,7 +1564,7 @@ def get_dataset_title(property_key, normalized_type, user_token, existing_data_d
 
     # Get the sample organ name and source metadata information of this dataset
     source_organs_list = schema_neo4j_queries.get_dataset_source_organs_info(
-        neo4j_driver=schema_manager.get_neo4j_driver_instance(),
+        neo4j_driver=g.neo4j_session,
         dataset_uuid=existing_data_dict["uuid"]
     )
 
@@ -1860,7 +1860,7 @@ def get_origin_samples(property_key, normalized_type, user_token, existing_data_
 
         origin_samples = None
         if normalized_type in ["Sample", "Dataset", "Publication"]:
-            origin_samples = schema_neo4j_queries.get_origin_samples(schema_manager.get_neo4j_driver_instance(),
+            origin_samples = schema_neo4j_queries.get_origin_samples(g.neo4j_session,
                                                                      [existing_data_dict['uuid']],
                                                                      is_bulk=False)
 
@@ -1917,7 +1917,7 @@ def get_has_rui_information(property_key, normalized_type, user_token, existing_
             if existing_data_dict['sample_category'] == 'Organ':
                 return property_key, None
 
-        has_rui_information = schema_neo4j_queries.get_has_rui_information(schema_manager.get_neo4j_driver_instance(),
+        has_rui_information = schema_neo4j_queries.get_has_rui_information(g.neo4j_session,
                                                                            existing_data_dict['uuid'])
         return property_key, has_rui_information
 
@@ -2034,7 +2034,7 @@ def get_previous_revision_uuids(property_key, normalized_type, user_token, exist
         )
         raise KeyError(msg)
 
-    previous_revision_uuid = schema_neo4j_queries.get_previous_revision_uuids(schema_manager.get_neo4j_driver_instance(),
+    previous_revision_uuid = schema_neo4j_queries.get_previous_revision_uuids(g.neo4j_session,
                                                                               existing_data_dict['uuid'])
 
     # previous_revision_uuid can be None, but will be filtered out by
@@ -2071,7 +2071,7 @@ def get_next_revision_uuids(property_key, normalized_type, user_token, existing_
         )
         raise KeyError(msg)
 
-    next_revision_uuids = schema_neo4j_queries.get_next_revision_uuids(schema_manager.get_neo4j_driver_instance(),
+    next_revision_uuids = schema_neo4j_queries.get_next_revision_uuids(g.neo4j_session,
                                                                        existing_data_dict['uuid'])
 
     # next_revision_uuid can be None, but will be filtered out by
@@ -2111,7 +2111,7 @@ def get_previous_revision_uuid(property_key, normalized_type, user_token, existi
         )
         raise KeyError(msg)
 
-    previous_revision_uuid = schema_neo4j_queries.get_previous_revision_uuid(schema_manager.get_neo4j_driver_instance(),
+    previous_revision_uuid = schema_neo4j_queries.get_previous_revision_uuid(g.neo4j_session,
                                                                              existing_data_dict['uuid'])
 
     # previous_revision_uuid can be None, but will be filtered out by
@@ -2151,7 +2151,7 @@ def get_next_revision_uuid(property_key, normalized_type, user_token, existing_d
         )
         raise KeyError(msg)
 
-    next_revision_uuid = schema_neo4j_queries.get_next_revision_uuid(schema_manager.get_neo4j_driver_instance(),
+    next_revision_uuid = schema_neo4j_queries.get_next_revision_uuid(g.neo4j_session,
                                                                      existing_data_dict['uuid'])
 
     # next_revision_uuid can be None, but will be filtered out by
@@ -2386,7 +2386,7 @@ def set_was_attributed_to(property_key, normalized_type, user_token, existing_da
     try:
         # Create a linkage
         # between the Entity node and the parent Agent node in neo4j
-        schema_neo4j_queries.link_entity_to_agent(schema_manager.get_neo4j_driver_instance(),
+        schema_neo4j_queries.link_entity_to_agent(g.neo4j_session,
                                                   existing_data_dict['uuid'], direct_ancestor_uuids, activity_data_dict)
     except TransactionError:
         # No need to log
@@ -2441,7 +2441,7 @@ def set_was_generated_by(property_key, normalized_type, user_token, existing_dat
     try:
         # Create a linkage  (via Activity node)
         # between the Entity node and the parent Agent node in neo4j
-        schema_neo4j_queries.link_entity_to_entity_via_activity(schema_manager.get_neo4j_driver_instance(),
+        schema_neo4j_queries.link_entity_to_entity_via_activity(g.neo4j_session,
                                                                 existing_data_dict['uuid'], direct_ancestor_uuids,
                                                                 activity_data_dict)
     except TransactionError:
@@ -2489,7 +2489,7 @@ def set_was_derived_from(property_key, normalized_type, user_token, existing_dat
     try:
         # Create a linkage  (via Activity node)
         # between the Entity node and the parent Agent node in neo4j
-        schema_neo4j_queries.link_entity_to_entity(schema_manager.get_neo4j_driver_instance(),
+        schema_neo4j_queries.link_entity_to_entity(g.neo4j_session,
                                                    existing_data_dict['uuid'], direct_ancestor_uuids,
                                                    activity_data_dict)
     except TransactionError:
@@ -2543,11 +2543,11 @@ def sync_component_dataset_status(property_key, normalized_type, user_token, exi
     if 'status' not in existing_data_dict:
         raise KeyError("Missing 'status' key in 'existing_data_dict' during calling 'link_dataset_to_direct_ancestors()' trigger method.")
     status = existing_data_dict['status']
-    children_uuids_list = schema_neo4j_queries.get_children(schema_manager.get_neo4j_driver_instance(), uuid, properties=['uuid'])
+    children_uuids_list = schema_neo4j_queries.get_children(g.neo4j_session, uuid, properties=['uuid'])
     status_body = {"status": status}
 
     for child_uuid in children_uuids_list:
-        creation_action = schema_neo4j_queries.get_entity_creation_action_activity(schema_manager.get_neo4j_driver_instance(), child_uuid)
+        creation_action = schema_neo4j_queries.get_entity_creation_action_activity(g.neo4j_session, child_uuid)
         if creation_action == 'Multi-Assay Split':
             # Update the status of the child entities
             url = schema_manager.get_entity_api_url() + 'entities/' + child_uuid
@@ -2599,7 +2599,7 @@ def set_in_collection(property_key, normalized_type, user_token, existing_data_d
     try:
         # Create a linkage
         # between the Entity node and the parent Agent node in neo4j
-        schema_neo4j_queries.link_collection_to_entity(schema_manager.get_neo4j_driver_instance(),
+        schema_neo4j_queries.link_collection_to_entity(g.neo4j_session,
                                                        existing_data_dict['uuid'], direct_ancestor_uuids)
     except TransactionError:
         # No need to log
@@ -2728,7 +2728,7 @@ def get_sample_direct_ancestor(property_key, normalized_type, user_token, existi
         )
         raise KeyError(msg)
 
-    direct_ancestor_dict = schema_neo4j_queries.get_sample_direct_ancestor(schema_manager.get_neo4j_driver_instance(),
+    direct_ancestor_dict = schema_neo4j_queries.get_sample_direct_ancestor(g.neo4j_session,
                                                                            existing_data_dict['uuid'])
 
     if 'entity_type' not in direct_ancestor_dict:
@@ -2850,7 +2850,7 @@ def link_upload_to_lab(property_key, normalized_type, user_token, existing_data_
     try:
         # Create a linkage (via Activity node)
         # between the Submission node and the parent Lab node in neo4j
-        schema_neo4j_queries.link_entity_to_entity_via_activity(schema_manager.get_neo4j_driver_instance(),
+        schema_neo4j_queries.link_entity_to_entity_via_activity(g.neo4j_session,
                                                                 existing_data_dict['uuid'], direct_ancestor_uuids,
                                                                 activity_data_dict)
 
@@ -2895,7 +2895,7 @@ def link_datasets_to_upload(property_key, normalized_type, user_token, existing_
 
     try:
         # Create a direct linkage (Dataset) - [:IN_UPLOAD] -> (Submission) for each dataset
-        schema_neo4j_queries.link_datasets_to_upload(schema_manager.get_neo4j_driver_instance(), upload_uuid,
+        schema_neo4j_queries.link_datasets_to_upload(g.neo4j_session, upload_uuid,
                                                      dataset_uuids)
 
         # Delete the cache of each associated dataset and the target upload if any cache exists
@@ -2942,7 +2942,7 @@ def unlink_datasets_from_upload(property_key, normalized_type, user_token, exist
 
     try:
         # Delete the linkage (Dataset) - [:IN_UPLOAD] -> (Upload) for each dataset
-        schema_neo4j_queries.unlink_datasets_from_upload(schema_manager.get_neo4j_driver_instance(), upload_uuid,
+        schema_neo4j_queries.unlink_datasets_from_upload(g.neo4j_session, upload_uuid,
                                                          dataset_uuids)
 
         # Delete the cache of each associated dataset and the upload itself if any cache exists
@@ -3005,7 +3005,7 @@ def get_normalized_upload_datasets(uuid: str, token, properties_to_exclude: List
     -------
     list: A list of associated dataset dicts with all the normalized information
     """
-    db = schema_manager.get_neo4j_driver_instance()
+    db = g.neo4j_session
     datasets_list = schema_neo4j_queries.get_upload_datasets(db, uuid)
 
 
@@ -3120,9 +3120,7 @@ def get_creation_action_activity(property_key, normalized_type, user_token, exis
     uuid: str = existing_data_dict['uuid']
     logger.info(f"Executing 'get_creation_action_activity()' trigger method on uuid: {uuid}")
 
-    neo4j_driver_instance = schema_manager.get_neo4j_driver_instance()
-    creation_action_activity =\
-        schema_neo4j_queries.get_entity_creation_action_activity(neo4j_driver_instance, uuid)
+    creation_action_activity = schema_neo4j_queries.get_entity_creation_action_activity(g.neo4j_session, uuid)
 
     return property_key, creation_action_activity
 
@@ -3597,7 +3595,7 @@ def set_status_history(property_key, normalized_type, user_token, existing_data_
     new_status_history.append(status_entry)
     entity_data_dict = {"status_history": new_status_history}
 
-    schema_neo4j_queries.update_entity(schema_manager.get_neo4j_driver_instance(), normalized_type, entity_data_dict, uuid)
+    schema_neo4j_queries.update_entity(g.neo4j_session, normalized_type, entity_data_dict, uuid)
 
 
 def set_publication_dataset_type(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
@@ -3649,7 +3647,7 @@ def set_dataset_sources(property_key, normalized_type, user_token, existing_data
         str: The target property key
         list: The list of sources associated with a dataset
     """
-    sources = schema_neo4j_queries.get_sources_associated_entity(schema_manager.get_neo4j_driver_instance(),
+    sources = schema_neo4j_queries.get_sources_associated_entity(g.neo4j_session,
                                                                  existing_data_dict['uuid'])
     return property_key, sources
 
@@ -3676,7 +3674,7 @@ def set_sample_source(property_key, normalized_type, user_token, existing_data_d
         str: The target property key
         dict: The source associated with a sample
     """
-    sources = schema_neo4j_queries.get_sources_associated_entity(schema_manager.get_neo4j_driver_instance(),
+    sources = schema_neo4j_queries.get_sources_associated_entity(g.neo4j_session,
                                                                  existing_data_dict['uuid'])
     return property_key, sources[0]
 
@@ -3811,7 +3809,7 @@ def get_has_qa_derived_dataset(property_key, normalized_type, user_token, existi
     _, dataset_category = get_dataset_category(property_key, normalized_type, user_token, existing_data_dict, new_data_dict)
     if equals(dataset_category, 'primary'):
         match_case = "AND s.status = 'QA'"
-        descendants = schema_neo4j_queries.get_dataset_direct_descendants(schema_manager.get_neo4j_driver_instance(),
+        descendants = schema_neo4j_queries.get_dataset_direct_descendants(g.neo4j_session,
                                                                           existing_data_dict['uuid'],
                                                                           property_keys=['uuid'],
                                                                           match_case=match_case)
@@ -3848,7 +3846,7 @@ def get_has_all_published_datasets(property_key, normalized_type, user_token, ex
     """
 
 
-    db = schema_manager.get_neo4j_driver_instance()
+    db = g.neo4j_session
 
     published_filter = 'AND t.status = "Published"'
     datasets_primary_list = schema_neo4j_queries.get_upload_datasets(db, existing_data_dict['uuid'], properties=['uuid'])
@@ -3890,7 +3888,7 @@ def get_contains_data(property_key, normalized_type, user_token, existing_data_d
     if not equals(Ontology.ops().entities().SAMPLE, existing_data_dict['entity_type']):
         return property_key, None
 
-    datasets = app_neo4j_queries.get_descendants_by_type(neo4j_driver=schema_manager.get_neo4j_driver_instance(),
+    datasets = app_neo4j_queries.get_descendants_by_type(neo4j_driver=g.neo4j_session,
                                                          uuid=existing_data_dict['uuid'],
                                                          descendant_type=Ontology.ops().entities().DATASET,
                                                          property_keys=['uuid'])
