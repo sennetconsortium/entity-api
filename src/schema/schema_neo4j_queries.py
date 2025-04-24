@@ -183,49 +183,42 @@ def get_origin_samples(neo4j_driver, uuids: List, is_bulk: bool = True):
     return result
 
 
-def get_dataset_organ_and_source_info(neo4j_driver, uuid):
+def get_dataset_source_organs_info(neo4j_driver, dataset_uuid: str) -> List[dict]:
     """
-    Get the sample organ name and source metadata information of the given dataset uuid
+    For every Sample organ associated with the given dataset_uuid, retrieve the
+    organ information and organ source information for use in composing a title for the Dataset.
 
     Parameters
     ----------
     neo4j_driver : neo4j.Driver object
         The neo4j database connection pool
-    uuid : str
-        The uuid of target entity
+    dataset_uuid : str
+        The UUID of a Dataset
 
     Returns
     -------
-    str: The sample organ name
-    str: The source metadata (string representation of a Python dict)
+    list : List of dicts that contain 'source_uuid', 'source_type', 'organ_type' and 'source_metadata'
     """
-    organ_type = None
-    source_metadata = None
-    source_type = None
-
     with neo4j_driver.session() as session:
-        sample_query = (
-            "MATCH (e:Dataset)-[:USED|WAS_GENERATED_BY*]->(s:Sample) WHERE "
-            "e.uuid=$uuid AND s.sample_category is not null and s.sample_category='Organ' "
-            "MATCH (s2:Sample)-[:USED|WAS_GENERATED_BY*]->(d:Source) WHERE s2.uuid=s.uuid AND s2.sample_category is not null "
-            "RETURN COLLECT({source_metadata: d.metadata, source_type: d.source_type, "
-            "organ_type: CASE WHEN s.organ is not null THEN s.organ "
-            "ELSE s.sample_category END}) "
-            f"AS {record_field_name}"
+        ds_sources_organs_query = (
+            "MATCH (d:Dataset)-[:USED|WAS_GENERATED_BY*]->(org:Sample)-[:USED|WAS_GENERATED_BY*]->(s:Source) "
+            "WHERE d.uuid = $dataset_uuid "
+            "AND org.sample_category = 'Organ' "
+            "AND org.organ IS NOT NULL "
+            "RETURN apoc.coll.toSet(COLLECT("
+            "{source_uuid: s.uuid, source_type: s.source_type, "
+            "source_metadata: CASE WHEN s.metadata IS NOT NULL THEN apoc.convert.fromJsonMap(s.metadata) ELSE {} END, "
+            "organ_type: org.organ}"
+            ")) AS source_organ_set"
         )
 
-        logger.info("======get_dataset_organ_and_source_info() sample_query======")
-        logger.info(sample_query)
+        logger.info("======get_dataset_source_organs_info() ds_sources_organs_query======")
+        logger.info(ds_sources_organs_query)
 
         with neo4j_driver.session() as session:
-            record = session.read_transaction(_execute_readonly_tx, sample_query, uuid=uuid)
+            record = session.read_transaction(execute_readonly_tx, ds_sources_organs_query, dataset_uuid=dataset_uuid)
 
-            if record and record[record_field_name]:
-                source_metadata = set([d['source_metadata'] for d in record[record_field_name]])
-                source_type = next(iter(set([d['source_type'] for d in record[record_field_name]])))
-                organ_type = set([d['organ_type'] for d in record[record_field_name]])
-
-    return organ_type, source_metadata, source_type
+    return record["source_organ_set"] if record and record["source_organ_set"] else []
 
 
 def get_entity_type(neo4j_driver, entity_uuid: str) -> str:

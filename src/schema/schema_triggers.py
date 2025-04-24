@@ -14,6 +14,12 @@ import app_neo4j_queries
 from lib import github
 from lib.exceptions import create_trigger_error_msg
 from lib.ontology import Ontology
+from lib.title import (
+    generate_title,
+    get_source_data_phrase,
+    get_attributes_from_source_metadata,
+    make_phrase_from_separator_delineated_str
+)
 from schema import schema_manager
 from schema import schema_errors
 from schema import schema_neo4j_queries
@@ -1536,116 +1542,117 @@ def get_dataset_title(property_key, normalized_type, user_token, existing_data_d
         str: The target property key
         str: The generated dataset title
     """
-    if 'uuid' not in existing_data_dict:
+    if "uuid" not in existing_data_dict:
         msg = create_trigger_error_msg(
             "Missing 'uuid' key in 'existing_data_dict' during calling 'get_dataset_title()' trigger method.",
             existing_data_dict, new_data_dict
         )
         raise KeyError(msg)
 
+    MAX_ENTITY_LIST_LENGTH = 5
+
+    # Statistically improbable phrase to separate items while building a phrase, which can be
+    # replaced by a grammatically correct separator like the word 'and' or a comma later
+    ITEM_SEPARATOR_SIP = "_-_-_-ENTITY_SEPARATOR-_-_-_"
+
+    logger.info(f"Executing 'get_dataset_title()' trigger method on uuid: {existing_data_dict['uuid']}")
+
     # Assume organ_desc is always available, otherwise will throw parsing error
-    organ_desc = '<organ_desc>'
+    organ_desc = "<organ_desc>"
 
-    age = None
-    race = None
-    sex = None
+    dataset_type = existing_data_dict["dataset_type"]
 
-    dataset_type = existing_data_dict['dataset_type']
     # Get the sample organ name and source metadata information of this dataset
-    organ_type, source_metadata, source_type = schema_neo4j_queries.get_dataset_organ_and_source_info(
-        schema_manager.get_neo4j_driver_instance(), existing_data_dict['uuid'])
+    source_organs_list = schema_neo4j_queries.get_dataset_source_organs_info(
+        neo4j_driver=schema_manager.get_neo4j_driver_instance(),
+        dataset_uuid=existing_data_dict["uuid"]
+    )
 
-    # Parse the organ description
-    organ_desc = ''
-    organ_list = []
-    if organ_type is not None and bool(organ_type):
-        for organ_name in organ_type:
-            if organ_name is not None:
-                try:
-                    # The organ_name is the two-letter code only set if specimen_type == 'organ'
-                    # Convert the two-letter code to a description
-                    organ_list.append(_get_organ_description(organ_name))
-                except (requests.exceptions.RequestException) as e:
-                    raise Exception(e)
+    # Determine the number of unique organ types and the number of unique sources in
+    # source_organs_list so the format of the title to be created can be determined.
+    organ_abbrev_set = set()
+    source_metadata_list = list()
+    source_uuid_set = set()
+    source_type = None
+    for source_organ_data in source_organs_list:
+        organ_abbrev_set.add(source_organ_data["organ_type"])
+        source_metadata_list.append(source_organ_data["source_metadata"])
+        source_uuid_set.add(source_organ_data["source_uuid"])
+        source_type = source_organ_data["source_type"]
 
-        organ_desc = ", ".join(organ_list[:-2] + [" and ".join(organ_list[-2:])])
+    if source_type is None:
+        # This should never happen, but just in case
+        raise Exception(f"Unable to determine source type for dataset {existing_data_dict['uuid']}")
 
-    generated_title = f"{dataset_type} data from the {organ_desc}"
+    # If the number of unique organ types is no more than MAX_ENTITY_LIST_LENGTH, we need to come up
+    # with a phrase to be used to create the title which describes them. If there are more than
+    # the threshold, we will just use the number in the title.
+    organs_description_phrase = f"{len(organ_abbrev_set)} organs"
+    organ_types_dict = Ontology.ops(as_data_dict=True, key="rui_code", val_key="term").organ_types()
 
-    # Parse age, race, and sex
-    source_metadata_desc = ''
-    source_metadata_list = []
-    if source_metadata is not None and bool(source_metadata):
-        for metadata in source_metadata:
-            if metadata is not None:
-                # Note: The donor_metadata is stored in Neo4j as a string representation of the Python dict
-                # It's not stored in Neo4j as a json string! And we can't store it as a json string
-                # due to the way that Cypher handles single/double quotes.
-                ancestor_metadata_dict = schema_manager.get_as_dict(metadata)
+    if len(organ_abbrev_set) <= MAX_ENTITY_LIST_LENGTH:
+        organ_description_set = set()
+        if organ_abbrev_set:
+            for organ_abbrev in organ_abbrev_set:
+                # The organ_abbrev is the two-letter code only set for 'organ'
+                # Convert the two-letter code to a description
+                organ_desc = organ_types_dict[organ_abbrev]
+                organ_description_set.add(organ_desc.lower())
 
-                if equals(source_type, Ontology.ops().source_types().MOUSE):
-                    sex = ancestor_metadata_dict['sex'].lower()
-                    is_embryo = ancestor_metadata_dict['is_embryo']
-                    embryo = ' embryo' if is_embryo is True or equals(is_embryo, 'True') else ''
+        # Turn the set of organ descriptions into a phrase which can be used to compose the Dataset title
+        organs_description_phrase = ITEM_SEPARATOR_SIP.join(organ_description_set)
+        organs_description_phrase = make_phrase_from_separator_delineated_str(separated_phrase=organs_description_phrase, separator=ITEM_SEPARATOR_SIP)
 
-                    source_metadata_list.append(f"{ancestor_metadata_dict['strain']} {sex} mouse{embryo}")
-
+    # If the number of unique organ sources is no more than MAX_ENTITY_LIST_LENGTH, we need to come up
+    # with a phrase to be used to create the title which describes them.  If there are more than
+    # the threshold, we will just use the number in the title.
+    # Parse age, race, and sex from the source metadata, but determine the number of sources using source_uuid_set.
+    sources_description_phrase = f"{len(source_uuid_set)} sources"
+    if len(source_uuid_set) <= MAX_ENTITY_LIST_LENGTH:
+        sources_grouping_concepts_dict = dict()
+        if source_metadata_list:
+            for source_metadata in source_metadata_list:
+                source_data = get_attributes_from_source_metadata(source_type=source_type, source_metadata=source_metadata)
+                age_race_sex_info = get_source_data_phrase(source_type=source_type, source_data=source_data)
+                if age_race_sex_info in sources_grouping_concepts_dict:
+                    sources_grouping_concepts_dict[age_race_sex_info] += 1
                 else:
-                    data_list = []
+                    sources_grouping_concepts_dict[age_race_sex_info] = 1
 
-                    # Either 'organ_donor_data' or 'living_donor_data' can be present, but not both
-                    if 'organ_donor_data' in ancestor_metadata_dict:
-                        data_list = ancestor_metadata_dict['organ_donor_data']
-                    elif 'living_donor_data' in ancestor_metadata_dict:
-                        data_list = ancestor_metadata_dict['living_donor_data']
-                    else:
-                        # When neither 'organ_donor_data' nor 'living_donor_data' exists, use default None and continue
-                        pass
+        sources_description_phrase = ""
+        for age_race_sex_info in sources_grouping_concepts_dict.keys():
+            if len(sources_grouping_concepts_dict) > 1:
+                sources_description_phrase += f"({sources_grouping_concepts_dict[age_race_sex_info]}) "
+            sources_description_phrase += f"{age_race_sex_info}{ITEM_SEPARATOR_SIP}"
 
-                    for data in data_list:
-                        if 'grouping_concept_preferred_term' in data:
-                            if data['grouping_concept_preferred_term'].lower() == 'age':
-                                # The actual value of age stored in 'data_value' instead of 'preferred_term'
-                                age = data['data_value']
+        sources_description_phrase = make_phrase_from_separator_delineated_str(separated_phrase=sources_description_phrase, separator=ITEM_SEPARATOR_SIP)
 
-                            if data['grouping_concept_preferred_term'].lower() == 'race':
-                                race = data['preferred_term'].lower()
+    # When both the number of unique organ codes is between 2 and MAX_ENTITY_LIST_LENGTH and
+    # the number of unique organ sources is between 2 and MAX_ENTITY_LIST_LENGTH, we will
+    # use a phrase which associates each organ type and source metadata rather than the
+    # phrases previously built.
+    source_organ_association_phrase = ""
+    if len(organ_abbrev_set) <= MAX_ENTITY_LIST_LENGTH:  # and len(source_uuid_set) <= MAX_ENTITY_LIST_LENGTH:
+        for source_organ_data in source_organs_list:
+            # The organ_abbrev is the two-letter code only set for "organ"
+            # Convert the two-letter code to a description
+            organ_desc = organ_types_dict[source_organ_data["organ_type"]]
+            source_data = get_attributes_from_source_metadata(source_type=source_type, source_metadata=source_organ_data["source_metadata"])
+            age_race_sex_info = get_source_data_phrase(source_type=source_type, source_data=source_data)
 
-                            if data['grouping_concept_preferred_term'].lower() == 'sex':
-                                sex = data['preferred_term'].lower()
+            source_organ_association_phrase += f"{organ_desc.lower()} of {age_race_sex_info}{ITEM_SEPARATOR_SIP}"
 
-                    age_race_sex_info = None
+        source_organ_association_phrase = make_phrase_from_separator_delineated_str(separated_phrase=source_organ_association_phrase, separator=ITEM_SEPARATOR_SIP)
 
-                    if (age is None) and (race is not None) and (sex is not None):
-                        age_race_sex_info = f"{race} {sex} of unknown age"
-                    elif (race is None) and (age is not None) and (sex is not None):
-                        age_race_sex_info = f"{age}-year-old {sex} of unknown race"
-                    elif (sex is None) and (age is not None) and (race is not None):
-                        age_race_sex_info = f"{age}-year-old {race} source of unknown sex"
-                    elif (age is None) and (race is None) and (sex is not None):
-                        age_race_sex_info = f"{sex} source of unknown age and race"
-                    elif (age is None) and (sex is None) and (race is not None):
-                        age_race_sex_info = f"{race} source of unknown age and sex"
-                    elif (race is None) and (sex is None) and (age is not None):
-                        age_race_sex_info = f"{age}-year-old source of unknown race and sex"
-                    elif (age is None) and (race is None) and (sex is None):
-                        age_race_sex_info = "source of unknown age, race and sex"
-                    else:
-                        age_race_sex_info = f"{age}-year-old {race} {sex}"
-
-                    source_metadata_list.append(f"{age_race_sex_info}")
-    else:
-        if equals(source_type, Ontology.ops().source_types().MOUSE) or \
-                equals(source_type, Ontology.ops().source_types().MOUSE_ORGANOID):
-            source_metadata_list.append(f"source of unknown strain, sex, and age")
-        else:
-            source_metadata_list.append(f"source of unknown age, race and sex")
-
-    if len(source_metadata_list) == 0:
-        source_metadata_list.append(f"source of unknown age, race and sex")
-
-    source_metadata_desc = ", ".join(source_metadata_list[:-2] + [" and ".join(source_metadata_list[-2:])])
-    generated_title += " of a " + source_metadata_desc
+    generated_title = generate_title(
+        organ_abbrev_set=organ_abbrev_set,
+        source_uuid_set=source_uuid_set,
+        dataset_type=dataset_type,
+        organs_description_phrase=organs_description_phrase,
+        sources_description_phrase=sources_description_phrase,
+        source_organ_association_phrase=source_organ_association_phrase,
+        max_entity_list_length=MAX_ENTITY_LIST_LENGTH,
+    )
 
     return property_key, generated_title
 
@@ -1656,6 +1663,7 @@ dataset_category_map = {
     "Central Process": "codcc-processed",
     "Lab Process": "lab-processed",
 }
+
 
 def get_dataset_category(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
     """Trigger event method of auto generating the dataset category.
