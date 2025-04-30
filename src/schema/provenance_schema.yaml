@@ -78,6 +78,9 @@ shared_properties: &shared_properties
     description: "A SenNet Consortium wide unique identifier randomly generated in the format SN###.ABCD.### for every entity."
     before_create_trigger: set_sennet_id
 
+# Shared properties to be excluded from public response.
+# Set with:
+#  - <<: *shared_excluded_properties_from_public_response
 shared_excluded_properties_from_public_response: &shared_excluded_properties_from_public_response
   - metadata:
     - lab_id
