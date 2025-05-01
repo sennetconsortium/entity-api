@@ -93,6 +93,7 @@ shared_excluded_properties_from_public_response: &shared_excluded_properties_fro
   - cedar_mapped_metadata:
     - Lab ID
     - Slide ID
+    - Parent Sample ID
 
 ####################################################################################################
 ## Activities
