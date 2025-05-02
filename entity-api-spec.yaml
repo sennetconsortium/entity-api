@@ -1,7 +1,7 @@
 openapi: 3.0.0
 info:
   description: 'The SenNet Entity API is a standard RESTful web service with create, update and read operations for the standard SenNet provenance graph entities.'
-  version: 1.8.0
+  version: 1.8.1
   title: SenNet Entity API
   contact:
     name: SenNet Help Desk
@@ -2101,34 +2101,6 @@ paths:
           description: The user's token has expired or the user did not supply a valid token
         '403':
           description: The user is not authorized to use this method
-        '500':
-          description: Internal error
-
-  /datasets/sankey_data:
-    get:
-      tags:
-        - datasets
-      summary: Retrieves the information needed to generate the sankey on software-docs as a json.
-      responses:
-        '200':
-          description: dataset_group_name, organ_type, dataset_data_types, and dataset_status for every primary dataset
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  dataset_group_name:
-                    type: string
-                    description: The displayname of globus group which the user who created this entity is a member of
-                  organ_type:
-                    type: string
-                    description: The organ type of the organ associated to this dataset in the provenance chain
-                  dataset_data_types:
-                    type: string
-                    description: The data/assay types (if more than one, output is a comma separated string)
-                  dataset_status:
-                    type: string
-                    description: The status of the dataset New, QA, Published, etc ...
         '500':
           description: Internal error
 
