@@ -3887,66 +3887,6 @@ def get_prov_info_for_dataset(id):
 
 
 """
-Get the information needed to generate the sankey on software-docs as a json.
-
-AWS API Gateway and Flask treat this endpoint as public accessible
-
-Authentication
---------------
-No token is required or checked. The information returned is what is displayed in the public sankey
-
-Returns
--------
-json
-    a json array. Each item in the array corresponds to a dataset. Each dataset has the values: dataset_group_name,
-    organ_type, dataset_data_types, and dataset_status, each of which is a string.
-
-"""
-@app.route('/datasets/sankey_data', methods=['GET'])
-def sankey_data():
-    # String constants
-    HEADER_DATASET_GROUP_NAME = 'dataset_group_name'
-    HEADER_ORGAN_TYPE = 'organ_type'
-    HEADER_DATASET_DATASET_TYPE = 'dataset_dataset_type'
-    HEADER_DATASET_STATUS = 'dataset_status'
-    ORGAN_TYPES = Ontology.ops(as_data_dict=True, data_as_val=True, val_key='rui_code').organ_types()
-    HEADER_DATASET_SOURCE_TYPE = 'dataset_source_type'
-    with open('sankey_mapping.json') as f:
-        mapping_dict = json.load(f)
-
-    authorized = user_in_sennet_read_group(request)
-    data_access_level = 'public' if authorized is False else None
-
-    # Instantiation of the list dataset_prov_list
-    dataset_sankey_list = []
-
-    # Call to app_neo4j_queries to prepare and execute the database query
-    sankey_info = app_neo4j_queries.get_sankey_info(neo4j_driver_instance, data_access_level=data_access_level)
-    for dataset in sankey_info:
-        internal_dict = collections.OrderedDict()
-        internal_dict[HEADER_DATASET_GROUP_NAME] = dataset[HEADER_DATASET_GROUP_NAME]
-        # TODO: Need to update this code once Ontology Organ Types endpoint is update
-        for organ_type in ORGAN_TYPES:
-            if ORGAN_TYPES[organ_type]['rui_code'] == dataset[HEADER_ORGAN_TYPE]:
-                internal_dict[HEADER_ORGAN_TYPE] = ORGAN_TYPES[organ_type]['term']
-                break
-
-        internal_dict[HEADER_DATASET_DATASET_TYPE] = dataset[HEADER_DATASET_DATASET_TYPE]
-
-        # Replace applicable Group Name and Data type with the value needed for the sankey via the mapping_dict
-        internal_dict[HEADER_DATASET_STATUS] = dataset['dataset_status']
-        if internal_dict[HEADER_DATASET_GROUP_NAME] in mapping_dict.keys():
-            internal_dict[HEADER_DATASET_GROUP_NAME] = mapping_dict[internal_dict[HEADER_DATASET_GROUP_NAME]]
-
-        internal_dict[HEADER_DATASET_SOURCE_TYPE] = dataset[HEADER_DATASET_SOURCE_TYPE]
-
-        # Each dataset's dictionary is added to the list to be returned
-        dataset_sankey_list.append(internal_dict)
-
-    return jsonify(dataset_sankey_list)
-
-
-"""
 Get the complete provenance info for all samples
 
 Globus groups token is required by AWS API Gateway lambda authorizer
