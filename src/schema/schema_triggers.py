@@ -2513,11 +2513,14 @@ def update_status(property_key, normalized_type, user_token, existing_data_dict,
     new_data_dict : dict
         A merged dictionary that contains all possible input data to be used
     """
+    status = existing_data_dict.get('status')
+
     # execute set_status_history
     set_status_history(property_key, normalized_type, user_token, existing_data_dict, new_data_dict)
 
-    # execute sync_component_dataset_status
-    sync_component_dataset_status(property_key, normalized_type, user_token, existing_data_dict, new_data_dict)
+    if status is not None and not equals(status, 'published'):
+        # execute sync_component_dataset_status
+        sync_component_dataset_status(property_key, normalized_type, user_token, existing_data_dict, new_data_dict)
 
 
 def sync_component_dataset_status(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
@@ -2538,10 +2541,10 @@ def sync_component_dataset_status(property_key, normalized_type, user_token, exi
     """
 
     if 'uuid' not in existing_data_dict:
-        raise KeyError("Missing 'uuid' key in 'existing_data_dict' during calling 'link_dataset_to_direct_ancestors()' trigger method.")
+        raise KeyError("Missing 'uuid' key in 'existing_data_dict' during calling 'sync_component_dataset_status()' trigger method.")
     uuid = existing_data_dict['uuid']
     if 'status' not in existing_data_dict:
-        raise KeyError("Missing 'status' key in 'existing_data_dict' during calling 'link_dataset_to_direct_ancestors()' trigger method.")
+        raise KeyError("Missing 'status' key in 'existing_data_dict' during calling 'sync_component_dataset_status()' trigger method.")
     status = existing_data_dict['status']
     children_uuids_list = schema_neo4j_queries.get_children(schema_manager.get_neo4j_driver_instance(), uuid, properties=['uuid'])
     status_body = {"status": status}
