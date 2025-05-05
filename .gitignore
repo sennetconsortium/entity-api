@@ -1,5 +1,6 @@
 # Ignore config file
-src/instance/app.cfg
+src/instance/*
+!src/instance/app.cfg.example
 *~
 
 .settings
