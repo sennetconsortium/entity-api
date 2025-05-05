@@ -78,6 +78,22 @@ shared_properties: &shared_properties
     description: "A SenNet Consortium wide unique identifier randomly generated in the format SN###.ABCD.### for every entity."
     before_create_trigger: set_sennet_id
 
+# Shared properties to be excluded from public response.
+# Set with:
+#  - <<: *shared_excluded_properties_from_public_response
+shared_excluded_properties_from_public_response: &shared_excluded_properties_from_public_response
+  - metadata:
+    - lab_id
+    - slide_id
+    - library_id
+    - acquisition_id
+    - source_id
+    - tissue_id
+    - parent_sample_id
+  - cedar_mapped_metadata:
+    - Lab ID
+    - Slide ID
+    - Parent Sample ID
 
 ####################################################################################################
 ## Activities
@@ -359,6 +375,7 @@ ENTITIES:
     # Only allowed applications can create new Dataset via POST
     before_entity_create_validator: validate_application_header_before_entity_create
     excluded_properties_from_public_response:
+      - <<: *shared_excluded_properties_from_public_response
       - lab_dataset_id
       - direct_ancestors:
           - lab_tissue_sample_id
@@ -372,9 +389,6 @@ ENTITIES:
           - lab_source_id
       - origin_samples:
           - lab_tissue_sample_id
-      - metadata:
-          - lab_id
-          - slide_id
       - cedar_mapped_metadata:
           - Lab ID
           - Slide ID
@@ -707,15 +721,10 @@ ENTITIES:
     before_entity_create_validator: validate_application_header_before_entity_create
     # Publications can be either derivation source or target
     excluded_properties_from_public_response:
+      - <<: *shared_excluded_properties_from_public_response
       - lab_dataset_id
       - sources:
           - lab_source_id
-      - metadata:
-          - lab_id
-          - slide_id
-      - cedar_mapped_metadata:
-          - Lab ID
-          - Slide ID
     derivation:
       source: true
       target: true
@@ -941,6 +950,7 @@ ENTITIES:
       source: true
       target: true
     excluded_properties_from_public_response:
+      - <<: *shared_excluded_properties_from_public_response
       - lab_tissue_sample_id
       - origin_sample:
           - lab_tissue_sample_id
@@ -948,12 +958,6 @@ ENTITIES:
           - lab_tissue_sample_id
       - source:
           - lab_source_id
-      - metadata:
-          - lab_id
-          - slide_id
-      - cedar_mapped_metadata:
-          - Lab ID
-          - Slide ID
     properties:
       <<: *shared_properties
       <<: *shared_entity_properties
