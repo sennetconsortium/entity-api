@@ -10,6 +10,7 @@ venv-entity-api
 .DS_Store
 
 # Ignore copied files
+docker/.env
 docker/entity-api/src
 docker/entity-api/VERSION
 docker/entity-api/BUILD
