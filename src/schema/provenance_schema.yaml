@@ -93,7 +93,22 @@ shared_excluded_properties_from_public_response: &shared_excluded_properties_fro
   - cedar_mapped_metadata:
     - Lab ID
     - Slide ID
+    - Library ID
+    - Acquisition ID
+    - Source ID
+    - Tissue ID
     - Parent Sample ID
+  - direct_ancestors:
+      - lab_tissue_sample_id
+      - lab_dataset_id
+      - metadata:
+          - lab_id
+          - acquisition_id
+          - library_id
+          - donor_id
+          - slide_id
+          - tissue_id
+          - parent_sample_id
 
 ####################################################################################################
 ## Activities
