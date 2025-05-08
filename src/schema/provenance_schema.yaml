@@ -98,6 +98,10 @@ shared_excluded_properties_from_public_response: &shared_excluded_properties_fro
     - Source ID
     - Tissue ID
     - Parent Sample ID
+  - origin_samples:
+      - lab_tissue_sample_id
+  - sources:
+      - lab_source_id
   - direct_ancestors:
       - lab_tissue_sample_id
       - lab_dataset_id
@@ -406,8 +410,6 @@ ENTITIES:
           - lab_tissue_sample_id
       - sources:
           - lab_source_id
-      - origin_samples:
-          - lab_tissue_sample_id
       - cedar_mapped_metadata:
           - Lab ID
           - Slide ID
