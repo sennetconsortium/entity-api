@@ -104,6 +104,8 @@ shared_excluded_properties_from_public_response: &shared_excluded_properties_fro
           - lab_source_id
       - source:
           - lab_source_id
+  - source:
+      - lab_source_id
   - sources:
       - lab_source_id
   - direct_ancestor:
@@ -428,21 +430,6 @@ ENTITIES:
     excluded_properties_from_public_response:
       - <<: *shared_excluded_properties_from_public_response
       - lab_dataset_id
-      - direct_ancestors:
-          - lab_tissue_sample_id
-          - source:
-              - lab_source_id
-          - origin_samples:
-              - lab_tissue_sample_id
-      - origin_samples:
-          - lab_tissue_sample_id
-      - sources:
-          - lab_source_id
-      - origin_samples:
-          - lab_tissue_sample_id
-      - cedar_mapped_metadata:
-          - Lab ID
-          - Slide ID
     # Dataset can be either derivation source or target
     derivation:
       source: true
@@ -774,8 +761,6 @@ ENTITIES:
     excluded_properties_from_public_response:
       - <<: *shared_excluded_properties_from_public_response
       - lab_dataset_id
-      - sources:
-          - lab_source_id
     derivation:
       source: true
       target: true
@@ -1003,10 +988,6 @@ ENTITIES:
     excluded_properties_from_public_response:
       - <<: *shared_excluded_properties_from_public_response
       - lab_tissue_sample_id
-      - origin_samples:
-          - lab_tissue_sample_id
-      - source:
-          - lab_source_id
     properties:
       <<: *shared_properties
       <<: *shared_entity_properties
