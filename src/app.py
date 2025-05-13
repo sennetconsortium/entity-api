@@ -3186,7 +3186,6 @@ def get_associated_organs_from_dataset(id):
     # Use the internal token to query the target entity
     # since public entities don't require user token
     token = get_internal_token()
-    excluded_fields = schema_manager.get_fields_to_exclude('Sample')
     public_entity = True
 
     # published/public datasets don't require token
@@ -3210,6 +3209,7 @@ def get_associated_organs_from_dataset(id):
     final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list)
 
     if public_entity and not user_in_sennet_read_group(request):
+        excluded_fields = schema_manager.get_fields_to_exclude('Sample')
         filtered_organs_list = []
         for organ in final_result:
             filtered_organs_list.append(schema_manager.exclude_properties_from_response(excluded_fields, organ))
