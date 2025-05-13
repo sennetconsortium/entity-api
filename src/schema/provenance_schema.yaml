@@ -102,6 +102,21 @@ shared_excluded_properties_from_public_response: &shared_excluded_properties_fro
       - lab_tissue_sample_id
   - sources:
       - lab_source_id
+  - direct_ancestor:
+    - lab_tissue_sample_id
+    - lab_dataset_id
+    - metadata:
+        - lab_id
+        - acquisition_id
+        - library_id
+        - donor_id
+        - slide_id
+        - tissue_id
+        - parent_sample_id
+    - source:
+        - lab_source_id
+    - origin_samples:
+        - lab_tissue_sample_id
   - direct_ancestors:
       - lab_tissue_sample_id
       - lab_dataset_id
