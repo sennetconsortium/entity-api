@@ -82,6 +82,10 @@ shared_properties: &shared_properties
 # Set with:
 #  - <<: *shared_excluded_properties_from_public_response
 shared_excluded_properties_from_public_response: &shared_excluded_properties_from_public_response
+  - lab_source_id
+  - label
+  - lab_tissue_sample_id
+  - lab_dataset_id
   - metadata:
     - lab_id
     - slide_id
@@ -104,6 +108,8 @@ shared_excluded_properties_from_public_response: &shared_excluded_properties_fro
           - lab_source_id
       - source:
           - lab_source_id
+  - source:
+      - lab_source_id
   - sources:
       - lab_source_id
   - direct_ancestor:
@@ -411,22 +417,6 @@ ENTITIES:
     before_entity_create_validator: validate_application_header_before_entity_create
     excluded_properties_from_public_response:
       - <<: *shared_excluded_properties_from_public_response
-      - lab_dataset_id
-      - direct_ancestors:
-          - lab_tissue_sample_id
-          - source:
-              - lab_source_id
-          - origin_samples:
-              - lab_tissue_sample_id
-      - origin_samples:
-          - lab_tissue_sample_id
-      - sources:
-          - lab_source_id
-      - origin_samples:
-          - lab_tissue_sample_id
-      - cedar_mapped_metadata:
-          - Lab ID
-          - Slide ID
     # Dataset can be either derivation source or target
     derivation:
       source: true
@@ -757,9 +747,6 @@ ENTITIES:
     # Publications can be either derivation source or target
     excluded_properties_from_public_response:
       - <<: *shared_excluded_properties_from_public_response
-      - lab_dataset_id
-      - sources:
-          - lab_source_id
     derivation:
       source: true
       target: true
@@ -857,8 +844,7 @@ ENTITIES:
       source: false
       target: true
     excluded_properties_from_public_response:
-      - lab_source_id
-      - label
+      - <<: *shared_excluded_properties_from_public_response
     properties:
       <<: *shared_properties
       <<: *shared_entity_properties
@@ -986,11 +972,6 @@ ENTITIES:
       target: true
     excluded_properties_from_public_response:
       - <<: *shared_excluded_properties_from_public_response
-      - lab_tissue_sample_id
-      - origin_samples:
-          - lab_tissue_sample_id
-      - source:
-          - lab_source_id
     properties:
       <<: *shared_properties
       <<: *shared_entity_properties
