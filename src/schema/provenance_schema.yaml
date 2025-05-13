@@ -93,7 +93,42 @@ shared_excluded_properties_from_public_response: &shared_excluded_properties_fro
   - cedar_mapped_metadata:
     - Lab ID
     - Slide ID
+    - Library ID
+    - Acquisition ID
+    - Source ID
+    - Tissue ID
     - Parent Sample ID
+  - origin_samples:
+      - lab_tissue_sample_id
+      - direct_ancestor:
+          - lab_source_id
+      - source:
+          - lab_source_id
+  - sources:
+      - lab_source_id
+  - direct_ancestor:
+    - lab_source_id
+    - lab_tissue_sample_id
+    - source:
+        - lab_source_id
+    - origin_samples:
+        - lab_source_id
+        - lab_tissue_sample_id
+  - direct_ancestors:
+      - lab_tissue_sample_id
+      - lab_dataset_id
+      - metadata:
+          - lab_id
+          - acquisition_id
+          - library_id
+          - donor_id
+          - slide_id
+          - tissue_id
+          - parent_sample_id
+      - source:
+          - lab_source_id
+      - origin_samples:
+          - lab_tissue_sample_id
 
 ####################################################################################################
 ## Activities
@@ -952,8 +987,6 @@ ENTITIES:
     excluded_properties_from_public_response:
       - <<: *shared_excluded_properties_from_public_response
       - lab_tissue_sample_id
-      - origin_sample:
-          - lab_tissue_sample_id
       - origin_samples:
           - lab_tissue_sample_id
       - source:
