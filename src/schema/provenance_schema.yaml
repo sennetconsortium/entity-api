@@ -975,6 +975,10 @@ ENTITIES:
     excluded_properties_from_public_response:
       - <<: *shared_excluded_properties_from_public_response
       - lab_tissue_sample_id
+      - direct_ancestor:
+          - lab_tissue_sample_id
+          - origin_samples:
+              - lab_tissue_sample_id
       - origin_samples:
           - lab_tissue_sample_id
       - source:

@@ -3273,6 +3273,10 @@ def get_associated_samples_from_dataset(id):
     _final_result = schema_manager.normalize_entities_list_for_response(complete_entities_list)
     final_result = schema_manager.remove_unauthorized_fields_from_response(_final_result, unauthorized=not user_in_sennet_read_group(request))
 
+    if user_in_sennet_read_group(request) and public_entity:
+        fields_to_exclude = schema_manager.get_fields_to_exclude('Sample')
+        final_result = schema_manager.exclude_properties_from_response(fields_to_exclude, final_result)
+
     return jsonify(final_result)
 
 
