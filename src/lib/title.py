@@ -3,7 +3,9 @@ import re
 from lib.ontology import Ontology
 
 
-def make_phrase_from_separator_delineated_str(separated_phrase: str, separator: str, new_separator: str = ", ") -> str:
+def make_phrase_from_separator_delineated_str(
+    separated_phrase: str, separator: str, new_separator: str = ", "
+) -> str:
     """
     Given a string which contains multiple items, each separated by the substring specified by
     the 'separator' argument, and possibly also ending with 'separator',
@@ -28,10 +30,14 @@ def make_phrase_from_separator_delineated_str(separated_phrase: str, separator: 
     """
     # Remove the last separator
     if re.search(rf"{separator}$", separated_phrase):
-        separated_phrase = re.sub(pattern=rf"(.*)({separator})$", repl=r"\1", string=separated_phrase)
+        separated_phrase = re.sub(
+            pattern=rf"(.*)({separator})$", repl=r"\1", string=separated_phrase
+        )
 
     # Replace the last separator with the word 'and' for inclusion in the Dataset title
-    separated_phrase = re.sub(pattern=rf"(.*)({separator})(.*?)$", repl=r"\1, and \3", string=separated_phrase)
+    separated_phrase = re.sub(
+        pattern=rf"(.*)({separator})(.*?)$", repl=r"\1, and \3", string=separated_phrase
+    )
 
     # Replace all remaining separator with commas
     descriptions = separated_phrase.rsplit(separator)
@@ -159,13 +165,27 @@ def generate_title(
     elif len(organ_abbrev_set) == 1 and len(source_uuid_set) == 1:
         # One source, one organ type
         return f"{dataset_type} data from the {organs_description_phrase} of a {sources_description_phrase}"
-    elif len(organ_abbrev_set) > 1 and len(organ_abbrev_set) <= max_entity_list_length and len(source_uuid_set) == 1:
+    elif (
+        len(organ_abbrev_set) > 1
+        and len(organ_abbrev_set) <= max_entity_list_length
+        and len(source_uuid_set) == 1
+    ):
         # One source, and more than 1 and less than max_entity_list_length organ types
-        return f"{dataset_type} data from {organs_description_phrase} of " f"a {sources_description_phrase}"
+        return (
+            f"{dataset_type} data from {organs_description_phrase} of "
+            f"a {sources_description_phrase}"
+        )
     elif len(organ_abbrev_set) > max_entity_list_length and len(source_uuid_set) == 1:
         # One source, more than max_entity_list_length organ types
-        return f"{dataset_type} data from {len(organ_abbrev_set)} organs of " f"a {sources_description_phrase}"
-    elif len(organ_abbrev_set) == 1 and len(source_uuid_set) > 1 and len(source_uuid_set) <= max_entity_list_length:
+        return (
+            f"{dataset_type} data from {len(organ_abbrev_set)} organs of "
+            f"a {sources_description_phrase}"
+        )
+    elif (
+        len(organ_abbrev_set) == 1
+        and len(source_uuid_set) > 1
+        and len(source_uuid_set) <= max_entity_list_length
+    ):
         # More than 1 and less than max_entity_list_length sources, and one organ type
         return (
             f"{dataset_type} data from the {organs_description_phrase} of "
@@ -174,7 +194,8 @@ def generate_title(
     elif len(organ_abbrev_set) == 1 and len(source_uuid_set) > max_entity_list_length:
         # More than max_entity_list_length sources, one organ type
         return (
-            f"{dataset_type} data from the {organs_description_phrase} " f"of {len(source_uuid_set)} different sources"
+            f"{dataset_type} data from the {organs_description_phrase} "
+            f"of {len(source_uuid_set)} different sources"
         )
     elif (
         len(organ_abbrev_set) > 1
@@ -207,10 +228,12 @@ def generate_title(
     ):
         #  More than max_entity_list_length sources, and more than 1 and less than max_entity_list_length organ type
         return (
-            f"{dataset_type} data from the {organs_description_phrase} " f"of {len(source_uuid_set)} different sources"
+            f"{dataset_type} data from the {organs_description_phrase} "
+            f"of {len(source_uuid_set)} different sources"
         )
     else:
         # Default, including more than max_entity_list_length sources, and more than max_entity_list_length organ types
         return (
-            f"{dataset_type} data from {len(organ_abbrev_set)} organs of " f"{len(source_uuid_set)} different sources"
+            f"{dataset_type} data from {len(organ_abbrev_set)} organs of "
+            f"{len(source_uuid_set)} different sources"
         )
