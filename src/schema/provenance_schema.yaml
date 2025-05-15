@@ -83,37 +83,60 @@ shared_properties: &shared_properties
 #  - <<: *shared_excluded_properties_from_public_response
 shared_excluded_properties_from_public_response: &shared_excluded_properties_from_public_response
   - metadata:
-    - lab_id
-    - slide_id
-    - library_id
-    - acquisition_id
-    - source_id
-    - tissue_id
-    - parent_sample_id
+      - lab_id
+      - slide_id
+      - library_id
+      - acquisition_id
+      - source_id
+      - tissue_id
+      - parent_sample_id
   - cedar_mapped_metadata:
-    - Lab ID
-    - Slide ID
-    - Library ID
-    - Acquisition ID
-    - Source ID
-    - Tissue ID
-    - Parent Sample ID
+      - Lab ID
+      - Slide ID
+      - Library ID
+      - Acquisition ID
+      - Source ID
+      - Tissue ID
+      - Parent Sample ID
   - origin_samples:
       - lab_tissue_sample_id
       - direct_ancestor:
           - lab_source_id
       - source:
           - lab_source_id
+  - source:
+      - lab_source_id
   - sources:
       - lab_source_id
+  # Exists for Samples
   - direct_ancestor:
-    - lab_source_id
-    - lab_tissue_sample_id
-    - source:
-        - lab_source_id
-    - origin_samples:
-        - lab_source_id
-        - lab_tissue_sample_id
+      - lab_source_id
+      - lab_tissue_sample_id
+      - metadata:
+          - lab_id
+          - acquisition_id
+          - library_id
+          - donor_id
+          - slide_id
+          - tissue_id
+          - parent_sample_id
+      - cedar_mapped_metadata:
+          - Lab ID
+          - Slide ID
+          - Library ID
+          - Acquisition ID
+          - Source ID
+          - Tissue ID
+          - Parent Sample ID
+      # "Source" exists for Samples
+      - source:
+          - lab_source_id
+      # "Sources" exists for Datasets
+      - sources:
+          - lab_source_id
+      - origin_samples:
+          - lab_tissue_sample_id
+  # Exists for Datasets
   - direct_ancestors:
       - lab_tissue_sample_id
       - lab_dataset_id
@@ -125,7 +148,19 @@ shared_excluded_properties_from_public_response: &shared_excluded_properties_fro
           - slide_id
           - tissue_id
           - parent_sample_id
+      - cedar_mapped_metadata:
+          - Lab ID
+          - Slide ID
+          - Library ID
+          - Acquisition ID
+          - Source ID
+          - Tissue ID
+          - Parent Sample ID
+      # "Source" exists for Samples
       - source:
+          - lab_source_id
+      # "Sources" exists for Datasets
+      - sources:
           - lab_source_id
       - origin_samples:
           - lab_tissue_sample_id
@@ -412,21 +447,6 @@ ENTITIES:
     excluded_properties_from_public_response:
       - <<: *shared_excluded_properties_from_public_response
       - lab_dataset_id
-      - direct_ancestors:
-          - lab_tissue_sample_id
-          - source:
-              - lab_source_id
-          - origin_samples:
-              - lab_tissue_sample_id
-      - origin_samples:
-          - lab_tissue_sample_id
-      - sources:
-          - lab_source_id
-      - origin_samples:
-          - lab_tissue_sample_id
-      - cedar_mapped_metadata:
-          - Lab ID
-          - Slide ID
     # Dataset can be either derivation source or target
     derivation:
       source: true
@@ -758,8 +778,6 @@ ENTITIES:
     excluded_properties_from_public_response:
       - <<: *shared_excluded_properties_from_public_response
       - lab_dataset_id
-      - sources:
-          - lab_source_id
     derivation:
       source: true
       target: true
@@ -987,10 +1005,6 @@ ENTITIES:
     excluded_properties_from_public_response:
       - <<: *shared_excluded_properties_from_public_response
       - lab_tissue_sample_id
-      - origin_samples:
-          - lab_tissue_sample_id
-      - source:
-          - lab_source_id
     properties:
       <<: *shared_properties
       <<: *shared_entity_properties
