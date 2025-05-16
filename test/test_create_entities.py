@@ -1,6 +1,11 @@
 from test.helpers import GROUP, USER
 from test.helpers.auth import AUTH_TOKEN
-from test.helpers.database import create_provenance, generate_entity, get_activity_for_entity, get_entity
+from test.helpers.database import (
+    create_provenance,
+    generate_entity,
+    get_activity_for_entity,
+    get_entity,
+)
 from test.helpers.response import mock_response
 
 
@@ -27,7 +32,9 @@ def test_create_source(app, requests, db_session):
     search_api_url = app.config["SEARCH_API_URL"]
     requests.add_response(f"{uuid_api_url}/uuid", "post", mock_response(200, [entities[0]]))
     requests.add_response(f"{uuid_api_url}/uuid", "post", mock_response(200, [entities[1]]))
-    requests.add_response(f"{search_api_url}/reindex/{entities[0]['uuid']}", "put", mock_response(202))
+    requests.add_response(
+        f"{search_api_url}/reindex/{entities[0]['uuid']}", "put", mock_response(202)
+    )
 
     with app.test_client() as client:
         data = {
@@ -100,10 +107,14 @@ def test_create_organ_sample(db_session, app, requests):
     # uuid and search api mock responses
     uuid_api_url = app.config["UUID_API_URL"]
     search_api_url = app.config["SEARCH_API_URL"]
-    requests.add_response(f"{uuid_api_url}/uuid/{entities[2]['uuid']}", "get", mock_response(200, entities[2]))
+    requests.add_response(
+        f"{uuid_api_url}/uuid/{entities[2]['uuid']}", "get", mock_response(200, entities[2])
+    )
     requests.add_response(f"{uuid_api_url}/uuid", "post", mock_response(200, [entities[0]]))
     requests.add_response(f"{uuid_api_url}/uuid", "post", mock_response(200, [entities[1]]))
-    requests.add_response(f"{search_api_url}/reindex/{entities[0]['uuid']}", "put", mock_response(202))
+    requests.add_response(
+        f"{search_api_url}/reindex/{entities[0]['uuid']}", "put", mock_response(202)
+    )
 
     with app.test_client() as client:
         data = {
@@ -176,10 +187,14 @@ def test_create_block_sample(db_session, app, requests):
     # uuid and search api mock responses
     uuid_api_url = app.config["UUID_API_URL"]
     search_api_url = app.config["SEARCH_API_URL"]
-    requests.add_response(f"{uuid_api_url}/uuid/{entities[2]['uuid']}", "get", mock_response(200, entities[2]))
+    requests.add_response(
+        f"{uuid_api_url}/uuid/{entities[2]['uuid']}", "get", mock_response(200, entities[2])
+    )
     requests.add_response(f"{uuid_api_url}/uuid", "post", mock_response(200, [entities[0]]))
     requests.add_response(f"{uuid_api_url}/uuid", "post", mock_response(200, [entities[1]]))
-    requests.add_response(f"{search_api_url}/reindex/{entities[0]['uuid']}", "put", mock_response(202))
+    requests.add_response(
+        f"{search_api_url}/reindex/{entities[0]['uuid']}", "put", mock_response(202)
+    )
 
     with app.test_client() as client:
         data = {
@@ -252,10 +267,14 @@ def test_create_section_sample(db_session, app, requests):
     # uuid and search api mock responses
     uuid_api_url = app.config["UUID_API_URL"]
     search_api_url = app.config["SEARCH_API_URL"]
-    requests.add_response(f"{uuid_api_url}/uuid/{entities[2]['uuid']}", "get", mock_response(200, entities[2]))
+    requests.add_response(
+        f"{uuid_api_url}/uuid/{entities[2]['uuid']}", "get", mock_response(200, entities[2])
+    )
     requests.add_response(f"{uuid_api_url}/uuid", "post", mock_response(200, [entities[0]]))
     requests.add_response(f"{uuid_api_url}/uuid", "post", mock_response(200, [entities[1]]))
-    requests.add_response(f"{search_api_url}/reindex/{entities[0]['uuid']}", "put", mock_response(202))
+    requests.add_response(
+        f"{search_api_url}/reindex/{entities[0]['uuid']}", "put", mock_response(202)
+    )
 
     with app.test_client() as client:
         data = {
@@ -327,10 +346,14 @@ def test_create_dataset(db_session, app, requests):
     # uuid and search api mock responses
     uuid_api_url = app.config["UUID_API_URL"]
     search_api_url = app.config["SEARCH_API_URL"]
-    requests.add_response(f"{uuid_api_url}/uuid/{entities[2]['uuid']}", "get", mock_response(200, entities[2]))
+    requests.add_response(
+        f"{uuid_api_url}/uuid/{entities[2]['uuid']}", "get", mock_response(200, entities[2])
+    )
     requests.add_response(f"{uuid_api_url}/uuid", "post", mock_response(200, [entities[0]]))
     requests.add_response(f"{uuid_api_url}/uuid", "post", mock_response(200, [entities[1]]))
-    requests.add_response(f"{search_api_url}/reindex/{entities[0]['uuid']}", "put", mock_response(202))
+    requests.add_response(
+        f"{search_api_url}/reindex/{entities[0]['uuid']}", "put", mock_response(202)
+    )
 
     with app.test_client() as client:
         data = {
@@ -349,7 +372,7 @@ def test_create_dataset(db_session, app, requests):
                     "last_name": "Üser",
                     "metadata_schema_id": "94dae6f8-0756-4ab0-a47b-138e446a9501",
                     "middle_name_or_initial": "'$PI&*\"",
-                    "orcid": "0000-0000-0000-0000"
+                    "orcid": "0000-0000-0000-0000",
                 },
             ],
         }
@@ -369,7 +392,9 @@ def test_create_dataset(db_session, app, requests):
         assert res.json["entity_type"] == "Dataset"
         assert res.json["status"] == "New"
 
-        assert res.json["contains_human_genetic_sequences"] == data["contains_human_genetic_sequences"]
+        assert (
+            res.json["contains_human_genetic_sequences"] == data["contains_human_genetic_sequences"]
+        )
         assert res.json["dataset_type"] == data["dataset_type"]
         assert res.json["contributors"] == data["contributors"]
         assert len(res.json["direct_ancestors"]) == 1
@@ -389,7 +414,10 @@ def test_create_dataset(db_session, app, requests):
 
         # check database
         db_entity = get_entity(entities[0]["uuid"], db_session)
-        assert db_entity["contains_human_genetic_sequences"] == data["contains_human_genetic_sequences"]
+        assert (
+            db_entity["contains_human_genetic_sequences"]
+            == data["contains_human_genetic_sequences"]
+        )
         assert db_entity["dataset_type"] == data["dataset_type"]
 
 

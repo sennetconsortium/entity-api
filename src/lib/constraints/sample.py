@@ -3,6 +3,7 @@ from lib.ontology import Ontology
 
 # can be the descendant of / --->
 
+
 def build_sample_organ_constraints(entity, constraints=None):
     if constraints is None:
         constraints = []
@@ -11,7 +12,9 @@ def build_sample_organ_constraints(entity, constraints=None):
     Entities = Ontology.ops().entities()
 
     # Sample suspension ---> Sample organ of blood
-    ancestor = build_constraint_unit(entity, [SpecimenCategories.ORGAN], [Ontology.ops().organ_types().BLOOD])
+    ancestor = build_constraint_unit(
+        entity, [SpecimenCategories.ORGAN], [Ontology.ops().organ_types().BLOOD]
+    )
     descendant = build_constraint_unit(Entities.SAMPLE, [SpecimenCategories.SUSPENSION])
     constraints.append(build_constraint(ancestor, [descendant]))
 
@@ -35,8 +38,12 @@ def build_sample_block_constraints(entity, constraints=None):
     descendant = build_constraint_unit(Entities.SAMPLE, [SpecimenCategories.BLOCK])
     descendant2 = build_constraint_unit(Entities.SAMPLE, [SpecimenCategories.SECTION])
     descendant3 = build_constraint_unit(Entities.SAMPLE, [SpecimenCategories.SUSPENSION])
-    descendant4 = build_constraint_unit(Entities.DATASET, [Ontology.ops().dataset_types().LIGHT_SHEET])
-    constraints.append(build_constraint(ancestor, [descendant, descendant2, descendant3, descendant4]))
+    descendant4 = build_constraint_unit(
+        Entities.DATASET, [Ontology.ops().dataset_types().LIGHT_SHEET]
+    )
+    constraints.append(
+        build_constraint(ancestor, [descendant, descendant2, descendant3, descendant4])
+    )
 
     return constraints
 

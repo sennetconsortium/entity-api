@@ -7,8 +7,8 @@ def build_all_source_constraints(entity):
 
     # Sample organ ---> Source
     ancestor = build_constraint_unit(entity)
-    descendant = build_constraint_unit(Ontology.ops().entities().SAMPLE, [Ontology.ops().specimen_categories().ORGAN])
+    descendant = build_constraint_unit(
+        Ontology.ops().entities().SAMPLE, [Ontology.ops().specimen_categories().ORGAN]
+    )
 
-    return [
-        build_constraint(ancestor, [descendant])
-    ]
+    return [build_constraint(ancestor, [descendant])]

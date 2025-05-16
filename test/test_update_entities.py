@@ -2,7 +2,6 @@ from test.helpers.auth import AUTH_TOKEN
 from test.helpers.database import create_provenance, get_activity_for_entity, get_entity
 from test.helpers.response import mock_response
 
-
 # Update Entity Tests
 
 
@@ -19,7 +18,9 @@ def test_update_source(app, requests, db_session):
         "get",
         mock_response(200, {k: test_source[k] for k in ["uuid", "sennet_id", "base_id"]}),
     )
-    requests.add_response(f"{search_api_url}/reindex/{test_source['uuid']}", "put", mock_response(202))
+    requests.add_response(
+        f"{search_api_url}/reindex/{test_source['uuid']}", "put", mock_response(202)
+    )
 
     with app.test_client() as client:
         data = {
@@ -78,7 +79,9 @@ def test_update_organ_sample(app, requests, db_session):
         "get",
         mock_response(200, {k: test_organ[k] for k in ["uuid", "sennet_id", "base_id"]}),
     )
-    requests.add_response(f"{search_api_url}/reindex/{test_organ['uuid']}", "put", mock_response(202))
+    requests.add_response(
+        f"{search_api_url}/reindex/{test_organ['uuid']}", "put", mock_response(202)
+    )
 
     with app.test_client() as client:
         data = {
@@ -140,7 +143,9 @@ def test_update_block_sample(app, requests, db_session):
             mock_response(200, {k: test_block[k] for k in ["uuid", "sennet_id", "base_id"]}),
         )
 
-    requests.add_response(f"{search_api_url}/reindex/{test_block['uuid']}", "put", mock_response(202))
+    requests.add_response(
+        f"{search_api_url}/reindex/{test_block['uuid']}", "put", mock_response(202)
+    )
 
     with app.test_client() as client:
         data = {
@@ -205,7 +210,9 @@ def test_update_section_sample(app, requests, db_session):
         "get",
         mock_response(200, {k: test_section[k] for k in ["uuid", "sennet_id", "base_id"]}),
     )
-    requests.add_response(f"{search_api_url}/reindex/{test_section['uuid']}", "put", mock_response(202))
+    requests.add_response(
+        f"{search_api_url}/reindex/{test_section['uuid']}", "put", mock_response(202)
+    )
 
     with app.test_client() as client:
         data = {
@@ -253,7 +260,9 @@ def test_update_section_sample_no_auth(app, db_session):
 
 def test_update_dataset(app, requests, db_session):
     # Create provenance in test database
-    test_entities = create_provenance(db_session, ["source", "organ", "block", "section", "dataset"])
+    test_entities = create_provenance(
+        db_session, ["source", "organ", "block", "section", "dataset"]
+    )
     test_dataset = test_entities["dataset"]
 
     # uuid and search api mock responses
@@ -264,7 +273,9 @@ def test_update_dataset(app, requests, db_session):
         "get",
         mock_response(200, {k: test_dataset[k] for k in ["uuid", "sennet_id", "base_id"]}),
     )
-    requests.add_response(f"{search_api_url}/reindex/{test_dataset['uuid']}", "put", mock_response(202))
+    requests.add_response(
+        f"{search_api_url}/reindex/{test_dataset['uuid']}", "put", mock_response(202)
+    )
 
     with app.test_client() as client:
         data = {
@@ -281,7 +292,7 @@ def test_update_dataset(app, requests, db_session):
                     "last_name": "Üser",
                     "metadata_schema_id": "94dae6f8-0756-4ab0-a47b-138e446a9501",
                     "middle_name_or_initial": "'$PI&*\"",
-                    "orcid": "0000-0000-0000-0000"
+                    "orcid": "0000-0000-0000-0000",
                 },
             ],
         }
@@ -306,7 +317,9 @@ def test_update_dataset(app, requests, db_session):
 
 def test_update_dataset_no_auth(app, db_session):
     # Create provenance in test database
-    test_entities = create_provenance(db_session, ["source", "organ", "block", "section", "dataset"])
+    test_entities = create_provenance(
+        db_session, ["source", "organ", "block", "section", "dataset"]
+    )
     test_dataset = test_entities["dataset"]
 
     with app.test_client() as client:
