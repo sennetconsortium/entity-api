@@ -1,2 +1,5 @@
+# Formatting
+black>=25.1.0,<26.0
+
 # For unit test
 pytest>=7.4.4,<8.0

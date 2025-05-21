@@ -14,17 +14,12 @@ filters = {
         "metadata",
         "ingest_metadata",
         "cedar_mapped_metadata",
-        "source_mapped_metadata"
+        "source_mapped_metadata",
     ],
-    "is_include": True
+    "is_include": True,
 }
 
-filters_uuid = {
-    "filter_properties": [
-        "uuid"
-    ],
-    "is_include": True
-}
+filters_uuid = {"filter_properties": ["uuid"], "is_include": True}
 
 
 # Get Descendants Tests
@@ -32,7 +27,9 @@ filters_uuid = {
 
 def test_get_source_descendants(db_session, app, requests):
     # Create provenance in test database
-    test_entities = create_provenance(db_session, ["source", "organ", "block", "section", "dataset"])
+    test_entities = create_provenance(
+        db_session, ["source", "organ", "block", "section", "dataset"]
+    )
     test_source = test_entities["source"]
 
     # uuid mock responses
@@ -61,7 +58,9 @@ def test_get_source_descendants(db_session, app, requests):
 
 def test_get_source_descendants_with_filters(db_session, app, requests):
     # Create provenance in test database
-    test_entities = create_provenance(db_session, ["source", "organ", "block", "section", "dataset"])
+    test_entities = create_provenance(
+        db_session, ["source", "organ", "block", "section", "dataset"]
+    )
     test_source = test_entities["source"]
 
     # uuid mock responses
@@ -137,7 +136,9 @@ def test_get_source_descendants_with_filters(db_session, app, requests):
         assert len(origin_samples) == 1
         assert origin_samples[0]["uuid"] == test_entities["organ"]["uuid"]
         assert dataset == {
-            "contains_human_genetic_sequences": test_entities["dataset"]["contains_human_genetic_sequences"],
+            "contains_human_genetic_sequences": test_entities["dataset"][
+                "contains_human_genetic_sequences"
+            ],
             "creation_action": "Create Dataset Activity",
             "data_access_level": test_entities["dataset"]["data_access_level"],
             "dataset_type": test_entities["dataset"]["dataset_type"],
@@ -153,13 +154,16 @@ def test_get_source_descendants_with_filters(db_session, app, requests):
 
 def test_get_source_descendants_with_filters_public_no_auth(db_session, app, requests):
     # Create provenance in test database
-    test_entities = create_provenance(db_session, [
-        {"type": "source", "data_access_level": "public"},
-        {"type": "organ", "data_access_level": "public"},
-        {"type": "block", "data_access_level": "public"},
-        {"type": "section", "data_access_level": "public"},
-        {"type": "dataset", "data_access_level": "public", "status": "Published"}
-    ])
+    test_entities = create_provenance(
+        db_session,
+        [
+            {"type": "source", "data_access_level": "public"},
+            {"type": "organ", "data_access_level": "public"},
+            {"type": "block", "data_access_level": "public"},
+            {"type": "section", "data_access_level": "public"},
+            {"type": "dataset", "data_access_level": "public", "status": "Published"},
+        ],
+    )
     test_source = test_entities["source"]
 
     # uuid mock responses
@@ -206,7 +210,9 @@ def test_get_source_descendants_with_filters_public_no_auth(db_session, app, req
 
 def test_get_organ_sample_descendants(db_session, app, requests):
     # Create provenance in test database
-    test_entities = create_provenance(db_session, ["source", "organ", "block", "section", "dataset"])
+    test_entities = create_provenance(
+        db_session, ["source", "organ", "block", "section", "dataset"]
+    )
     test_organ = test_entities["organ"]
 
     # uuid mock responses
@@ -234,7 +240,9 @@ def test_get_organ_sample_descendants(db_session, app, requests):
 
 def test_get_organ_sample_descendants_with_filters(db_session, app, requests):
     # Create provenance in test database
-    test_entities = create_provenance(db_session, ["source", "organ", "block", "section", "dataset"])
+    test_entities = create_provenance(
+        db_session, ["source", "organ", "block", "section", "dataset"]
+    )
     test_organ = test_entities["organ"]
 
     # uuid mock responses
@@ -292,7 +300,9 @@ def test_get_organ_sample_descendants_with_filters(db_session, app, requests):
         assert len(origin_samples) == 1
         assert origin_samples[0]["uuid"] == test_entities["organ"]["uuid"]
         assert dataset == {
-            "contains_human_genetic_sequences": test_entities["dataset"]["contains_human_genetic_sequences"],
+            "contains_human_genetic_sequences": test_entities["dataset"][
+                "contains_human_genetic_sequences"
+            ],
             "creation_action": "Create Dataset Activity",
             "data_access_level": test_entities["dataset"]["data_access_level"],
             "dataset_type": test_entities["dataset"]["dataset_type"],
@@ -308,13 +318,16 @@ def test_get_organ_sample_descendants_with_filters(db_session, app, requests):
 
 def test_get_organ_sample_descendants_with_filters_public_no_auth(db_session, app, requests):
     # Create provenance in test database
-    test_entities = create_provenance(db_session, [
-        {"type": "source", "data_access_level": "public"},
-        {"type": "organ", "data_access_level": "public"},
-        {"type": "block", "data_access_level": "public"},
-        {"type": "section", "data_access_level": "public"},
-        {"type": "dataset", "data_access_level": "public", "status": "Published"}
-    ])
+    test_entities = create_provenance(
+        db_session,
+        [
+            {"type": "source", "data_access_level": "public"},
+            {"type": "organ", "data_access_level": "public"},
+            {"type": "block", "data_access_level": "public"},
+            {"type": "section", "data_access_level": "public"},
+            {"type": "dataset", "data_access_level": "public", "status": "Published"},
+        ],
+    )
     test_organ = test_entities["organ"]
 
     # uuid mock responses
@@ -355,7 +368,9 @@ def test_get_organ_sample_descendants_with_filters_public_no_auth(db_session, ap
 
 def test_get_block_sample_descendants(db_session, app, requests):
     # Create provenance in test database
-    test_entities = create_provenance(db_session, ["source", "organ", "block", "section", "dataset"])
+    test_entities = create_provenance(
+        db_session, ["source", "organ", "block", "section", "dataset"]
+    )
     test_block = test_entities["block"]
 
     # uuid mock responses
@@ -382,7 +397,9 @@ def test_get_block_sample_descendants(db_session, app, requests):
 
 def test_get_block_sample_descendants_with_filters(db_session, app, requests):
     # Create provenance in test database
-    test_entities = create_provenance(db_session, ["source", "organ", "block", "section", "dataset"])
+    test_entities = create_provenance(
+        db_session, ["source", "organ", "block", "section", "dataset"]
+    )
     test_block = test_entities["block"]
 
     # uuid mock responses
@@ -424,7 +441,9 @@ def test_get_block_sample_descendants_with_filters(db_session, app, requests):
         assert len(origin_samples) == 1
         assert origin_samples[0]["uuid"] == test_entities["organ"]["uuid"]
         assert dataset == {
-            "contains_human_genetic_sequences": test_entities["dataset"]["contains_human_genetic_sequences"],
+            "contains_human_genetic_sequences": test_entities["dataset"][
+                "contains_human_genetic_sequences"
+            ],
             "creation_action": "Create Dataset Activity",
             "data_access_level": test_entities["dataset"]["data_access_level"],
             "dataset_type": test_entities["dataset"]["dataset_type"],
@@ -440,13 +459,16 @@ def test_get_block_sample_descendants_with_filters(db_session, app, requests):
 
 def test_get_block_sample_descendants_with_filters_public_no_auth(db_session, app, requests):
     # Create provenance in test database
-    test_entities = create_provenance(db_session, [
-        {"type": "source", "data_access_level": "public"},
-        {"type": "organ", "data_access_level": "public"},
-        {"type": "block", "data_access_level": "public"},
-        {"type": "section", "data_access_level": "public"},
-        {"type": "dataset", "data_access_level": "public", "status": "Published"}
-    ])
+    test_entities = create_provenance(
+        db_session,
+        [
+            {"type": "source", "data_access_level": "public"},
+            {"type": "organ", "data_access_level": "public"},
+            {"type": "block", "data_access_level": "public"},
+            {"type": "section", "data_access_level": "public"},
+            {"type": "dataset", "data_access_level": "public", "status": "Published"},
+        ],
+    )
     test_block = test_entities["block"]
 
     # uuid mock responses
@@ -481,7 +503,9 @@ def test_get_block_sample_descendants_with_filters_public_no_auth(db_session, ap
 
 def test_get_section_sample_descendants(db_session, app, requests):
     # Create provenance in test database
-    test_entities = create_provenance(db_session, ["source", "organ", "block", "section", "dataset"])
+    test_entities = create_provenance(
+        db_session, ["source", "organ", "block", "section", "dataset"]
+    )
     test_section = test_entities["section"]
 
     # uuid mock responses
@@ -507,7 +531,9 @@ def test_get_section_sample_descendants(db_session, app, requests):
 
 def test_get_section_sample_descendants_with_filters(db_session, app, requests):
     # Create provenance in test database
-    test_entities = create_provenance(db_session, ["source", "organ", "block", "section", "dataset"])
+    test_entities = create_provenance(
+        db_session, ["source", "organ", "block", "section", "dataset"]
+    )
     test_section = test_entities["section"]
 
     # uuid mock responses
@@ -533,7 +559,9 @@ def test_get_section_sample_descendants_with_filters(db_session, app, requests):
         assert len(origin_samples) == 1
         assert origin_samples[0]["uuid"] == test_entities["organ"]["uuid"]
         assert dataset == {
-            "contains_human_genetic_sequences": test_entities["dataset"]["contains_human_genetic_sequences"],
+            "contains_human_genetic_sequences": test_entities["dataset"][
+                "contains_human_genetic_sequences"
+            ],
             "creation_action": "Create Dataset Activity",
             "data_access_level": test_entities["dataset"]["data_access_level"],
             "dataset_type": test_entities["dataset"]["dataset_type"],
@@ -546,13 +574,19 @@ def test_get_section_sample_descendants_with_filters(db_session, app, requests):
             "uuid": test_entities["dataset"]["uuid"],
         }
 
+
 def test_get_block_sample_descendants_uuids_with_filters_no_auth(db_session, app, requests):
     # Create provenance in test database
-    test_entities = create_provenance(db_session, ["source", "organ",
-                                                   {"type": "block", "data_access_level": "public"},
-                                                   {"type": "section", "data_access_level": "public"},
-                                                   {"type": "dataset", "data_access_level": "public", "status": "Published"},
-                                                    ])
+    test_entities = create_provenance(
+        db_session,
+        [
+            "source",
+            "organ",
+            {"type": "block", "data_access_level": "public"},
+            {"type": "section", "data_access_level": "public"},
+            {"type": "dataset", "data_access_level": "public", "status": "Published"},
+        ],
+    )
     test_entity = test_entities["block"]
 
     # uuid mock responses
@@ -580,13 +614,16 @@ def test_get_block_sample_descendants_uuids_with_filters_no_auth(db_session, app
 
 def test_get_section_sample_descendants_with_filters_public_no_auth(db_session, app, requests):
     # Create provenance in test database
-    test_entities = create_provenance(db_session, [
-        {"type": "source", "data_access_level": "public"},
-        {"type": "organ", "data_access_level": "public"},
-        {"type": "block", "data_access_level": "public"},
-        {"type": "section", "data_access_level": "public"},
-        {"type": "dataset", "data_access_level": "public", "status": "Published"}
-    ])
+    test_entities = create_provenance(
+        db_session,
+        [
+            {"type": "source", "data_access_level": "public"},
+            {"type": "organ", "data_access_level": "public"},
+            {"type": "block", "data_access_level": "public"},
+            {"type": "section", "data_access_level": "public"},
+            {"type": "dataset", "data_access_level": "public", "status": "Published"},
+        ],
+    )
     test_section = test_entities["section"]
 
     # uuid mock responses
@@ -615,7 +652,9 @@ def test_get_section_sample_descendants_with_filters_public_no_auth(db_session, 
 
 def test_get_dataset_descendants(db_session, app, requests):
     # Create provenance in test database
-    test_entities = create_provenance(db_session, ["source", "organ", "block", "section", "dataset"])
+    test_entities = create_provenance(
+        db_session, ["source", "organ", "block", "section", "dataset"]
+    )
     test_dataset = test_entities["dataset"]
 
     # uuid mock responses
@@ -638,7 +677,9 @@ def test_get_dataset_descendants(db_session, app, requests):
 
 def test_get_datasets_descendants_with_filters(db_session, app, requests):
     # Create provenance in test database
-    test_entities = create_provenance(db_session, ["source", "organ", "block", "section", "dataset"])
+    test_entities = create_provenance(
+        db_session, ["source", "organ", "block", "section", "dataset"]
+    )
     test_dataset = test_entities["dataset"]
 
     # uuid mock responses
@@ -662,13 +703,16 @@ def test_get_datasets_descendants_with_filters(db_session, app, requests):
 
 def test_get_datasets_descendants_with_filters_public_no_auth(db_session, app, requests):
     # Create provenance in test database
-    test_entities = create_provenance(db_session, [
-        {"type": "source", "data_access_level": "public"},
-        {"type": "organ", "data_access_level": "public"},
-        {"type": "block", "data_access_level": "public"},
-        {"type": "section", "data_access_level": "public"},
-        {"type": "dataset", "data_access_level": "public", "status": "Published"}
-    ])
+    test_entities = create_provenance(
+        db_session,
+        [
+            {"type": "source", "data_access_level": "public"},
+            {"type": "organ", "data_access_level": "public"},
+            {"type": "block", "data_access_level": "public"},
+            {"type": "section", "data_access_level": "public"},
+            {"type": "dataset", "data_access_level": "public", "status": "Published"},
+        ],
+    )
     test_dataset = test_entities["dataset"]
 
     # uuid mock responses
