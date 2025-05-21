@@ -1302,6 +1302,23 @@ def create_entity(entity_type: str, user_token: str, json_data_dict: dict):
         direct_ancestor_uuids = []
         for direct_ancestor_uuid in json_data_dict["direct_ancestor_uuids"]:
             direct_ancestor_dict = query_target_entity(direct_ancestor_uuid)
+
+            # check that the origin sample is not Organ Other
+            if equals(direct_ancestor_dict["entity_type"], "Sample"):
+                origin_samples = schema_neo4j_queries.get_origin_samples(
+                    schema_manager.get_neo4j_driver_instance(),
+                    [direct_ancestor_uuid],
+                    is_bulk=False,
+                )
+                for origin_sample in origin_samples:
+                    if (
+                        equals(origin_sample.get("organ"), "OT")
+                        or origin_sample.get("organ") is None
+                    ):
+                        abort_bad_req(
+                            f"You are not allowed to register data against Sample {origin_sample['sennet_id']} with Organ Other. Please contact our help desk to ensure that we can provide appropriate support for your work."
+                        )
+
             validate_constraints_by_entities(
                 direct_ancestor_dict, json_data_dict, normalized_entity_type
             )
