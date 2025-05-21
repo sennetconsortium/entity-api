@@ -3,7 +3,6 @@ from test.helpers.auth import AUTH_TOKEN
 from test.helpers.database import create_provenance
 from test.helpers.response import mock_response
 
-
 # Get Entity Tests
 
 
@@ -98,9 +97,9 @@ def test_get_source_by_uuid_no_auth(db_session, app, requests):
 
 def test_get_source_by_uuid_public_no_auth(db_session, app, requests):
     # Create provenance in test database
-    test_entities = create_provenance(db_session, [
-        {"type": "source", "data_access_level": "public"}
-    ])
+    test_entities = create_provenance(
+        db_session, [{"type": "source", "data_access_level": "public"}]
+    )
     test_source = test_entities["source"]
 
     # uuid mock responses
@@ -224,10 +223,13 @@ def test_get_organ_sample_by_uuid_no_auth(db_session, app, requests):
 
 def test_get_organ_sample_by_uuid_public_no_auth(db_session, app, requests):
     # Create provenance in test database
-    test_entities = create_provenance(db_session, [
-        {"type": "source", "data_access_level": "public"},
-        {"type": "organ", "data_access_level": "public"}
-    ])
+    test_entities = create_provenance(
+        db_session,
+        [
+            {"type": "source", "data_access_level": "public"},
+            {"type": "organ", "data_access_level": "public"},
+        ],
+    )
     test_organ = test_entities["organ"]
 
     # uuid mock responses
@@ -351,11 +353,14 @@ def test_get_block_sample_by_uuid_no_auth(db_session, app, requests):
 
 def test_get_block_sample_by_uuid_public_no_auth(db_session, app, requests):
     # Create provenance in test database
-    test_entities = create_provenance(db_session, [
-        {"type": "source", "data_access_level": "public"},
-        {"type": "organ", "data_access_level": "public"},
-        {"type": "block", "data_access_level": "public"}
-    ])
+    test_entities = create_provenance(
+        db_session,
+        [
+            {"type": "source", "data_access_level": "public"},
+            {"type": "organ", "data_access_level": "public"},
+            {"type": "block", "data_access_level": "public"},
+        ],
+    )
     test_block = test_entities["block"]
 
     # uuid mock responses
@@ -479,12 +484,15 @@ def test_get_section_sample_by_uuid_no_auth(db_session, app, requests):
 
 def test_get_section_sample_by_uuid_public_no_auth(db_session, app, requests):
     # Create provenance in test database
-    test_entities = create_provenance(db_session, [
-        {"type": "source", "data_access_level": "public"},
-        {"type": "organ", "data_access_level": "public"},
-        {"type": "block", "data_access_level": "public"},
-        {"type": "section", "data_access_level": "public"}
-    ])
+    test_entities = create_provenance(
+        db_session,
+        [
+            {"type": "source", "data_access_level": "public"},
+            {"type": "organ", "data_access_level": "public"},
+            {"type": "block", "data_access_level": "public"},
+            {"type": "section", "data_access_level": "public"},
+        ],
+    )
     test_section = test_entities["section"]
 
     # uuid mock responses
@@ -507,7 +515,9 @@ def test_get_section_sample_by_uuid_public_no_auth(db_session, app, requests):
 
 def test_get_dataset_by_uuid(db_session, app, requests):
     # Create provenance in test database
-    test_entities = create_provenance(db_session, ["source", "organ", "block", "section", "dataset"])
+    test_entities = create_provenance(
+        db_session, ["source", "organ", "block", "section", "dataset"]
+    )
     test_dataset = test_entities["dataset"]
 
     # uuid mock responses
@@ -530,7 +540,10 @@ def test_get_dataset_by_uuid(db_session, app, requests):
         assert res.json["entity_type"] == "Dataset"
         assert res.json["status"] == "New"
 
-        assert res.json["contains_human_genetic_sequences"] == test_dataset["contains_human_genetic_sequences"]
+        assert (
+            res.json["contains_human_genetic_sequences"]
+            == test_dataset["contains_human_genetic_sequences"]
+        )
         assert res.json["dataset_type"] == test_dataset["dataset_type"]
         assert len(res.json["direct_ancestors"]) == 1
         assert res.json["direct_ancestors"][0]["uuid"] == test_entities["section"]["uuid"]
@@ -550,7 +563,9 @@ def test_get_dataset_by_uuid(db_session, app, requests):
 
 def test_get_dataset_by_sennet_id(db_session, app, requests):
     # Create provenance in test database
-    test_entities = create_provenance(db_session, ["source", "organ", "block", "section", "dataset"])
+    test_entities = create_provenance(
+        db_session, ["source", "organ", "block", "section", "dataset"]
+    )
     test_dataset = test_entities["dataset"]
 
     # uuid mock responses
@@ -573,7 +588,10 @@ def test_get_dataset_by_sennet_id(db_session, app, requests):
         assert res.json["entity_type"] == "Dataset"
         assert res.json["status"] == "New"
 
-        assert res.json["contains_human_genetic_sequences"] == test_dataset["contains_human_genetic_sequences"]
+        assert (
+            res.json["contains_human_genetic_sequences"]
+            == test_dataset["contains_human_genetic_sequences"]
+        )
         assert res.json["dataset_type"] == test_dataset["dataset_type"]
         assert len(res.json["direct_ancestors"]) == 1
         assert res.json["direct_ancestors"][0]["uuid"] == test_entities["section"]["uuid"]
@@ -614,13 +632,16 @@ def test_get_dataset_by_uuid_no_auth(db_session, app, requests):
 
 def test_get_dataset_by_uuid_published_no_auth(db_session, app, requests):
     # Create provenance in test database
-    test_entities = create_provenance(db_session, [
-        {"type": "source", "data_access_level": "public"},
-        {"type": "organ", "data_access_level": "public"},
-        {"type": "block", "data_access_level": "public"},
-        {"type": "section", "data_access_level": "public"},
-        {"type": "dataset", "data_access_level": "public", "status": "Published"}
-    ])
+    test_entities = create_provenance(
+        db_session,
+        [
+            {"type": "source", "data_access_level": "public"},
+            {"type": "organ", "data_access_level": "public"},
+            {"type": "block", "data_access_level": "public"},
+            {"type": "section", "data_access_level": "public"},
+            {"type": "dataset", "data_access_level": "public", "status": "Published"},
+        ],
+    )
     test_dataset = test_entities["dataset"]
 
     # uuid mock responses

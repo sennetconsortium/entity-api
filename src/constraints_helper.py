@@ -6,6 +6,5 @@ class ConstraintsHelper:
         self.constraints = config
         self.logger = logging.getLogger()
 
-
     def get_constraints(self):
         return self.constraints
