@@ -1266,19 +1266,25 @@ def create_entity(entity_type: str, user_token: str, json_data_dict: dict):
     except ValueError as e:
         abort_bad_req(e)
 
+    sample_categories = Ontology.ops().specimen_categories()
+    entities = Ontology.ops().entities()
+
     # Sample and Dataset: additional validation, create entity, after_create_trigger
     # Collection and Source: create entity
-    if normalized_entity_type == "Sample":
+    if equals(normalized_entity_type, entities.SAMPLE):
         # A bit more validation to ensure if `organ` code is set, the `sample_category` must be set to "organ"
         # Vise versa, if `sample_category` is set to "organ", `organ` code is required
-        if ("sample_category" in json_data_dict) and (
-            json_data_dict["sample_category"].lower() == "organ"
+        if (
+            equals(json_data_dict["sample_category"], sample_categories.ORGAN)
+            and "organ" not in json_data_dict
         ):
-            if ("organ" not in json_data_dict) or (json_data_dict["organ"].strip() == ""):
-                abort_bad_req("A valid organ code is required when the sample_category is organ")
-        else:
-            if "organ" in json_data_dict:
-                abort_bad_req("The sample_category must be organ when an organ code is provided")
+            abort_bad_req("A valid organ code is required when the sample_category is organ")
+
+        elif (
+            not equals(json_data_dict["sample_category"], sample_categories.ORGAN)
+            and "organ" in json_data_dict
+        ):
+            abort_bad_req("The sample_category must be organ when an organ code is provided")
 
         # A bit more validation for new sample to be linked to existing source entity
         direct_ancestor_uuid = json_data_dict["direct_ancestor_uuid"]
@@ -1291,14 +1297,34 @@ def create_entity(entity_type: str, user_token: str, json_data_dict: dict):
 
         check_multiple_organs_constraint(json_data_dict, direct_ancestor_dict)
 
+        # Even more validation once we have the directory ancestor
+        if equals(json_data_dict["sample_category"], sample_categories.ORGAN):
+            source_types = Ontology.ops().source_types()
+            organ_code = json_data_dict["organ"]
+
+            if organ_code.upper() in ["ML", "MR"] and direct_ancestor_dict["source_type"] not in [
+                source_types.HUMAN,
+                source_types.HUMAN_ORGANOID,
+            ]:
+                abort_bad_req(
+                    "The organ codes ML and MR are only valid for human and human organoid source type"
+                )
+
+            if organ_code.upper() in ["UBERON:0001911"] and direct_ancestor_dict[
+                "source_type"
+            ] not in [source_types.MOUSE, source_types.MOUSE_ORGANOID]:
+                abort_bad_req(
+                    "The organ code UBERON:0001911 is only valid for mouse and mouse organoid source type"
+                )
+
         # Generate 'before_create_triiger' data and create the entity details in Neo4j
         merged_dict = create_entity_details(
             request, normalized_entity_type, user_token, json_data_dict
         )
-    elif schema_manager.entity_type_instanceof(normalized_entity_type, "Dataset"):
+
+    elif schema_manager.entity_type_instanceof(normalized_entity_type, entities.DATASET):
         # `direct_ancestor_uuids` is required for creating new Dataset
         # Check existence of those direct ancestors
-
         direct_ancestor_uuids = []
         for direct_ancestor_uuid in json_data_dict["direct_ancestor_uuids"]:
             direct_ancestor_dict = query_target_entity(direct_ancestor_uuid)
