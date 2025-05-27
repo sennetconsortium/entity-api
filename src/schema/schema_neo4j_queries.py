@@ -2281,6 +2281,9 @@ def exclude_include_query_part(
     else:
         _properties = properties
 
+    if _properties is None:
+        return f"RETURN apoc.coll.toSet(COLLECT(t)) AS {record_field_name}"
+
     if is_include_action and len(_properties) == 1 and _properties[0] in ["uuid"]:
         return f"RETURN apoc.coll.toSet(COLLECT(t.{_properties[0]})) AS {record_field_name}"
 
