@@ -11,5 +11,5 @@ class Ontology(UbkgSDK):
         key = f"VALUESET_{entities}"
         if key in cache:
             for e in cache[key]:
-                if e['term'] == 'Publication Entity':
-                    e['term'] = 'Publication'
+                if e["term"] == "Publication Entity":
+                    e["term"] = "Publication"
