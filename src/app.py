@@ -9,7 +9,7 @@ import os
 import re
 import csv
 import requests
-import urllib.request
+import urllib.parse
 from io import StringIO
 
 # Don't confuse urllib (Python native library) with urllib3 (3rd-party library, requests also uses urllib3)
@@ -1302,12 +1302,15 @@ def create_entity(entity_type: str, user_token: str, json_data_dict: dict):
             source_types = Ontology.ops().source_types()
             organ_code = json_data_dict["organ"]
 
-            if organ_code.upper() in ["ML", "MR"] and direct_ancestor_dict["source_type"] not in [
+            # Left and right mammary gland
+            if organ_code.upper() in ["FMA:57991", "FMA:57987"] and direct_ancestor_dict[
+                "source_type"
+            ] not in [
                 source_types.HUMAN,
                 source_types.HUMAN_ORGANOID,
             ]:
                 abort_bad_req(
-                    "The organ codes ML and MR are only valid for human and human organoid source type"
+                    "The organ codes FMA:57991 and FMA:57987 are only valid for human and human organoid source type"
                 )
 
             if organ_code.upper() in ["UBERON:0001911"] and direct_ancestor_dict[
@@ -3938,7 +3941,7 @@ def get_prov_info():
     HEADER_PROCESSED_DATASET_STATUS = "processed_dataset_status"
     HEADER_PROCESSED_DATASET_PORTAL_URL = "processed_dataset_portal_url"
     ORGAN_TYPES = Ontology.ops(
-        as_data_dict=True, data_as_val=True, val_key="rui_code"
+        as_data_dict=True, data_as_val=True, val_key="organ_uberon"
     ).organ_types()
     HEADER_PREVIOUS_VERSION_SENNET_IDS = "previous_version_sennet_ids"
 
@@ -4103,7 +4106,7 @@ def get_prov_info():
                 distinct_organ_sennet_id_list.append(item["sennet_id"])
                 distinct_organ_uuid_list.append(item["uuid"])
                 for organ_type in ORGAN_TYPES:
-                    if ORGAN_TYPES[organ_type]["rui_code"] == item["organ"]:
+                    if ORGAN_TYPES[organ_type]["organ_uberon"] == item["organ"]:
                         distinct_organ_type_list.append(ORGAN_TYPES[organ_type]["term"])
                         break
             internal_dict[HEADER_ORGAN_SENNET_ID] = distinct_organ_sennet_id_list
@@ -4312,7 +4315,7 @@ def get_prov_info_for_dataset(id):
     HEADER_PROCESSED_DATASET_PORTAL_URL = "processed_dataset_portal_url"
     HEADER_DATASET_SAMPLES = "dataset_samples"
     ORGAN_TYPES = Ontology.ops(
-        as_data_dict=True, data_as_val=True, val_key="rui_code"
+        as_data_dict=True, data_as_val=True, val_key="organ_uberon"
     ).organ_types()
 
     headers = [
@@ -4410,7 +4413,7 @@ def get_prov_info_for_dataset(id):
             distinct_organ_sennet_id_list.append(item["sennet_id"])
             distinct_organ_uuid_list.append(item["uuid"])
             for organ_type in ORGAN_TYPES:
-                if ORGAN_TYPES[organ_type]["rui_code"] == item["organ"]:
+                if ORGAN_TYPES[organ_type]["organ_uberon"] == item["organ"]:
                     distinct_organ_type_list.append(ORGAN_TYPES[organ_type]["term"])
                     break
         internal_dict[HEADER_ORGAN_SENNET_ID] = distinct_organ_sennet_id_list
@@ -4557,7 +4560,7 @@ def get_sample_prov_info():
     HEADER_ORGAN_TYPE = "organ_type"
     HEADER_ORGAN_SENNET_ID = "organ_sennet_id"
     ORGAN_TYPES = Ontology.ops(
-        as_data_dict=True, data_as_val=True, val_key="rui_code"
+        as_data_dict=True, data_as_val=True, val_key="organ_uberon"
     ).organ_types()
 
     # Processing and validating query parameters
@@ -4594,7 +4597,7 @@ def get_sample_prov_info():
         if sample["organ_uuid"] is not None:
             organ_uuid = sample["organ_uuid"]
             for organ_type in ORGAN_TYPES:
-                if ORGAN_TYPES[organ_type]["rui_code"] == sample["organ_organ_type"]:
+                if ORGAN_TYPES[organ_type]["organ_uberon"] == sample["organ_organ_type"]:
                     organ_type = ORGAN_TYPES[organ_type]["term"]
                     break
             organ_sennet_id = sample["organ_sennet_id"]
@@ -4602,7 +4605,7 @@ def get_sample_prov_info():
             if sample["sample_sample_category"] == Ontology.ops().specimen_categories().ORGAN:
                 organ_uuid = sample["sample_uuid"]
                 for organ_type in ORGAN_TYPES:
-                    if ORGAN_TYPES[organ_type]["rui_code"] == sample["sample_organ"]:
+                    if ORGAN_TYPES[organ_type]["organ_uberon"] == sample["sample_organ"]:
                         organ_type = ORGAN_TYPES[organ_type]["term"]
                         break
                 organ_sennet_id = sample["sample_sennet_id"]
@@ -4663,7 +4666,7 @@ Example:
 <required>      "ancestors": {
 <required>            "entity_type": "sample",
 <optional>            "sub_type": ["organ"],
-<optional>            "sub_type_val": ["BD"],
+<optional>            "sub_type_val": ["UBERON:0000178"]
                  },
 <required>      "descendants": {
 <required>           "entity_type": "sample",
@@ -6510,11 +6513,11 @@ Returns nothing. Raises abort_bad_req is organ code not found on organ_types.yam
 
 def validate_organ_code(organ_code):
     ORGAN_TYPES = Ontology.ops(
-        as_data_dict=True, data_as_val=True, val_key="rui_code"
+        as_data_dict=True, data_as_val=True, val_key="organ_uberon"
     ).organ_types()
 
     for organ_type in ORGAN_TYPES:
-        if equals(ORGAN_TYPES[organ_type]["rui_code"], organ_code):
+        if equals(ORGAN_TYPES[organ_type]["organ_uberon"], organ_code):
             return
 
     abort_bad_req("Invalid Organ. Organ must be 2 digit, case-insensitive code")
@@ -6523,7 +6526,7 @@ def validate_organ_code(organ_code):
 def verify_ubkg_properties(json_data_dict):
     SOURCE_TYPES = Ontology.ops(as_data_dict=True).source_types()
     SAMPLE_CATEGORIES = Ontology.ops(as_data_dict=True).specimen_categories()
-    ORGAN_TYPES = Ontology.ops(as_data_dict=True, key="rui_code").organ_types()
+    ORGAN_TYPES = Ontology.ops(as_data_dict=True, key="organ_uberon").organ_types()
     DATASET_TYPE = Ontology.ops(as_data_dict=True).dataset_types()
 
     if "source_type" in json_data_dict:
@@ -6617,7 +6620,7 @@ def check_multiple_organs_constraint(
                 )
                 if count >= 1:
                     organ_codes = Ontology.ops(
-                        as_data_dict=True, val_key="term", key="rui_code"
+                        as_data_dict=True, val_key="term", key="organ_uberon"
                     ).organ_types()
                     organ = organ_codes[organ_code]
                     abort_bad_req(
