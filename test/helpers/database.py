@@ -197,7 +197,7 @@ def create_provenance(db_session, provenance):
                     "description": "Test organ description.",
                     "entity_type": "Sample",
                     "lab_tissue_sample_id": "test_label_organ_sample_id",
-                    "organ": "LI",
+                    "organ": "UBERON:0000059",  # Large Intestine
                     "sample_category": "Organ",
                 }
             )

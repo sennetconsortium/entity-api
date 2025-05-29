@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from atlas_consortia_commons.ubkg.ubkg_sdk import UbkgSDK
 from flask import current_app
 
@@ -13,3 +15,9 @@ class Ontology(UbkgSDK):
             for e in cache[key]:
                 if e["term"] == "Publication Entity":
                     e["term"] = "Publication"
+
+    @classmethod
+    def organs_by_organ_uberon(cls: Ontology) -> dict:
+        return cls.ops(
+            as_data_dict=True, prop_callback=None, data_as_val=True, key="organ_uberon"
+        ).organ_types()

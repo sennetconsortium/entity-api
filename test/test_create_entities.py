@@ -119,7 +119,7 @@ def test_create_organ_sample(db_session, app, requests):
     with app.test_client() as client:
         data = {
             "sample_category": "Organ",
-            "organ": "LV",
+            "organ": "UBERON:0002107",  # Liver
             "lab_tissue_sample_id": "test_lab_tissue_organ_id",
             "direct_ancestor_uuid": test_entities["source"]["uuid"],  # source to link to
         }

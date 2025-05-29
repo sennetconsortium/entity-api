@@ -1219,10 +1219,12 @@ def get_has_rui_information(neo4j_driver, entity_uuid):
             return str(results)
 
         # Check the ancestry of the given entity and if the origin sample is
-        # Adipose Tissue (AD), Blood (BD), Bone Marrow (BM), Breast (BS), Bone (BX), Muscle (MU), or Other (OT), then return "N/A"
+        # Adipose Tissue (UBERON:0001013), Blood (UBERON:0000178), Bone (UBERON:0001474), Bone Marrow (UBERON:0002371),
+        # Muscle (UBERON:0005090), or Other (UBERON:0010000), then return "N/A"
         organ_query = (
             "MATCH (e:Entity)-[:USED|WAS_GENERATED_BY*]->(o:Sample) "
-            "WHERE e.uuid = $entity_uuid AND o.sample_category = 'Organ' AND o.organ IN ['AD', 'BD', 'BM', 'BS', 'BX', 'MU', 'OT'] "
+            "WHERE e.uuid = $entity_uuid AND o.sample_category = 'Organ' "
+            "AND o.organ IN ['UBERON:0001013', 'UBERON:0000178', 'UBERON:0001474', 'UBERON:0002371', 'UBERON:0005090', 'UBERON:0010000'] "
             f"RETURN 'N/A' as {record_field_name}"
         )
 
