@@ -4030,6 +4030,7 @@ def get_prov_info():
             param_dict["group_uuid"] = group_uuid
         organ = request.args.get("organ")
         if organ is not None:
+            organ = organ.upper()
             validate_organ_code(organ)
             param_dict["organ"] = organ
         has_rui_info = request.args.get("has_rui_info")
@@ -6519,25 +6520,19 @@ def validate_constraints_by_entities(ancestor, descendant, descendant_entity_typ
     return result
 
 
-"""
-Ensures that a given organ code matches what is found on the organ_types yaml document
+def validate_organ_code(organ_code: str):
+    """
+    Ensures that a given organ code matches what is found in ubkg.
 
-organ_code : str
+    organ_code : str
 
-Returns nothing. Raises abort_bad_req is organ code not found on organ_types.yaml
-"""
-
-
-def validate_organ_code(organ_code):
-    ORGAN_TYPES = Ontology.ops(
-        as_data_dict=True, data_as_val=True, val_key="organ_uberon"
-    ).organ_types()
-
-    for organ_type in ORGAN_TYPES:
-        if equals(ORGAN_TYPES[organ_type]["organ_uberon"], organ_code):
-            return
-
-    abort_bad_req("Invalid Organ. Organ must be 2 digit, case-insensitive code")
+    Returns nothing. Raises abort_bad_req is organ code not found in ubkg.
+    """
+    try:
+        organs = Ontology.organs_by_organ_uberon()
+        organs[organ_code]
+    except KeyError:
+        abort_bad_req("Organ must be a valid organ uberon code")
 
 
 def verify_ubkg_properties(json_data_dict):
