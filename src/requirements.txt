@@ -23,3 +23,5 @@ hubmap-commons==2.1.19
 atlas-consortia-commons==1.1.2
 
 deepdiff~=6.6.0
+
+psutil>=7.0.0,<7.1

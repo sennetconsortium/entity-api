@@ -71,3 +71,6 @@ UBKG_ENDPOINT_VALUESET =
 UBKG_CODES =
 
 MULTIPLE_ALLOWED_ORGANS = ['LY', 'SK', 'BD', 'BM', 'AD', 'BX', 'MU', 'OT']
+
+# Disk names that appear in 'Mounted on' column when 'df' is run in shell
+STATUS_DISKS = {'/': 'host disk space'}
