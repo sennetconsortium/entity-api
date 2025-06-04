@@ -421,28 +421,37 @@ def get_status():
         file_build_content = str(e)
         response_code = 500
 
-    status_data = {"version": file_version_content, "build": file_build_content, "usage": [], "services": []}
+    status_data = {
+        "version": file_version_content,
+        "build": file_build_content,
+        "usage": [],
+        "services": [],
+    }
 
     # Usage
     try:
         # get memory usage
         memory_percent = psutil.virtual_memory().percent
-        status_data["usage"].append({
-            "type": "memory",
-            "percent_used": round(memory_percent, 1),
-            "description": "host memory"
-        })
+        status_data["usage"].append(
+            {
+                "type": "memory",
+                "percent_used": round(memory_percent, 1),
+                "description": "host memory",
+            }
+        )
 
         # get disk usage
         disks = current_app.config.get("STATUS_DISKS", {})
         for name, description in disks.items():
             disk_usage = psutil.disk_usage(name)
             storage_percent = (disk_usage.used / disk_usage.total) * 100
-            status_data["usage"].append({
-                "type": "storage",
-                "percent_used": round(storage_percent, 1),
-                "description": description,
-            })
+            status_data["usage"].append(
+                {
+                    "type": "storage",
+                    "percent_used": round(storage_percent, 1),
+                    "description": description,
+                }
+            )
     except Exception as e:
         response_code = 500
         logger.error(f"Error getting system usage: {str(e)}")
