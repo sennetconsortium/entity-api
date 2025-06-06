@@ -1,4 +1,4 @@
-FROM sennet/api-base-image:1.3.1
+FROM sennet/api-base-image:1.3.2
 
 LABEL description="SenNet Entity API Service"
 
@@ -42,7 +42,7 @@ COPY . .
 COPY ./entrypoint.sh /usr/local/bin/entrypoint.sh
 
 # Update Python packages. uwsgi is installed by the base image.
-RUN pip install --upgrade pip setuptools wheel uwsgi && \
+RUN pip install --upgrade pip setuptools wheel && \
     pip install -r src/requirements.txt
 
 # Modify the UID and GID of codcc to match the host
