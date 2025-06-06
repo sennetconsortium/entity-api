@@ -155,7 +155,9 @@ def create_provenance(db_session, provenance):
     for item in provenance:
         if isinstance(item, dict):
             if "entity_type" in item or "sample_category" in item:
-                raise ValueError("entity_type and sample_category are not allowed in provenance items. Use type instead.")
+                raise ValueError(
+                    "entity_type and sample_category are not allowed in provenance items. Use type instead."
+                )
             entity_type = item.pop("type")
         elif isinstance(item, str):
             entity_type = item
@@ -195,7 +197,7 @@ def create_provenance(db_session, provenance):
                     "description": "Test organ description.",
                     "entity_type": "Sample",
                     "lab_tissue_sample_id": "test_label_organ_sample_id",
-                    "organ": "LI",
+                    "organ": "UBERON:0000059",  # Large Intestine
                     "sample_category": "Organ",
                 }
             )
