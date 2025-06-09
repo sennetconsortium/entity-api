@@ -313,24 +313,35 @@ components:
         organ:
           type: string
           enum:
-            - AD
-            - BD
-            - BM
-            - BR
-            - BS
-            - LK
-            - RK
-            - LI
-            - LV
-            - LL
-            - RL
-            - LN
-            - MU
-            - LO
-            - RO
-            - PA
-            - PL
-            - SK
+            - UBERON:0001013  # Adipose Tissue
+            - UBERON:0000178  # Blood
+            - UBERON:0001474  # Bone
+            - UBERON:0002371  # Bone Marrow
+            - UBERON:0000955  # Brain
+            - UBERON:0000948  # Heart
+            - UBERON:0004538  # Kidney (Left)
+            - UBERON:0004539  # Kidney (Right)
+            - UBERON:0000059  # Large Intestine
+            - UBERON:0002107  # Liver
+            - UBERON:0002168  # Lung (Left)
+            - UBERON:0002167  # Lung (Right)
+            - UBERON:0000029  # Lymph Node 
+            - UBERON:0001911  # Mammary Gland
+            - FMA:57991  # Mammary Gland (Left)
+            - FMA:57987  # Mammary Gland (Right)
+            - UBERON:0005090  # Muscle
+            - UBERON:0010000  # Other
+            - UBERON:0002119  # Ovary (Left)
+            - UBERON:0002118  # Ovary (Right)
+            - UBERON:0001264  # Pancreas
+            - UBERON:0001987  # Placenta
+            - UBERON:0002097  # Skin
+            - UBERON:0002240  # Spinal Cord
+            - UBERON:0002106  # Spleen
+            - UBERON:0002370  # Thymus
+            - FMA:54974  # Tonsil (Left)
+            - FMA:54973  # Tonsil (Right)
+            - UBERON:0003126  # Trachea
           description: "Organ code specifier, only set if sample_type == organ. Valid values found in: [organ types](https://ontology.api.hubmapconsortium.org/organs?application_context=sennet)"
         organ_other:
           type: string

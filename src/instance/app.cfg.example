@@ -70,7 +70,17 @@ UBKG_SERVER =
 UBKG_ENDPOINT_VALUESET =
 UBKG_CODES =
 
-MULTIPLE_ALLOWED_ORGANS = ['LY', 'SK', 'BD', 'BM', 'AD', 'BX', 'MU', 'OT']
+MULTIPLE_ALLOWED_ORGANS = [
+    'UBERON:0001013',  # Adipose Tissue
+    'UBERON:0000178',  # Blood
+    'UBERON:0001474',  # Bone
+    'UBERON:0002371',  # Bone Marrow
+    'UBERON:0000029',  # Lymph Node
+    'UBERON:0001911',  # Mammary Gland
+    'UBERON:0005090',  # Muscle
+    'UBERON:0002097',  # Skin
+    'UBERON:0010000',  # Other
+]
 
 # Disk names that appear in 'Mounted on' column when 'df' is run in shell
 STATUS_DISKS = {'/': 'host disk space'}
