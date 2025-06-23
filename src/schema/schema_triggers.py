@@ -4165,43 +4165,24 @@ def get_dataset_type_hierarchy(
         str: The target property key
         dict: The dataset type hierarchy with keys of 'first_level' and 'second_level'
     """
-    if "metadata" in existing_data_dict:
-        ingest_api_target_url = f"{schema_manager.get_ingest_api_url()}/assaytype"
+    def prop_callback(d):
+        return d["dataset_type"]["dataset_type"]
 
-        headers = {
-            "Authorization": f"Bearer {user_token}",
+    def val_callback(d):
+        return d["dataset_type"]["fig2"]["modality"]
+
+    assay_classes = Ontology.ops(
+        prop_callback=prop_callback, val_callback=val_callback, as_data_dict=True
+    ).assay_classes()
+
+    if existing_data_dict["dataset_type"] not in assay_classes or assay_classes[existing_data_dict["dataset_type"]] is None:
+        return property_key, {
+            "first_level": existing_data_dict["dataset_type"],
+            "second_level": existing_data_dict["dataset_type"],
         }
-        res = requests.post(
-            ingest_api_target_url, headers=headers, json=json.loads(existing_data_dict["metadata"])
-        )
-        if res.status_code != 200:
-            return property_key, None
-
-        if "description" not in res.json() or "assaytype" not in res.json():
-            return property_key, {
-                "first_level": existing_data_dict["dataset_type"],
-                "second_level": existing_data_dict["dataset_type"],
-            }
-
-        desc = res.json()["description"]
-        assay_type = res.json()["assaytype"]
-
-        def prop_callback(d):
-            return d["assaytype"]
-
-        def val_callback(d):
-            return d["dataset_type"]["fig2"]["modality"]
-
-        assay_classes = Ontology.ops(
-            prop_callback=prop_callback, val_callback=val_callback, as_data_dict=True
-        ).assay_classes()
-        if assay_type not in assay_classes:
-            return property_key, None
-
-        return property_key, {"first_level": assay_classes[assay_type], "second_level": desc}
 
     return property_key, {
-        "first_level": existing_data_dict["dataset_type"],
+        "first_level": assay_classes[existing_data_dict["dataset_type"]],
         "second_level": existing_data_dict["dataset_type"],
     }
 
