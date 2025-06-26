@@ -1,0 +1,145 @@
+{
+    "Cell DIVE": [
+        "Antibody-based imaging"
+    ],
+    "CODEX": [
+        "Antibody-based imaging"
+    ],
+    "CyCIF": [
+        "Antibody-based imaging"
+    ],
+    "MIBI": [
+        "Antibody-based imaging"
+    ],
+    "PhenoCycler": [
+        "Antibody-based imaging"
+    ],
+    "Thick section Multiphoton MxIF": [
+        "Antibody-based imaging"
+    ],
+    "Segmentation Masks": [
+        "Derived"
+    ],
+    "ATACseq": [
+        "Epigenomics"
+    ],
+    "DART-FISH": [
+        "Florescence In Situ Hybridization"
+    ],
+    "seqFISH": [
+        "Florescence In Situ Hybridization"
+    ],
+    "CyTOF": [
+        "Flow Cytometry"
+    ],
+    "FACS": [
+        "Flow Cytometry"
+    ],
+    "Auto-fluorescence": [
+        "Imaging"
+    ],
+    "Confocal": [
+        "Imaging"
+    ],
+    "Enhanced Stimulated Raman Spectroscopy (SRS)": [
+        "Imaging"
+    ],
+    "Second Harmonic Generation (SHG)": [
+        "Imaging"
+    ],
+    "Light Sheet": [
+        "Antibody-based imaging",
+        "Microscopy"
+    ],
+    "Histology": [
+        "Microscopy"
+    ],
+    "DESI": [
+        "Imaging",
+        "Mass Spectometry"
+    ],
+    "MALDI": [
+        "Imaging",
+        "Mass Spectometry"
+    ],
+    "MS Lipidomics": [
+        "Mass Spectometry"
+    ],
+    "SIMS": [
+        "Imaging",
+        "Mass Spectometry"
+    ],
+    "2D Imaging Mass Cytometry": [
+        "Proteomics"
+    ],
+    "3D Imaging Mass Cytometry": [
+        "Proteomics"
+    ],
+    "CosMx Proteomics": [
+        "Proteomics"
+    ],
+    "LC-MS": [
+        "Mass Spectometry",
+        "Proteomics"
+    ],
+    "GeoMx (NGS)": [
+        "Spatial Transcriptomics"
+    ],
+    "MERFISH": [
+        "Spatial Transcriptomics"
+    ],
+    "MERSCOPE v2": [
+        "Spatial Transcriptomics"
+    ],
+    "Molecular Cartography": [
+        "Spatial Transcriptomics"
+    ],
+    "Singular Genomics G4X": [
+        "Spatial Transcriptomics"
+    ],
+    "Stereo-seq": [
+        "Microscopy",
+        "Spatial Transcriptomics"
+    ],
+    "Visium (no probes)": [
+        "Microscopy",
+        "Spatial Transcriptomics"
+    ],
+    "Visium (with probes)": [
+        "Microscopy",
+        "Spatial Transcriptomics"
+    ],
+    "Xenium": [
+        "Spatial Transcriptomics"
+    ],
+    "CosMx Transcriptomics": [
+        "Spatial Transcriptomics"
+    ],
+    "DBiT-seq": [
+        "Spatial Transcriptomics"
+    ],
+    "10X Multiome": [
+        "Epigenomics",
+        "Transcriptomics"
+    ],
+    "SNARE-seq2": [
+        "Epigenomics",
+        "Transcriptomics"
+    ],
+    "nanoSPLITS": [
+        "Proteomics",
+        "Transcriptomics"
+    ],
+    "RNAseq": [
+        "Transcriptomics"
+    ],
+    "RNAseq (with probes)": [
+        "Transcriptomics"
+    ],
+    "Slideseq": [
+        "Transcriptomics"
+    ],
+    "WGS": [
+        "Transcriptomics"
+    ]
+}
