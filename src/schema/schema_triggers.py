@@ -4209,7 +4209,7 @@ def get_dataset_type_hierarchy(
 def get_has_qa_published_derived_dataset(
     property_key, normalized_type, user_token, existing_data_dict, new_data_dict
 ):
-    """Trigger event method that determines if a primary dataset a processed/derived dataset with a status of 'QA' of 'Published'.
+    """Trigger event method that determines if a primary dataset a processed/derived dataset with a status of 'QA' and 'Published'.
 
     Parameters
     ----------
