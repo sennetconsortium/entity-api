@@ -120,7 +120,7 @@ requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
 ####################################################################################################
 
 try:
-    with open("../dataset_type_hierarchy.json", 'r') as file:
+    with open(app.config['HIERARCHY_JSON_FILE'], 'r') as file:
        app.config["DATASET_TYPE_HIERARCHY"] = json.load(file)
 except FileNotFoundError:
     print(f"Error: The file dataset_type_hierarchy.json was not found.")
