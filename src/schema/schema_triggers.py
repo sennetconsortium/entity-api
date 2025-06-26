@@ -4206,10 +4206,10 @@ def get_dataset_type_hierarchy(
     }
 
 
-def get_has_qa_derived_dataset(
+def get_has_qa_published_derived_dataset(
     property_key, normalized_type, user_token, existing_data_dict, new_data_dict
 ):
-    """Trigger event method that determines if a primary dataset a processed/derived dataset with a status of 'QA'.
+    """Trigger event method that determines if a primary dataset a processed/derived dataset with a status of 'QA' of 'Published'.
 
     Parameters
     ----------
@@ -4234,7 +4234,7 @@ def get_has_qa_derived_dataset(
         property_key, normalized_type, user_token, existing_data_dict, new_data_dict
     )
     if equals(dataset_category, "primary"):
-        match_case = "AND s.status = 'QA'"
+        match_case = "AND s.status IN ['QA', 'Published']"
         descendants = schema_neo4j_queries.get_dataset_direct_descendants(
             schema_manager.get_neo4j_driver_instance(),
             existing_data_dict["uuid"],

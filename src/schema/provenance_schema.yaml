@@ -754,7 +754,7 @@ ENTITIES:
         on_index_trigger: get_has_rui_information
       has_qa_derived_dataset:
         type: boolean
-        on_index_trigger: get_has_qa_derived_dataset
+        on_index_trigger: get_has_qa_published_derived_dataset
       ancestors:
         type: list
         generated: true
