@@ -1,6 +1,7 @@
 import json
 import urllib.parse
 from typing import List, Optional
+from flask import current_app
 
 import logging
 from datetime import datetime, timezone
@@ -4165,24 +4166,20 @@ def get_dataset_type_hierarchy(
         str: The target property key
         dict: The dataset type hierarchy with keys of 'first_level' and 'second_level'
     """
-    def prop_callback(d):
-        return d["dataset_type"]["dataset_type"]
 
-    def val_callback(d):
-        return d["dataset_type"]["fig2"]["modality"]
-
-    assay_classes = Ontology.ops(
-        prop_callback=prop_callback, val_callback=val_callback, as_data_dict=True
-    ).assay_classes()
-
-    if existing_data_dict["dataset_type"] not in assay_classes or assay_classes[existing_data_dict["dataset_type"]] is None:
+    if (
+        "DATASET_TYPE_HIERARCHY" not in current_app.config
+        or existing_data_dict["dataset_type"] not in current_app.config["DATASET_TYPE_HIERARCHY"]
+    ):
         return property_key, {
             "first_level": existing_data_dict["dataset_type"],
             "second_level": existing_data_dict["dataset_type"],
         }
 
     return property_key, {
-        "first_level": assay_classes[existing_data_dict["dataset_type"]],
+        "first_level": current_app.config["DATASET_TYPE_HIERARCHY"][
+            existing_data_dict["dataset_type"]
+        ],
         "second_level": existing_data_dict["dataset_type"],
     }
 
