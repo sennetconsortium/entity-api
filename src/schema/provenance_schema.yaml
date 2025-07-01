@@ -617,8 +617,10 @@ ENTITIES:
         # No on_index_trigger to include local_directory_rel_path in the OpenSearch document for a Dataset
       run_id:
         type: string
+        description: "Field used by the Ingest Pipeline for validation and processing."
       ingest_id:
         type: string
+        description: "Field used by the Ingest Pipeline for validation and processing."
       # A user who is a member of multiple groups HAS to send in the group_uuid
       group_uuid:
         type: string
@@ -1398,6 +1400,12 @@ ENTITIES:
           - validate_positive_int
         before_property_update_validators:
           - validate_positive_int
+      run_id:
+        type: string
+        description: "Field used by the Ingest Pipeline for validation and processing."
+      ingest_id:
+        type: string
+        description: "Field used by the Ingest Pipeline for validation and processing."
 
 
   ############################################# EPICollection #############################################
