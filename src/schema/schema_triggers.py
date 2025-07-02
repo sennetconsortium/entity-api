@@ -4167,21 +4167,24 @@ def get_dataset_type_hierarchy(
         dict: The dataset type hierarchy with keys of 'first_level' and 'second_level'
     """
 
-    if (
-        "DATASET_TYPE_HIERARCHY" not in current_app.config
-        or existing_data_dict["dataset_type"] not in current_app.config["DATASET_TYPE_HIERARCHY"]
-    ):
+    if equals(existing_data_dict['entity_type'], 'Dataset'):
+        if (
+            "DATASET_TYPE_HIERARCHY" not in current_app.config
+            or existing_data_dict["dataset_type"] not in current_app.config["DATASET_TYPE_HIERARCHY"]
+        ):
+            return property_key, {
+                "first_level": existing_data_dict["dataset_type"],
+                "second_level": existing_data_dict["dataset_type"],
+            }
+
         return property_key, {
-            "first_level": existing_data_dict["dataset_type"],
+            "first_level": current_app.config["DATASET_TYPE_HIERARCHY"][
+                existing_data_dict["dataset_type"]
+            ],
             "second_level": existing_data_dict["dataset_type"],
         }
-
-    return property_key, {
-        "first_level": current_app.config["DATASET_TYPE_HIERARCHY"][
-            existing_data_dict["dataset_type"]
-        ],
-        "second_level": existing_data_dict["dataset_type"],
-    }
+    else:
+        return property_key, None
 
 
 def get_has_qa_published_derived_dataset(
