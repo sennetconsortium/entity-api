@@ -4167,21 +4167,24 @@ def get_dataset_type_hierarchy(
         dict: The dataset type hierarchy with keys of 'first_level' and 'second_level'
     """
 
-    if (
-        "DATASET_TYPE_HIERARCHY" not in current_app.config
-        or existing_data_dict["dataset_type"] not in current_app.config["DATASET_TYPE_HIERARCHY"]
-    ):
+    if equals(existing_data_dict['entity_type'], 'Dataset'):
+        if (
+            "DATASET_TYPE_HIERARCHY" not in current_app.config
+            or existing_data_dict["dataset_type"] not in current_app.config["DATASET_TYPE_HIERARCHY"]
+        ):
+            return property_key, {
+                "first_level": existing_data_dict["dataset_type"],
+                "second_level": existing_data_dict["dataset_type"],
+            }
+
         return property_key, {
-            "first_level": existing_data_dict["dataset_type"],
+            "first_level": current_app.config["DATASET_TYPE_HIERARCHY"][
+                existing_data_dict["dataset_type"]
+            ],
             "second_level": existing_data_dict["dataset_type"],
         }
-
-    return property_key, {
-        "first_level": current_app.config["DATASET_TYPE_HIERARCHY"][
-            existing_data_dict["dataset_type"]
-        ],
-        "second_level": existing_data_dict["dataset_type"],
-    }
+    else:
+        return property_key, None
 
 
 def get_has_qa_published_derived_dataset(
@@ -4270,6 +4273,39 @@ def get_has_all_published_datasets(
         if len(datasets_primary_list) > 0
         else "False"
     )
+
+def get_primary_dataset_uuid(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method that grabs the primary dataset UUID for derived and component datasets
+        Parameters
+        ----------
+        property_key : str
+            The target property key of the value to be generated
+        normalized_type : str
+            One of the types defined in the schema yaml: Sample
+        user_token: str
+            The user's globus nexus token
+        existing_data_dict : dict
+            A dictionary that contains all existing entity properties
+        new_data_dict : dict
+            A merged dictionary that contains all possible input data to be used
+
+        Returns
+        -------
+        Tuple[str, str]
+            str: The target property key
+            str: "True" or "False" if the sample has any descendant datasets
+        """
+    if equals(existing_data_dict["entity_type"], "Dataset"):
+        if existing_data_dict['creation_action'] == "Multi-Assay Split":
+            return (
+                property_key,
+                schema_neo4j_queries.get_primary_dataset(
+                    schema_manager.get_neo4j_driver_instance(), existing_data_dict["uuid"]
+                )["uuid"],
+            )
+        return property_key, None
+    else:
+        return property_key, None
 
 
 def get_contains_data(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
