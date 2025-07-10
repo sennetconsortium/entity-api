@@ -2077,6 +2077,43 @@ def get_uploads(neo4j_driver, uuid, property_key=None):
     return results
 
 
+def get_primary_dataset(neo4j_driver, uuid, property_key=None):
+    """
+   Get the primary dataset for a given component or derived dataset
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    uuid : str
+        The uuid of target entity
+    property_key : str
+        A target property key for result filtering
+    Returns
+    -------
+    dict
+          A dictionary of entity details returned from the Cypher query
+    """
+    result = {}
+
+    query = (
+        "MATCH (dd:Dataset)-[:WAS_GENERATED_BY|USED*]->(d:Dataset)-[:WAS_GENERATED_BY]-(a:Activity) "
+        "WHERE dd.uuid = $uuid AND a.creation_action = 'Create Dataset Activity' "
+        f"RETURN d AS {record_field_name}"
+    )
+
+    logger.info("======get_primary_dataset() query======")
+    logger.info(query)
+
+    with neo4j_driver.session() as session:
+        record = session.read_transaction(_execute_readonly_tx, query, uuid=uuid)
+
+        if record and record[record_field_name]:
+            # Convert the node to a dict
+            result = _node_to_dict(record[record_field_name])
+
+    return result
+
+
 def get_sources_associated_entity(neo4j_driver, uuid, filter_out=None):
     """
     Get the associated sources for a given entity (dataset/publication)
