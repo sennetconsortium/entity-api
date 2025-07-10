@@ -1,6 +1,7 @@
 import json
 import urllib.parse
 from typing import List, Optional
+from flask import current_app
 
 import logging
 from datetime import datetime, timezone
@@ -4165,51 +4166,28 @@ def get_dataset_type_hierarchy(
         str: The target property key
         dict: The dataset type hierarchy with keys of 'first_level' and 'second_level'
     """
-    if "metadata" in existing_data_dict:
-        ingest_api_target_url = f"{schema_manager.get_ingest_api_url()}/assaytype"
 
-        headers = {
-            "Authorization": f"Bearer {user_token}",
+    if (
+        "DATASET_TYPE_HIERARCHY" not in current_app.config
+        or existing_data_dict["dataset_type"] not in current_app.config["DATASET_TYPE_HIERARCHY"]
+    ):
+        return property_key, {
+            "first_level": existing_data_dict["dataset_type"],
+            "second_level": existing_data_dict["dataset_type"],
         }
-        res = requests.post(
-            ingest_api_target_url, headers=headers, json=json.loads(existing_data_dict["metadata"])
-        )
-        if res.status_code != 200:
-            return property_key, None
-
-        if "description" not in res.json() or "assaytype" not in res.json():
-            return property_key, {
-                "first_level": existing_data_dict["dataset_type"],
-                "second_level": existing_data_dict["dataset_type"],
-            }
-
-        desc = res.json()["description"]
-        assay_type = res.json()["assaytype"]
-
-        def prop_callback(d):
-            return d["assaytype"]
-
-        def val_callback(d):
-            return d["dataset_type"]["fig2"]["modality"]
-
-        assay_classes = Ontology.ops(
-            prop_callback=prop_callback, val_callback=val_callback, as_data_dict=True
-        ).assay_classes()
-        if assay_type not in assay_classes:
-            return property_key, None
-
-        return property_key, {"first_level": assay_classes[assay_type], "second_level": desc}
 
     return property_key, {
-        "first_level": existing_data_dict["dataset_type"],
+        "first_level": current_app.config["DATASET_TYPE_HIERARCHY"][
+            existing_data_dict["dataset_type"]
+        ],
         "second_level": existing_data_dict["dataset_type"],
     }
 
 
-def get_has_qa_derived_dataset(
+def get_has_qa_published_derived_dataset(
     property_key, normalized_type, user_token, existing_data_dict, new_data_dict
 ):
-    """Trigger event method that determines if a primary dataset a processed/derived dataset with a status of 'QA'.
+    """Trigger event method that determines if a primary dataset a processed/derived dataset with a status of 'QA' and 'Published'.
 
     Parameters
     ----------
@@ -4234,19 +4212,19 @@ def get_has_qa_derived_dataset(
         property_key, normalized_type, user_token, existing_data_dict, new_data_dict
     )
     if equals(dataset_category, "primary"):
-        match_case = "AND s.status = 'QA'"
+        match_case = "AND s.status IN ['QA', 'Published']"
         descendants = schema_neo4j_queries.get_dataset_direct_descendants(
             schema_manager.get_neo4j_driver_instance(),
             existing_data_dict["uuid"],
-            property_keys=["uuid"],
             match_case=match_case,
         )
         for d in descendants:
-            _, descendant_category = get_dataset_category(
-                property_key, normalized_type, user_token, d, d
-            )
-            if "processed" in descendant_category:
-                return property_key, "True"
+            if equals(d.get('entity_type'), 'Dataset'):
+                _, descendant_category = get_dataset_category(
+                    property_key, normalized_type, user_token, d, d
+                )
+                if "processed" in descendant_category:
+                    return property_key, "True"
         return property_key, "False"
     else:
         return property_key, "False"

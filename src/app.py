@@ -116,6 +116,20 @@ else:
 requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
 
 ####################################################################################################
+## Dataset Hierarchy initialization
+####################################################################################################
+
+try:
+    with open(app.config['HIERARCHY_JSON_FILE'], 'r') as file:
+       app.config["DATASET_TYPE_HIERARCHY"] = json.load(file)
+except FileNotFoundError:
+    print(f"Error: The file dataset_type_hierarchy.json was not found.")
+except Exception as e:
+    print(f"An unexpected error occurred: {e}")
+
+
+
+####################################################################################################
 ## UBKG Ontology and REST initialization
 ####################################################################################################
 
@@ -431,7 +445,11 @@ def get_status():
     # Usage
     try:
         # get memory usage
-        memory_percent = psutil.virtual_memory().percent
+        memory_percent = (
+            100
+            * (psutil.virtual_memory().total - psutil.virtual_memory().free)
+            / psutil.virtual_memory().total
+        )
         status_data["usage"].append(
             {
                 "type": "memory",
