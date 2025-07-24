@@ -767,6 +767,12 @@ ENTITIES:
         immutable: true
         description: "The list of all source samples. This is utilized by the HRA EUI and returns limited properties."
         on_index_trigger: get_source_samples
+      primary_dataset_uuid:
+        type: string
+        generated: true
+        immutable: true
+        description: "The UUID of the primary dataset. This field is only set for component or derived datasets."
+        on_index_trigger: get_primary_dataset_uuid
 
   ############################################# Publication #############################################
   Publication:
