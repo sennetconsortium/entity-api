@@ -90,6 +90,7 @@ shared_excluded_properties_from_public_response: &shared_excluded_properties_fro
       - source_id
       - tissue_id
       - parent_sample_id
+      - data_path
   - cedar_mapped_metadata:
       - Lab ID
       - Slide ID
@@ -98,6 +99,7 @@ shared_excluded_properties_from_public_response: &shared_excluded_properties_fro
       - Source ID
       - Tissue ID
       - Parent Sample ID
+      - Data Path
   - origin_samples:
       - lab_tissue_sample_id
       - direct_ancestor:
@@ -120,6 +122,7 @@ shared_excluded_properties_from_public_response: &shared_excluded_properties_fro
           - slide_id
           - tissue_id
           - parent_sample_id
+          - data_path
       - cedar_mapped_metadata:
           - Lab ID
           - Slide ID
@@ -128,6 +131,7 @@ shared_excluded_properties_from_public_response: &shared_excluded_properties_fro
           - Source ID
           - Tissue ID
           - Parent Sample ID
+          - Data Path
       # "Source" exists for Samples
       - source:
           - lab_source_id
@@ -148,6 +152,7 @@ shared_excluded_properties_from_public_response: &shared_excluded_properties_fro
           - slide_id
           - tissue_id
           - parent_sample_id
+          - data_path
       - cedar_mapped_metadata:
           - Lab ID
           - Slide ID
@@ -156,6 +161,7 @@ shared_excluded_properties_from_public_response: &shared_excluded_properties_fro
           - Source ID
           - Tissue ID
           - Parent Sample ID
+          - Data Path
       # "Source" exists for Samples
       - source:
           - lab_source_id
