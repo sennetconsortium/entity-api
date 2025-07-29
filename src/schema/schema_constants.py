@@ -51,6 +51,7 @@ class SchemaConstants(object):
     # Used to validate the X-SenNet-Application header
     ALLOWED_APPLICATIONS = [INGEST_API_APP, INGEST_PIPELINE_APP, INGEST_PORTAL_APP]
 
+    ALLOWED_PRIORITY_PROJECTS = ["SWAT (Integration Paper)", "MOSDAP", "", None]
 
 # Define an enumeration to classify an entity's visibility, which can be combined with
 # authorization info when verify operations on a request.

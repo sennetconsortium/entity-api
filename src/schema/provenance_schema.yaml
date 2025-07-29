@@ -781,6 +781,15 @@ ENTITIES:
         immutable: true
         description: "The UUID of the primary dataset. This field is only set for component or derived datasets."
         on_index_trigger: get_primary_dataset_uuid
+      priority_project_list:
+        type: list
+        required: false
+        description: "The list of priority projects that this Dataset data will be used for."
+        immutable: false
+        before_property_update_validators:
+          - validate_priority_project
+        before_property_create_validators:
+          - validate_priority_project
 
   ############################################# Publication #############################################
   Publication:
@@ -881,6 +890,7 @@ ENTITIES:
       ingest_task: null # This ingest_task is Dataset specific, Publication doesn't have it
       new_associated_multi_assay_uuid: null # Dataset-only attribute of Multi-Assay Dataset relationships
       superseded_associated_processed_component_uuids: null # Dataset-only attribute of Multi-Assay Dataset relationships
+      priority_project_list: null # Dataset-only attribute
 
   ############################################# Source #############################################
   Source:
@@ -1418,7 +1428,15 @@ ENTITIES:
       ingest_id:
         type: string
         description: "Field used by the Ingest Pipeline for validation and processing."
-
+      priority_project_list:
+        type: list
+        required: false
+        description: "The list of priority projects that this Uploaded data will be used for."
+        immutable: false
+        before_property_update_validators:
+          - validate_priority_project
+        before_property_create_validators:
+          - validate_priority_project
 
 
   ############################################# EPICollection #############################################
