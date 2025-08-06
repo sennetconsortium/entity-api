@@ -4213,28 +4213,31 @@ def get_has_visualization(property_key, normalized_type, user_token, existing_da
     )
 
     uuid_to_query = None
-    if equals(dataset_category, "primary"):
-        match_case = "AND s.status IN ['QA', 'Published'] AND s.entity_type = 'Dataset'"
-        descendants = schema_neo4j_queries.get_dataset_direct_descendants(
-            schema_manager.get_neo4j_driver_instance(),
-            existing_data_dict["uuid"],
-            match_case=match_case,
-        )
+    if existing_data_dict["status"] in ['QA', 'Published']:
+        if equals(dataset_category, "primary"):
+            match_case = "AND s.status IN ['QA', 'Published'] AND s.entity_type = 'Dataset'"
+            descendants = schema_neo4j_queries.get_dataset_direct_descendants(
+                schema_manager.get_neo4j_driver_instance(),
+                existing_data_dict["uuid"],
+                match_case=match_case,
+            )
 
-        # Sort the derived datasets by status and last_modified_timestamp
-        descendants = sorted(
-            descendants, key=lambda d: d["last_modified_timestamp"], reverse=True
-        )
-        published_descendants = next(
-            (i for i, item in enumerate(descendants) if item["status"] == "Published"), None
-        )
-        if published_descendants and published_descendants != 0:
-            published_processed_dataset = descendants.pop(published_descendants)
-            descendants.insert(0, published_processed_dataset)
+            # Sort the derived datasets by status and last_modified_timestamp
+            descendants = sorted(
+                descendants, key=lambda d: d["last_modified_timestamp"], reverse=True
+            )
+            published_descendants = next(
+                (i for i, item in enumerate(descendants) if item["status"] == "Published"), None
+            )
+            if published_descendants and published_descendants != 0:
+                published_processed_dataset = descendants.pop(published_descendants)
+                descendants.insert(0, published_processed_dataset)
 
-        uuid_to_query = descendants[0]["uuid"]
-    elif equals(dataset_category, "codcc-processed"):
-        uuid_to_query = existing_data_dict["uuid"]
+            uuid_to_query = descendants[0]["uuid"]
+        elif equals(dataset_category, "codcc-processed"):
+            uuid_to_query = existing_data_dict["uuid"]
+        else:
+            return property_key, None
     else:
         return property_key, None
 
