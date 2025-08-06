@@ -4237,9 +4237,9 @@ def get_has_visualization(property_key, normalized_type, user_token, existing_da
         elif equals(dataset_category, "codcc-processed"):
             uuid_to_query = existing_data_dict["uuid"]
         else:
-            return property_key, None
+            return property_key, "False"
     else:
-        return property_key, None
+        return property_key, "False"
 
     if uuid_to_query is not None:
         # GET the Ingest API to determine if this dataset has a visualization
