@@ -790,6 +790,11 @@ ENTITIES:
           - validate_priority_project
         before_property_create_validators:
           - validate_priority_project
+      has_visualization:
+        type: boolean
+        description: "Whether a derived dataset for this primary dataset has a Vitessce visualization."
+        on_index_trigger: get_has_visualization
+        generated: true
 
   ############################################# Publication #############################################
   Publication:
@@ -891,6 +896,7 @@ ENTITIES:
       new_associated_multi_assay_uuid: null # Dataset-only attribute of Multi-Assay Dataset relationships
       superseded_associated_processed_component_uuids: null # Dataset-only attribute of Multi-Assay Dataset relationships
       priority_project_list: null # Dataset-only attribute
+      has_visualization: null # Dataset-only attribute
 
   ############################################# Source #############################################
   Source:
@@ -1056,7 +1062,7 @@ ENTITIES:
         #todo: migrate to new attribute set as above portal_metadata_upload files
         type: json_string
         description: "A list of uploaded image files and descriptions of the files."
-      # A user who is a member of multiple groups HAS to send in the group_uuid 
+      # A user who is a member of multiple groups HAS to send in the group_uuid
       group_uuid:
         type: string
         immutable: true
