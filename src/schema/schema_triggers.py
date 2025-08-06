@@ -4214,7 +4214,7 @@ def get_has_visualization(property_key, normalized_type, user_token, existing_da
 
     uuid_to_query = None
     if equals(dataset_category, "primary"):
-        match_case = "AND s.status IN ['QA', 'Published']"
+        match_case = "AND s.status IN ['QA', 'Published'] AND s.entity_type = 'Dataset'"
         descendants = schema_neo4j_queries.get_dataset_direct_descendants(
             schema_manager.get_neo4j_driver_instance(),
             existing_data_dict["uuid"],
