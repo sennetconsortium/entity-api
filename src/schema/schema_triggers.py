@@ -4244,7 +4244,7 @@ def get_has_visualization(property_key, normalized_type, user_token, existing_da
     if uuid_to_query is not None:
         # GET the Ingest API to determine if this dataset has a visualization
         ingest_api_target_url = (
-            schema_manager.get_ingest_api_url() + "/has_visualization/" + uuid_to_query
+            schema_manager.get_ingest_api_url() + "/has-visualization/" + uuid_to_query
         )
 
         # Disable ssl certificate verification
