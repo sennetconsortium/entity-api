@@ -4222,18 +4222,19 @@ def get_has_visualization(property_key, normalized_type, user_token, existing_da
                 match_case=match_case,
             )
 
-            # Sort the derived datasets by status and last_modified_timestamp
-            descendants = sorted(
-                descendants, key=lambda d: d["last_modified_timestamp"], reverse=True
-            )
-            published_descendants = next(
-                (i for i, item in enumerate(descendants) if item["status"] == "Published"), None
-            )
-            if published_descendants and published_descendants != 0:
-                published_processed_dataset = descendants.pop(published_descendants)
-                descendants.insert(0, published_processed_dataset)
+            if len(descendants) > 0:
+                # Sort the derived datasets by status and last_modified_timestamp
+                descendants = sorted(
+                    descendants, key=lambda d: d["last_modified_timestamp"], reverse=True
+                )
+                published_descendants = next(
+                    (i for i, item in enumerate(descendants) if item["status"] == "Published"), None
+                )
+                if published_descendants and published_descendants != 0:
+                    published_processed_dataset = descendants.pop(published_descendants)
+                    descendants.insert(0, published_processed_dataset)
 
-            uuid_to_query = descendants[0]["uuid"]
+                uuid_to_query = descendants[0]["uuid"]
         elif equals(dataset_category, "codcc-processed"):
             uuid_to_query = existing_data_dict["uuid"]
         else:
