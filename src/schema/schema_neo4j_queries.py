@@ -995,6 +995,23 @@ def unlink_datasets_from_upload(neo4j_driver, upload_uuid, dataset_uuids_list):
         raise TransactionError(msg)
 
 
+def get_qa_published_derived_dataset(neo4j_driver, uuid):
+    """
+    Get the most recent QA or Published derived dataset given a primary dataset UUID
+
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    uuid : str
+        The uuid of target entity
+
+    Returns
+    -------
+    str
+        The UUID of the most recent QA or Published derived dataset
+    """
+
 def get_upload_datasets(
     neo4j_driver,
     uuid,
