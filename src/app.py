@@ -67,7 +67,12 @@ from atlas_consortia_commons.rest import (
 )
 from atlas_consortia_commons.string import equals
 from atlas_consortia_commons.ubkg.ubkg_sdk import init_ontology
-from atlas_consortia_commons.decorator import require_data_admin, require_json, require_valid_token
+from atlas_consortia_commons.decorator import (
+    require_data_admin,
+    require_json,
+    require_valid_token,
+    strip_whitespace_id,
+)
 from lib.ontology import Ontology
 
 # Root logger configuration
@@ -126,7 +131,6 @@ except FileNotFoundError:
     print(f"Error: The file dataset_type_hierarchy.json was not found.")
 except Exception as e:
     print(f"An unexpected error occurred: {e}")
-
 
 
 ####################################################################################################
@@ -394,6 +398,7 @@ str
 
 @app.route("/flush-cache/<id>", methods=["DELETE"])
 @require_data_admin()
+@strip_whitespace_id()
 def flush_cache(id):
     msg = ""
 
@@ -591,6 +596,7 @@ json
 
 
 @app.route("/entities/<id>/ancestor-organs", methods=["GET"])
+@strip_whitespace_id()
 def get_ancestor_organs(id):
     # Token is not required, but if an invalid token provided,
     # we need to tell the client with a 401 error
@@ -727,12 +733,11 @@ json
 
 
 @app.route("/entities/<id>", methods=["GET"])
+@strip_whitespace_id()
 def get_entity_by_id(id):
     # Token is not required, but if an invalid token provided,
     # we need to tell the client with a 401 error
     validate_token_if_auth_header_exists(request)
-
-    id = urllib.parse.unquote(id).strip()
 
     # Query target entity against uuid-api and neo4j and return as a dict if exists
     entity_dict = query_target_entity(id)
@@ -846,6 +851,7 @@ json
 @app.route("/entities/<id>/pipeline-message", methods=["GET"])
 @app.route("/entities/<id>/validation-message", methods=["GET"])
 @require_valid_token()
+@strip_whitespace_id()
 def get_entity_pipeline_validation_message(id: str):
     try:
         # Get the last part of the request path. Validate just in case
@@ -967,6 +973,7 @@ json
 
 
 @app.route("/documents/<id>", methods=["GET"])
+@strip_whitespace_id()
 def get_document_by_id(id):
     result_dict = _get_metadata_by_id(entity_id=id, metadata_scope=MetadataScopeEnum.INDEX)
     return jsonify(result_dict)
@@ -991,6 +998,7 @@ json
 
 
 @app.route("/entities/<id>/provenance", methods=["GET"])
+@strip_whitespace_id()
 def get_entity_provenance(id):
     # Token is not required, but if an invalid token provided,
     # we need to tell the client with a 401 error
@@ -1601,6 +1609,7 @@ json
 @app.route("/activity/<id>", methods=["PUT"])
 @require_valid_token(param="user_token")
 @require_json(param="json_data_dict")
+@strip_whitespace_id()
 def update_activity(id: str, user_token: str, json_data_dict: dict):
     # Get target entity and return as a dict if exists
     activity_dict = query_target_activity(id)
@@ -1673,6 +1682,7 @@ json
 
 
 @app.route("/visibility/<id>", methods=["GET"])
+@strip_whitespace_id()
 def get_entity_visibility(id):
     # Token is not required, but if an invalid token provided,
     # we need to tell the client with a 401 error
@@ -1732,6 +1742,7 @@ json
 @app.route("/entities/<id>", methods=["PUT"])
 @require_valid_token(param="user_token")
 @require_json(param="json_data_dict")
+@strip_whitespace_id()
 def update_entity(id: str, user_token: str, json_data_dict: dict):
     if READ_ONLY_MODE:
         abort_forbidden("Access not granted when entity-api in READ-ONLY mode")
@@ -2050,6 +2061,7 @@ json
 
 
 @app.route("/ancestors/<id>", methods=["GET", "POST"])
+@strip_whitespace_id()
 def get_ancestors(id):
     final_result = []
 
@@ -2214,6 +2226,7 @@ json
 
 
 @app.route("/descendants/<id>", methods=["GET", "POST"])
+@strip_whitespace_id()
 def get_descendants(id):
     final_result = []
 
@@ -2368,6 +2381,7 @@ json
 
 
 @app.route("/parents/<id>", methods=["GET", "POST"])
+@strip_whitespace_id()
 def get_parents(id):
     final_result = []
 
@@ -2523,6 +2537,7 @@ json
 
 
 @app.route("/children/<id>", methods=["GET", "POST"])
+@strip_whitespace_id()
 def get_children(id):
     final_result = []
 
@@ -2649,6 +2664,7 @@ json
 
 
 @app.route("/entities/<id>/siblings", methods=["GET"])
+@strip_whitespace_id()
 def get_siblings(id):
     final_result = []
 
@@ -2784,6 +2800,7 @@ json
 
 
 @app.route("/entities/<id>/tuplets", methods=["GET"])
+@strip_whitespace_id()
 def get_tuplets(id):
     final_result = []
 
@@ -2904,6 +2921,7 @@ json
 
 
 @app.route("/previous_revisions/<id>", methods=["GET"])
+@strip_whitespace_id()
 def get_previous_revisions(id):
     # Get user token from Authorization header
     user_token = get_user_token(request)
@@ -2986,6 +3004,7 @@ json
 
 
 @app.route("/next_revisions/<id>", methods=["GET"])
+@strip_whitespace_id()
 def get_next_revisions(id):
     # Get user token from Authorization header
     user_token = get_user_token(request)
@@ -3062,6 +3081,7 @@ id : str
 @app.route("/collection/redirect/<id>", methods=["GET"])
 # New route
 @app.route("/doi/redirect/<id>", methods=["GET"])
+@strip_whitespace_id()
 def doi_redirect(id):
     # Use the internal token to query the target entity
     # since public entities don't require user token
@@ -3159,6 +3179,7 @@ Response
 @app.route("/dataset/globus-url/<id>", methods=["GET"])
 # New route
 @app.route("/entities/<id>/globus-url", methods=["GET"])
+@strip_whitespace_id()
 def get_globus_url(id):
     # Token is not required, but if an invalid token provided,
     # we need to tell the client with a 401 error
@@ -3301,6 +3322,7 @@ json
 
 
 @app.route("/datasets/<id>/latest-revision", methods=["GET"])
+@strip_whitespace_id()
 def get_dataset_latest_revision(id):
     # Token is not required, but if an invalid token provided,
     # we need to tell the client with a 401 error
@@ -3394,6 +3416,7 @@ int
 
 
 @app.route("/datasets/<id>/revision", methods=["GET"])
+@strip_whitespace_id()
 def get_dataset_revision_number(id):
     # Token is not required, but if an invalid token provided,
     # we need to tell the client with a 401 error
@@ -3454,6 +3477,7 @@ dict
 @app.route("/datasets/<id>/retract", methods=["PUT"])
 @require_data_admin()
 @require_json(param="json_data_dict")
+@strip_whitespace_id()
 def retract_dataset(id: str, token: str, json_data_dict: dict):
     if READ_ONLY_MODE:
         abort_forbidden("Access not granted when entity-api in READ-ONLY mode")
@@ -3564,6 +3588,7 @@ list
 
 @app.route("/entities/<id>/revisions", methods=["GET"])
 @app.route("/datasets/<id>/revisions", methods=["GET"])
+@strip_whitespace_id()
 def get_revisions_list(id):
     # Token is not required, but if an invalid token provided,
     # we need to tell the client with a 401 error
@@ -3753,6 +3778,7 @@ json
 
 
 @app.route("/datasets/<id>/organs", methods=["GET"])
+@strip_whitespace_id()
 def get_associated_organs_from_dataset(id):
     # Token is not required, but if an invalid token provided,
     # we need to tell the client with a 401 error
@@ -3826,6 +3852,7 @@ json
 
 
 @app.route("/datasets/<id>/samples", methods=["GET"])
+@strip_whitespace_id()
 def get_associated_samples_from_dataset(id):
     # Token is not required, but if an invalid token provided,
     # we need to tell the client with a 401 error
@@ -3892,6 +3919,7 @@ json
 
 
 @app.route("/datasets/<id>/sources", methods=["GET"])
+@strip_whitespace_id()
 def get_associated_sources_from_dataset(id):
     # Token is not required, but if an invalid token provided,
     # we need to tell the client with a 401 error
@@ -4326,6 +4354,7 @@ tsv
 
 
 @app.route("/datasets/<id>/prov-info", methods=["GET"])
+@strip_whitespace_id()
 def get_prov_info_for_dataset(id):
     # Token is not required, but if an invalid token provided,
     # we need to tell the client with a 401 error
@@ -5506,6 +5535,7 @@ json
 
 
 @app.route("/entities/<id>/collections", methods=["GET"])
+@strip_whitespace_id()
 def get_collections(id):
     final_result = []
 
@@ -5633,6 +5663,7 @@ json
 
 
 @app.route("/entities/<id>/uploads", methods=["GET"])
+@strip_whitespace_id()
 def get_uploads(id):
     final_result = []
 
@@ -5867,6 +5898,7 @@ json
 
 @app.route("/uploads/<id>/datasets", methods=["GET", "POST"])
 @require_valid_token()
+@strip_whitespace_id()
 def get_datasets_for_upload(id: str):
     # Verify that the entity is an upload
     entity_dict = query_target_entity(id)
@@ -5955,6 +5987,7 @@ json
 
 
 @app.route("/collections/<id>/entities", methods=["GET", "POST"])
+@strip_whitespace_id()
 def get_entities_for_collection(id: str):
     # Verify that the entity is a collection
     entity_dict = query_target_entity(id)
