@@ -732,6 +732,8 @@ def get_entity_by_id(id):
     # we need to tell the client with a 401 error
     validate_token_if_auth_header_exists(request)
 
+    id = urllib.parse.unquote(id).strip()
+
     # Query target entity against uuid-api and neo4j and return as a dict if exists
     entity_dict = query_target_entity(id)
     normalized_entity_type = entity_dict["entity_type"]
