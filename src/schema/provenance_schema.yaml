@@ -795,6 +795,10 @@ ENTITIES:
         description: "Whether a derived dataset for this primary dataset has a Vitessce visualization."
         on_index_trigger: get_has_visualization
         generated: true
+      error_message:
+        type: string
+        indexed: false
+        description: "An open text field that holds the last error message that arose from pipeline validation or analysis."
 
   ############################################# Publication #############################################
   Publication:
@@ -1443,6 +1447,10 @@ ENTITIES:
           - validate_priority_project
         before_property_create_validators:
           - validate_priority_project
+      error_message:
+        type: string
+        indexed: false
+        description: "An open text field that holds the last error message that arose from pipeline validation or analysis."
 
   ############################################# EPICollection #############################################
   Epicollection:
