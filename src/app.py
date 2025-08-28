@@ -4040,7 +4040,7 @@ def get_prov_info():
     HEADER_PROCESSED_DATASET_STATUS = "processed_dataset_status"
     HEADER_PROCESSED_DATASET_PORTAL_URL = "processed_dataset_portal_url"
     ORGAN_TYPES = Ontology.ops(
-        as_data_dict=True, data_as_val=True, val_key="organ_uberon"
+        as_data_dict=True, data_as_val=True, val_key="organ_uberon", prop_callback=None
     ).organ_types()
     HEADER_PREVIOUS_VERSION_SENNET_IDS = "previous_version_sennet_ids"
 
@@ -4416,7 +4416,7 @@ def get_prov_info_for_dataset(id):
     HEADER_PROCESSED_DATASET_PORTAL_URL = "processed_dataset_portal_url"
     HEADER_DATASET_SAMPLES = "dataset_samples"
     ORGAN_TYPES = Ontology.ops(
-        as_data_dict=True, data_as_val=True, val_key="organ_uberon"
+        as_data_dict=True, data_as_val=True, val_key="organ_uberon", prop_callback=None
     ).organ_types()
 
     headers = [
@@ -4661,7 +4661,7 @@ def get_sample_prov_info():
     HEADER_ORGAN_TYPE = "organ_type"
     HEADER_ORGAN_SENNET_ID = "organ_sennet_id"
     ORGAN_TYPES = Ontology.ops(
-        as_data_dict=True, data_as_val=True, val_key="organ_uberon"
+        as_data_dict=True, data_as_val=True, val_key="organ_uberon", prop_callback=None
     ).organ_types()
 
     # Processing and validating query parameters
@@ -6625,7 +6625,7 @@ def validate_organ_code(organ_code: str):
 def verify_ubkg_properties(json_data_dict):
     SOURCE_TYPES = Ontology.ops(as_data_dict=True).source_types()
     SAMPLE_CATEGORIES = Ontology.ops(as_data_dict=True).specimen_categories()
-    ORGAN_TYPES = Ontology.ops(as_data_dict=True, key="organ_uberon").organ_types()
+    ORGAN_TYPES = Ontology.ops(as_data_dict=True, key="organ_uberon", prop_callback=None).organ_types()
     DATASET_TYPE = Ontology.ops(as_data_dict=True).dataset_types()
 
     if "source_type" in json_data_dict:
@@ -6719,7 +6719,7 @@ def check_multiple_organs_constraint(
                 )
                 if count >= 1:
                     organ_codes = Ontology.ops(
-                        as_data_dict=True, val_key="term", key="organ_uberon"
+                        as_data_dict=True, val_key="term", key="organ_uberon", prop_callback=None
                     ).organ_types()
                     organ = organ_codes[organ_code]
                     abort_bad_req(
