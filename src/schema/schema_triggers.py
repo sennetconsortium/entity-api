@@ -4215,7 +4215,7 @@ def get_has_visualization(property_key, normalized_type, user_token, existing_da
     uuid_to_query = None
     if existing_data_dict["status"] in ['QA', 'Published']:
         if equals(dataset_category, "primary"):
-            match_case = "AND s.status IN ['QA', 'Published'] AND s.entity_type = 'Dataset'"
+            match_case = "AND s.status IN ['QA', 'Published'] AND s.entity_type = 'Dataset' AND s.files IS NOT NULL AND NOT isEmpty(apoc.convert.fromJsonList(s.files))"
             descendants = schema_neo4j_queries.get_dataset_direct_descendants(
                 schema_manager.get_neo4j_driver_instance(),
                 existing_data_dict["uuid"],
@@ -4236,7 +4236,10 @@ def get_has_visualization(property_key, normalized_type, user_token, existing_da
 
                 uuid_to_query = descendants[0]["uuid"]
         elif equals(dataset_category, "codcc-processed"):
-            uuid_to_query = existing_data_dict["uuid"]
+            if "files" in existing_data_dict and len(existing_data_dict["files"]) > 0:
+                uuid_to_query = existing_data_dict["uuid"]
+            else:
+                return property_key, "False"
         else:
             return property_key, "False"
     else:
