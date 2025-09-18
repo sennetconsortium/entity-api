@@ -5,6 +5,7 @@ from typing import List, Union
 import schema.schema_manager
 from lib.property_groups import PropertyGroups
 import json
+import re
 
 from schema import schema_manager
 
