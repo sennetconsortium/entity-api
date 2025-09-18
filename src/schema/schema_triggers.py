@@ -4061,7 +4061,7 @@ def set_dataset_sources(
         schema_manager.get_neo4j_driver_instance(), existing_data_dict["uuid"]
     )
     for source in sources:
-        if source['metadata'] is not None and source['source_type'] == 'Human':
+        if 'metadata' in source and source['source_type'] == 'Human':
             metadata =  source['metadata'].get("organ_donor_data") or  source['metadata'].get("living_donor_data") or {}
             mapped_metadata = {}
             for kv in metadata:
@@ -4115,7 +4115,7 @@ def set_sample_source(property_key, normalized_type, user_token, existing_data_d
         schema_manager.get_neo4j_driver_instance(), existing_data_dict["uuid"]
     )
     for source in sources:
-        if source['metadata'] is not None and source['source_type'] == 'Human':
+        if 'metadata' in source and source['source_type'] == 'Human':
             metadata =  source['metadata'].get("organ_donor_data") or  source['metadata'].get("living_donor_data") or {}
             mapped_metadata = {}
             for kv in metadata:
