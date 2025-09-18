@@ -4060,6 +4060,32 @@ def set_dataset_sources(
     sources = schema_neo4j_queries.get_sources_associated_entity(
         schema_manager.get_neo4j_driver_instance(), existing_data_dict["uuid"]
     )
+    for source in sources:
+        if source['metadata'] is not None and source['source_type'] == 'Human':
+            metadata =  source['metadata'].get("organ_donor_data") or  source['metadata'].get("living_donor_data") or {}
+            mapped_metadata = {}
+            for kv in metadata:
+                term = kv["grouping_concept_preferred_term"]
+                key = re.sub(r"\W+", "_", term).lower()
+                value = (
+                    float(kv["data_value"])
+                    if kv.get("data_type") == "Numeric"
+                    else kv["preferred_term"]
+                )
+
+                if key not in mapped_metadata:
+                    mapped_metadata_item = {
+                        "value": [value],
+                        "unit": kv.get("units", ""),
+                        "key_display": term,
+                        "value_display": source_metadata_display_value(kv),
+                        "group_display": source_metadata_group(key),
+                    }
+                    mapped_metadata[key] = mapped_metadata_item
+                else:
+                    mapped_metadata[key]["value"].append(value)
+                    mapped_metadata[key]["value_display"] += f", {value}"
+            source['mapped_metadata'] = mapped_metadata
     return property_key, sources
 
 
@@ -4088,6 +4114,32 @@ def set_sample_source(property_key, normalized_type, user_token, existing_data_d
     sources = schema_neo4j_queries.get_sources_associated_entity(
         schema_manager.get_neo4j_driver_instance(), existing_data_dict["uuid"]
     )
+    for source in sources:
+        if source['metadata'] is not None and source['source_type'] == 'Human':
+            metadata =  source['metadata'].get("organ_donor_data") or  source['metadata'].get("living_donor_data") or {}
+            mapped_metadata = {}
+            for kv in metadata:
+                term = kv["grouping_concept_preferred_term"]
+                key = re.sub(r"\W+", "_", term).lower()
+                value = (
+                    float(kv["data_value"])
+                    if kv.get("data_type") == "Numeric"
+                    else kv["preferred_term"]
+                )
+
+                if key not in mapped_metadata:
+                    mapped_metadata_item = {
+                        "value": [value],
+                        "unit": kv.get("units", ""),
+                        "key_display": term,
+                        "value_display": source_metadata_display_value(kv),
+                        "group_display": source_metadata_group(key),
+                    }
+                    mapped_metadata[key] = mapped_metadata_item
+                else:
+                    mapped_metadata[key]["value"].append(value)
+                    mapped_metadata[key]["value_display"] += f", {value}"
+            source['mapped_metadata'] = mapped_metadata
     return property_key, sources[0]
 
 
@@ -4186,6 +4238,81 @@ def get_dataset_type_hierarchy(
     else:
         return property_key, None
 
+def get_has_visualization(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method that determines if a processed dataset for a given primary contains Vitessce visualization
+    Parameters
+    ----------
+    property_key : str
+        The target property key of the value to be generated
+    normalized_type : str
+        One of the types defined in the schema yaml: Sample
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, str]
+        str: The target property key
+        str: "True" or "False" if a processed dataset for a given primary contains Vitessce visualization
+    """
+
+    _, dataset_category = get_dataset_category(
+        property_key, normalized_type, user_token, existing_data_dict, new_data_dict
+    )
+
+    uuid_to_query = None
+    if existing_data_dict["status"] in ['QA', 'Published']:
+        if equals(dataset_category, "primary"):
+            match_case = "AND s.status IN ['QA', 'Published'] AND s.entity_type = 'Dataset' AND s.files IS NOT NULL AND NOT isEmpty(apoc.convert.fromJsonList(s.files))"
+            descendants = schema_neo4j_queries.get_dataset_direct_descendants(
+                schema_manager.get_neo4j_driver_instance(),
+                existing_data_dict["uuid"],
+                match_case=match_case,
+            )
+
+            if len(descendants) > 0:
+                # Sort the derived datasets by status and last_modified_timestamp
+                descendants = sorted(
+                    descendants, key=lambda d: d["last_modified_timestamp"], reverse=True
+                )
+                published_descendants = next(
+                    (i for i, item in enumerate(descendants) if item["status"] == "Published"), None
+                )
+                if published_descendants and published_descendants != 0:
+                    published_processed_dataset = descendants.pop(published_descendants)
+                    descendants.insert(0, published_processed_dataset)
+
+                uuid_to_query = descendants[0]["uuid"]
+        elif equals(dataset_category, "codcc-processed"):
+            if "files" in existing_data_dict and len(existing_data_dict["files"]) > 0:
+                uuid_to_query = existing_data_dict["uuid"]
+            else:
+                return property_key, "False"
+        else:
+            return property_key, "False"
+    else:
+        return property_key, "False"
+
+    if uuid_to_query is not None:
+        # GET the Ingest API to determine if this dataset has a visualization
+        ingest_api_target_url = (
+            schema_manager.get_ingest_api_url() + "/has-visualization/" + uuid_to_query
+        )
+
+        # Disable ssl certificate verification
+        response = requests.get(
+            url=ingest_api_target_url,
+            headers=schema_manager._create_request_headers(user_token),
+            verify=False,
+        )
+        return property_key, str(response.json()['has_visualization'])
+
+    return property_key, "False"
+
 
 def get_has_qa_published_derived_dataset(
     property_key, normalized_type, user_token, existing_data_dict, new_data_dict
@@ -4274,27 +4401,30 @@ def get_has_all_published_datasets(
         else "False"
     )
 
-def get_primary_dataset_uuid(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
-    """Trigger event method that grabs the primary dataset UUID for derived and component datasets
-        Parameters
-        ----------
-        property_key : str
-            The target property key of the value to be generated
-        normalized_type : str
-            One of the types defined in the schema yaml: Sample
-        user_token: str
-            The user's globus nexus token
-        existing_data_dict : dict
-            A dictionary that contains all existing entity properties
-        new_data_dict : dict
-            A merged dictionary that contains all possible input data to be used
 
-        Returns
-        -------
-        Tuple[str, str]
-            str: The target property key
-            str: "True" or "False" if the sample has any descendant datasets
-        """
+def get_primary_dataset_uuid(
+    property_key, normalized_type, user_token, existing_data_dict, new_data_dict
+):
+    """Trigger event method that grabs the primary dataset UUID for derived and component datasets
+    Parameters
+    ----------
+    property_key : str
+        The target property key of the value to be generated
+    normalized_type : str
+        One of the types defined in the schema yaml: Sample
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, str]
+        str: The target property key
+        str: UUID of primary dataset
+    """
     if equals(existing_data_dict["entity_type"], "Dataset"):
         if existing_data_dict['creation_action'] == "Multi-Assay Split":
             return (
