@@ -4060,6 +4060,32 @@ def set_dataset_sources(
     sources = schema_neo4j_queries.get_sources_associated_entity(
         schema_manager.get_neo4j_driver_instance(), existing_data_dict["uuid"]
     )
+    for source in sources:
+        if source['metadata'] is not None and source['source_type'] == 'Human':
+            metadata =  source['metadata'].get("organ_donor_data") or  source['metadata'].get("living_donor_data") or {}
+            mapped_metadata = {}
+            for kv in metadata:
+                term = kv["grouping_concept_preferred_term"]
+                key = re.sub(r"\W+", "_", term).lower()
+                value = (
+                    float(kv["data_value"])
+                    if kv.get("data_type") == "Numeric"
+                    else kv["preferred_term"]
+                )
+
+                if key not in mapped_metadata:
+                    mapped_metadata_item = {
+                        "value": [value],
+                        "unit": kv.get("units", ""),
+                        "key_display": term,
+                        "value_display": source_metadata_display_value(kv),
+                        "group_display": source_metadata_group(key),
+                    }
+                    mapped_metadata[key] = mapped_metadata_item
+                else:
+                    mapped_metadata[key]["value"].append(value)
+                    mapped_metadata[key]["value_display"] += f", {value}"
+            source['mapped_metadata'] = mapped_metadata
     return property_key, sources
 
 
@@ -4088,6 +4114,32 @@ def set_sample_source(property_key, normalized_type, user_token, existing_data_d
     sources = schema_neo4j_queries.get_sources_associated_entity(
         schema_manager.get_neo4j_driver_instance(), existing_data_dict["uuid"]
     )
+    for source in sources:
+        if source['metadata'] is not None and source['source_type'] == 'Human':
+            metadata =  source['metadata'].get("organ_donor_data") or  source['metadata'].get("living_donor_data") or {}
+            mapped_metadata = {}
+            for kv in metadata:
+                term = kv["grouping_concept_preferred_term"]
+                key = re.sub(r"\W+", "_", term).lower()
+                value = (
+                    float(kv["data_value"])
+                    if kv.get("data_type") == "Numeric"
+                    else kv["preferred_term"]
+                )
+
+                if key not in mapped_metadata:
+                    mapped_metadata_item = {
+                        "value": [value],
+                        "unit": kv.get("units", ""),
+                        "key_display": term,
+                        "value_display": source_metadata_display_value(kv),
+                        "group_display": source_metadata_group(key),
+                    }
+                    mapped_metadata[key] = mapped_metadata_item
+                else:
+                    mapped_metadata[key]["value"].append(value)
+                    mapped_metadata[key]["value_display"] += f", {value}"
+            source['mapped_metadata'] = mapped_metadata
     return property_key, sources[0]
 
 
@@ -4215,7 +4267,7 @@ def get_has_visualization(property_key, normalized_type, user_token, existing_da
     uuid_to_query = None
     if existing_data_dict["status"] in ['QA', 'Published']:
         if equals(dataset_category, "primary"):
-            match_case = "AND s.status IN ['QA', 'Published'] AND s.entity_type = 'Dataset'"
+            match_case = "AND s.status IN ['QA', 'Published'] AND s.entity_type = 'Dataset' AND s.files IS NOT NULL AND NOT isEmpty(apoc.convert.fromJsonList(s.files))"
             descendants = schema_neo4j_queries.get_dataset_direct_descendants(
                 schema_manager.get_neo4j_driver_instance(),
                 existing_data_dict["uuid"],
@@ -4236,7 +4288,10 @@ def get_has_visualization(property_key, normalized_type, user_token, existing_da
 
                 uuid_to_query = descendants[0]["uuid"]
         elif equals(dataset_category, "codcc-processed"):
-            uuid_to_query = existing_data_dict["uuid"]
+            if "files" in existing_data_dict and len(existing_data_dict["files"]) > 0:
+                uuid_to_query = existing_data_dict["uuid"]
+            else:
+                return property_key, "False"
         else:
             return property_key, "False"
     else:
