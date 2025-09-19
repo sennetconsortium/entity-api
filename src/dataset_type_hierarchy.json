@@ -56,18 +56,18 @@
   ],
   "DESI": [
     "Imaging",
-    "Mass Spectometry"
+    "Mass Spectrometry"
   ],
   "MALDI": [
     "Imaging",
-    "Mass Spectometry"
+    "Mass Spectrometry"
   ],
   "MS Lipidomics": [
-    "Mass Spectometry"
+    "Mass Spectrometry"
   ],
   "SIMS": [
     "Imaging",
-    "Mass Spectometry"
+    "Mass Spectrometry"
   ],
   "2D Imaging Mass Cytometry": [
     "Proteomics"
@@ -79,7 +79,6 @@
     "Proteomics"
   ],
   "LC-MS": [
-    "Mass Spectometry",
     "Proteomics"
   ],
   "GeoMx (NGS)": [
