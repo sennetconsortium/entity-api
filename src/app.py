@@ -72,6 +72,7 @@ from atlas_consortia_commons.decorator import (
     require_json,
     require_valid_token,
     strip_whitespace_id,
+    suppress_reindex
 )
 from lib.ontology import Ontology
 
@@ -1281,7 +1282,8 @@ json
 @app.route("/entities/<entity_type>", methods=["POST"])
 @require_valid_token(param="user_token")
 @require_json(param="json_data_dict")
-def create_entity(entity_type: str, user_token: str, json_data_dict: dict):
+@suppress_reindex(param="reindex")
+def create_entity(entity_type: str, user_token: str, json_data_dict: dict, suppress_reindex: bool):
     # Normalize user provided entity_type
     normalized_entity_type = schema_manager.normalize_entity_type(entity_type)
 
@@ -1515,13 +1517,20 @@ def create_entity(entity_type: str, user_token: str, json_data_dict: dict):
         "ENTITIES", complete_dict
     )
 
-    # Also index the new entity node in elasticsearch via search-api
-    logger.log(
-        logging.INFO,
-        f"Re-indexing for creation of {complete_dict['entity_type']}"
-        f" with UUID {complete_dict['uuid']}",
-    )
-    reindex_entity(complete_dict["uuid"], user_token)
+    if suppress_reindex:
+        logger.log(
+            level=logging.INFO,
+            msg=f"Re-indexing suppressed during creation of {complete_dict['entity_type']}"
+            f" with UUID {complete_dict['uuid']}",
+        )
+    else:
+        # Also index the new entity node in elasticsearch via search-api
+        logger.log(
+            logging.INFO,
+            f"Re-indexing for creation of {complete_dict['entity_type']}"
+            f" with UUID {complete_dict['uuid']}",
+        )
+        reindex_entity(complete_dict["uuid"], user_token)
 
     return jsonify(normalized_complete_dict)
 
@@ -1743,7 +1752,8 @@ json
 @require_valid_token(param="user_token")
 @require_json(param="json_data_dict")
 @strip_whitespace_id()
-def update_entity(id: str, user_token: str, json_data_dict: dict):
+@suppress_reindex(param="reindex")
+def update_entity(id: str, user_token: str, json_data_dict: dict, suppress_reindex: bool):
     if READ_ONLY_MODE:
         abort_forbidden("Access not granted when entity-api in READ-ONLY mode")
 
@@ -2010,27 +2020,34 @@ def update_entity(id: str, user_token: str, json_data_dict: dict):
 
         update_activity_details(activity_data, new_activity_data, user_token)
 
-    # How to handle reindex collection?
-    # Also reindex the updated entity node in elasticsearch via search-api
-    logger.log(
-        logging.INFO,
-        f"Re-indexing for modification of {entity_dict['entity_type']} "
-        f"with UUID {entity_dict['uuid']}",
-    )
-    reindex_entity(entity_dict["uuid"], user_token)
-
-    if (
-        equals(normalized_entity_type, Ontology.ops().entities().SOURCE)
-        and "metadata" in json_data_dict
-    ):
-        # Reindex all the descendant datasets if metadata is updated
-        datasets = app_neo4j_queries.get_descendant_datasets(
-            neo4j_driver_instance, entity_dict["uuid"], "uuid"
+    if suppress_reindex:
+        logger.log(
+            level=logging.INFO,
+            msg=f"Re-indexing suppressed during update of {complete_dict['entity_type']}"
+            f" with UUID {complete_dict['uuid']}",
         )
-        for dataset in datasets:
-            if MEMCACHED_MODE:
-                delete_cache(dataset)
-            reindex_entity(dataset, user_token)
+    else:
+        # How to handle reindex collection?
+        # Also reindex the updated entity node in elasticsearch via search-api
+        logger.log(
+            logging.INFO,
+            f"Re-indexing for modification of {entity_dict['entity_type']} "
+            f"with UUID {entity_dict['uuid']}",
+        )
+        reindex_entity(entity_dict["uuid"], user_token)
+
+        if (
+            equals(normalized_entity_type, Ontology.ops().entities().SOURCE)
+            and "metadata" in json_data_dict
+        ):
+            # Reindex all the descendant datasets if metadata is updated
+            datasets = app_neo4j_queries.get_descendant_datasets(
+                neo4j_driver_instance, entity_dict["uuid"], "uuid"
+            )
+            for dataset in datasets:
+                if MEMCACHED_MODE:
+                    delete_cache(dataset)
+                reindex_entity(dataset, user_token)
 
     if return_dict:
         return jsonify(normalized_complete_dict)
@@ -5367,7 +5384,8 @@ json array
 @app.route("/datasets/components", methods=["POST"])
 @require_valid_token(param="user_token")
 @require_json(param="json_data_dict")
-def multiple_components(user_token: str, json_data_dict: dict):
+@suppress_reindex(param="reindex")
+def multiple_components(user_token: str, json_data_dict: dict, suppress_reindex: bool):
     if READ_ONLY_MODE:
         abort_forbidden("Access not granted when entity-api in READ-ONLY mode")
 
@@ -5499,13 +5517,18 @@ def multiple_components(user_token: str, json_data_dict: dict):
             provenance_type="ENTITIES", entity_dict=complete_dict
         )
 
-        # Also index the new entity node in elasticsearch via search-api
-        logger.log(
-            logging.INFO,
-            f"Re-indexing for creation of {complete_dict['entity_type']}"
-            f" with UUID {complete_dict['uuid']}",
-        )
-        reindex_entity(complete_dict["uuid"], user_token)
+        if suppress_reindex:
+            logger.log(level=logging.INFO
+                       , msg=f"Re-indexing suppressed during multiple component creation of {complete_dict['entity_type']}"
+                             f" with UUID {complete_dict['uuid']}")
+        else:
+            # Also index the new entity node in elasticsearch via search-api
+            logger.log(
+                logging.INFO,
+                f"Re-indexing for creation of {complete_dict['entity_type']}"
+                f" with UUID {complete_dict['uuid']}",
+            )
+            reindex_entity(complete_dict["uuid"], user_token)
         # Add back in dataset_link_abs_dir one last time
         normalized_complete_dict["dataset_link_abs_dir"] = dataset_link_abs_dir
         normalized_complete_entity_list.append(normalized_complete_dict)
