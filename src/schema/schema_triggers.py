@@ -1485,6 +1485,9 @@ def get_has_metadata(property_key, normalized_type, user_token, existing_data_di
         has_metadata = "metadata" in existing_data_dict
         return property_key, str(has_metadata)
 
+    if equals(SpecimenCategories.ORGAN, existing_data_dict.get("sample_category")):
+        return property_key, "N/A"
+
     return property_key, None
 
 
