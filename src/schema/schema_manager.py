@@ -2177,6 +2177,10 @@ def get_user_info(request):
     # `group_required` is a boolean, when True, 'hmgroupids' is in the output
     user_info = _auth_helper.getUserInfoUsingRequest(request, True)
 
+    # This field is present in some user's info and can cause issues with entity create and update
+    if "data_access_level" in user_info:
+        user_info.pop("data_access_level")
+
     logger.info("======get_user_info()======")
     logger.info(user_info)
 
