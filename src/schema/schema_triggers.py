@@ -1951,6 +1951,9 @@ def get_display_subtype(
     elif equals(Ontology.ops().entities().UPLOAD, normalized_type):
         display_subtype = "Data Upload"
 
+    elif equals("Publication", normalized_type):
+        display_subtype = "Publication"
+
     else:
         # Do nothing
         logger.error(
