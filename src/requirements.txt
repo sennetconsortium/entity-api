@@ -18,7 +18,7 @@ neo4j==5.28.1
 # Use the branch name of commons from github for testing new changes made in commons from different branch
 # Default is main branch specified in docker-compose.development.yml if not set
 # git+https://github.com/hubmapconsortium/commons.git@${COMMONS_BRANCH}#egg=hubmap-commons
-hubmap-commons==2.1.20
+hubmap-commons==2.1.21
 atlas-consortia-commons==1.1.4
 #git+https://github.com/x-atlas-consortia/commons.git@{COMMONS_BRANCH}#egg=atlas_consortia_commons
 
