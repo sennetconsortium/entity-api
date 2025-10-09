@@ -5441,7 +5441,7 @@ def multiple_components(user_token: str, json_data_dict: dict, suppress_reindex:
 
     # validate that there is at least one component dataset
     if len(json_data_dict.get("datasets")) < 1:
-        abort_bad_req("'datasets' field must contain 2 component datasets.")
+        abort_bad_req(f"'datasets' field must contain at least 1 dataset.")
 
     # Validate all datasets using existing schema with triggers and validators
     for dataset in json_data_dict.get("datasets"):
