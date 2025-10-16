@@ -458,6 +458,111 @@ def rearrange_datasets(results, entity_type="Dataset"):
             published_processed_dataset = results.pop(published_processed_dataset_location)
             results.insert(0, published_processed_dataset)
 
+"""
+Use the Flask request.args MultiDict to see if 'exclude' is a URL parameter passed in with the
+request and parse the comma-separated properties to be excluded from final response
+
+For now, only support one dot for nested fields (depth 2)
+
+Parameters
+----------
+request: Flask request object
+    The instance of Flask request passed in from application request
+
+Returns
+-------
+list
+    A list of either string properties to remove or dictionary of embedded properties to remove. Formatted in the same style as 'fields_to_exclude'
+"""
+def get_excluded_query_props(request_args):
+    props_to_exclude = [{}]
+
+    if "exclude" in request_args:
+        # The query string values are case-sensitive as the property keys in schema yaml are case-sensitive
+        props_to_exclude_str = request_args.get("exclude")
+
+        if not validate_comma_separated_exclude_str(props_to_exclude_str):
+            raise ValueError(
+                "The 'exclude' query parameter must be a comma-separated list of properties that follow these rules: "
+                "[1] Each property must include at least one letter; "
+                "[2] Only lowercase letters and underscores '_' are allowed; "
+                "[3] Nested property is limited to 2 depths and must use single dot '.' for dot-notation (like 'a.b')."
+            )
+
+        args_props_to_exclude_list = [item.strip() for item in props_to_exclude_str.split(",")]
+
+        logger.info(f"User specified properties to exclude in request URL: {args_props_to_exclude_list}")
+
+        # More validation - ensure prohibited properties are not accepted
+        # This two properties are required internally by `normalize_entity_result_for_response()`
+        prohibited_properties = ["uuid", "entity_type"]
+
+        for item in args_props_to_exclude_list:
+            if item in prohibited_properties or (
+                "." in item and item.split(".")[1] in prohibited_properties
+            ):
+                raise ValueError(
+                    f"Entity property '{item}' is not allowed in the 'exclude' query parameter."
+                )
+            else:
+                item_split = item.split(".")
+                if item_split[0] in props_to_exclude[0]:
+                    if len(item_split) > 1:
+                        props_to_exclude[0][item_split[0]].append(item_split[1])
+                    else:
+                        if item_split[0] not in props_to_exclude:
+                            props_to_exclude.append(item_split[0])
+                else:
+                    if len(item_split) > 1:
+                        props_to_exclude[0][item_split[0]] = [item_split[1]]
+                    else:
+                        if item_split[0] not in props_to_exclude:
+                            props_to_exclude.append(item_split[0])
+
+    return props_to_exclude
+
+
+"""
+The 'exclude' query parameter must be a comma-separated list of properties that follow these rules:
+
+[1] Each property must include at least one letter;
+[2] Only lowercase letters and underscores '_' are allowed;
+[3] Nested property is limited to 2 depths and must use single dot '.' for dot-notation (like 'a.b').
+
+Parameters
+----------
+s : str
+    Comma-separated input string used to exclude entity properties
+
+Returns
+-------
+bool
+    True if valid or False otherwise
+"""
+
+
+def validate_comma_separated_exclude_str(s: str):
+    # No empty string
+    if not s:
+        return False
+
+    # Split by commas
+    items = s.split(",")
+
+    # No empty items allowed (prevents ',,' or trailing comma)
+    if any(not item.strip() for item in items):
+        return False
+
+    def is_valid_item(item: str):
+        return (
+            all(c.islower() or c in "._" for c in item)
+            and any(c.isalpha() for c in item)
+            and item.count(".") <= 1
+            and not ((item.startswith(".") or item.endswith(".")))
+        )
+
+    return all(is_valid_item(item.strip()) for item in items)
+
 
 def group_verify_properties_list(normalized_class="All", properties=[]):
     """Separates neo4j properties from transient ones. More over, buckets neo4j properties that are
