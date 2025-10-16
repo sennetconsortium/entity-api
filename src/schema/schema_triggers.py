@@ -743,6 +743,52 @@ def get_normalized_collection_entities(
         is_include_action=False,
     )
 
+def get_collection_associated_publication(
+    property_key, normalized_type, user_token, existing_data_dict, new_data_dict
+):
+    """Trigger event method of getting the associated publication for this collection.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key
+    normalized_type : str
+        One of the types defined in the schema yaml: Dataset
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, dict]
+        str: The target property key
+        dict: A dictionary representation of the associated publication with all the normalized information
+    """
+    if "uuid" not in existing_data_dict:
+        msg = create_trigger_error_msg(
+            "Missing 'uuid' key in 'existing_data_dict' during calling 'get_collection_associated_publication()' trigger method.",
+            existing_data_dict,
+            new_data_dict,
+        )
+        raise KeyError(msg)
+
+    logger.info(
+        f"Executing 'get_collection_associated_publication()' trigger method on uuid: {existing_data_dict['uuid']}"
+    )
+
+    collection_dict = schema_neo4j_queries.get_collection_associated_publication(
+        schema_manager.get_neo4j_driver_instance(), existing_data_dict["uuid"]
+    )
+
+    # Get rid of the entity node properties that are not defined in the yaml schema
+    # as well as the ones defined as `exposed: false` in the yaml schema
+    return property_key, schema_manager.normalize_object_result_for_response(
+        entity_dict=collection_dict
+    )
+
 
 def get_publication_associated_collection(
     property_key, normalized_type, user_token, existing_data_dict, new_data_dict
