@@ -511,7 +511,7 @@ def get_excluded_query_props(request_args):
                         props_to_exclude[0][item_split[0]].append(item_split[1])
                     else:
                         if item_split[0] not in props_to_exclude:
-                            props_to_exclude.append([item_split[0]])
+                            props_to_exclude.append(item_split[0])
                 else:
                     if len(item_split) > 1:
                         props_to_exclude[0][item_split[0]] = [item_split[1]]
