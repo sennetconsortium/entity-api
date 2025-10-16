@@ -801,8 +801,6 @@ def get_entity_by_id(id):
     # The `status` property is only available in Dataset and being used by search-api for revision
     result_filtering_accepted_property_keys = ["data_access_level", "status"]
 
-    # We technically allow for `exclude` as a query parameter to match how HuBMAP handles property exclusion.
-    # If `exclude` is set then just simply return the normal response without doing anything.
     supported_query_params = ['property', 'exclude']
     if bool(request.args):
         for param in request.args:
@@ -833,6 +831,19 @@ def get_entity_by_id(id):
                 abort_bad_req(
                     "The specified query string is not supported. Use '?property=<key>' to filter the result"
                 )
+
+        try:
+            # Modify fields_to_exclude based on request args
+            props_to_exclude = schema_manager.get_excluded_query_props(request.args)
+            final_result= schema_manager.exclude_properties_from_response(
+                props_to_exclude, final_result
+            )
+
+        except ValueError as e:
+            abort_bad_req(e)
+        except Exception as e:
+            abort_internal_err(e)
+
         # Response with the dict
         if public_entity and not user_in_sennet_read_group(request):
             final_result = schema_manager.exclude_properties_from_response(
