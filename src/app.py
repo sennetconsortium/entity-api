@@ -3295,9 +3295,16 @@ def get_globus_url(id):
     globus_server_uuid = None
     dir_path = ""
 
+    entity_status = entity_dict.get('status', '')
+
     # Note: `entity_data_access_level` for Upload is always default to 'protected'
     # public access
     if entity_data_access_level == ACCESS_LEVEL_PUBLIC:
+        globus_server_uuid = app.config["GLOBUS_PUBLIC_ENDPOINT_UUID"]
+        dir_path = dir_path + "/"
+    # for protected data that is published but user does not have sufficient rights
+    elif (entity_data_access_level == ACCESS_LEVEL_PROTECTED and equals(entity_status, 'Published')) and \
+    (user_data_access_level == ACCESS_LEVEL_PUBLIC or user_data_access_level == ACCESS_LEVEL_CONSORTIUM):
         globus_server_uuid = app.config["GLOBUS_PUBLIC_ENDPOINT_UUID"]
         dir_path = dir_path + "/"
     # consortium access
