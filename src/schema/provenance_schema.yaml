@@ -445,6 +445,13 @@ ENTITIES:
         immutable: true
         description: "The displayname of globus group which the user who created this entity is a member of"
         before_create_trigger: set_group_name
+      associated_publication:
+        type: json_string # dict
+        generated: true
+        transient: true
+        on_read_trigger: get_collection_associated_publication
+        on_index_trigger: get_collection_associated_publication
+        description: "The publication which uses this collection's data"
 
   ############################################# Dataset #############################################
   Dataset:
