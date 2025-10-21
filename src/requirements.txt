@@ -1,4 +1,4 @@
-Flask==3.1.0
+Flask==3.1.2
 prov==2.0.1
 
 # For interacting with memcached
@@ -8,7 +8,7 @@ pymemcache==4.0.0
 nested-lookup==0.2.25
 
 # The commons package requires requests>=2.22.0 and PyYAML>=5.3.1
-requests==2.32.3
+requests==2.32.5
 PyYAML==6.0.2
 
 # Pinning specific version of neo4j
