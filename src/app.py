@@ -1769,9 +1769,7 @@ def update_entity(id: str, user_token: str, json_data_dict: dict, suppress_reind
     if "status" in json_data_dict and json_data_dict["status"]:
         has_updated_status = True
 
-    has_associated_collection_uuid = False
-    if "associated_collection_uuid" in json_data_dict: 
-        has_associated_collection_uuid = True
+    associated_collection_uuid = json_data_dict.get('associated_collection_uuid')
 
     # Normalize user provided status
     if "sub_status" in json_data_dict:
@@ -1882,7 +1880,7 @@ def update_entity(id: str, user_token: str, json_data_dict: dict, suppress_reind
         )
 
         # Handle linkages update via `after_update_trigger` methods
-        if has_updated_status or has_associated_collection_uuid:
+        if has_updated_status or (associated_collection_uuid is not None):
             after_update(normalized_entity_type, user_token, merged_updated_dict)
 
     elif normalized_entity_type == "Upload":
@@ -2052,6 +2050,11 @@ def update_entity(id: str, user_token: str, json_data_dict: dict, suppress_reind
                 if MEMCACHED_MODE:
                     delete_cache(dataset)
                 reindex_entity(dataset, user_token)
+
+        if associated_collection_uuid is not None:
+            if MEMCACHED_MODE:
+                delete_cache(associated_collection_uuid)
+            reindex_entity(associated_collection_uuid, user_token)
 
     if return_dict:
         return jsonify(normalized_complete_dict)
