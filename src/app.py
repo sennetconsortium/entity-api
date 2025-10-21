@@ -1796,6 +1796,10 @@ def update_entity(id: str, user_token: str, json_data_dict: dict, suppress_reind
     if "status" in json_data_dict and json_data_dict["status"]:
         has_updated_status = True
 
+    has_associated_collection_uuid = False
+    if "associated_collection_uuid" in json_data_dict: 
+        has_associated_collection_uuid = True
+
     # Normalize user provided status
     if "sub_status" in json_data_dict:
         normalized_status = schema_manager.normalize_status(json_data_dict["sub_status"])
@@ -1905,7 +1909,7 @@ def update_entity(id: str, user_token: str, json_data_dict: dict, suppress_reind
         )
 
         # Handle linkages update via `after_update_trigger` methods
-        if has_updated_status:
+        if has_updated_status or has_associated_collection_uuid:
             after_update(normalized_entity_type, user_token, merged_updated_dict)
 
     elif normalized_entity_type == "Upload":
