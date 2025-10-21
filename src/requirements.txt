@@ -22,6 +22,6 @@ hubmap-commons==2.1.21
 atlas-consortia-commons==1.1.4
 #git+https://github.com/x-atlas-consortia/commons.git@{COMMONS_BRANCH}#egg=atlas_consortia_commons
 
-deepdiff~=6.6.0
+deepdiff==8.6.1
 
 psutil>=7.0.0,<7.1
