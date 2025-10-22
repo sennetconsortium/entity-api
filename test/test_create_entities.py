@@ -8,6 +8,8 @@ from test.helpers.database import (
 )
 from test.helpers.response import mock_response
 
+import pytest
+
 
 def test_index(app):
     """Test that the index page is working"""
@@ -437,3 +439,147 @@ def test_create_dataset_no_auth(app):
         )
 
         assert res.status_code == 401
+
+
+@pytest.mark.parametrize("invalid_ancestor_type", ["organ", "block", "section", "dataset"])
+def test_create_organ_invalid_constraints(db_session, app, requests, invalid_ancestor_type):
+    # Create provenance in test database
+    test_entities = create_provenance(db_session, [invalid_ancestor_type])
+    entities = [
+        {k: test_entities[invalid_ancestor_type][k] for k in ["uuid", "sennet_id", "base_id"]},
+    ]
+
+    # uuid mock responses
+    uuid_api_url = app.config["UUID_API_URL"]
+    requests.add_response(
+        f"{uuid_api_url}/uuid/{entities[0]['uuid']}", "get", mock_response(200, entities[0])
+    )
+
+    with app.test_client() as client:
+        data = {
+            "sample_category": "Organ",
+            "organ": "UBERON:0002107",  # Liver
+            "lab_tissue_sample_id": "test_lab_tissue_organ_id",
+            "direct_ancestor_uuid": test_entities[invalid_ancestor_type]["uuid"],
+        }
+
+        res = client.post(
+            "/entities/sample?return_all_properties=true",
+            json=data,
+            headers={"Authorization": f"Bearer {AUTH_TOKEN}"},
+        )
+
+        assert res.status_code == 400
+        assert "invalid entity constraints" in res.json["error"].lower()
+
+
+@pytest.mark.parametrize("invalid_ancestor_type", ["source", "section", "dataset"])
+def test_create_block_invalid_constraints(db_session, app, requests, invalid_ancestor_type):
+    # Create provenance in test database
+    test_entities = create_provenance(db_session, [invalid_ancestor_type])
+    entities = [
+        {k: test_entities[invalid_ancestor_type][k] for k in ["uuid", "sennet_id", "base_id"]},
+    ]
+
+    # uuid mock responses
+    uuid_api_url = app.config["UUID_API_URL"]
+    requests.add_response(
+        f"{uuid_api_url}/uuid/{entities[0]['uuid']}", "get", mock_response(200, entities[0])
+    )
+
+    with app.test_client() as client:
+        data = {
+            "sample_category": "Block",
+            "lab_tissue_sample_id": "test_lab_tissue_block_id",
+            "protocol_url": "dx.doi.org/10.17504/protocols.io.test1f9n",
+            "direct_ancestor_uuid": test_entities[invalid_ancestor_type]["uuid"],
+        }
+
+        res = client.post(
+            "/entities/sample?return_all_properties=true",
+            json=data,
+            headers={"Authorization": f"Bearer {AUTH_TOKEN}"},
+        )
+
+        assert res.status_code == 400
+        assert "invalid entity constraints" in res.json["error"].lower()
+
+
+@pytest.mark.parametrize("invalid_ancestor_type", ["source", "section", "section", "dataset"])
+def test_create_section_invalid_constraints(db_session, app, requests, invalid_ancestor_type):
+    # Create provenance in test database
+    test_entities = create_provenance(db_session, [invalid_ancestor_type])
+    entities = [
+        {k: test_entities[invalid_ancestor_type][k] for k in ["uuid", "sennet_id", "base_id"]},
+    ]
+
+    # uuid mock responses
+    uuid_api_url = app.config["UUID_API_URL"]
+    requests.add_response(
+        f"{uuid_api_url}/uuid/{entities[0]['uuid']}", "get", mock_response(200, entities[0])
+    )
+
+    with app.test_client() as client:
+        data = {
+            "sample_category": "Section",
+            "lab_tissue_sample_id": "test_lab_tissue_section_id",
+            "direct_ancestor_uuid": test_entities[invalid_ancestor_type]["uuid"],
+        }
+
+        res = client.post(
+            "/entities/sample?return_all_properties=true",
+            json=data,
+            headers={"Authorization": f"Bearer {AUTH_TOKEN}"},
+        )
+
+        assert res.status_code == 400
+        assert "invalid entity constraints" in res.json["error"].lower()
+
+
+@pytest.mark.parametrize("invalid_ancestor_type", ["source", "organ", "block"])
+def test_create_dataset_invalid_constraint(db_session, app, requests, invalid_ancestor_type):
+    # Create provenance in test database
+    test_entities = create_provenance(db_session, [invalid_ancestor_type])
+    entities = [
+        {k: test_entities[invalid_ancestor_type][k] for k in ["uuid", "sennet_id", "base_id"]},
+    ]
+
+    # uuid mock responses
+    uuid_api_url = app.config["UUID_API_URL"]
+    requests.add_response(
+        f"{uuid_api_url}/uuid/{entities[0]['uuid']}", "get", mock_response(200, entities[0])
+    )
+
+    with app.test_client() as client:
+        data = {
+            "contains_human_genetic_sequences": False,
+            "dataset_type": "RNAseq",
+            "direct_ancestor_uuids": [test_entities[invalid_ancestor_type]["uuid"]],
+            "contributors": [
+                {
+                    "affiliation": "Test Laboratory",
+                    "display_name": "Teßt '$PI&*\" Üser",
+                    "email": "Teßt.Üser@jax.org",
+                    "first_name": "Teßt",
+                    "is_contact": "Yes",
+                    "is_operator": "Yes",
+                    "is_principal_investigator": "Yes",
+                    "last_name": "Üser",
+                    "metadata_schema_id": "94dae6f8-0756-4ab0-a47b-138e446a9501",
+                    "middle_name_or_initial": "'$PI&*\"",
+                    "orcid": "0000-0000-0000-0000",
+                },
+            ],
+        }
+
+        res = client.post(
+            "/entities/dataset?return_all_properties=true",
+            json=data,
+            headers={
+                "Authorization": f"Bearer {AUTH_TOKEN}",
+                "X-SenNet-Application": "portal-ui",
+            },
+        )
+
+        assert res.status_code == 400
+        assert "invalid entity constraints" in res.json["error"].lower()
