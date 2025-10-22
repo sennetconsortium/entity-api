@@ -1,7 +1,7 @@
 openapi: 3.0.0
 info:
   description: 'The SenNet Entity API is a standard RESTful web service with create, update and read operations for the standard SenNet provenance graph entities.'
-  version: 1.9.5
+  version: 1.9.6
   title: SenNet Entity API
   contact:
     name: SenNet Help Desk
@@ -792,6 +792,21 @@ paths:
           required: true
           schema:
             type: string
+        - name: exclude
+          in: query
+          description: The properties to not be included in the JSON response of the entity.
+          required: false
+          schema:
+            type: string
+        - name: property
+          in: query
+          description: Specifies a single property to be returned from the entity JSON.
+          required: false
+          schema:
+            type: string
+            enum:
+              - 'data_access_level'
+              - 'status'
       responses:
         '200':
           description: The json of the **[Source](http://somewhere.org)**, **[Sample](http://somewhere.org)**, **[Dataset](http://somewhere.org)**, or **[Upload](http://somewhere.org)**
