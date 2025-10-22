@@ -31,4 +31,21 @@ def app(auth):
     app_module.schema_manager._auth_helper = auth
     # other setup
     yield app_module.app
-    # clean up
+    # cleanup
+
+
+@pytest.fixture(scope="session", autouse=True)
+def clean_up_after_tests():
+    """
+    Runs once per pytest session and ensures neo4j driver resources are closed
+    after all tests finish.
+    """
+    yield
+    try:
+        import app as app_module
+
+        driver = getattr(app_module, "neo4j_driver_instance", None)
+        if driver:
+            driver.close()
+    except Exception:
+        pass
