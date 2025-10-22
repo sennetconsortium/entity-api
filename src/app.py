@@ -801,28 +801,55 @@ def get_entity_by_id(id):
     # The `status` property is only available in Dataset and being used by search-api for revision
     result_filtering_accepted_property_keys = ["data_access_level", "status"]
 
+    supported_query_params = ['property', 'exclude']
     if bool(request.args):
-        property_key = request.args.get("property")
-
-        if property_key is not None:
-            # Validate the target property
-            if property_key not in result_filtering_accepted_property_keys:
+        for param in request.args:
+            if param not in supported_query_params:
                 abort_bad_req(
-                    f"Only the following property keys are supported in the query string: {COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}"
+                    f"Only the following URL query parameters (case-sensitive) are supported: {COMMA_SEPARATOR.join(supported_query_params)}"
                 )
 
-            if property_key == "status" and not schema_manager.entity_type_instanceof(
-                normalized_entity_type, "Dataset"
-            ):
-                abort_bad_req("Only Dataset supports 'status' property key in the query string")
+        if 'property' in request.args:
+            property_key = request.args.get("property")
 
-            # Response with the property value directly
-            # Don't use jsonify() on string value
-            return complete_dict[property_key]
-        else:
-            abort_bad_req(
-                "The specified query string is not supported. Use '?property=<key>' to filter the result"
+            if property_key is not None:
+                # Validate the target property
+                if property_key not in result_filtering_accepted_property_keys:
+                    abort_bad_req(
+                        f"Only the following property keys are supported in the query string: {COMMA_SEPARATOR.join(result_filtering_accepted_property_keys)}"
+                    )
+
+                if property_key == "status" and not schema_manager.entity_type_instanceof(
+                    normalized_entity_type, "Dataset"
+                ):
+                    abort_bad_req("Only Dataset supports 'status' property key in the query string")
+
+                # Response with the property value directly
+                # Don't use jsonify() on string value
+                return complete_dict[property_key]
+            else:
+                abort_bad_req(
+                    "The specified query string is not supported. Use '?property=<key>' to filter the result"
+                )
+
+        try:
+            # Modify fields_to_exclude based on request args
+            props_to_exclude = schema_manager.get_excluded_query_props(request.args)
+            final_result= schema_manager.exclude_properties_from_response(
+                props_to_exclude, final_result
             )
+
+        except ValueError as e:
+            abort_bad_req(e)
+        except Exception as e:
+            abort_internal_err(e)
+
+        # Response with the dict
+        if public_entity and not user_in_sennet_read_group(request):
+            final_result = schema_manager.exclude_properties_from_response(
+                fields_to_exclude, final_result
+            )
+        return jsonify(final_result)
     else:
         # Response with the dict
         if public_entity and not user_in_sennet_read_group(request):
@@ -1769,6 +1796,8 @@ def update_entity(id: str, user_token: str, json_data_dict: dict, suppress_reind
     if "status" in json_data_dict and json_data_dict["status"]:
         has_updated_status = True
 
+    associated_collection_uuid = json_data_dict.get('associated_collection_uuid')
+
     # Normalize user provided status
     if "sub_status" in json_data_dict:
         normalized_status = schema_manager.normalize_status(json_data_dict["sub_status"])
@@ -1878,7 +1907,7 @@ def update_entity(id: str, user_token: str, json_data_dict: dict, suppress_reind
         )
 
         # Handle linkages update via `after_update_trigger` methods
-        if has_updated_status:
+        if has_updated_status or (associated_collection_uuid is not None):
             after_update(normalized_entity_type, user_token, merged_updated_dict)
 
     elif normalized_entity_type == "Upload":
@@ -2048,6 +2077,11 @@ def update_entity(id: str, user_token: str, json_data_dict: dict, suppress_reind
                 if MEMCACHED_MODE:
                     delete_cache(dataset)
                 reindex_entity(dataset, user_token)
+
+        if associated_collection_uuid is not None:
+            if MEMCACHED_MODE:
+                delete_cache(associated_collection_uuid)
+            reindex_entity(associated_collection_uuid, user_token)
 
     if return_dict:
         return jsonify(normalized_complete_dict)
@@ -3279,9 +3313,16 @@ def get_globus_url(id):
     globus_server_uuid = None
     dir_path = ""
 
+    entity_status = entity_dict.get('status', '')
+
     # Note: `entity_data_access_level` for Upload is always default to 'protected'
     # public access
     if entity_data_access_level == ACCESS_LEVEL_PUBLIC:
+        globus_server_uuid = app.config["GLOBUS_PUBLIC_ENDPOINT_UUID"]
+        dir_path = dir_path + "/"
+    # for protected data that is published but user does not have sufficient rights
+    elif (entity_data_access_level == ACCESS_LEVEL_PROTECTED and equals(entity_status, 'Published')) and \
+    (user_data_access_level == ACCESS_LEVEL_PUBLIC or user_data_access_level == ACCESS_LEVEL_CONSORTIUM):
         globus_server_uuid = app.config["GLOBUS_PUBLIC_ENDPOINT_UUID"]
         dir_path = dir_path + "/"
     # consortium access
