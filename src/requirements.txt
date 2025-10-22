@@ -1,4 +1,4 @@
-Flask==3.1.0
+Flask==3.1.2
 prov==2.0.1
 
 # For interacting with memcached
@@ -8,7 +8,7 @@ pymemcache==4.0.0
 nested-lookup==0.2.25
 
 # The commons package requires requests>=2.22.0 and PyYAML>=5.3.1
-requests==2.32.3
+requests==2.32.5
 PyYAML==6.0.2
 
 # Pinning specific version of neo4j
@@ -22,6 +22,6 @@ hubmap-commons==2.1.21
 atlas-consortia-commons==1.1.4
 #git+https://github.com/x-atlas-consortia/commons.git@{COMMONS_BRANCH}#egg=atlas_consortia_commons
 
-deepdiff~=6.6.0
+deepdiff==8.6.1
 
 psutil>=7.0.0,<7.1
