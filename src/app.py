@@ -801,7 +801,8 @@ def get_entity_by_id(id):
     # The `status` property is only available in Dataset and being used by search-api for revision
     result_filtering_accepted_property_keys = ["data_access_level", "status"]
 
-    supported_query_params = ['property', 'exclude']
+    # Allow for `return_dict` as well since some code passes that to the PUT /entities endpoint. Return as normal
+    supported_query_params = ['property', 'exclude', 'return_dict']
     if bool(request.args):
         for param in request.args:
             if param not in supported_query_params:
