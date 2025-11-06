@@ -4531,3 +4531,49 @@ def get_contains_data(property_key, normalized_type, user_token, existing_data_d
     )
 
     return property_key, str(len(datasets) > 0)
+
+
+def get_benchmarking_project(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method that determines if this entity belongs to the benchmarking project
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key of the value to be generated
+    normalized_type : str
+        One of the types defined in the schema yaml: Sample
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, str]
+        str: The target property key
+        str: "True" if this entity belongs to the benchmarking project
+    """
+    benchmarking_source_uuids = [
+        '694f43ad76508c665a335fd1606a1168',
+        '37546305fadd47df9b6fab73b9f2d76a',
+        'cbedb6b045bb7410c8ac448e24175bd7',
+        'b8c2782a2387f30c8352bbd0b7246a10',
+        '033996659189ebfe06e71b12f9892605',
+    ]
+
+    # If the entity is a source check if its UUID exists in benchmarking_source_uuids
+    if equals(Ontology.ops().entities().SOURCE, normalized_type):
+        if existing_data_dict.get("uuid") in benchmarking_source_uuids:
+            return property_key, str(True)
+    else:
+        sources = schema_neo4j_queries.get_sources_associated_entity(
+            schema_manager.get_neo4j_driver_instance(), existing_data_dict["uuid"]
+        )
+
+        for source in sources:
+            if source['uuid'] in benchmarking_source_uuids:
+                return property_key, str(True)
+
+    return property_key, None
