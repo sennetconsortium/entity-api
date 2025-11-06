@@ -350,6 +350,12 @@ shared_entity_properties: &shared_entity_properties
     type: list
     description: "A derivation is a transformation of an entity into another, an update of an entity resulting in a new one, or the construction of a new entity based on a pre-existing entity."
     after_create_trigger: set_was_derived_from
+  benchmarking_project:
+    type: boolean
+    generated: true
+    immutable: true
+    description: "Whether this entity belongs to a the benchmarking project."
+    on_index_trigger: get_benchmarking_project
 
 ENTITIES:
   ############################################# Collection #############################################
