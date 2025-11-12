@@ -1559,15 +1559,17 @@ def create_entity(entity_type: str, user_token: str, json_data_dict: dict, suppr
             f" with UUID {complete_dict['uuid']}",
         )
         reindex_entity(complete_dict["uuid"], user_token)
-        
+
         # If a non-primary dataset is created we want to reindex the primary
-        if equals(normalized_entity_type, Ontology.ops().entities().DATASET) and not is_primary_dataset(normalized_entity_type, complete_dict):
-            primary_datasets = complete_dict["direct_ancestor_uuids"]
-            if MEMCACHED_MODE:
+        if equals(normalized_entity_type, Ontology.ops().entities().DATASET):
+            activity_data = app_neo4j_queries.get_activity_was_generated_by(neo4j_driver_instance, complete_dict['uuid'])
+            if not is_primary_dataset(normalized_entity_type, activity_data):
+                primary_datasets = complete_dict["direct_ancestor_uuids"]
+                if MEMCACHED_MODE:
+                    for dataset in primary_datasets:
+                        delete_cache(dataset)
                 for dataset in primary_datasets:
-                    delete_cache(dataset)
-            for dataset in primary_datasets:
-                reindex_entity(dataset, user_token)
+                    reindex_entity(dataset, user_token)
 
     return jsonify(normalized_complete_dict)
 
