@@ -727,6 +727,53 @@ def get_descendant_datasets(neo4j_driver, uuid, property_key=None):
 
     return results
 
+def get_primary_dataset_from_descendant(neo4j_driver, uuid, property_key=None):
+    """Get the primary dataset for a given descendant dataset.
+
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    uuid : str
+        The uuid of target entity
+    property_key : str
+        A target property key for result filtering
+
+    Returns
+    -------
+    dict
+        A list of unique descendant datasets returned from the Cypher query
+    """
+    results = {}
+
+    if property_key:
+        query = (
+            "MATCH (primary:Dataset)<-[:USED|WAS_GENERATED_BY*]-(e:Dataset) "
+            "WHERE e.uuid = $uuid "
+            f"RETURN primary.{property_key} AS {record_field_name}"
+        )
+    else:
+        _activity_query_part = schema_neo4j_queries.activity_query_part(for_all_match=True)
+        query = (
+            "MATCH (t:Dataset)<-[:USED|WAS_GENERATED_BY*]-(e:Dataset) "
+            "WHERE e.uuid = $uuid "
+            f"{_activity_query_part} {record_field_name}"
+        )
+
+    logger.info("======get_primary_dataset_from_descendant() query======")
+    logger.info(query)
+
+    with neo4j_driver.session() as session:
+        record = session.read_transaction(_execute_readonly_tx, query, uuid=uuid)
+
+        if record and record[record_field_name]:
+            if property_key:
+                results = record[record_field_name]
+            else:
+                results = record[record_field_name][0]
+
+    return results
+
 
 def get_ancestors_by_type(neo4j_driver, uuid, ancestor_type, property_keys=None):
     """Get all ancestors of a specific type for a given entity.

@@ -1559,6 +1559,15 @@ def create_entity(entity_type: str, user_token: str, json_data_dict: dict, suppr
             f" with UUID {complete_dict['uuid']}",
         )
         reindex_entity(complete_dict["uuid"], user_token)
+        
+        # If a non-primary dataset is created we want to reindex the primary
+        if equals(normalized_entity_type, Ontology.ops().entities().DATASET) and not is_primary_dataset(normalized_entity_type, complete_dict):
+            primary_dataset = app_neo4j_queries.get_primary_dataset_from_descendant(
+                neo4j_driver_instance, complete_dict["uuid"], "uuid"
+            )
+            if MEMCACHED_MODE:
+                delete_cache(primary_dataset)
+            reindex_entity(primary_dataset, user_token)
 
     return jsonify(normalized_complete_dict)
 
@@ -2083,6 +2092,15 @@ def update_entity(id: str, user_token: str, json_data_dict: dict, suppress_reind
             if MEMCACHED_MODE:
                 delete_cache(associated_collection_uuid)
             reindex_entity(associated_collection_uuid, user_token)
+
+        # If a non-primary dataset is updated we want to reindex the primary
+        if equals(normalized_entity_type, Ontology.ops().entities().DATASET) and not is_primary_dataset(normalized_entity_type, entity_dict):
+            primary_dataset = app_neo4j_queries.get_primary_dataset_from_descendant(
+                neo4j_driver_instance, entity_dict["uuid"], "uuid"
+            )
+            if MEMCACHED_MODE:
+                delete_cache(primary_dataset)
+            reindex_entity(primary_dataset, user_token)
 
     if return_dict:
         return jsonify(normalized_complete_dict)
@@ -7078,6 +7096,34 @@ def user_in_sennet_read_group(request):
         return False
 
     return sennet_read_group_uuid in user_info["hmgroupids"]
+
+
+"""
+Check if an entity is a primary Dataset
+
+Parameters
+----------
+entity : entity dict
+    A dictionary containing entity specific information
+
+Returns
+-------
+bool
+    True if the entity is of type Dataset and the creation action is Create Dataset Activity
+"""
+
+
+def is_primary_dataset(normalized_entity_type, entity):
+    if not equals(normalized_entity_type, Ontology.ops().entities().DATASET):
+        return False
+
+    if 'creation_action' not in entity:
+        return False
+
+    if entity['creation_action'] == "Create Dataset Activity":
+        return True
+
+    return False
 
 
 ####################################################################################################
