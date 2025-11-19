@@ -4272,9 +4272,9 @@ def get_dataset_type_hierarchy(
     """
 
     if equals(existing_data_dict['entity_type'], 'Dataset'):
+        dataset_type_hierarchy = Ontology.dataset_type_hierarchy()
         if (
-            "DATASET_TYPE_HIERARCHY" not in current_app.config
-            or existing_data_dict["dataset_type"] not in current_app.config["DATASET_TYPE_HIERARCHY"]
+            existing_data_dict["dataset_type"] not in dataset_type_hierarchy
         ):
             return property_key, {
                 "first_level": existing_data_dict["dataset_type"],
@@ -4282,7 +4282,7 @@ def get_dataset_type_hierarchy(
             }
 
         return property_key, {
-            "first_level": current_app.config["DATASET_TYPE_HIERARCHY"][
+            "first_level": dataset_type_hierarchy[
                 existing_data_dict["dataset_type"]
             ],
             "second_level": existing_data_dict["dataset_type"],
