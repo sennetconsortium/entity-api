@@ -21,3 +21,9 @@ class Ontology(UbkgSDK):
         return cls.ops(
             as_data_dict=True, prop_callback=None, data_as_val=True, key="organ_uberon"
         ).organ_types()
+    
+    @classmethod
+    def dataset_type_hierarchy(cls: Ontology) -> dict:
+        return cls.ops(
+            as_data_dict=True, prop_callback=None, data_as_val=False, key="dataset_type", val_key="sennet_dataset_modalities"
+        ).dataset_types()
