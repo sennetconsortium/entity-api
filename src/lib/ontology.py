@@ -25,5 +25,5 @@ class Ontology(UbkgSDK):
     @classmethod
     def dataset_type_hierarchy(cls: Ontology) -> dict:
         return cls.ops(
-            as_data_dict=True, prop_callback=None, data_as_val=False, key="dataset_type", val_key="sennet_dataset_modalities"
+            as_data_dict=True, prop_callback=None, data_as_val=False, key="dataset_type", val_key="dataset_modalities"
         ).dataset_types()
