@@ -458,6 +458,7 @@ def rearrange_datasets(results, entity_type="Dataset"):
             published_processed_dataset = results.pop(published_processed_dataset_location)
             results.insert(0, published_processed_dataset)
 
+
 """
 Use the Flask request.args MultiDict to see if 'exclude' is a URL parameter passed in with the
 request and parse the comma-separated properties to be excluded from final response
@@ -474,6 +475,8 @@ Returns
 list
     A list of either string properties to remove or dictionary of embedded properties to remove. Formatted in the same style as 'fields_to_exclude'
 """
+
+
 def get_excluded_query_props(request_args):
     props_to_exclude = [{}]
 
@@ -491,7 +494,9 @@ def get_excluded_query_props(request_args):
 
         args_props_to_exclude_list = [item.strip() for item in props_to_exclude_str.split(",")]
 
-        logger.info(f"User specified properties to exclude in request URL: {args_props_to_exclude_list}")
+        logger.info(
+            f"User specified properties to exclude in request URL: {args_props_to_exclude_list}"
+        )
 
         # More validation - ensure prohibited properties are not accepted
         # This two properties are required internally by `normalize_entity_result_for_response()`

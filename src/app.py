@@ -72,7 +72,7 @@ from atlas_consortia_commons.decorator import (
     require_json,
     require_valid_token,
     strip_whitespace_id,
-    suppress_reindex
+    suppress_reindex,
 )
 from lib.ontology import Ontology
 
@@ -126,8 +126,8 @@ requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
 ####################################################################################################
 
 try:
-    with open(app.config['HIERARCHY_JSON_FILE'], 'r') as file:
-       app.config["DATASET_TYPE_HIERARCHY"] = json.load(file)
+    with open(app.config["HIERARCHY_JSON_FILE"], "r") as file:
+        app.config["DATASET_TYPE_HIERARCHY"] = json.load(file)
 except FileNotFoundError:
     print(f"Error: The file dataset_type_hierarchy.json was not found.")
 except Exception as e:
@@ -802,7 +802,7 @@ def get_entity_by_id(id):
     result_filtering_accepted_property_keys = ["data_access_level", "status"]
 
     # Allow for `return_dict` as well since some code passes that to the PUT /entities endpoint. Return as normal
-    supported_query_params = ['property', 'exclude', 'return_dict']
+    supported_query_params = ["property", "exclude", "return_dict"]
     if bool(request.args):
         for param in request.args:
             if param not in supported_query_params:
@@ -810,7 +810,7 @@ def get_entity_by_id(id):
                     f"Only the following URL query parameters (case-sensitive) are supported: {COMMA_SEPARATOR.join(supported_query_params)}"
                 )
 
-        if 'property' in request.args:
+        if "property" in request.args:
             property_key = request.args.get("property")
 
             if property_key is not None:
@@ -836,7 +836,7 @@ def get_entity_by_id(id):
         try:
             # Modify fields_to_exclude based on request args
             props_to_exclude = schema_manager.get_excluded_query_props(request.args)
-            final_result= schema_manager.exclude_properties_from_response(
+            final_result = schema_manager.exclude_properties_from_response(
                 props_to_exclude, final_result
             )
 
@@ -1562,7 +1562,9 @@ def create_entity(entity_type: str, user_token: str, json_data_dict: dict, suppr
 
         # If a non-primary dataset is created we want to reindex the primary
         if equals(normalized_entity_type, Ontology.ops().entities().DATASET):
-            activity_data = app_neo4j_queries.get_activity_was_generated_by(neo4j_driver_instance, complete_dict['uuid'])
+            activity_data = app_neo4j_queries.get_activity_was_generated_by(
+                neo4j_driver_instance, complete_dict["uuid"]
+            )
             if not is_primary_dataset(normalized_entity_type, activity_data):
                 primary_datasets = complete_dict["direct_ancestor_uuids"]
                 if MEMCACHED_MODE:
@@ -1808,7 +1810,7 @@ def update_entity(id: str, user_token: str, json_data_dict: dict, suppress_reind
     if "status" in json_data_dict and json_data_dict["status"]:
         has_updated_status = True
 
-    associated_collection_uuid = json_data_dict.get('associated_collection_uuid')
+    associated_collection_uuid = json_data_dict.get("associated_collection_uuid")
 
     # Normalize user provided status
     if "sub_status" in json_data_dict:
@@ -2096,7 +2098,9 @@ def update_entity(id: str, user_token: str, json_data_dict: dict, suppress_reind
             reindex_entity(associated_collection_uuid, user_token)
 
         # If a non-primary dataset is updated we want to reindex the primary
-        if equals(normalized_entity_type, Ontology.ops().entities().DATASET) and not is_primary_dataset(normalized_entity_type, entity_dict):
+        if equals(
+            normalized_entity_type, Ontology.ops().entities().DATASET
+        ) and not is_primary_dataset(normalized_entity_type, entity_dict):
             primary_dataset = app_neo4j_queries.get_primary_dataset_from_descendant(
                 neo4j_driver_instance, entity_dict["uuid"], "uuid"
             )
@@ -3334,7 +3338,7 @@ def get_globus_url(id):
     globus_server_uuid = None
     dir_path = ""
 
-    entity_status = entity_dict.get('status', '')
+    entity_status = entity_dict.get("status", "")
 
     # Note: `entity_data_access_level` for Upload is always default to 'protected'
     # public access
@@ -3342,8 +3346,12 @@ def get_globus_url(id):
         globus_server_uuid = app.config["GLOBUS_PUBLIC_ENDPOINT_UUID"]
         dir_path = dir_path + "/"
     # for protected data that is published but user does not have sufficient rights
-    elif (entity_data_access_level == ACCESS_LEVEL_PROTECTED and equals(entity_status, 'Published')) and \
-    (user_data_access_level == ACCESS_LEVEL_PUBLIC or user_data_access_level == ACCESS_LEVEL_CONSORTIUM):
+    elif (
+        entity_data_access_level == ACCESS_LEVEL_PROTECTED and equals(entity_status, "Published")
+    ) and (
+        user_data_access_level == ACCESS_LEVEL_PUBLIC
+        or user_data_access_level == ACCESS_LEVEL_CONSORTIUM
+    ):
         globus_server_uuid = app.config["GLOBUS_PUBLIC_ENDPOINT_UUID"]
         dir_path = dir_path + "/"
     # consortium access
@@ -5580,9 +5588,11 @@ def multiple_components(user_token: str, json_data_dict: dict, suppress_reindex:
         )
 
         if suppress_reindex:
-            logger.log(level=logging.INFO
-                       , msg=f"Re-indexing suppressed during multiple component creation of {complete_dict['entity_type']}"
-                             f" with UUID {complete_dict['uuid']}")
+            logger.log(
+                level=logging.INFO,
+                msg=f"Re-indexing suppressed during multiple component creation of {complete_dict['entity_type']}"
+                f" with UUID {complete_dict['uuid']}",
+            )
         else:
             # Also index the new entity node in elasticsearch via search-api
             logger.log(
@@ -6710,7 +6720,9 @@ def validate_organ_code(organ_code: str):
 def verify_ubkg_properties(json_data_dict):
     SOURCE_TYPES = Ontology.ops(as_data_dict=True).source_types()
     SAMPLE_CATEGORIES = Ontology.ops(as_data_dict=True).specimen_categories()
-    ORGAN_TYPES = Ontology.ops(as_data_dict=True, key="organ_uberon", prop_callback=None).organ_types()
+    ORGAN_TYPES = Ontology.ops(
+        as_data_dict=True, key="organ_uberon", prop_callback=None
+    ).organ_types()
     DATASET_TYPE = Ontology.ops(as_data_dict=True).dataset_types()
 
     if "source_type" in json_data_dict:
@@ -7119,10 +7131,10 @@ def is_primary_dataset(normalized_entity_type, entity):
     if not equals(normalized_entity_type, Ontology.ops().entities().DATASET):
         return False
 
-    if 'creation_action' not in entity:
+    if "creation_action" not in entity:
         return False
 
-    if entity['creation_action'] == "Create Dataset Activity":
+    if entity["creation_action"] == "Create Dataset Activity":
         return True
 
     return False

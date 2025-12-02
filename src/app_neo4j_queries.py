@@ -727,6 +727,7 @@ def get_descendant_datasets(neo4j_driver, uuid, property_key=None):
 
     return results
 
+
 def get_primary_dataset_from_descendant(neo4j_driver, uuid, property_key=None):
     """Get the primary dataset for a given descendant dataset.
 

@@ -743,6 +743,7 @@ def get_normalized_collection_entities(
         is_include_action=False,
     )
 
+
 def get_collection_associated_publication(
     property_key, normalized_type, user_token, existing_data_dict, new_data_dict
 ):
@@ -4113,8 +4114,12 @@ def set_dataset_sources(
         schema_manager.get_neo4j_driver_instance(), existing_data_dict["uuid"]
     )
     for source in sources:
-        if 'metadata' in source and source['source_type'] == 'Human':
-            metadata =  source['metadata'].get("organ_donor_data") or  source['metadata'].get("living_donor_data") or {}
+        if "metadata" in source and source["source_type"] == "Human":
+            metadata = (
+                source["metadata"].get("organ_donor_data")
+                or source["metadata"].get("living_donor_data")
+                or {}
+            )
             mapped_metadata = {}
             for kv in metadata:
                 term = kv["grouping_concept_preferred_term"]
@@ -4137,7 +4142,7 @@ def set_dataset_sources(
                 else:
                     mapped_metadata[key]["value"].append(value)
                     mapped_metadata[key]["value_display"] += f", {value}"
-            source['mapped_metadata'] = mapped_metadata
+            source["mapped_metadata"] = mapped_metadata
     return property_key, sources
 
 
@@ -4167,8 +4172,12 @@ def set_sample_source(property_key, normalized_type, user_token, existing_data_d
         schema_manager.get_neo4j_driver_instance(), existing_data_dict["uuid"]
     )
     for source in sources:
-        if 'metadata' in source and source['source_type'] == 'Human':
-            metadata =  source['metadata'].get("organ_donor_data") or  source['metadata'].get("living_donor_data") or {}
+        if "metadata" in source and source["source_type"] == "Human":
+            metadata = (
+                source["metadata"].get("organ_donor_data")
+                or source["metadata"].get("living_donor_data")
+                or {}
+            )
             mapped_metadata = {}
             for kv in metadata:
                 term = kv["grouping_concept_preferred_term"]
@@ -4191,7 +4200,7 @@ def set_sample_source(property_key, normalized_type, user_token, existing_data_d
                 else:
                     mapped_metadata[key]["value"].append(value)
                     mapped_metadata[key]["value_display"] += f", {value}"
-            source['mapped_metadata'] = mapped_metadata
+            source["mapped_metadata"] = mapped_metadata
     return property_key, sources[0]
 
 
@@ -4271,10 +4280,11 @@ def get_dataset_type_hierarchy(
         dict: The dataset type hierarchy with keys of 'first_level' and 'second_level'
     """
 
-    if equals(existing_data_dict['entity_type'], 'Dataset'):
+    if equals(existing_data_dict["entity_type"], "Dataset"):
         if (
             "DATASET_TYPE_HIERARCHY" not in current_app.config
-            or existing_data_dict["dataset_type"] not in current_app.config["DATASET_TYPE_HIERARCHY"]
+            or existing_data_dict["dataset_type"]
+            not in current_app.config["DATASET_TYPE_HIERARCHY"]
         ):
             return property_key, {
                 "first_level": existing_data_dict["dataset_type"],
@@ -4290,7 +4300,10 @@ def get_dataset_type_hierarchy(
     else:
         return property_key, None
 
-def get_has_visualization(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+
+def get_has_visualization(
+    property_key, normalized_type, user_token, existing_data_dict, new_data_dict
+):
     """Trigger event method that determines if a processed dataset for a given primary contains Vitessce visualization
     Parameters
     ----------
@@ -4317,7 +4330,7 @@ def get_has_visualization(property_key, normalized_type, user_token, existing_da
     )
 
     uuid_to_query = None
-    if existing_data_dict["status"] in ['QA', 'Published']:
+    if existing_data_dict["status"] in ["QA", "Published"]:
         if equals(dataset_category, "primary"):
             match_case = "AND s.status IN ['QA', 'Published'] AND s.entity_type = 'Dataset' AND s.files IS NOT NULL AND NOT isEmpty(apoc.convert.fromJsonList(s.files))"
             descendants = schema_neo4j_queries.get_dataset_direct_descendants(
@@ -4361,7 +4374,7 @@ def get_has_visualization(property_key, normalized_type, user_token, existing_da
             headers=schema_manager._create_request_headers(user_token),
             verify=False,
         )
-        return property_key, str(response.json()['has_visualization'])
+        return property_key, str(response.json()["has_visualization"])
 
     return property_key, "False"
 
@@ -4401,7 +4414,7 @@ def get_has_qa_published_derived_dataset(
             match_case=match_case,
         )
         for d in descendants:
-            if equals(d.get('entity_type'), 'Dataset'):
+            if equals(d.get("entity_type"), "Dataset"):
                 _, descendant_category = get_dataset_category(
                     property_key, normalized_type, user_token, d, d
                 )
@@ -4478,7 +4491,7 @@ def get_primary_dataset_uuid(
         str: UUID of primary dataset
     """
     if equals(existing_data_dict["entity_type"], "Dataset"):
-        if existing_data_dict['creation_action'] == "Multi-Assay Split":
+        if existing_data_dict["creation_action"] == "Multi-Assay Split":
             return (
                 property_key,
                 schema_neo4j_queries.get_primary_dataset(
@@ -4533,7 +4546,9 @@ def get_contains_data(property_key, normalized_type, user_token, existing_data_d
     return property_key, str(len(datasets) > 0)
 
 
-def get_benchmarking_project(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+def get_benchmarking_project(
+    property_key, normalized_type, user_token, existing_data_dict, new_data_dict
+):
     """Trigger event method that determines if this entity belongs to the benchmarking project
 
     Parameters
@@ -4556,11 +4571,11 @@ def get_benchmarking_project(property_key, normalized_type, user_token, existing
         str: "True" if this entity belongs to the benchmarking project
     """
     benchmarking_source_uuids = [
-        '694f43ad76508c665a335fd1606a1168',
-        '37546305fadd47df9b6fab73b9f2d76a',
-        'cbedb6b045bb7410c8ac448e24175bd7',
-        'b8c2782a2387f30c8352bbd0b7246a10',
-        '033996659189ebfe06e71b12f9892605',
+        "694f43ad76508c665a335fd1606a1168",
+        "37546305fadd47df9b6fab73b9f2d76a",
+        "cbedb6b045bb7410c8ac448e24175bd7",
+        "b8c2782a2387f30c8352bbd0b7246a10",
+        "033996659189ebfe06e71b12f9892605",
     ]
 
     # If the entity is a source check if its UUID exists in benchmarking_source_uuids
@@ -4573,7 +4588,7 @@ def get_benchmarking_project(property_key, normalized_type, user_token, existing
         )
 
         for source in sources:
-            if source['uuid'] in benchmarking_source_uuids:
+            if source["uuid"] in benchmarking_source_uuids:
                 return property_key, str(True)
 
     return property_key, None

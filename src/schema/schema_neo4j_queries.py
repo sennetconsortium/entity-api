@@ -1012,6 +1012,7 @@ def get_qa_published_derived_dataset(neo4j_driver, uuid):
         The UUID of the most recent QA or Published derived dataset
     """
 
+
 def get_upload_datasets(
     neo4j_driver,
     uuid,
@@ -2133,19 +2134,19 @@ def get_uploads(neo4j_driver, uuid, property_key=None):
 
 def get_primary_dataset(neo4j_driver, uuid, property_key=None):
     """
-   Get the primary dataset for a given component or derived dataset
-    Parameters
-    ----------
-    neo4j_driver : neo4j.Driver object
-        The neo4j database connection pool
-    uuid : str
-        The uuid of target entity
-    property_key : str
-        A target property key for result filtering
-    Returns
-    -------
-    dict
-          A dictionary of entity details returned from the Cypher query
+    Get the primary dataset for a given component or derived dataset
+     Parameters
+     ----------
+     neo4j_driver : neo4j.Driver object
+         The neo4j database connection pool
+     uuid : str
+         The uuid of target entity
+     property_key : str
+         A target property key for result filtering
+     Returns
+     -------
+     dict
+           A dictionary of entity details returned from the Cypher query
     """
     result = {}
 
