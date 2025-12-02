@@ -4,8 +4,6 @@ READ_ONLY_MODE = False
 # File path of schema yaml file, DO NOT MODIFY
 SCHEMA_YAML_FILE = '/usr/src/app/src/schema/provenance_schema.yaml'
 
-HIERARCHY_JSON_FILE = '/usr/src/app/src/dataset_type_hierarchy.json'
-
 # Globus App ID and secret
 APP_CLIENT_ID = ''
 APP_CLIENT_SECRET = ''

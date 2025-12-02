@@ -24,8 +24,6 @@ services:
       - "../log:/usr/src/app/log"
       # Mount the schema yaml file
       - "../src/schema/provenance_schema.yaml:/usr/src/app/src/schema/provenance_schema.yaml"
-      # Mount the dataset type hierarchy JSON file
-      - "../src/dataset_type_hierarchy.json:/usr/src/app/src/dataset_type_hierarchy.json"
       # Mount conf.d on host machine to the nginx conf.d on container
       - "./entity-api/nginx/conf.d:/etc/nginx/conf.d"
     networks:
