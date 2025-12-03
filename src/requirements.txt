@@ -19,7 +19,7 @@ neo4j==5.28.1
 # Default is main branch specified in docker-compose.development.yml if not set
 # git+https://github.com/hubmapconsortium/commons.git@${COMMONS_BRANCH}#egg=hubmap-commons
 hubmap-commons==2.1.21
-atlas-consortia-commons==1.1.4
+atlas-consortia-commons==1.1.5
 #git+https://github.com/x-atlas-consortia/commons.git@{COMMONS_BRANCH}#egg=atlas_consortia_commons
 
 deepdiff==8.6.1
