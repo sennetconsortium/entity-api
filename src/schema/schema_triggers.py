@@ -4387,6 +4387,9 @@ def get_has_visualization(
             headers=schema_manager._create_request_headers(user_token) if user_token else None,
             verify=False,
         )
+        if not response.ok:
+            return property_key, "False"
+
         return property_key, str(response.json()["has_visualization"])
 
     return property_key, "False"
