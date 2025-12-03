@@ -6960,9 +6960,9 @@ def _get_metadata_by_id(
     # we need to tell the client with a 401 error
     validate_token_if_auth_header_exists(request)
 
-    # Use the internal token to query the target entity
-    # since public entities don't require user token
-    token = get_internal_token()
+    token = get_user_token(request)
+    if not isinstance(token, str):
+        token = None
 
     # Get the entity dict from cache if exists
     # Otherwise query against uuid-api and neo4j to get the entity dict if the id exists
