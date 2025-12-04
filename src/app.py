@@ -6959,11 +6959,10 @@ def _get_metadata_by_id(
     excluded_fields = schema_manager.get_fields_to_exclude(normalized_entity_type)
 
     # Get the entity result of the indexable dictionary from cache if exists, otherwise regenerate and cache
-    use_cache = True if token is not None else False
     metadata_dict = (
         schema_manager.get_index_metadata(token, entity_dict)
         if metadata_scope == MetadataScopeEnum.INDEX
-        else schema_manager.get_complete_entity_result(token, entity_dict, use_memcache=use_cache)
+        else schema_manager.get_complete_entity_result(token, entity_dict, use_memcache=True)
     )
 
     # Determine if the entity is publicly visible base on its data, only.
