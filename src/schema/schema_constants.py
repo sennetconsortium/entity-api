@@ -53,6 +53,7 @@ class SchemaConstants(object):
 
     ALLOWED_PRIORITY_PROJECTS = ["", None]
 
+
 # Define an enumeration to classify an entity's visibility, which can be combined with
 # authorization info when verify operations on a request.
 class DataVisibilityEnum(Enum):

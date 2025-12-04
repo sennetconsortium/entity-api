@@ -458,6 +458,7 @@ def rearrange_datasets(results, entity_type="Dataset"):
             published_processed_dataset = results.pop(published_processed_dataset_location)
             results.insert(0, published_processed_dataset)
 
+
 """
 Use the Flask request.args MultiDict to see if 'exclude' is a URL parameter passed in with the
 request and parse the comma-separated properties to be excluded from final response
@@ -474,6 +475,8 @@ Returns
 list
     A list of either string properties to remove or dictionary of embedded properties to remove. Formatted in the same style as 'fields_to_exclude'
 """
+
+
 def get_excluded_query_props(request_args):
     props_to_exclude = [{}]
 
@@ -491,7 +494,9 @@ def get_excluded_query_props(request_args):
 
         args_props_to_exclude_list = [item.strip() for item in props_to_exclude_str.split(",")]
 
-        logger.info(f"User specified properties to exclude in request URL: {args_props_to_exclude_list}")
+        logger.info(
+            f"User specified properties to exclude in request URL: {args_props_to_exclude_list}"
+        )
 
         # More validation - ensure prohibited properties are not accepted
         # This two properties are required internally by `normalize_entity_result_for_response()`
@@ -1107,7 +1112,8 @@ def get_complete_entity_result(
         # Need both client and prefix when fetching the cache
         # Do NOT fetch cache if properties_to_skip is specified or use_memcache is False
         if _memcached_client and _memcached_prefix and (not properties_to_filter and use_memcache):
-            cache_key = f"{_memcached_prefix}_complete_{entity_uuid}"
+            auth_state = "authenticated" if token else "unauthenticated"
+            cache_key = f"{_memcached_prefix}_complete_{entity_uuid}_{auth_state}"
             cache_result = _memcached_client.get(cache_key)
 
         # Use the cached data if found and still valid
@@ -1115,7 +1121,8 @@ def get_complete_entity_result(
         if cache_result is None:
             if _memcached_client and _memcached_prefix:
                 logger.info(
-                    f"Cache of complete entity of {entity_type} {entity_uuid} not found or expired at time {datetime.now()}"
+                    f"Cache of complete entity of {entity_type} {entity_uuid} not found or "
+                    f"expired at time {datetime.now()}"
                 )
 
             # No error handling here since if a 'on_read_trigger' method fails,
@@ -1146,21 +1153,25 @@ def get_complete_entity_result(
                 and (not properties_to_filter and use_memcache)
             ):
                 logger.info(
-                    f"Creating complete entity cache of {entity_type} {entity_uuid} at time {datetime.now()}"
+                    f"Creating complete entity cache of {entity_type} {entity_uuid} at "
+                    f"time {datetime.now()}"
                 )
 
-                cache_key = f"{_memcached_prefix}_complete_{entity_uuid}"
+                auth_state = "authenticated" if token else "unauthenticated"
+                cache_key = f"{_memcached_prefix}_complete_{entity_uuid}_{auth_state}"
                 _memcached_client.set(
                     cache_key, complete_entity, expire=SchemaConstants.MEMCACHED_TTL
                 )
 
                 logger.debug(
-                    f"Following is the complete {entity_type} cache created at time {datetime.now()} using key {cache_key}:"
+                    f"Following is the complete {entity_type} cache created at time "
+                    f"{datetime.now()} using key {cache_key}:"
                 )
                 logger.debug(complete_entity)
         else:
             logger.info(
-                f"Using complete entity cache of {entity_type} {entity_uuid} at time {datetime.now()}"
+                f"Using complete entity cache of {entity_type} {entity_uuid} at "
+                f"time {datetime.now()}"
             )
             logger.debug(cache_result)
 
@@ -1229,8 +1240,6 @@ def _get_metadata_result(
     global _memcached_client
     global _memcached_prefix
 
-    complete_entity = {}
-
     # In case entity_dict is None or
     # an incorrectly created entity that doesn't have the `entity_type` property
     if entity_dict and ("entity_type" in entity_dict) and ("uuid" in entity_dict):
@@ -1241,7 +1250,8 @@ def _get_metadata_result(
         # Need both client and prefix when fetching the cache
         # Do NOT fetch cache if properties_to_skip is specified
         if _memcached_client and _memcached_prefix and (not properties_to_skip):
-            cache_key = f"{_memcached_prefix}_complete_index_{entity_uuid}"
+            auth_state = "authenticated" if token else "unauthenticated"
+            cache_key = f"{_memcached_prefix}_complete_index_{entity_uuid}_{auth_state}"
             cache_result = _memcached_client.get(cache_key)
 
         # Use the cached data if found and still valid
@@ -1249,7 +1259,8 @@ def _get_metadata_result(
         if cache_result is None:
             if _memcached_client and _memcached_prefix:
                 logger.info(
-                    f"Cache of complete entity of {entity_type} {entity_uuid} not found or expired at time {datetime.now()}"
+                    f"Cache of complete entity of {entity_type} {entity_uuid} not found or "
+                    f"expired at time {datetime.now()}"
                 )
 
             if metadata_scope == MetadataScopeEnum.COMPLETE:
@@ -1298,21 +1309,25 @@ def _get_metadata_result(
             # Do NOT cache when properties_to_skip is specified
             if _memcached_client and _memcached_prefix and (not properties_to_skip):
                 logger.info(
-                    f"Creating complete entity cache of {entity_type} {entity_uuid} at time {datetime.now()}"
+                    f"Creating complete entity cache of {entity_type} {entity_uuid} at time "
+                    f"{datetime.now()}"
                 )
 
-                cache_key = f"{_memcached_prefix}_complete_index_{entity_uuid}"
+                auth_state = "authenticated" if token else "unauthenticated"
+                cache_key = f"{_memcached_prefix}_complete_index_{entity_uuid}_{auth_state}"
                 _memcached_client.set(
                     cache_key, metadata_dict, expire=SchemaConstants.MEMCACHED_TTL
                 )
 
                 logger.debug(
-                    f"Following is the complete {entity_type} cache created at time {datetime.now()} using key {cache_key}:"
+                    f"Following is the complete {entity_type} cache created at time "
+                    f"{datetime.now()} using key {cache_key}:"
                 )
                 logger.debug(metadata_dict)
         else:
             logger.info(
-                f"Using complete entity cache of {entity_type} {entity_uuid} at time {datetime.now()}"
+                f"Using complete entity cache of {entity_type} {entity_uuid} at time "
+                f"{datetime.now()}"
             )
             logger.debug(cache_result)
 
