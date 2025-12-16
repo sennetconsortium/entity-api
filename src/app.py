@@ -2065,6 +2065,8 @@ def update_entity(id: str, user_token: str, json_data_dict: dict, suppress_reind
             f"Re-indexing for modification of {entity_dict['entity_type']} "
             f"with UUID {entity_dict['uuid']}",
         )
+        if MEMCACHED_MODE:
+            delete_cache(entity_dict["uuid"])
         reindex_entity(entity_dict["uuid"], user_token)
 
         if (
