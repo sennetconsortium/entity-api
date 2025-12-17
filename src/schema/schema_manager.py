@@ -19,7 +19,12 @@ from schema import schema_triggers
 from schema import schema_bulk_triggers
 from schema import schema_validators
 from schema.schema_bulk_triggers import BulkTriggersManager
-from schema.schema_constants import SchemaConstants, MetadataScopeEnum, TriggerTypeEnum
+from schema.schema_constants import (
+    MemcachedKeyEnum,
+    SchemaConstants,
+    MetadataScopeEnum,
+    TriggerTypeEnum,
+)
 from schema import schema_neo4j_queries
 
 # Atlas Consortia commons
@@ -1112,8 +1117,12 @@ def get_complete_entity_result(
         # Need both client and prefix when fetching the cache
         # Do NOT fetch cache if properties_to_skip is specified or use_memcache is False
         if _memcached_client and _memcached_prefix and (not properties_to_filter and use_memcache):
-            auth_state = "authenticated" if token else "unauthenticated"
-            cache_key = f"{_memcached_prefix}_complete_{entity_uuid}_{auth_state}"
+            cache_key = (
+                MemcachedKeyEnum.COMPLETE_AUTHENTICATED
+                if token
+                else MemcachedKeyEnum.COMPLETE_UNAUTHENTICATED
+            )
+            cache_key = f"{_memcached_prefix}_{cache_key.value}_{entity_uuid}"
             cache_result = _memcached_client.get(cache_key)
 
         # Use the cached data if found and still valid
@@ -1157,8 +1166,12 @@ def get_complete_entity_result(
                     f"time {datetime.now()}"
                 )
 
-                auth_state = "authenticated" if token else "unauthenticated"
-                cache_key = f"{_memcached_prefix}_complete_{entity_uuid}_{auth_state}"
+                cache_key = (
+                    MemcachedKeyEnum.COMPLETE_AUTHENTICATED
+                    if token
+                    else MemcachedKeyEnum.COMPLETE_UNAUTHENTICATED
+                )
+                cache_key = f"{_memcached_prefix}_{cache_key.value}_{entity_uuid}"
                 _memcached_client.set(
                     cache_key, complete_entity, expire=SchemaConstants.MEMCACHED_TTL
                 )
@@ -1250,8 +1263,12 @@ def _get_metadata_result(
         # Need both client and prefix when fetching the cache
         # Do NOT fetch cache if properties_to_skip is specified
         if _memcached_client and _memcached_prefix and (not properties_to_skip):
-            auth_state = "authenticated" if token else "unauthenticated"
-            cache_key = f"{_memcached_prefix}_complete_index_{entity_uuid}_{auth_state}"
+            cache_key = (
+                MemcachedKeyEnum.COMPLETE_INDEX_AUTHENTICATED
+                if token
+                else MemcachedKeyEnum.COMPLETE_INDEX_UNAUTHENTICATED
+            )
+            cache_key = f"{_memcached_prefix}_{cache_key.value}_{entity_uuid}"
             cache_result = _memcached_client.get(cache_key)
 
         # Use the cached data if found and still valid
@@ -1313,8 +1330,12 @@ def _get_metadata_result(
                     f"{datetime.now()}"
                 )
 
-                auth_state = "authenticated" if token else "unauthenticated"
-                cache_key = f"{_memcached_prefix}_complete_index_{entity_uuid}_{auth_state}"
+                cache_key = (
+                    MemcachedKeyEnum.COMPLETE_INDEX_AUTHENTICATED
+                    if token
+                    else MemcachedKeyEnum.COMPLETE_INDEX_UNAUTHENTICATED
+                )
+                cache_key = f"{_memcached_prefix}_{cache_key.value}_{entity_uuid}"
                 _memcached_client.set(
                     cache_key, metadata_dict, expire=SchemaConstants.MEMCACHED_TTL
                 )
@@ -2914,11 +2935,8 @@ def delete_memcached_cache(uuids_list):
     if _memcached_client and _memcached_prefix:
         cache_keys = []
         for uuid in uuids_list:
-            cache_keys.append(f"{_memcached_prefix}_neo4j_{uuid}")
-            cache_keys.append(f"{_memcached_prefix}_complete_{uuid}_authenticated")
-            cache_keys.append(f"{_memcached_prefix}_complete_{uuid}_unauthenticated")
-            cache_keys.append(f"{_memcached_prefix}_complete_index_{uuid}_authenticated")
-            cache_keys.append(f"{_memcached_prefix}_complete_index_{uuid}_unauthenticated")
+            # loop through values of the MemcachedKeyEnum
+            cache_keys.extend([f"{_memcached_prefix}_{e.value}_{uuid}" for e in MemcachedKeyEnum])
 
         _memcached_client.delete_many(cache_keys)
 
