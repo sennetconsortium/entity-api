@@ -62,6 +62,9 @@ def db_session():
     session = driver.session()
     create_lab(session)
     yield session
+
+    # Clean up the database after tests
+    session.run("MATCH (n) DETACH DELETE n")
     session.close()
     driver.close()
 
