@@ -58,7 +58,6 @@ _auth_helper = None
 _neo4j_driver = None
 _ubkg = None
 _memcached_client = None
-_memcached_prefix = None
 _schema_properties = {}
 
 # For handling cached requests to uuid-api and external static resources (github raw yaml files)
@@ -91,7 +90,6 @@ def initialize(
     neo4j_driver_instance,
     ubkg_instance,
     memcached_client_instance,
-    memcached_prefix,
 ):
 
     # Specify as module-scope variables
@@ -104,7 +102,6 @@ def initialize(
     global _neo4j_driver
     global _ubkg
     global _memcached_client
-    global _memcached_prefix
     global _schema_properties
 
     logger.info(f"Initialize schema_manager using valid_yaml_file={valid_yaml_file}.")
@@ -129,7 +126,6 @@ def initialize(
     _ubkg = ubkg_instance
 
     _memcached_client = memcached_client_instance
-    _memcached_prefix = memcached_prefix
 
 
 ####################################################################################################
@@ -1106,7 +1102,6 @@ def get_complete_entity_result(
         A dictionary of complete entity with all the generated 'on_read_trigger' data
     """
     global _memcached_client
-    global _memcached_prefix
 
     complete_entity = {}
 
@@ -1119,19 +1114,19 @@ def get_complete_entity_result(
 
         # Need both client and prefix when fetching the cache
         # Do NOT fetch cache if properties_to_skip is specified or use_memcache is False
-        if _memcached_client and _memcached_prefix and (not properties_to_filter and use_memcache):
+        if _memcached_client and (not properties_to_filter and use_memcache):
             cache_key = (
                 MemcachedKeyEnum.COMPLETE_AUTHENTICATED
                 if token
                 else MemcachedKeyEnum.COMPLETE_UNAUTHENTICATED
             )
-            cache_key = f"{_memcached_prefix}_{cache_key.value}_{entity_uuid}"
+            cache_key = f"{cache_key.value}_{entity_uuid}"
             cache_result = _memcached_client.get(cache_key)
 
         # Use the cached data if found and still valid
         # Otherwise, calculate and add to cache
         if cache_result is None:
-            if _memcached_client and _memcached_prefix:
+            if _memcached_client:
                 logger.info(
                     f"Cache of complete entity of {entity_type} {entity_uuid} not found or "
                     f"expired at time {datetime.now()}"
@@ -1159,11 +1154,7 @@ def get_complete_entity_result(
 
             # Need both client and prefix when creating the cache
             # Do NOT cache when properties_to_skip is specified
-            if (
-                _memcached_client
-                and _memcached_prefix
-                and (not properties_to_filter and use_memcache)
-            ):
+            if _memcached_client and (not properties_to_filter and use_memcache):
                 logger.info(
                     f"Creating complete entity cache of {entity_type} {entity_uuid} at "
                     f"time {datetime.now()}"
@@ -1174,7 +1165,7 @@ def get_complete_entity_result(
                     if token
                     else MemcachedKeyEnum.COMPLETE_UNAUTHENTICATED
                 )
-                cache_key = f"{_memcached_prefix}_{cache_key.value}_{entity_uuid}"
+                cache_key = f"{cache_key.value}_{entity_uuid}"
                 _memcached_client.set(
                     cache_key, complete_entity, expire=SchemaConstants.MEMCACHED_TTL
                 )
@@ -1254,7 +1245,6 @@ def _get_metadata_result(
         A dictionary of metadata appropriate for the metadata_scope argument value.
     """
     global _memcached_client
-    global _memcached_prefix
 
     # In case entity_dict is None or
     # an incorrectly created entity that doesn't have the `entity_type` property
@@ -1265,19 +1255,19 @@ def _get_metadata_result(
 
         # Need both client and prefix when fetching the cache
         # Do NOT fetch cache if properties_to_skip is specified
-        if _memcached_client and _memcached_prefix and (not properties_to_skip):
+        if _memcached_client and not properties_to_skip:
             cache_key = (
                 MemcachedKeyEnum.COMPLETE_INDEX_AUTHENTICATED
                 if token
                 else MemcachedKeyEnum.COMPLETE_INDEX_UNAUTHENTICATED
             )
-            cache_key = f"{_memcached_prefix}_{cache_key.value}_{entity_uuid}"
+            cache_key = f"{cache_key.value}_{entity_uuid}"
             cache_result = _memcached_client.get(cache_key)
 
         # Use the cached data if found and still valid
         # Otherwise, calculate and add to cache
         if cache_result is None:
-            if _memcached_client and _memcached_prefix:
+            if _memcached_client:
                 logger.info(
                     f"Cache of complete entity of {entity_type} {entity_uuid} not found or "
                     f"expired at time {datetime.now()}"
@@ -1327,7 +1317,7 @@ def _get_metadata_result(
 
             # Need both client and prefix when creating the cache
             # Do NOT cache when properties_to_skip is specified
-            if _memcached_client and _memcached_prefix and (not properties_to_skip):
+            if _memcached_client and not properties_to_skip:
                 logger.info(
                     f"Creating complete entity cache of {entity_type} {entity_uuid} at time "
                     f"{datetime.now()}"
@@ -1338,7 +1328,7 @@ def _get_metadata_result(
                     if token
                     else MemcachedKeyEnum.COMPLETE_INDEX_UNAUTHENTICATED
                 )
-                cache_key = f"{_memcached_prefix}_{cache_key.value}_{entity_uuid}"
+                cache_key = f"{cache_key.value}_{entity_uuid}"
                 _memcached_client.set(
                     cache_key, metadata_dict, expire=SchemaConstants.MEMCACHED_TTL
                 )
@@ -2884,20 +2874,20 @@ def make_request_get(target_url, internal_token_used=False):
         The response object
     """
     global _memcached_client
-    global _memcached_prefix
 
     response = None
 
-    if _memcached_client and _memcached_prefix:
-        cache_key = f"{_memcached_prefix}{target_url}"
+    if _memcached_client:
+        cache_key = f"{target_url}"
         response = _memcached_client.get(cache_key)
 
     # Use the cached data if found and still valid
     # Otherwise, make a fresh query and add to cache
     if response is None:
-        if _memcached_client and _memcached_prefix:
+        if _memcached_client:
             logger.info(
-                f"HTTP response cache not found or expired. Making a new HTTP request of GET {target_url} at time {datetime.now()}"
+                f"HTTP response cache not found or expired. Making a new HTTP request of GET "
+                f"{target_url} at time {datetime.now()}"
             )
 
         if internal_token_used:
@@ -2910,12 +2900,12 @@ def make_request_get(target_url, internal_token_used=False):
         else:
             response = requests.get(url=target_url, verify=False)
 
-        if _memcached_client and _memcached_prefix:
+        if _memcached_client:
             logger.info(
                 f"Creating HTTP response cache of GET {target_url} at time {datetime.now()}"
             )
 
-            cache_key = f"{_memcached_prefix}{target_url}"
+            cache_key = f"{target_url}"
             _memcached_client.set(cache_key, response, expire=SchemaConstants.MEMCACHED_TTL)
     else:
         logger.info(f"Using HTTP response cache of GET {target_url} at time {datetime.now()}")
@@ -2933,13 +2923,12 @@ def delete_memcached_cache(uuids_list):
         A list of target uuids
     """
     global _memcached_client
-    global _memcached_prefix
 
-    if _memcached_client and _memcached_prefix:
+    if _memcached_client:
         cache_keys = []
         for uuid in uuids_list:
             # loop through values of the MemcachedKeyEnum
-            cache_keys.extend([f"{_memcached_prefix}_{e.value}_{uuid}" for e in MemcachedKeyEnum])
+            cache_keys.extend([f"{e.value}_{uuid}" for e in MemcachedKeyEnum])
 
         _memcached_client.delete_many(cache_keys)
 
