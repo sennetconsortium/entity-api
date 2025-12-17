@@ -2915,8 +2915,10 @@ def delete_memcached_cache(uuids_list):
         cache_keys = []
         for uuid in uuids_list:
             cache_keys.append(f"{_memcached_prefix}_neo4j_{uuid}")
-            cache_keys.append(f"{_memcached_prefix}_complete_{uuid}")
-            cache_keys.append(f"{_memcached_prefix}_complete_index_{uuid}")
+            cache_keys.append(f"{_memcached_prefix}_complete_{uuid}_authenticated")
+            cache_keys.append(f"{_memcached_prefix}_complete_{uuid}_unauthenticated")
+            cache_keys.append(f"{_memcached_prefix}_complete_index_{uuid}_authenticated")
+            cache_keys.append(f"{_memcached_prefix}_complete_index_{uuid}_unauthenticated")
 
         _memcached_client.delete_many(cache_keys)
 
