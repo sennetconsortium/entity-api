@@ -1,38 +1,39 @@
-import yaml
 import logging
-import requests
 from datetime import datetime
+from typing import List
 
-from flask import Response
-from hubmap_commons.file_helper import ensureTrailingSlashURL
-
-# Don't confuse urllib (Python native library) with urllib3 (3rd-party library, requests also uses urllib3)
-from requests.packages.urllib3.exceptions import InsecureRequestWarning
-
-
-from lib.commons import get_as_dict
-from lib.property_groups import PropertyGroups
-
-# Local modules
-from schema import schema_errors
-from schema import schema_triggers
-from schema import schema_bulk_triggers
-from schema import schema_validators
-from schema.schema_bulk_triggers import BulkTriggersManager
-from schema.schema_constants import (
-    MemcachedKeyEnum,
-    SchemaConstants,
-    MetadataScopeEnum,
-    TriggerTypeEnum,
-)
-from schema import schema_neo4j_queries
+import requests
+import yaml
 
 # Atlas Consortia commons
 from atlas_consortia_commons.rest import abort_bad_req
 from atlas_consortia_commons.string import equals
-from typing import List
+from flask import Response
+from hubmap_commons.file_helper import ensureTrailingSlashURL
 
+# Don't confuse urllib (Python native library) with urllib3 (3rd-party library, requests also
+# uses urllib3)
+from urllib3.exceptions import InsecureRequestWarning
+
+from lib.commons import get_as_dict
 from lib.ontology import Ontology
+from lib.property_groups import PropertyGroups
+
+# Local modules
+from schema import (
+    schema_bulk_triggers,
+    schema_errors,
+    schema_neo4j_queries,
+    schema_triggers,
+    schema_validators,
+)
+from schema.schema_bulk_triggers import BulkTriggersManager
+from schema.schema_constants import (
+    MemcachedKeyEnum,
+    MetadataScopeEnum,
+    SchemaConstants,
+    TriggerTypeEnum,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +43,8 @@ except Exception as e:
     print("Error opening log file during startup")
     print(str(e))
 
-# Suppress InsecureRequestWarning warning when requesting status on https with ssl cert verify disabled
+# Suppress InsecureRequestWarning warning when requesting status on https with ssl cert verify
+# disabled
 requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
 
 # In Python, "privacy" depends on "consenting adults'" levels of agreement, we can't force it.
@@ -154,7 +156,8 @@ def load_provenance_schema(valid_yaml_file):
         schema_dict = yaml.safe_load(file)
 
         logger.info("Schema yaml file loaded successfully")
-        # For entities with properties set to None/Null, remove them as these represent private values not inherited by subclass
+        # For entities with properties set to None/Null, remove them as these represent private
+        # values not inherited by subclass
         for entity in schema_dict["ENTITIES"]:
             schema_dict["ENTITIES"][entity]["properties"] = remove_none_values(
                 schema_dict["ENTITIES"][entity]["properties"]
