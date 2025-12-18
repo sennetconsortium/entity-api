@@ -23,8 +23,9 @@ filters = {
 # Get Ancestors Tests
 
 
-def test_get_source_ancestors(db_session, app, requests):
+def test_get_source_ancestors(database, app, requests):
     # Create provenance in test database
+    _, db_session = database
     test_entities = create_provenance(
         db_session, ["source", "organ", "block", "section", "dataset"]
     )
@@ -48,8 +49,9 @@ def test_get_source_ancestors(db_session, app, requests):
         assert res.json == []
 
 
-def test_get_source_ancestors_with_filters(db_session, app, requests):
+def test_get_source_ancestors_with_filters(database, app, requests):
     # Create provenance in test database
+    _, db_session = database
     test_entities = create_provenance(
         db_session, ["source", "organ", "block", "section", "dataset"]
     )
@@ -74,8 +76,9 @@ def test_get_source_ancestors_with_filters(db_session, app, requests):
         assert res.json == []
 
 
-def test_get_source_ancestors_with_filters_public_no_auth(db_session, app, requests):
+def test_get_source_ancestors_with_filters_public_no_auth(database, app, requests):
     # Create provenance in test database
+    _, db_session = database
     test_entities = create_provenance(
         db_session,
         [
@@ -106,8 +109,9 @@ def test_get_source_ancestors_with_filters_public_no_auth(db_session, app, reque
         assert res.json == []
 
 
-def test_get_organ_sample_ancestors(db_session, app, requests):
+def test_get_organ_sample_ancestors(database, app, requests):
     # Create provenance in test database
+    _, db_session = database
     test_entities = create_provenance(
         db_session, ["source", "organ", "block", "section", "dataset"]
     )
@@ -134,8 +138,9 @@ def test_get_organ_sample_ancestors(db_session, app, requests):
         assert test_entities["source"]["uuid"] in ancestor_uuids
 
 
-def test_get_organ_sample_ancestors_with_filters(db_session, app, requests):
+def test_get_organ_sample_ancestors_with_filters(database, app, requests):
     # Create provenance in test database
+    _, db_session = database
     test_entities = create_provenance(
         db_session, ["source", "organ", "block", "section", "dataset"]
     )
@@ -171,8 +176,9 @@ def test_get_organ_sample_ancestors_with_filters(db_session, app, requests):
         }
 
 
-def test_get_organ_sample_ancestors_with_filters_public_no_auth(db_session, app, requests):
+def test_get_organ_sample_ancestors_with_filters_public_no_auth(database, app, requests):
     # Create provenance in test database
+    _, db_session = database
     test_entities = create_provenance(
         db_session,
         [
@@ -204,8 +210,9 @@ def test_get_organ_sample_ancestors_with_filters_public_no_auth(db_session, app,
         assert not any(k.startswith("lab_") for k in res.json[0].keys())  # no lab id fields
 
 
-def test_get_block_sample_ancestors(db_session, app, requests):
+def test_get_block_sample_ancestors(database, app, requests):
     # Create provenance in test database
+    _, db_session = database
     test_entities = create_provenance(
         db_session, ["source", "organ", "block", "section", "dataset"]
     )
@@ -233,8 +240,9 @@ def test_get_block_sample_ancestors(db_session, app, requests):
         assert test_entities["organ"]["uuid"] in ancestor_uuids
 
 
-def test_get_block_sample_ancestors_with_filters(db_session, app, requests):
+def test_get_block_sample_ancestors_with_filters(database, app, requests):
     # Create provenance in test database
+    _, db_session = database
     test_entities = create_provenance(
         db_session, ["source", "organ", "block", "section", "dataset"]
     )
@@ -289,8 +297,9 @@ def test_get_block_sample_ancestors_with_filters(db_session, app, requests):
         }
 
 
-def test_get_block_sample_ancestors_with_filters_public_no_auth(db_session, app, requests):
+def test_get_block_sample_ancestors_with_filters_public_no_auth(database, app, requests):
     # Create provenance in test database
+    _, db_session = database
     test_entities = create_provenance(
         db_session,
         [
@@ -330,8 +339,9 @@ def test_get_block_sample_ancestors_with_filters_public_no_auth(db_session, app,
         assert not any(k.startswith("lab_") for k in organ.keys())  # no lab id fields
 
 
-def test_get_section_sample_ancestors(db_session, app, requests):
+def test_get_section_sample_ancestors(database, app, requests):
     # Create provenance in test database
+    _, db_session = database
     test_entities = create_provenance(
         db_session, ["source", "organ", "block", "section", "dataset"]
     )
@@ -360,8 +370,9 @@ def test_get_section_sample_ancestors(db_session, app, requests):
         assert test_entities["block"]["uuid"] in ancestor_uuids
 
 
-def test_get_section_sample_ancestors_with_filters(db_session, app, requests):
+def test_get_section_sample_ancestors_with_filters(database, app, requests):
     # Create provenance in test database
+    _, db_session = database
     test_entities = create_provenance(
         db_session, ["source", "organ", "block", "section", "dataset"]
     )
@@ -433,8 +444,9 @@ def test_get_section_sample_ancestors_with_filters(db_session, app, requests):
         }
 
 
-def test_get_section_sample_ancestors_with_filters_public_no_auth(db_session, app, requests):
+def test_get_section_sample_ancestors_with_filters_public_no_auth(database, app, requests):
     # Create provenance in test database
+    _, db_session = database
     test_entities = create_provenance(
         db_session,
         [
@@ -480,8 +492,9 @@ def test_get_section_sample_ancestors_with_filters_public_no_auth(db_session, ap
         assert not any(k.startswith("lab_") for k in block.keys())  # no lab id fields
 
 
-def test_get_dataset_ancestors(db_session, app, requests):
+def test_get_dataset_ancestors(database, app, requests):
     # Create provenance in test database
+    _, db_session = database
     test_entities = create_provenance(
         db_session, ["source", "organ", "block", "section", "dataset"]
     )
@@ -511,8 +524,9 @@ def test_get_dataset_ancestors(db_session, app, requests):
         assert test_entities["section"]["uuid"] in ancestor_uuids
 
 
-def test_get_dataset_ancestors_with_filters(db_session, app, requests):
+def test_get_dataset_ancestors_with_filters(database, app, requests):
     # Create provenance in test database
+    _, db_session = database
     test_entities = create_provenance(
         db_session, ["source", "organ", "block", "section", "dataset"]
     )
@@ -600,8 +614,9 @@ def test_get_dataset_ancestors_with_filters(db_session, app, requests):
         }
 
 
-def test_get_dataset_ancestors_with_filters_public_no_auth(db_session, app, requests):
+def test_get_dataset_ancestors_with_filters_public_no_auth(database, app, requests):
     # Create provenance in test database
+    _, db_session = database
     test_entities = create_provenance(
         db_session,
         [

@@ -23,7 +23,8 @@ def test_index(app):
 # Create Entity Tests
 
 
-def test_create_source(app, requests, db_session):
+def test_create_source(app, requests, database):
+    _, db_session = database
     entities = [
         generate_entity(),  # source
         generate_entity(),  # activity
@@ -97,8 +98,9 @@ def test_create_source_no_auth(app):
         assert res.status_code == 401
 
 
-def test_create_organ_sample(db_session, app, requests):
+def test_create_organ_sample(database, app, requests):
     # Create provenance in test database
+    _, db_session = database
     test_entities = create_provenance(db_session, ["source"])
     entities = [
         generate_entity(),  # organ
@@ -177,8 +179,9 @@ def test_create_organ_sample_no_auth(app):
         assert res.status_code == 401
 
 
-def test_create_block_sample(db_session, app, requests):
+def test_create_block_sample(database, app, requests):
     # Create provenance in test database
+    _, db_session = database
     test_entities = create_provenance(db_session, ["source", "organ"])
     entities = [
         generate_entity(),  # block
@@ -256,8 +259,9 @@ def test_create_block_sample_no_auth(app):
         assert res.status_code == 401
 
 
-def test_create_section_sample(db_session, app, requests):
+def test_create_section_sample(database, app, requests):
     # Create provenance in test database
+    _, db_session = database
     test_entities = create_provenance(db_session, ["source", "organ", "block"])
 
     entities = [
@@ -335,8 +339,9 @@ def test_create_section_sample_no_auth(app):
         assert res.status_code == 401
 
 
-def test_create_dataset(db_session, app, requests):
+def test_create_dataset(database, app, requests):
     # Create provenance in test database
+    _, db_session = database
     test_entities = create_provenance(db_session, ["source", "organ", "block", "section"])
 
     entities = [
@@ -442,8 +447,9 @@ def test_create_dataset_no_auth(app):
 
 
 @pytest.mark.parametrize("invalid_ancestor_type", ["organ", "block", "section", "dataset"])
-def test_create_organ_invalid_constraints(db_session, app, requests, invalid_ancestor_type):
+def test_create_organ_invalid_constraints(database, app, requests, invalid_ancestor_type):
     # Create provenance in test database
+    _, db_session = database
     test_entities = create_provenance(db_session, [invalid_ancestor_type])
     entities = [
         {k: test_entities[invalid_ancestor_type][k] for k in ["uuid", "sennet_id", "base_id"]},
@@ -474,8 +480,9 @@ def test_create_organ_invalid_constraints(db_session, app, requests, invalid_anc
 
 
 @pytest.mark.parametrize("invalid_ancestor_type", ["source", "section", "dataset"])
-def test_create_block_invalid_constraints(db_session, app, requests, invalid_ancestor_type):
+def test_create_block_invalid_constraints(database, app, requests, invalid_ancestor_type):
     # Create provenance in test database
+    _, db_session = database
     test_entities = create_provenance(db_session, [invalid_ancestor_type])
     entities = [
         {k: test_entities[invalid_ancestor_type][k] for k in ["uuid", "sennet_id", "base_id"]},
@@ -506,8 +513,9 @@ def test_create_block_invalid_constraints(db_session, app, requests, invalid_anc
 
 
 @pytest.mark.parametrize("invalid_ancestor_type", ["source", "section", "section", "dataset"])
-def test_create_section_invalid_constraints(db_session, app, requests, invalid_ancestor_type):
+def test_create_section_invalid_constraints(database, app, requests, invalid_ancestor_type):
     # Create provenance in test database
+    _, db_session = database
     test_entities = create_provenance(db_session, [invalid_ancestor_type])
     entities = [
         {k: test_entities[invalid_ancestor_type][k] for k in ["uuid", "sennet_id", "base_id"]},
@@ -537,8 +545,9 @@ def test_create_section_invalid_constraints(db_session, app, requests, invalid_a
 
 
 @pytest.mark.parametrize("invalid_ancestor_type", ["source", "organ", "block"])
-def test_create_dataset_invalid_constraint(db_session, app, requests, invalid_ancestor_type):
+def test_create_dataset_invalid_constraint(database, app, requests, invalid_ancestor_type):
     # Create provenance in test database
+    _, db_session = database
     test_entities = create_provenance(db_session, [invalid_ancestor_type])
     entities = [
         {k: test_entities[invalid_ancestor_type][k] for k in ["uuid", "sennet_id", "base_id"]},

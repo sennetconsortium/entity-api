@@ -23,12 +23,19 @@ USER = {
 
 
 @pytest.fixture()
-def app(auth):
+def app(auth, database):
     import app as app_module
+
+    driver, _ = database
 
     app_module.app.config.update({"TESTING": True})
     app_module.auth_helper_instance = auth
     app_module.schema_manager._auth_helper = auth
+
+    app_module.neo4j_driver_instance = driver
+    app_module.neo4j_driver._driver = driver
+    app_module.schema_manager._neo4j_driver = driver
+
     # other setup
     yield app_module.app
     # cleanup
