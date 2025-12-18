@@ -46,7 +46,7 @@ def wait_for_neo4j(uri, user, password, timeout=60):
 
 
 @pytest.fixture(scope="session")
-def db_session():
+def database():
     """Test fixture to create a Neo4j session
 
     Returns
@@ -61,7 +61,7 @@ def db_session():
     driver = wait_for_neo4j(neo4j_uri, neo4j_username, neo4j_password)
     session = driver.session()
     create_lab(session)
-    yield session
+    yield driver, session
 
     # Clean up the database after tests
     session.run("MATCH (n) DETACH DELETE n")
