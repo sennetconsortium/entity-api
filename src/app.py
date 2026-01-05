@@ -90,6 +90,9 @@ logging.basicConfig(
 # will be inherited by the sub-module loggers
 logger = logging.getLogger()
 
+# Suppress InsecureRequestWarning warning when requesting status on https with ssl cert verify disabled
+requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
+
 # Specify the absolute path of the instance folder and use the config file relative to the instance path
 app = Flask(
     __name__,
@@ -109,17 +112,7 @@ READ_ONLY_MODE = app.config["READ_ONLY_MODE"]
 
 # Whether Memcached is being used or not
 # Default to false if the property is missing in the configuration file
-
-if "MEMCACHED_MODE" in app.config:
-    MEMCACHED_MODE = app.config["MEMCACHED_MODE"]
-    # Use prefix to distinguish the cached data of same source across different deployments
-    MEMCACHED_PREFIX = app.config["MEMCACHED_PREFIX"]
-else:
-    MEMCACHED_MODE = False
-    MEMCACHED_PREFIX = "NONE"
-
-# Suppress InsecureRequestWarning warning when requesting status on https with ssl cert verify disabled
-requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
+MEMCACHED_MODE = app.config.get("MEMCACHED_MODE", False)
 
 
 ####################################################################################################
@@ -196,6 +189,13 @@ if MEMCACHED_MODE:
         # Use the ignore_exc flag to treat memcache/network errors as cache misses on calls to the get* methods
         # Set the no_delay flag to sent TCP_NODELAY (disable Nagle's algorithm to improve TCP/IP networks and decrease the number of packets)
         # If you intend to use anything but str as a value, it is a good idea to use a serializer
+        memcached_prefix = app.config.get("MEMCACHED_PREFIX")
+        if memcached_prefix is None or memcached_prefix.strip() == "":
+            raise Exception("MEMCACHED_PREFIX must be set when MEMCACHED_MODE is True")
+
+        if not memcached_prefix.endswith("_"):
+            memcached_prefix += "_"
+
         memcached_client_instance = PooledClient(
             app.config["MEMCACHED_SERVER"],
             max_pool_size=256,
@@ -204,6 +204,7 @@ if MEMCACHED_MODE:
             ignore_exc=True,
             no_delay=True,
             serde=serde.pickle_serde,
+            key_prefix=memcached_prefix.encode("ascii"),
         )
 
         # memcached_client_instance can be instantiated without connecting to the Memcached server
@@ -252,7 +253,6 @@ try:
         neo4j_driver_instance=neo4j_driver_instance,
         ubkg_instance=app.ubkg,
         memcached_client_instance=memcached_client_instance,
-        memcached_prefix=app.config["MEMCACHED_PREFIX"],
     )
 
     logger.info("Initialized schema_manager module successfully :)")
@@ -481,7 +481,7 @@ def get_status():
     status_data["services"].append(service)
 
     # check the memcached connection
-    if current_app.config.get("MEMCACHED_MODE"):
+    if MEMCACHED_MODE:
         try:
             service = {"name": "memcached", "status": True}
             memcached_client_instance.stats()
@@ -2065,6 +2065,8 @@ def update_entity(id: str, user_token: str, json_data_dict: dict, suppress_reind
             f"Re-indexing for modification of {entity_dict['entity_type']} "
             f"with UUID {entity_dict['uuid']}",
         )
+        if MEMCACHED_MODE:
+            delete_cache(entity_dict["uuid"])
         reindex_entity(entity_dict["uuid"], user_token)
 
         if (
