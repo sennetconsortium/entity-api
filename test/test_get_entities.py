@@ -6,8 +6,9 @@ from test.helpers.response import mock_response
 # Get Entity Tests
 
 
-def test_get_source_by_uuid(db_session, app, requests):
+def test_get_source_by_uuid(database, app, requests):
     # Create provenance in test database
+    _, db_session = database
     test_entities = create_provenance(db_session, ["source"])
     test_source = test_entities["source"]
 
@@ -40,8 +41,9 @@ def test_get_source_by_uuid(db_session, app, requests):
         assert res.json["data_access_level"] == "consortium"
 
 
-def test_get_source_by_sennet_id(db_session, app, requests):
+def test_get_source_by_sennet_id(database, app, requests):
     # Create provenance in test database
+    _, db_session = database
     test_entities = create_provenance(db_session, ["source"])
     test_source = test_entities["source"]
 
@@ -74,8 +76,9 @@ def test_get_source_by_sennet_id(db_session, app, requests):
         assert res.json["data_access_level"] == "consortium"
 
 
-def test_get_source_by_uuid_no_auth(db_session, app, requests):
+def test_get_source_by_uuid_no_auth(database, app, requests):
     # Create provenance in test database
+    _, db_session = database
     test_entities = create_provenance(db_session, ["source"])
     test_source = test_entities["source"]
 
@@ -95,8 +98,9 @@ def test_get_source_by_uuid_no_auth(db_session, app, requests):
         assert res.status_code == 403
 
 
-def test_get_source_by_uuid_public_no_auth(db_session, app, requests):
+def test_get_source_by_uuid_public_no_auth(database, app, requests):
     # Create provenance in test database
+    _, db_session = database
     test_entities = create_provenance(
         db_session, [{"type": "source", "data_access_level": "public"}]
     )
@@ -120,8 +124,9 @@ def test_get_source_by_uuid_public_no_auth(db_session, app, requests):
         assert not any(k.startswith("lab_") for k in res.json.keys())  # no lab id fields
 
 
-def test_get_organ_sample_by_uuid(db_session, app, requests):
+def test_get_organ_sample_by_uuid(database, app, requests):
     # Create provenance in test database
+    _, db_session = database
     test_entities = create_provenance(db_session, ["source", "organ"])
     test_organ = test_entities["organ"]
 
@@ -160,8 +165,9 @@ def test_get_organ_sample_by_uuid(db_session, app, requests):
         assert res.json["data_access_level"] == "consortium"
 
 
-def test_get_organ_sample_by_sennet_id(db_session, app, requests):
+def test_get_organ_sample_by_sennet_id(database, app, requests):
     # Create provenance in test database
+    _, db_session = database
     test_entities = create_provenance(db_session, ["source", "organ"])
     test_organ = test_entities["organ"]
 
@@ -200,8 +206,9 @@ def test_get_organ_sample_by_sennet_id(db_session, app, requests):
         assert res.json["data_access_level"] == "consortium"
 
 
-def test_get_organ_sample_by_uuid_no_auth(db_session, app, requests):
+def test_get_organ_sample_by_uuid_no_auth(database, app, requests):
     # Create provenance in test database
+    _, db_session = database
     test_entities = create_provenance(db_session, ["source", "organ"])
     test_organ = test_entities["organ"]
 
@@ -221,8 +228,9 @@ def test_get_organ_sample_by_uuid_no_auth(db_session, app, requests):
         assert res.status_code == 403
 
 
-def test_get_organ_sample_by_uuid_public_no_auth(db_session, app, requests):
+def test_get_organ_sample_by_uuid_public_no_auth(database, app, requests):
     # Create provenance in test database
+    _, db_session = database
     test_entities = create_provenance(
         db_session,
         [
@@ -250,8 +258,9 @@ def test_get_organ_sample_by_uuid_public_no_auth(db_session, app, requests):
         assert not any(k.startswith("lab_") for k in res.json.keys())  # no lab id fields
 
 
-def test_get_block_sample_by_uuid(db_session, app, requests):
+def test_get_block_sample_by_uuid(database, app, requests):
     # Create provenance in test database
+    _, db_session = database
     test_entities = create_provenance(db_session, ["source", "organ", "block"])
     test_block = test_entities["block"]
 
@@ -290,8 +299,9 @@ def test_get_block_sample_by_uuid(db_session, app, requests):
         assert res.json["data_access_level"] == "consortium"
 
 
-def test_get_block_sample_by_sennet_id(db_session, app, requests):
+def test_get_block_sample_by_sennet_id(database, app, requests):
     # Create provenance in test database
+    _, db_session = database
     test_entities = create_provenance(db_session, ["source", "organ", "block"])
     test_block = test_entities["block"]
 
@@ -330,8 +340,9 @@ def test_get_block_sample_by_sennet_id(db_session, app, requests):
         assert res.json["data_access_level"] == "consortium"
 
 
-def test_get_block_sample_by_uuid_no_auth(db_session, app, requests):
+def test_get_block_sample_by_uuid_no_auth(database, app, requests):
     # Create provenance in test database
+    _, db_session = database
     test_entities = create_provenance(db_session, ["source", "organ", "block"])
     test_block = test_entities["block"]
 
@@ -351,8 +362,9 @@ def test_get_block_sample_by_uuid_no_auth(db_session, app, requests):
         assert res.status_code == 403
 
 
-def test_get_block_sample_by_uuid_public_no_auth(db_session, app, requests):
+def test_get_block_sample_by_uuid_public_no_auth(database, app, requests):
     # Create provenance in test database
+    _, db_session = database
     test_entities = create_provenance(
         db_session,
         [
@@ -381,8 +393,9 @@ def test_get_block_sample_by_uuid_public_no_auth(db_session, app, requests):
         assert not any(k.startswith("lab_") for k in res.json.keys())  # no lab id fields
 
 
-def test_get_section_sample_by_uuid(db_session, app, requests):
+def test_get_section_sample_by_uuid(database, app, requests):
     # Create provenance in test database
+    _, db_session = database
     test_entities = create_provenance(db_session, ["source", "organ", "block", "section"])
     test_section = test_entities["section"]
 
@@ -421,8 +434,9 @@ def test_get_section_sample_by_uuid(db_session, app, requests):
         assert res.json["data_access_level"] == "consortium"
 
 
-def test_get_section_sample_by_sennet_id(db_session, app, requests):
+def test_get_section_sample_by_sennet_id(database, app, requests):
     # Create provenance in test database
+    _, db_session = database
     test_entities = create_provenance(db_session, ["source", "organ", "block", "section"])
     test_section = test_entities["section"]
 
@@ -461,8 +475,9 @@ def test_get_section_sample_by_sennet_id(db_session, app, requests):
         assert res.json["data_access_level"] == "consortium"
 
 
-def test_get_section_sample_by_uuid_no_auth(db_session, app, requests):
+def test_get_section_sample_by_uuid_no_auth(database, app, requests):
     # Create provenance in test database
+    _, db_session = database
     test_entities = create_provenance(db_session, ["source", "organ", "block", "section"])
     test_section = test_entities["section"]
 
@@ -482,8 +497,9 @@ def test_get_section_sample_by_uuid_no_auth(db_session, app, requests):
         assert res.status_code == 403
 
 
-def test_get_section_sample_by_uuid_public_no_auth(db_session, app, requests):
+def test_get_section_sample_by_uuid_public_no_auth(database, app, requests):
     # Create provenance in test database
+    _, db_session = database
     test_entities = create_provenance(
         db_session,
         [
@@ -513,8 +529,9 @@ def test_get_section_sample_by_uuid_public_no_auth(db_session, app, requests):
         assert not any(k.startswith("lab_") for k in res.json.keys())  # no lab id fields
 
 
-def test_get_dataset_by_uuid(db_session, app, requests):
+def test_get_dataset_by_uuid(database, app, requests):
     # Create provenance in test database
+    _, db_session = database
     test_entities = create_provenance(
         db_session, ["source", "organ", "block", "section", "dataset"]
     )
@@ -561,8 +578,9 @@ def test_get_dataset_by_uuid(db_session, app, requests):
         assert res.json["data_access_level"] == "consortium"
 
 
-def test_get_dataset_by_sennet_id(db_session, app, requests):
+def test_get_dataset_by_sennet_id(database, app, requests):
     # Create provenance in test database
+    _, db_session = database
     test_entities = create_provenance(
         db_session, ["source", "organ", "block", "section", "dataset"]
     )
@@ -609,8 +627,9 @@ def test_get_dataset_by_sennet_id(db_session, app, requests):
         assert res.json["data_access_level"] == "consortium"
 
 
-def test_get_dataset_by_uuid_no_auth(db_session, app, requests):
+def test_get_dataset_by_uuid_no_auth(database, app, requests):
     # Create provenance in test database
+    _, db_session = database
     test_entities = create_provenance(db_session, ["source", "organ", "block", "section"])
     test_section = test_entities["section"]
 
@@ -630,8 +649,9 @@ def test_get_dataset_by_uuid_no_auth(db_session, app, requests):
         assert res.status_code == 403
 
 
-def test_get_dataset_by_uuid_published_no_auth(db_session, app, requests):
+def test_get_dataset_by_uuid_published_no_auth(database, app, requests):
     # Create provenance in test database
+    _, db_session = database
     test_entities = create_provenance(
         db_session,
         [

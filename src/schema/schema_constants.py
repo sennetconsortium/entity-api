@@ -83,3 +83,11 @@ class TriggerTypeEnum(Enum):
     AFTER_CREATE = "after_create_trigger"
     AFTER_UPDATE = "after_update_trigger"
     ON_BULK_READ = "on_bulk_read_trigger"
+
+
+# Define an enumeration of memcached keys used for caching entity data.
+class MemcachedKeyEnum(Enum):
+    COMPLETE_AUTHENTICATED = "complete_authenticated"
+    COMPLETE_UNAUTHENTICATED = "complete_unauthenticated"
+    COMPLETE_INDEX_AUTHENTICATED = "complete_index_authenticated"
+    COMPLETE_INDEX_UNAUTHENTICATED = "complete_index_unauthenticated"
