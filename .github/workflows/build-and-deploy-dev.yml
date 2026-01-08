@@ -67,20 +67,7 @@ jobs:
           timeout: 120s
           script: |
             # Change to codcc user on server
-            sudo -u codcc -i
-            
-            # Navigate to proper directory
-            cd /opt/sennet/entity-api/docker/
-            
-            # Pull latest GitHub changes
-            git pull
-            
-            # Pull the new image
-            docker pull sennet/entity-api-dev:latest
-            
-            # Restart container container
-            ./docker-development.sh down
-            ./docker-development.sh start
+            sudo su - codcc -c "cd /opt/sennet/entity-api/docker/; git pull; docker pull sennet/entity-api-dev:latest; ./docker-development.sh down; ./docker-development.sh start;"
 
   remove-whitelist-ip:
     runs-on: ubuntu-latest
