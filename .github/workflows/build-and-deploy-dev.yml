@@ -80,3 +80,16 @@ jobs:
             # Restart container container
             ./docker-development.sh down
             ./docker-development.sh start
+
+  remove-whitelist-ip:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Remove GitHub Actions IP
+        uses: bbharathkumarreddy/aws-whitelist-ip@v1.0
+        with:
+          security-group-id: sg-0ddfcbe0a83a5266c
+          action: remove
+          port: 22
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
