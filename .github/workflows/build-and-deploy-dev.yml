@@ -26,6 +26,10 @@ jobs:
         run: ./docker-development.sh build
         working-directory: ./docker
 
+      - name: Tag the Docker Image
+        run: docker image tag sennet/entity-api:latest sennet/entity-api-dev:latest
+        working-directory: ./docker
+
       - name: Push the Docker image
         run: docker push sennet/entity-api-dev:latest
         working-directory: ./docker
