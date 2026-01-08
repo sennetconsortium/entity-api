@@ -62,7 +62,7 @@ jobs:
         uses: kielabokkie/ssh-key-and-known-hosts-action@v1
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-          ssh-host: ${{ secrets.REMOTE_USER }}
+          ssh-host: ${{ secrets.REMOTE_HOST }}
 
       - name: Deploy to Server via SSH
         uses: appleboy/ssh-action@v1
