@@ -33,7 +33,7 @@ jobs:
         working-directory: ./docker
 
       - name: Tag the Docker Image
-        run: docker image tag sennet/entity-api:${ENTITY_API_VERSION} sennet/entity-api-dev:latest
+        run: docker image tag sennet/entity-api:${{ ENTITY_API_VERSION }} sennet/entity-api-dev:latest
         working-directory: ./docker
 
       - name: Push the Docker image
