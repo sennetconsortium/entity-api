@@ -59,7 +59,7 @@ jobs:
     needs: build-and-push
     steps:
       - name: Deploy to Server via SSH
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.REMOTE_HOST }}
           username: ${{ secrets.REMOTE_USER }}
