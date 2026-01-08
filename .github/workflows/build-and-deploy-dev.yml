@@ -9,6 +9,11 @@ jobs:
   build-and-push:
     runs-on: ubuntu-24.04
     steps:
+      - name: Create $ENTITY_API_VERSION
+        run: |
+          export ENTITY_API_VERSION=$(tr -d "\n\r" < ../VERSION | xargs)
+          echo "ENTITY_API_VERSION: $ENTITY_API_VERSION" >> $ENTITY_API_VERSION
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
