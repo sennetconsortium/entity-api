@@ -19,11 +19,11 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Make build script executable
-        run: chmod +x ./docker/docker-development.sh
+        run: chmod +x ./docker-development.sh
         working-directory: ./docker
 
       - name: Run the Docker build shell script
-        run: ./docker/docker-development.sh build
+        run: ./docker-development.sh build
         working-directory: ./docker
 
       - name: Push the Docker image
