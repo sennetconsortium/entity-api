@@ -64,6 +64,7 @@ jobs:
           host: ${{ secrets.REMOTE_HOST }}
           username: ${{ secrets.REMOTE_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          timeout: 120s
           script: |
             # Change to codcc user on server
             sudo -u codcc -i
