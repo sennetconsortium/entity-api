@@ -33,12 +33,26 @@ jobs:
         working-directory: ./docker
 
       - name: Tag the Docker Image
+        # Alternatively we could use ${{ github.sha }} instead of latest
         run: docker image tag sennet/entity-api:$ENTITY_API_VERSION sennet/entity-api-dev:latest
         working-directory: ./docker
 
       - name: Push the Docker image
         run: docker push sennet/entity-api-dev:latest
         working-directory: ./docker
+
+  whitelist-github-actions-ip:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Whitelist GitHub Actions IP
+        uses: bbharathkumarreddy/aws-whitelist-ip@v1.0
+        with:
+          security-group-id: sg-0ddfcbe0a83a5266c
+          action: whitelist
+          port: 22
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
 
   deploy:
     runs-on: ubuntu-latest
