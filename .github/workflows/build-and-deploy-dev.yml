@@ -20,9 +20,12 @@ jobs:
 
       - name: Make build script executable
         run: chmod +x ./docker/docker-development.sh
+        working-directory: ./docker
 
       - name: Run the Docker build shell script
         run: ./docker/docker-development.sh build
+        working-directory: ./docker
 
       - name: Push the Docker image
         run: docker push sennet/entity-api-dev:latest
+        working-directory: ./docker
