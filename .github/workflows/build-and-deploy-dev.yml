@@ -41,7 +41,7 @@ jobs:
         run: docker push sennet/entity-api-dev:latest
         working-directory: ./docker
 
-  whitelist-github-actions-ip:
+  deploy:
     runs-on: ubuntu-latest
     needs: build-and-push
     steps:
@@ -54,11 +54,6 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
-
-  deploy:
-    runs-on: ubuntu-latest
-    needs: whitelist-github-actions-ip
-    steps:
       - name: Deploy to Server via SSH
         uses: appleboy/ssh-action@v1
         with:
