@@ -1,0 +1,4 @@
+services:
+  entity-api:
+    # Use the published image and tag from DockerHub
+    image: sennet/entity-api-dev:latest
