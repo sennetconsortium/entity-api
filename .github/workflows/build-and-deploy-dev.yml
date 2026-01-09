@@ -64,13 +64,9 @@ jobs:
           script: |
             # Change to codcc user on server
             sudo su - codcc -c "cd /opt/sennet/entity-api/docker/; git pull; docker pull sennet/entity-api-dev:latest; ./docker-development.sh down; ./docker-development.sh start;"
-
-  remove-whitelist-ip:
-    runs-on: ubuntu-latest
-    needs: deploy
-    steps:
       - name: Remove GitHub Actions IP
         uses: bbharathkumarreddy/aws-whitelist-ip@v1.0
+        if: always()
         with:
           security-group-id: sg-0ddfcbe0a83a5266c
           action: remove
