@@ -43,6 +43,7 @@ jobs:
 
   whitelist-github-actions-ip:
     runs-on: ubuntu-latest
+    needs: build-and-push
     steps:
       - name: Whitelist GitHub Actions IP
         uses: bbharathkumarreddy/aws-whitelist-ip@v1.0
@@ -56,7 +57,7 @@ jobs:
 
   deploy:
     runs-on: ubuntu-latest
-    needs: build-and-push
+    needs: whitelist-github-actions-ip
     steps:
       - name: Deploy to Server via SSH
         uses: appleboy/ssh-action@v1
