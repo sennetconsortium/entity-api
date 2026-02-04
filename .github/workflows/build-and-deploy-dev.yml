@@ -1,0 +1,79 @@
+name: Build and Deploy Docker Image on Dev
+
+on:
+  push:
+    branches:
+      - dev-integrate
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Create $ENTITY_API_VERSION
+        run: |
+          export ENTITY_API_VERSION=$(tr -d "\n\r" < ../VERSION | xargs)
+          echo "ENTITY_API_VERSION=$ENTITY_API_VERSION" >> $GITHUB_ENV
+        working-directory: ./docker
+
+      - name: Make build script executable
+        run: chmod +x ./docker-development.sh
+        working-directory: ./docker
+
+      - name: Run the Docker build shell script
+        run: ./docker-development.sh build
+        working-directory: ./docker
+
+      - name: Tag the Docker Image
+        # Alternatively we could use ${{ github.sha }} instead of latest
+        run: docker image tag sennet/entity-api:$ENTITY_API_VERSION sennet/entity-api-dev:latest
+        working-directory: ./docker
+
+      - name: Push the Docker image
+        run: docker push sennet/entity-api-dev:latest
+        working-directory: ./docker
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    steps:
+      - name: Whitelist GitHub Actions IP
+        uses: bbharathkumarreddy/aws-whitelist-ip@v1.0
+        with:
+          security-group-id: sg-0ddfcbe0a83a5266c
+          action: whitelist
+          port: 22
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - name: Deploy to Server via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: '${{ secrets.REMOTE_HOST }}'
+          username: ${{ secrets.REMOTE_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          use_insecure_cipher: true
+          script: |
+            # Change to codcc user on server
+            sudo su - codcc -c "cd /opt/sennet/entity-api/docker/; git pull; docker pull sennet/entity-api-dev:latest; ./docker-development.sh down; ./docker-development.sh start;"
+      - name: Remove GitHub Actions IP
+        uses: bbharathkumarreddy/aws-whitelist-ip@v1.0
+        if: always()
+        with:
+          security-group-id: sg-0ddfcbe0a83a5266c
+          action: remove
+          port: 22
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
