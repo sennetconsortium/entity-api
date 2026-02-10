@@ -673,7 +673,7 @@ def get_descendants(
         if record and record[record_field_name]:
             results = record[record_field_name]
 
-            schema.schema_manager.rearrange_datasets(results, entity_type)
+            schema.schema_manager.rearrange_datasets(results)
 
     return results
 
