@@ -673,7 +673,7 @@ def get_descendants(
         if record and record[record_field_name]:
             results = record[record_field_name]
 
-            schema.schema_manager.rearrange_datasets(results, entity_type)
+            schema.schema_manager.rearrange_datasets(results)
 
     return results
 
@@ -1872,14 +1872,17 @@ def get_individual_prov_info(neo4j_driver, dataset_uuid):
                 content_sixteen, key=lambda d: d["last_modified_timestamp"], reverse=True
             )
 
-            published_processed_dataset_location = next(
-                (i for i, item in enumerate(content_sixteen) if item["status"] == "Published"), None
-            )
-            if published_processed_dataset_location and published_processed_dataset_location != 0:
-                published_processed_dataset = content_sixteen.pop(
-                    published_processed_dataset_location
-                )
-                content_sixteen.insert(0, published_processed_dataset)
+            # We are modifying the response of /prov-info to return derived datasets simply by last modified timestamp.
+            # We want to highlight QA datasets that were more recently touched over older published datasets.
+
+            # published_processed_dataset_location = next(
+            #     (i for i, item in enumerate(content_sixteen) if item["status"] == "Published"), None
+            # )
+            # if published_processed_dataset_location and published_processed_dataset_location != 0:
+            #     published_processed_dataset = content_sixteen.pop(
+            #         published_processed_dataset_location
+            #     )
+            #     content_sixteen.insert(0, published_processed_dataset)
 
             record_dict["processed_dataset"] = content_sixteen
     return record_dict
