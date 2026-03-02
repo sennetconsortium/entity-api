@@ -80,6 +80,7 @@ MULTIPLE_ALLOWED_ORGANS = [
     'UBERON:0005090',  # Muscle
     'UBERON:0002097',  # Skin
     'UBERON:0010000',  # Other
+    'UBERON:0001066',  # Intervetebral Disc
 ]
 
 # Disk names that appear in 'Mounted on' column when 'df' is run in shell
