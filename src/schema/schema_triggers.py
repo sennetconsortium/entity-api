@@ -1,13 +1,13 @@
 import json
+import logging
+import re
 import urllib.parse
+from datetime import datetime, timezone
 from typing import List, Optional
 
-import logging
-from datetime import datetime, timezone
 import requests
 from atlas_consortia_commons.string import equals
 from neo4j.exceptions import TransactionError
-import re
 
 # Local modules
 import app_neo4j_queries
@@ -16,13 +16,11 @@ from lib.exceptions import create_trigger_error_msg
 from lib.ontology import Ontology
 from lib.title import (
     generate_title,
-    get_source_data_phrase,
     get_attributes_from_source_metadata,
+    get_source_data_phrase,
     make_phrase_from_separator_delineated_str,
 )
-from schema import schema_manager
-from schema import schema_errors
-from schema import schema_neo4j_queries
+from schema import schema_errors, schema_manager, schema_neo4j_queries
 from schema.schema_constants import SchemaConstants
 
 logger = logging.getLogger(__name__)
