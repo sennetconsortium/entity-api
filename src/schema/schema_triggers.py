@@ -1,7 +1,6 @@
 import json
 import urllib.parse
 from typing import List, Optional
-from flask import current_app
 
 import logging
 from datetime import datetime, timezone
@@ -4603,3 +4602,139 @@ def get_benchmarking_project(
                 return property_key, str(True)
 
     return property_key, None
+
+
+def get_immediate_ancestor_ids(
+    property_key, normalized_type, user_token, existing_data_dict, new_data_dict
+):
+    """Trigger event method for getting the immediate ancestor UUIDs for a given entity.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key of the value to be generated
+    normalized_type : str
+        One of the types defined in the schema yaml: Sample
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, list[str]]
+        str: The target property key
+        list[str]: A list of immediate ancestor UUIDs
+    """
+    neo4j_driver = schema_manager.get_neo4j_driver_instance()
+    uuid = existing_data_dict["uuid"]
+    parent_uuids = app_neo4j_queries.get_parents(neo4j_driver, uuid, properties=["uuid"])
+    return property_key, parent_uuids
+
+
+def get_immediate_ancestors(
+    property_key, normalized_type, user_token, existing_data_dict, new_data_dict
+):
+    """Trigger event method for getting the immediate ancestors for a given entity.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key of the value to be generated
+    normalized_type : str
+        One of the types defined in the schema yaml: Sample
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, list[dict]]
+        str: The target property key
+        list[dict]: A list of immediate ancestors
+    """
+    neo4j_driver = schema_manager.get_neo4j_driver_instance()
+    uuid = existing_data_dict["uuid"]
+    keys = ["uuid", "sennet_id", "entity_type"]
+    parents = app_neo4j_queries.get_parents(neo4j_driver, uuid, properties=keys.copy())
+
+    # delete all keys that are not uuid, sennet_id, or entity_type
+    for p in parents:
+        keys_to_delete = [k for k in p.keys() if k not in keys]
+        for k in keys_to_delete:
+            del p[k]
+
+    return property_key, parents
+
+
+def get_immediate_descendant_ids(
+    property_key, normalized_type, user_token, existing_data_dict, new_data_dict
+):
+    """Trigger event method for getting the immediate descendant UUIDs for a given entity.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key of the value to be generated
+    normalized_type : str
+        One of the types defined in the schema yaml: Sample
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, list[str]]
+        str: The target property key
+        list[str]: A list of immediate descendant UUIDs
+    """
+    neo4j_driver = schema_manager.get_neo4j_driver_instance()
+    uuid = existing_data_dict["uuid"]
+    child_uuids = schema_neo4j_queries.get_children(neo4j_driver, uuid, properties=["uuid"])
+    return property_key, child_uuids
+
+
+def get_immediate_descendants(
+    property_key, normalized_type, user_token, existing_data_dict, new_data_dict
+):
+    """Trigger event method for getting the immediate descendants for a given entity.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key of the value to be generated
+    normalized_type : str
+        One of the types defined in the schema yaml: Sample
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, list[dict]]
+        str: The target property key
+        list[dict]: A list of immediate descendants
+    """
+    neo4j_driver = schema_manager.get_neo4j_driver_instance()
+    uuid = existing_data_dict["uuid"]
+    keys = ["uuid", "sennet_id", "entity_type"]
+    children = schema_neo4j_queries.get_children(neo4j_driver, uuid, properties=keys.copy())
+
+    # delete all keys that are not uuid, sennet_id, or entity_type
+    for c in children:
+        keys_to_delete = [k for k in c.keys() if k not in keys]
+        for k in keys_to_delete:
+            del c[k]
+
+    return property_key, children
