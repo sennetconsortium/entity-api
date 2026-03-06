@@ -4603,7 +4603,7 @@ def get_benchmarking_project(
 
 
 def get_immediate_ancestor_ids(
-    property_key, normalized_type, user_token, existing_data_dict, new_data_dict
+    property_key, normalized_type, user_token, existing_data_dict, new_data_dict, trigger_generated_data_dict
 ):
     """Trigger event method for getting the immediate ancestor UUIDs for a given entity.
 
@@ -4626,6 +4626,10 @@ def get_immediate_ancestor_ids(
         str: The target property key
         list[str]: A list of immediate ancestor UUIDs
     """
+    if 'immediate_ancestors' in trigger_generated_data_dict:
+        immediate_ancestor_ids = [ancestor["uuid"] for ancestor in trigger_generated_data_dict["immediate_ancestors"]]
+        return property_key, immediate_ancestor_ids
+
     neo4j_driver = schema_manager.get_neo4j_driver_instance()
     uuid = existing_data_dict["uuid"]
     parent_uuids = app_neo4j_queries.get_parents(neo4j_driver, uuid, properties=["uuid"])
@@ -4671,7 +4675,7 @@ def get_immediate_ancestors(
 
 
 def get_immediate_descendant_ids(
-    property_key, normalized_type, user_token, existing_data_dict, new_data_dict
+    property_key, normalized_type, user_token, existing_data_dict, new_data_dict, trigger_generated_data_dict
 ):
     """Trigger event method for getting the immediate descendant UUIDs for a given entity.
 
@@ -4694,6 +4698,10 @@ def get_immediate_descendant_ids(
         str: The target property key
         list[str]: A list of immediate descendant UUIDs
     """
+    if 'immediate_descendants' in trigger_generated_data_dict:
+        immediate_descendant_ids = [descendant["uuid"] for descendant in trigger_generated_data_dict["immediate_descendants"]]
+        return property_key, immediate_descendant_ids
+
     neo4j_driver = schema_manager.get_neo4j_driver_instance()
     uuid = existing_data_dict["uuid"]
     child_uuids = schema_neo4j_queries.get_children(neo4j_driver, uuid, properties=["uuid"])
