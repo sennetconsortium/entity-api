@@ -77,6 +77,30 @@ shared_properties: &shared_properties
     immutable: true
     description: "A SenNet Consortium wide unique identifier randomly generated in the format SN###.ABCD.### for every entity."
     before_create_trigger: set_sennet_id
+  immediate_ancestor_ids:
+    type: list
+    generated: true
+    immutable: true
+    description: "A list of uuids of immediate ancestors (one level above) that the entity was derived from"
+    on_index_trigger: get_immediate_ancestor_ids
+  immediate_ancestors:
+    type: list
+    generated: true
+    immutable: true
+    description: "A list of immediate ancestors (one level above) that the entity was derived from."
+    on_index_trigger: get_immediate_ancestors
+  immediate_descendant_ids:
+    type: list
+    generated: true
+    immutable: true
+    description: "A list of uuids of immediate descendants (one level below) that were derived from the entity"
+    on_index_trigger: get_immediate_descendant_ids
+  immediate_descendants:
+    type: list
+    generated: true
+    immutable: true
+    description: "A list of immediate descendants (one level below) that were derived from the entity."
+    on_index_trigger: get_immediate_descendants
 
 # Shared properties to be excluded from public response.
 # Set with:
