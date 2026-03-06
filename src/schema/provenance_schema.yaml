@@ -369,6 +369,7 @@ shared_entity_properties: &shared_entity_properties
     immutable: true
     description: "A list of uuids of immediate ancestors (one level above) that the entity was derived from"
     on_index_trigger: get_immediate_ancestor_ids
+    # This allows us to reuse the results from immediate_ancestors to generate the IDs
     dependent_property: true
   immediate_descendants:
     type: list
@@ -382,6 +383,7 @@ shared_entity_properties: &shared_entity_properties
     immutable: true
     description: "A list of uuids of immediate descendants (one level below) that were derived from the entity"
     on_index_trigger: get_immediate_descendant_ids
+    # This allows us to reuse the results from immediate_descendants to generate the IDs
     dependent_property: true
 
 ENTITIES:
