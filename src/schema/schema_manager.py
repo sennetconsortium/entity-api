@@ -946,6 +946,14 @@ def generate_triggered_data(
                             new_data_dict,
                             trigger_generated_data_dict,
                         )
+                    elif (
+                        "dependent_property" in properties[key]
+                    ):
+                        target_key, target_value = trigger_method_to_call(
+                            key, normalized_class, user_token, existing_data_dict, new_data_dict, trigger_generated_data_dict
+                        )
+                        if target_value is not None:
+                            trigger_generated_data_dict[target_key] = target_value
                     else:
                         target_key, target_value = trigger_method_to_call(
                             key, normalized_class, user_token, existing_data_dict, new_data_dict
