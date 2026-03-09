@@ -713,7 +713,7 @@ def get_entity_collections(neo4j_driver, uuid, property_key=None):
     Returns
     -------
     list
-        A list of collection uuids
+        A list of collections
     """
     results = []
 
@@ -739,6 +739,54 @@ def get_entity_collections(neo4j_driver, uuid, property_key=None):
         if record and record[record_field_name]:
             if property_key:
                 # Just return the list of property values from each entity node
+                results = record[record_field_name]
+            else:
+                # Convert the list of nodes to a list of dicts
+                results = _nodes_to_dicts(record[record_field_name])
+
+    return results
+
+
+def get_dataset_publications(neo4j_driver, uuid, property_key=None):
+    """
+    Get the associated publications for a given dataset
+
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    uuid : str
+        The uuid of dataset
+
+    Returns
+    -------
+    list
+        A list of publications
+    """
+    results = []
+
+    if property_key:
+        query = (
+            "MATCH (p:Publication)-[:WAS_GENERATED_BY]->(a:Activity)-[:USED]->(d:Dataset) "
+            "WHERE d.uuid = $uuid "
+            f"RETURN apoc.coll.toSet(COLLECT(p.{property_key})) AS {record_field_name}"
+        )
+    else:
+        query = (
+            "MATCH (p:Publication)-[:WAS_GENERATED_BY]->(a:Activity)-[:USED]->(d:Dataset) "
+            "WHERE d.uuid = $uuid "
+            f"RETURN apoc.coll.toSet(COLLECT(p)) AS {record_field_name}"
+        )
+
+    logger.info("======get_dataset_publications() query======")
+    logger.info(query)
+
+    with neo4j_driver.session() as session:
+        record = session.read_transaction(_execute_readonly_tx, query, uuid=uuid)
+
+        if record and record[record_field_name]:
+            if property_key:
+                # Just return the list of property values from each publication node
                 results = record[record_field_name]
             else:
                 # Convert the list of nodes to a list of dicts
