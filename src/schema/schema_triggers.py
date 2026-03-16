@@ -946,6 +946,7 @@ def get_entity_collections(
         list: A list of associated collections with all the normalized information
     """
     return_list = None
+    public_only = True
 
     if "uuid" not in existing_data_dict:
         msg = create_trigger_error_msg(
@@ -957,8 +958,11 @@ def get_entity_collections(
 
     # No property key needs to filter the result
     # Get back the list of collection dicts
+    if user_token is not None:
+        public_only = False
+
     collections_list = schema_neo4j_queries.get_entity_collections(
-        schema_manager.get_neo4j_driver_instance(), existing_data_dict["uuid"]
+        schema_manager.get_neo4j_driver_instance(), existing_data_dict["uuid"], public_only
     )
     if collections_list:
         # Exclude datasets from each resulting collection
@@ -997,6 +1001,7 @@ def get_dataset_publications(
         list: A list of associated publications with all the normalized information
     """
     return_list = None
+    public_only = True
 
     if "uuid" not in existing_data_dict:
         msg = create_trigger_error_msg(
@@ -1008,8 +1013,11 @@ def get_dataset_publications(
 
     # No property key needs to filter the result
     # Get back the list of publication dicts
+    if user_token is not None:
+        public_only = False
+
     publication_list = schema_neo4j_queries.get_dataset_publications(
-        schema_manager.get_neo4j_driver_instance(), existing_data_dict["uuid"]
+        schema_manager.get_neo4j_driver_instance(), existing_data_dict["uuid"], public_only
     )
     if publication_list:
         return_list = schema_manager.normalize_entities_list_for_response(publication_list)

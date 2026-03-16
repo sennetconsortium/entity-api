@@ -697,7 +697,7 @@ def get_next_revision_uuid(neo4j_driver, uuid):
     return result
 
 
-def get_entity_collections(neo4j_driver, uuid, property_key=None):
+def get_entity_collections(neo4j_driver, uuid,  public_only=True, property_key=None):
     """
     Get a list of associated collection uuids for a given entity
 
@@ -716,17 +716,20 @@ def get_entity_collections(neo4j_driver, uuid, property_key=None):
         A list of collections
     """
     results = []
+    public_query = ''
+    if public_only:
+        public_query = f"AND c.doi_url IS NOT NULL "
 
     if property_key:
         query = (
             "MATCH (e:Entity)-[:IN_COLLECTION]->(c:Collection) "
-            "WHERE e.uuid = $uuid "
+            f"WHERE e.uuid = $uuid {public_query}"
             f"RETURN apoc.coll.toSet(COLLECT(c.{property_key})) AS {record_field_name}"
         )
     else:
         query = (
             "MATCH (e:Entity)-[:IN_COLLECTION]->(c:Collection) "
-            "WHERE e.uuid = $uuid "
+            f"WHERE e.uuid = $uuid {public_query}"
             f"RETURN apoc.coll.toSet(COLLECT(c)) AS {record_field_name}"
         )
 
@@ -747,7 +750,7 @@ def get_entity_collections(neo4j_driver, uuid, property_key=None):
     return results
 
 
-def get_dataset_publications(neo4j_driver, uuid, property_key=None):
+def get_dataset_publications(neo4j_driver, uuid, public_only=True, property_key=None):
     """
     Get the associated publications for a given dataset
 
@@ -764,17 +767,20 @@ def get_dataset_publications(neo4j_driver, uuid, property_key=None):
         A list of publications
     """
     results = []
+    public_query = ''
+    if public_only:
+        public_query = f"AND p.publication_doi IS NOT NULL "
 
     if property_key:
         query = (
             "MATCH (p:Publication)-[:WAS_GENERATED_BY]->(a:Activity)-[:USED]->(d:Dataset) "
-            "WHERE d.uuid = $uuid "
+            f"WHERE d.uuid = $uuid {public_query}"
             f"RETURN apoc.coll.toSet(COLLECT(p.{property_key})) AS {record_field_name}"
         )
     else:
         query = (
             "MATCH (p:Publication)-[:WAS_GENERATED_BY]->(a:Activity)-[:USED]->(d:Dataset) "
-            "WHERE d.uuid = $uuid "
+            f"WHERE d.uuid = $uuid {public_query}"
             f"RETURN apoc.coll.toSet(COLLECT(p)) AS {record_field_name}"
         )
 
