@@ -697,7 +697,7 @@ def get_next_revision_uuid(neo4j_driver, uuid):
     return result
 
 
-def get_entity_collections(neo4j_driver, uuid, property_key=None):
+def get_entity_collections(neo4j_driver, uuid,  public_only=True, property_key=None):
     """
     Get a list of associated collection uuids for a given entity
 
@@ -713,20 +713,23 @@ def get_entity_collections(neo4j_driver, uuid, property_key=None):
     Returns
     -------
     list
-        A list of collection uuids
+        A list of collections
     """
     results = []
+    public_query = ''
+    if public_only:
+        public_query = f"AND c.doi_url IS NOT NULL "
 
     if property_key:
         query = (
             "MATCH (e:Entity)-[:IN_COLLECTION]->(c:Collection) "
-            "WHERE e.uuid = $uuid "
+            f"WHERE e.uuid = $uuid {public_query}"
             f"RETURN apoc.coll.toSet(COLLECT(c.{property_key})) AS {record_field_name}"
         )
     else:
         query = (
             "MATCH (e:Entity)-[:IN_COLLECTION]->(c:Collection) "
-            "WHERE e.uuid = $uuid "
+            f"WHERE e.uuid = $uuid {public_query}"
             f"RETURN apoc.coll.toSet(COLLECT(c)) AS {record_field_name}"
         )
 
@@ -739,6 +742,57 @@ def get_entity_collections(neo4j_driver, uuid, property_key=None):
         if record and record[record_field_name]:
             if property_key:
                 # Just return the list of property values from each entity node
+                results = record[record_field_name]
+            else:
+                # Convert the list of nodes to a list of dicts
+                results = _nodes_to_dicts(record[record_field_name])
+
+    return results
+
+
+def get_dataset_publications(neo4j_driver, uuid, public_only=True, property_key=None):
+    """
+    Get the associated publications for a given dataset
+
+    Parameters
+    ----------
+    neo4j_driver : neo4j.Driver object
+        The neo4j database connection pool
+    uuid : str
+        The uuid of dataset
+
+    Returns
+    -------
+    list
+        A list of publications
+    """
+    results = []
+    public_query = ''
+    if public_only:
+        public_query = f"AND p.publication_doi IS NOT NULL "
+
+    if property_key:
+        query = (
+            "MATCH (p:Publication)-[:WAS_GENERATED_BY]->(a:Activity)-[:USED]->(d:Dataset) "
+            f"WHERE d.uuid = $uuid {public_query}"
+            f"RETURN apoc.coll.toSet(COLLECT(p.{property_key})) AS {record_field_name}"
+        )
+    else:
+        query = (
+            "MATCH (p:Publication)-[:WAS_GENERATED_BY]->(a:Activity)-[:USED]->(d:Dataset) "
+            f"WHERE d.uuid = $uuid {public_query}"
+            f"RETURN apoc.coll.toSet(COLLECT(p)) AS {record_field_name}"
+        )
+
+    logger.info("======get_dataset_publications() query======")
+    logger.info(query)
+
+    with neo4j_driver.session() as session:
+        record = session.read_transaction(_execute_readonly_tx, query, uuid=uuid)
+
+        if record and record[record_field_name]:
+            if property_key:
+                # Just return the list of property values from each publication node
                 results = record[record_field_name]
             else:
                 # Convert the list of nodes to a list of dicts
