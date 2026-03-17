@@ -946,6 +946,7 @@ def get_entity_collections(
         list: A list of associated collections with all the normalized information
     """
     return_list = None
+    public_only = True
 
     if "uuid" not in existing_data_dict:
         msg = create_trigger_error_msg(
@@ -957,8 +958,11 @@ def get_entity_collections(
 
     # No property key needs to filter the result
     # Get back the list of collection dicts
+    if user_token is not None:
+        public_only = False
+
     collections_list = schema_neo4j_queries.get_entity_collections(
-        schema_manager.get_neo4j_driver_instance(), existing_data_dict["uuid"]
+        schema_manager.get_neo4j_driver_instance(), existing_data_dict["uuid"], public_only
     )
     if collections_list:
         # Exclude datasets from each resulting collection
@@ -968,6 +972,55 @@ def get_entity_collections(
             user_token, collections_list, properties_to_skip
         )
         return_list = schema_manager.normalize_entities_list_for_response(complete_entities_list)
+
+    return property_key, return_list
+
+
+def get_dataset_publications(
+    property_key, normalized_type, user_token, existing_data_dict, new_data_dict
+):
+    """Trigger event method of getting a list of publications for this Dataset.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key
+    normalized_type : str
+        One of the types defined in the schema yaml: Activity, Collection, Source, Sample, Dataset
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, list]
+        str: The target property key
+        list: A list of associated publications with all the normalized information
+    """
+    return_list = None
+    public_only = True
+
+    if "uuid" not in existing_data_dict:
+        msg = create_trigger_error_msg(
+            "Missing 'uuid' key in 'existing_data_dict' during calling 'get_dataset_publications()' trigger method.",
+            existing_data_dict,
+            new_data_dict,
+        )
+        raise KeyError(msg)
+
+    # No property key needs to filter the result
+    # Get back the list of publication dicts
+    if user_token is not None:
+        public_only = False
+
+    publication_list = schema_neo4j_queries.get_dataset_publications(
+        schema_manager.get_neo4j_driver_instance(), existing_data_dict["uuid"], public_only
+    )
+    if publication_list:
+        return_list = schema_manager.normalize_entities_list_for_response(publication_list)
 
     return property_key, return_list
 
