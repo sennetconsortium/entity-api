@@ -1020,7 +1020,13 @@ def get_dataset_publications(
         schema_manager.get_neo4j_driver_instance(), existing_data_dict["uuid"], public_only
     )
     if publication_list:
-        return_list = schema_manager.normalize_entities_list_for_response(publication_list)
+        # Remove pipeline_message from publications
+        exclude_properties = ['pipeline_message']
+        filtered_publication_list = []
+        for publication in publication_list:
+            filtered_publication = {key: value for key, value in publication.items() if key not in exclude_properties}
+            filtered_publication_list.append(filtered_publication)
+        return_list = schema_manager.normalize_entities_list_for_response(filtered_publication_list)
 
     return property_key, return_list
 
