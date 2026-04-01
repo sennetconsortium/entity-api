@@ -487,6 +487,13 @@ ENTITIES:
         on_read_trigger: get_collection_associated_publication
         on_index_trigger: get_collection_associated_publication
         description: "The publication which uses this collection's data"
+      status:
+        type: string
+        generated: true
+        transient: true
+        description: "One of: New|Published"
+        on_read_trigger:  get_collection_status
+        on_index_trigger: get_collection_status
 
   ############################################# Dataset #############################################
   Dataset:
