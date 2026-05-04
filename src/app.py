@@ -722,6 +722,7 @@ json
 
 
 @app.route("/entities/<id>", methods=["GET"])
+@app.route("/_entities/<id>", methods=["POST"])
 @strip_whitespace_id()
 def get_entity_by_id(id):
     # Token is not required, but if an invalid token provided,
@@ -787,7 +788,10 @@ def get_entity_by_id(id):
     # The `data_access_level` property is available in all entities Source/Sample/Dataset
     # and this filter is being used by gateway to check the data_access_level for file assets
     # The `status` property is only available in Dataset and being used by search-api for revision
-    result_filtering_accepted_property_keys = ["data_access_level", "status"]
+    result_filtering_accepted_property_keys = ["data_access_level", "status", "uuid"]
+
+    authorized = user_in_sennet_read_group(request)
+    data_access_level = "public" if authorized is False else None
 
     # Allow for `return_dict` as well since some code passes that to the PUT /entities endpoint. Return as normal
     supported_query_params = ["property", "exclude", "return_dict"]
@@ -839,13 +843,50 @@ def get_entity_by_id(id):
                 fields_to_exclude, final_result
             )
         return jsonify(final_result)
+    elif request.method == "POST":
+        if request.is_json and request.json != {}:
+            filtering_dict = request.json
+            if len(filtering_dict.keys()) > 0 and "filter_properties" not in filtering_dict:
+                abort_bad_req("Missing required key: filter_properties")
+            if "filter_properties" in filtering_dict:
+                properties_action = filtering_dict.get("is_include", True)
+                segregated_properties = schema_manager.group_verify_properties_list(
+                    properties=filtering_dict["filter_properties"]
+                )
+
+                entity_dict = app_neo4j_queries.get_entity(
+                    neo4j_driver_instance, 
+                    id, data_access_level, 
+                    properties=segregated_properties,
+                    is_include_action=properties_action,)
+
+                complete_entities_list = schema_manager.get_complete_entities_list(
+                    token,
+                    [entity_dict],
+                    segregated_properties.trigger,
+                    is_include_action=properties_action,
+                    use_memcache=False,
+                )
+
+                # Final result
+                normalize_result = schema_manager.normalize_entities_list_for_response(
+                    complete_entities_list,
+                    segregated_properties,
+                    is_include_action=properties_action,
+                    is_strict=True,
+                )
+                _final_result = schema_manager.remove_unauthorized_fields_from_response(
+                    normalize_result, unauthorized=not authorized
+                )
+                if (len(_final_result) > 0):
+                    final_result = _final_result[0]
     else:
         # Response with the dict
-        if public_entity and not user_in_sennet_read_group(request):
+        if public_entity and not  authorized:
             final_result = schema_manager.exclude_properties_from_response(
                 fields_to_exclude, final_result
             )
-        return jsonify(final_result)
+    return jsonify(final_result)
 
 
 """
