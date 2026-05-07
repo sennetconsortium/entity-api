@@ -856,7 +856,7 @@ def get_entity_by_id(id):
 
                 entity_dict = app_neo4j_queries.get_entity(
                     neo4j_driver_instance, 
-                    id, data_access_level, 
+                    complete_dict['uuid'], data_access_level, 
                     properties=segregated_properties,
                     is_include_action=properties_action,)
 
