@@ -722,20 +722,64 @@ json
 
 
 @app.route("/entities/<id>", methods=["GET"])
+@app.route("/_entities/<id>", methods=["POST"])
 @strip_whitespace_id()
 def get_entity_by_id(id):
     # Token is not required, but if an invalid token provided,
     # we need to tell the client with a 401 error
     validate_token_if_auth_header_exists(request)
-
-    # Query target entity against uuid-api and neo4j and return as a dict if exists
-    entity_dict = query_target_entity(id)
-    normalized_entity_type = entity_dict["entity_type"]
-    fields_to_exclude = schema_manager.get_fields_to_exclude(normalized_entity_type)
+    authorized = user_in_sennet_read_group(request)
+    data_access_level = "public" if authorized is False else None
 
     # Use the internal token to query the target entity
     # since public entities don't require user token
     token = get_internal_token()
+
+    # Query target entity against uuid-api and neo4j and return as a dict if exists
+    entity_dict = query_target_entity(id)
+
+    final_result = {}
+    if request.method == "POST":
+        if request.is_json and request.json != {}:
+            filtering_dict = request.json
+            if len(filtering_dict.keys()) > 0 and "filter_properties" not in filtering_dict:
+                abort_bad_req("Missing required key: filter_properties")
+            if "filter_properties" in filtering_dict:
+                properties_action = filtering_dict.get("is_include", True)
+                segregated_properties = schema_manager.group_verify_properties_list(
+                    properties=filtering_dict["filter_properties"]
+                )
+
+                entity_dict = app_neo4j_queries.get_entity(
+                    neo4j_driver_instance, 
+                    entity_dict['uuid'], data_access_level, 
+                    properties=segregated_properties,
+                    is_include_action=properties_action,)
+
+                complete_entities_list = schema_manager.get_complete_entities_list(
+                    token,
+                    [entity_dict],
+                    segregated_properties.trigger,
+                    is_include_action=properties_action,
+                    use_memcache=False,
+                )
+
+                # Final result
+                normalize_result = schema_manager.normalize_entities_list_for_response(
+                    complete_entities_list,
+                    segregated_properties,
+                    is_include_action=properties_action,
+                    is_strict=True,
+                )
+                _final_result = schema_manager.remove_unauthorized_fields_from_response(
+                    normalize_result, unauthorized=not authorized
+                )
+                if (len(_final_result) > 0):
+                    final_result = _final_result[0]
+        return jsonify(final_result)
+
+    normalized_entity_type = entity_dict["entity_type"]
+    fields_to_exclude = schema_manager.get_fields_to_exclude(normalized_entity_type)
 
     # To verify if a Collection is public, it is necessary to have its Datasets, which
     # are populated as triggered data.  So pull back the complete entity for
@@ -787,7 +831,7 @@ def get_entity_by_id(id):
     # The `data_access_level` property is available in all entities Source/Sample/Dataset
     # and this filter is being used by gateway to check the data_access_level for file assets
     # The `status` property is only available in Dataset and being used by search-api for revision
-    result_filtering_accepted_property_keys = ["data_access_level", "status"]
+    result_filtering_accepted_property_keys = ["data_access_level", "status", "uuid"]
 
     # Allow for `return_dict` as well since some code passes that to the PUT /entities endpoint. Return as normal
     supported_query_params = ["property", "exclude", "return_dict"]
@@ -841,11 +885,11 @@ def get_entity_by_id(id):
         return jsonify(final_result)
     else:
         # Response with the dict
-        if public_entity and not user_in_sennet_read_group(request):
+        if public_entity and not  authorized:
             final_result = schema_manager.exclude_properties_from_response(
                 fields_to_exclude, final_result
             )
-        return jsonify(final_result)
+    return jsonify(final_result)
 
 
 """
