@@ -921,6 +921,13 @@ def set_dataset_status_new(
     return property_key, "New"
 
 
+def set_collection_status_new(
+    property_key, normalized_type, user_token, existing_data_dict, new_data_dict
+):
+    ## Same as dataset unless otherwise stated
+    return set_dataset_status_new(property_key, normalized_type, user_token, existing_data_dict, new_data_dict)
+
+
 def get_entity_collections(
     property_key, normalized_type, user_token, existing_data_dict, new_data_dict
 ):
@@ -2869,6 +2876,30 @@ def set_was_derived_from(
     except TransactionError:
         # No need to log
         raise
+
+def get_collection_status(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):
+    """Trigger event method that calls related functions involved with updating the status value.
+
+    Parameters
+    ----------
+    property_key : str
+        The target property key
+    normalized_type : str
+        One of the types defined in the schema yaml: Dataset
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+    """
+    doi_url = existing_data_dict.get("doi_url")
+
+    if doi_url is not None:
+        return property_key, "Published"
+    else:
+        return set_collection_status_new(property_key, normalized_type, user_token, existing_data_dict, new_data_dict)
+        
 
 
 def update_status(property_key, normalized_type, user_token, existing_data_dict, new_data_dict):

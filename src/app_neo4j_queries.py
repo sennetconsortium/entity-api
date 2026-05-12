@@ -124,7 +124,11 @@ def get_activity(neo4j_driver, uuid):
     return result
 
 
-def get_entity(neo4j_driver, uuid):
+def get_entity(neo4j_driver, 
+    uuid, 
+    data_access_level=None,
+    properties: Union[PropertyGroups, List[str]] = None,
+    is_include_action: bool = True,):
     """
     Get target entity dict
 
@@ -134,18 +138,36 @@ def get_entity(neo4j_driver, uuid):
         The neo4j database connection pool
     uuid : str
         The uuid of target entity
+    data_access_level : Optional[str]
+        The data access level of the ancestor entities (public or consortium). None returns all ancestors.
+    properties : Union[PropertyGroups, List[str]]
+        A list of property keys to filter in or out from the normalized results, default is []
+    is_include_action : bool
+        Whether to include or exclude the listed properties
 
     Returns
     -------
     dict
         A dictionary of entity details returned from the Cypher query
     """
+
+    predicate = ""
+    if data_access_level:
+        predicate = "AND (t.status = 'Published' OR t.data_access_level = $data_access_level) "
+
     result = {}
 
-    _activity_query_part = schema_neo4j_queries.activity_query_part(for_all_match=True)
-    query = (
-        "MATCH (t:Entity) " "WHERE t.uuid = $uuid " f"{_activity_query_part} {record_field_name}"
-    )
+    is_filtered = isinstance(properties, PropertyGroups) or isinstance(properties, list)
+    if is_filtered:
+        query = (
+            f"MATCH (t:Entity) WHERE t.uuid = $uuid  {predicate} "
+            f"{schema_neo4j_queries.exclude_include_query_part(properties, is_include_action)}"
+        )
+    else:
+        _activity_query_part = schema_neo4j_queries.activity_query_part(for_all_match=True)
+        query = (
+            "MATCH (t:Entity) " "WHERE t.uuid = $uuid " f"{_activity_query_part} {record_field_name}"
+        )
 
     logger.info("======get_entity() query======")
     logger.info(query)
