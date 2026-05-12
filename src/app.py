@@ -2831,7 +2831,7 @@ def get_siblings(id):
             status = status.lower()
             if status not in SchemaConstants.ALLOWED_DATASET_STATUSES:
                 abort_bad_req(
-                    "Invalid Dataset Status. Must be 'new', 'qa', or 'published' Case-Insensitive"
+                    "Invalid Dataset Status. Must be 'new', 'qa', 'approval' or 'published' Case-Insensitive"
                 )
         if property_key is not None:
             property_key = property_key.lower()
@@ -4115,7 +4115,7 @@ has_rui_info : string
     an sample that contain rui info will be returned. If false, only datasets that are NOT connected to samples
     containing rui info will be returned. By default, no filtering is performed.
 dataset_status : string
-    Filters results by dataset status. Accepted values are "Published", "QA", and "NEW". If a user only has access
+    Filters results by dataset status. Accepted values are "Published", "QA", "Approval" and "NEW". If a user only has access
     to published datasets and enters QA or New, an error will be raised. By default, no filtering is performed
 
 Returns
@@ -4245,9 +4245,9 @@ def get_prov_info():
             param_dict["has_rui_info"] = has_rui_info
         dataset_status = request.args.get("dataset_status")
         if dataset_status is not None:
-            if dataset_status.lower() not in ["new", "qa", "published"]:
+            if dataset_status.lower() not in ["new", "qa", "approval", "published"]:
                 abort_bad_req(
-                    "Invalid Dataset Status. Must be 'new', 'qa', or 'published' Case-Insensitive"
+                    "Invalid Dataset Status. Must be 'new', 'qa', 'approval' or 'published' Case-Insensitive"
                 )
             if published_only and dataset_status.lower() != "published":
                 abort_bad_req(
