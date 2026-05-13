@@ -87,11 +87,12 @@ Dataset:
             - New
             - Processing
             - QA
+            - Approval
             - Published
             - Error
             - Hold
             - Invalid
-          description: "One of: New|Processing|QA|Published|Error|Hold|Invalid"
+          description: "One of: New|Processing|QA|Approval|Published|Error|Hold|Invalid"
     title:
       type: string
       description: "The dataset title."

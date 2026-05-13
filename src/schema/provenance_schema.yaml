@@ -538,7 +538,7 @@ ENTITIES:
           - validate_status_changed
           - validate_dataset_not_component
         generated: true
-        description: "One of: New|Processing|QA|Published|Error|Hold|Invalid|Incomplete"
+        description: "One of: New|Processing|QA|Approval|Published|Error|Hold|Invalid|Incomplete"
         before_create_trigger: set_dataset_status_new
         after_create_trigger: set_status_history
         after_update_trigger: update_status
