@@ -31,6 +31,7 @@ class SchemaConstants(object):
         "processing",
         "published",
         "qa",
+        'approval',
         "error",
         "hold",
         "invalid",

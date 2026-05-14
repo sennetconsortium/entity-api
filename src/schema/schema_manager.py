@@ -2001,7 +2001,7 @@ def normalize_status(status):
     Parameters
     ----------
     status : str
-        One of the status types: New|Processing|QA|Published|Error|Hold|Invalid
+        One of the status types: New|Processing|QA|Approval|Published|Error|Hold|Invalid
 
     Returns
     -------
