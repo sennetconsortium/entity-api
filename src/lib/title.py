@@ -64,8 +64,8 @@ def get_attributes_from_source_metadata(source_type: str, source_metadata: dict)
     source_grouping_concepts_dict = dict()
     source_types = Ontology.ops().source_types()
 
-    if source_type in [source_types.HUMAN, source_types.HUMAN_ORGANOID]:
-        # human and human organoid source
+    if source_type in [source_types.HUMAN]:
+        # human
         if "organ_donor_data" in source_metadata:
             source_metadata = source_metadata["organ_donor_data"]
 
@@ -88,7 +88,7 @@ def get_attributes_from_source_metadata(source_type: str, source_metadata: dict)
                     source_grouping_concepts_dict["sex"] = data["preferred_term"].lower()
 
     else:
-        # mouse and mouse organoid source, just pass through
+        # mouse source, just pass through
         source_grouping_concepts_dict = source_metadata
 
     return source_grouping_concepts_dict
@@ -114,7 +114,7 @@ def get_source_data_phrase(source_type: str, source_data: dict) -> str:
     """
     source_types = Ontology.ops().source_types()
 
-    if source_type in [source_types.HUMAN, source_types.HUMAN_ORGANOID]:
+    if source_type in [source_types.HUMAN]:
         # human and human organ
         age = source_data.get("age")
         age_units = source_data.get("age_units")
@@ -138,7 +138,7 @@ def get_source_data_phrase(source_type: str, source_data: dict) -> str:
         else:
             return f"{age} {age_units}-old {race} {sex}"
     else:
-        # mouse and mouse organoid
+        # mouse
         parts = []
         if strain := source_data.get("strain"):
             parts.append(strain)

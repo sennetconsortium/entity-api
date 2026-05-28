@@ -1430,18 +1430,17 @@ def create_entity(entity_type: str, user_token: str, json_data_dict: dict, suppr
             if organ_code.upper() in ["FMA:57991", "FMA:57987"] and direct_ancestor_dict[
                 "source_type"
             ] not in [
-                source_types.HUMAN,
-                source_types.HUMAN_ORGANOID,
+                source_types.HUMAN
             ]:
                 abort_bad_req(
-                    "The organ codes FMA:57991 and FMA:57987 are only valid for human and human organoid source type"
+                    "The organ codes FMA:57991 and FMA:57987 are only valid for human source type"
                 )
 
             if organ_code.upper() in ["UBERON:0001911"] and direct_ancestor_dict[
                 "source_type"
-            ] not in [source_types.MOUSE, source_types.MOUSE_ORGANOID]:
+            ] not in [source_types.MOUSE]:
                 abort_bad_req(
-                    "The organ code UBERON:0001911 is only valid for mouse and mouse organoid source type"
+                    "The organ code UBERON:0001911 is only valid for mouse source type"
                 )
 
         # Generate 'before_create_triiger' data and create the entity details in Neo4j
@@ -6941,7 +6940,7 @@ def delete_cache(id):
 
         # If the target entity is Datasets/Publication, delete the associated Collections cache, Upload cache
         collection_uuids = schema_neo4j_queries.get_entity_collections(
-            neo4j_driver_instance, entity_uuid, "uuid"
+            neo4j_driver_instance, entity_uuid, property_key="uuid"
         )
         collection_dict = schema_neo4j_queries.get_publication_associated_collection(
             neo4j_driver_instance, entity_uuid
