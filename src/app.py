@@ -6940,7 +6940,7 @@ def delete_cache(id):
 
         # If the target entity is Datasets/Publication, delete the associated Collections cache, Upload cache
         collection_uuids = schema_neo4j_queries.get_entity_collections(
-            neo4j_driver_instance, entity_uuid, "uuid"
+            neo4j_driver_instance, entity_uuid, property_key="uuid"
         )
         collection_dict = schema_neo4j_queries.get_publication_associated_collection(
             neo4j_driver_instance, entity_uuid
