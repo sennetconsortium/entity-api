@@ -21,15 +21,11 @@ class Ontology(UbkgSDK):
         return cls.ops(
             as_data_dict=True, key_callback=None, data_as_val=True, key="organ_uberon"
         ).organ_types()
-
-    @classmethod
-    def dataset_types_hierarchy(cls: Ontology):
-        return UbkgSDK.transform_ontology(current_app.ubkg.dataset_types_hierarchy, 'DatasetTypesHierarchy')
     
     @classmethod
     def dataset_type_hierarchy(cls: Ontology, dataset_type: str = None) -> dict:
         def prop_callback(dict):
-            return dict['dataset_type']['name']
+            return dict['name']
         
         def val_callback(dict):
             if 'modalities' not in dict:
@@ -46,7 +42,7 @@ class Ontology(UbkgSDK):
             return list_of_facets
         
         all_facets = cls.ops(
-            as_data_dict=True, key_callback=prop_callback, val_callback=val_callback, data_as_val=False, key="dataset_types", val_key="dataset_types"
+            as_data_dict=True, key_callback=prop_callback, val_callback=val_callback, data_as_val=True,
         ).dataset_types_hierarchy()
 
         if dataset_type is not None and dataset_type in all_facets:
