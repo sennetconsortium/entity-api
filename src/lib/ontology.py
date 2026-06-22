@@ -19,12 +19,15 @@ class Ontology(UbkgSDK):
     @classmethod
     def organs_by_organ_uberon(cls: Ontology) -> dict:
         return cls.ops(
-            as_data_dict=True, prop_callback=None, data_as_val=True, key="organ_uberon"
+            as_data_dict=True, key_callback=None, data_as_val=True, key="organ_uberon"
         ).organ_types()
 
+    @classmethod
+    def dataset_types_hierarchy(cls: Ontology):
+        return UbkgSDK.transform_ontology(current_app.ubkg.dataset_types_hierarchy, 'DatasetTypesHierarchy')
     
     @classmethod
-    def dataset_types_hierarchy(cls: Ontology, dataset_type: str = None) -> dict:
+    def dataset_type_hierarchy(cls: Ontology, dataset_type: str = None) -> dict:
         def prop_callback(dict):
             return dict['dataset_type']['name']
         
@@ -43,28 +46,12 @@ class Ontology(UbkgSDK):
             return list_of_facets
         
         all_facets = cls.ops(
-            as_data_dict=True, prop_callback=prop_callback, val_callback=val_callback, data_as_val=False, key="dataset_types", val_key="dataset_types"
-        ).transform_ontology(current_app.ubkg.dataset_types_hierarchy, 'DatasetTypesHierarchy')
+            as_data_dict=True, key_callback=prop_callback, val_callback=val_callback, data_as_val=False, key="dataset_types", val_key="dataset_types"
+        ).dataset_types_hierarchy()
 
         if dataset_type is not None and dataset_type in all_facets:
-            matrix = all_facets[dataset_type]
+            return all_facets[dataset_type]
         else:
             matrix = list(all_facets.values())
         
-        return [item for sublist in matrix for item in sublist]
-    
-    @classmethod
-    def dataset_type_hierarchy(cls: Ontology) -> dict:
-        def prop_callback(dict):
-            return dict['dataset_type']['name']
-        
-        def val_callback(dict):
-            modalities = []
-            if 'modalities' in dict:
-                for modality in dict['modalities']:
-                    modalities.append(modality['name'])
-            return modalities
-        
-        return cls.ops(
-            as_data_dict=True, prop_callback=prop_callback, val_callback=val_callback, data_as_val=False, key="dataset_type", val_key="dataset_modalities"
-        ).transform_ontology(current_app.ubkg.dataset_types_hierarchy, 'DatasetTypesHierarchy')
+            return [item for sublist in matrix for item in sublist]

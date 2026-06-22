@@ -1844,7 +1844,7 @@ def get_dataset_title(property_key, normalized_type, user_token, existing_data_d
     # the threshold, we will just use the number in the title.
     organs_description_phrase = f"{len(organ_abbrev_set)} organs"
     organ_types_dict = Ontology.ops(
-        as_data_dict=True, prop_callback=None, key="organ_uberon", val_key="term"
+        as_data_dict=True, key_callback=None, key="organ_uberon", val_key="term"
     ).organ_types()
 
     if len(organ_abbrev_set) <= MAX_ENTITY_LIST_LENGTH:
@@ -2029,7 +2029,7 @@ def get_display_subtype(
             ):
                 if "organ" in existing_data_dict:
                     organ_types = Ontology.ops(
-                        as_data_dict=True, prop_callback=None, key="organ_uberon", val_key="term"
+                        as_data_dict=True, key_callback=None, key="organ_uberon", val_key="term"
                     ).organ_types()
                     display_subtype = get_val_by_key(
                         existing_data_dict["organ"], organ_types, "ubkg.organ_types"
@@ -2042,7 +2042,7 @@ def get_display_subtype(
 
             else:
                 sample_categories = Ontology.ops(
-                    as_data_dict=True, prop_callback=None
+                    as_data_dict=True, key_callback=None
                 ).specimen_categories()
                 display_subtype = get_val_by_key(
                     existing_data_dict["sample_category"],
@@ -3995,7 +3995,7 @@ def _get_organ_description(organ_code):
     str: The organ code description
     """
     ORGAN_TYPES = Ontology.ops(
-        as_arr=False, prop_callback=None, as_data_dict=True, data_as_val=True
+        as_arr=False, key_callback=None, as_data_dict=True, data_as_val=True
     ).organ_types()
 
     for key in ORGAN_TYPES:
@@ -4318,7 +4318,7 @@ def get_organ_hierarchy(
     organ_hierarchy = None
     if equals(existing_data_dict["sample_category"], "organ"):
         organ_types_categories = Ontology.ops(
-            as_data_dict=True, prop_callback=None, key="organ_uberon", val_key="category"
+            as_data_dict=True, key_callback=None, key="organ_uberon", val_key="category"
         ).organ_types()
 
         organ_hierarchy = existing_data_dict["organ"]
@@ -4326,7 +4326,7 @@ def get_organ_hierarchy(
             return property_key, organ_types_categories[organ_hierarchy]["term"]
 
         organ_types = Ontology.ops(
-            as_data_dict=True, prop_callback=None, key="organ_uberon", val_key="term"
+            as_data_dict=True, key_callback=None, key="organ_uberon", val_key="term"
         ).organ_types()
         if existing_data_dict["organ"] in organ_types:
             organ_name = organ_types[organ_hierarchy]
@@ -4368,17 +4368,8 @@ def get_dataset_type_hierarchy(
     """
 
     if equals(existing_data_dict["entity_type"], "Dataset"):
-        dataset_type_hierarchy = Ontology.dataset_type_hierarchy()
-        if existing_data_dict["dataset_type"] not in dataset_type_hierarchy:
-            return property_key, {
-                "first_level": existing_data_dict["dataset_type"],
-                "second_level": existing_data_dict["dataset_type"],
-            }
-
-        return property_key, {
-            "first_level": dataset_type_hierarchy[existing_data_dict["dataset_type"]],
-            "second_level": existing_data_dict["dataset_type"],
-        }
+        dataset_type_hierarchy = Ontology.dataset_type_hierarchy(dataset_type=existing_data_dict["dataset_type"])
+        return property_key, dataset_type_hierarchy
     else:
         return property_key, None
 
