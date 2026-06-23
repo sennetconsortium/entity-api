@@ -4367,7 +4367,7 @@ def get_dataset_type_hierarchy(
         dict: The dataset type hierarchy with keys of 'first_level' and 'second_level'
     """
 
-    if equals(existing_data_dict["entity_type"], "Dataset"):
+    if equals(existing_data_dict["entity_type"], "Dataset") and equals(existing_data_dict["creation_action"], "Create Dataset Activity"):
         dataset_type_hierarchy = Ontology.dataset_type_hierarchy(dataset_type=existing_data_dict["dataset_type"])
         return property_key, dataset_type_hierarchy
     else:
