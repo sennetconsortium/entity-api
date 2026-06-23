@@ -45,8 +45,15 @@ class Ontology(UbkgSDK):
             as_data_dict=True, key_callback=prop_callback, val_callback=val_callback, data_as_val=True,
         ).dataset_types_hierarchy()
 
-        if dataset_type is not None and dataset_type in all_facets:
-            return all_facets[dataset_type]
+        if dataset_type is not None: 
+            if dataset_type in all_facets:
+                return all_facets[dataset_type]
+            else:
+                return [{
+                    "modality": 'N/A',
+                    "analyte": 'N/A',
+                    "dataset_type": dataset_type
+                }]
         else:
             matrix = list(all_facets.values())
         
