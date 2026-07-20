@@ -1430,18 +1430,17 @@ def create_entity(entity_type: str, user_token: str, json_data_dict: dict, suppr
             if organ_code.upper() in ["FMA:57991", "FMA:57987"] and direct_ancestor_dict[
                 "source_type"
             ] not in [
-                source_types.HUMAN,
-                source_types.HUMAN_ORGANOID,
+                source_types.HUMAN
             ]:
                 abort_bad_req(
-                    "The organ codes FMA:57991 and FMA:57987 are only valid for human and human organoid source type"
+                    "The organ codes FMA:57991 and FMA:57987 are only valid for human source type"
                 )
 
             if organ_code.upper() in ["UBERON:0001911"] and direct_ancestor_dict[
                 "source_type"
-            ] not in [source_types.MOUSE, source_types.MOUSE_ORGANOID]:
+            ] not in [source_types.MOUSE]:
                 abort_bad_req(
-                    "The organ code UBERON:0001911 is only valid for mouse and mouse organoid source type"
+                    "The organ code UBERON:0001911 is only valid for mouse source type"
                 )
 
         # Generate 'before_create_triiger' data and create the entity details in Neo4j
@@ -4161,7 +4160,7 @@ def get_prov_info():
     HEADER_PROCESSED_DATASET_STATUS = "processed_dataset_status"
     HEADER_PROCESSED_DATASET_PORTAL_URL = "processed_dataset_portal_url"
     ORGAN_TYPES = Ontology.ops(
-        as_data_dict=True, data_as_val=True, val_key="organ_uberon", prop_callback=None
+        as_data_dict=True, data_as_val=True, val_key="organ_uberon", key_callback=None
     ).organ_types()
     HEADER_PREVIOUS_VERSION_SENNET_IDS = "previous_version_sennet_ids"
 
@@ -4537,7 +4536,7 @@ def get_prov_info_for_dataset(id):
     HEADER_PROCESSED_DATASET_PORTAL_URL = "processed_dataset_portal_url"
     HEADER_DATASET_SAMPLES = "dataset_samples"
     ORGAN_TYPES = Ontology.ops(
-        as_data_dict=True, data_as_val=True, val_key="organ_uberon", prop_callback=None
+        as_data_dict=True, data_as_val=True, val_key="organ_uberon", key_callback=None
     ).organ_types()
 
     headers = [
@@ -4782,7 +4781,7 @@ def get_sample_prov_info():
     HEADER_ORGAN_TYPE = "organ_type"
     HEADER_ORGAN_SENNET_ID = "organ_sennet_id"
     ORGAN_TYPES = Ontology.ops(
-        as_data_dict=True, data_as_val=True, val_key="organ_uberon", prop_callback=None
+        as_data_dict=True, data_as_val=True, val_key="organ_uberon", key_callback=None
     ).organ_types()
 
     # Processing and validating query parameters
@@ -6755,7 +6754,7 @@ def verify_ubkg_properties(json_data_dict):
     SOURCE_TYPES = Ontology.ops(as_data_dict=True).source_types()
     SAMPLE_CATEGORIES = Ontology.ops(as_data_dict=True).specimen_categories()
     ORGAN_TYPES = Ontology.ops(
-        as_data_dict=True, key="organ_uberon", prop_callback=None
+        as_data_dict=True, key="organ_uberon", key_callback=None
     ).organ_types()
     DATASET_TYPE = Ontology.ops(as_data_dict=True).dataset_types()
 
@@ -6850,7 +6849,7 @@ def check_multiple_organs_constraint(
                 )
                 if count >= 1:
                     organ_codes = Ontology.ops(
-                        as_data_dict=True, val_key="term", key="organ_uberon", prop_callback=None
+                        as_data_dict=True, val_key="term", key="organ_uberon", key_callback=None
                     ).organ_types()
                     organ = organ_codes[organ_code]
                     abort_bad_req(
@@ -6941,7 +6940,7 @@ def delete_cache(id):
 
         # If the target entity is Datasets/Publication, delete the associated Collections cache, Upload cache
         collection_uuids = schema_neo4j_queries.get_entity_collections(
-            neo4j_driver_instance, entity_uuid, "uuid"
+            neo4j_driver_instance, entity_uuid, property_key="uuid"
         )
         collection_dict = schema_neo4j_queries.get_publication_associated_collection(
             neo4j_driver_instance, entity_uuid
