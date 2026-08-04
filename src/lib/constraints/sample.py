@@ -20,7 +20,7 @@ def build_sample_organ_constraints(entity, constraints=None):
 
     # Sample suspension ---> Sample organ of blood (organ_uberon)
     ancestor = build_constraint_unit(
-            entity, [SpecimenCategories.ORGAN], [Ontology.ops(as_data_dict=True, val_key='organ_uberon').organ_types()['BLOOD']]
+            entity, [SpecimenCategories.ORGAN], [Ontology.ops(val_key='organ_uberon').organ_types().BLOOD]
         )
     constraints.append(build_constraint(ancestor, [descendant]))
 
