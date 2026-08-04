@@ -18,6 +18,12 @@ def build_sample_organ_constraints(entity, constraints=None):
     descendant = build_constraint_unit(Entities.SAMPLE, [SpecimenCategories.SUSPENSION])
     constraints.append(build_constraint(ancestor, [descendant]))
 
+    # Sample suspension ---> Sample organ of blood (organ_uberon)
+    ancestor = build_constraint_unit(
+            entity, [SpecimenCategories.ORGAN], [Ontology.ops(val_key='organ_uberon').organ_types().BLOOD]
+        )
+    constraints.append(build_constraint(ancestor, [descendant]))
+
     # Sample block ---> Sample organ
     ancestor = build_constraint_unit(entity, [SpecimenCategories.ORGAN])
     descendant = build_constraint_unit(Entities.SAMPLE, [SpecimenCategories.BLOCK])
