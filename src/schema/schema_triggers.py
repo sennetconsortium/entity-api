@@ -1,3 +1,4 @@
+import ast
 import json
 import logging
 import re
@@ -1642,7 +1643,8 @@ def get_source_mapped_metadata(
         raise schema_errors.InvalidPropertyRequirementsException(msg)
 
     if not isinstance(existing_data_dict["metadata"], dict):
-        metadata = json.loads(existing_data_dict["metadata"].replace("'", '"'))
+        metadata = ast.literal_eval(existing_data_dict["metadata"])
+        # metadata = json.loads(existing_data_dict["metadata"].replace("'", '"'))
     else:
         metadata = existing_data_dict["metadata"]
 
