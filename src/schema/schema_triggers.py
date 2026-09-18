@@ -4662,11 +4662,16 @@ def get_benchmarking_project(
         str: "True" if this entity belongs to the benchmarking project
     """
     benchmarking_source_uuids = [
-        "694f43ad76508c665a335fd1606a1168",
-        "37546305fadd47df9b6fab73b9f2d76a",
-        "cbedb6b045bb7410c8ac448e24175bd7",
+        "4f20b60555502618d76fbfcde6de9aa6",
         "b8c2782a2387f30c8352bbd0b7246a10",
+        "3c0c037f01bc2aeff21d7a4e65fa8399",
+        "cbedb6b045bb7410c8ac448e24175bd7",
         "033996659189ebfe06e71b12f9892605",
+        "a546180e94fd2f84a64539a00a26bbde",
+        "694f43ad76508c665a335fd1606a1168",
+        "5fb1603de2b0f42eff612f6095478fe1",
+        "37546305fadd47df9b6fab73b9f2d76a",
+        "d21d17267c2139f071418da9e54092dc"
     ]
 
     # If the entity is a source check if its UUID exists in benchmarking_source_uuids
