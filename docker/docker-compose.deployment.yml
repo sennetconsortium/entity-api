@@ -1,4 +1,5 @@
 services:
+
   entity-api: 
     # Use the published image and tag from DockerHub
     image: sennet/entity-api:${ENTITY_API_VERSION:?err}
