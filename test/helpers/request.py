@@ -1,21 +1,5 @@
-import json
-from pathlib import Path
-
 import pytest
 import requests as requests_module
-
-from test.helpers.response import mock_response
-
-UBKG_SERVER = "https://ontology-api.test.hubmapconsortium.org/"
-UBKG_FIXTURES_DIR = Path(__file__).parent.parent / "fixtures" / "ubkg"
-UBKG_ENDPOINTS = {
-    "valueset?parent_sab=SENNET&parent_code=C020076&child_sabs=SENNET": "specimen_categories",
-    "valueset?parent_sab=SENNET&parent_code=C000012&child_sabs=SENNET": "entities",
-    "valueset?parent_sab=SENNET&parent_code=C050020&child_sabs=SENNET": "source_types",
-    "organs?application_context=SENNET": "organs",
-    "dataset-types?application_context=SENNET": "datasets",
-    "dataset-types/hierarchy": "dataset_types_hierarchy",
-}
 
 
 class RequestsMock:
@@ -80,9 +64,5 @@ def requests(monkeypatch):
     monkeypatch.setattr(requests_module, "post", mock.post)
     monkeypatch.setattr(requests_module, "put", mock.put)
     monkeypatch.setattr(requests_module, "delete", mock.delete)
-
-    for endpoint, name in UBKG_ENDPOINTS.items():
-        data = json.loads((UBKG_FIXTURES_DIR / f"{name}.json").read_text())
-        mock.add_response(f"{UBKG_SERVER}{endpoint}", "get", mock_response(200, data))
 
     yield mock

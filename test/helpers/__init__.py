@@ -23,8 +23,7 @@ USER = {
 
 
 @pytest.fixture()
-def app(auth, database, requests):
-    # The app loads UBKG ontologies on first import so requests must already be mocked
+def app(auth, database):
     import app as app_module
 
     driver, _ = database
