@@ -1,0 +1,982 @@
+[
+  {
+    "PDR_category": "Multiome Sequencing",
+    "assaytypes": [
+      "10x-multiome"
+    ],
+    "dataset_type": "10X Multiome",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": "single-cell",
+      "modality": "Single-cell multiomics"
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": "MxNF",
+    "assaytypes": [
+      "IMC2D",
+      "IMC2D_pyramid"
+    ],
+    "dataset_type": "2D Imaging Mass Cytometry",
+    "fig2": {
+      "aggregated_assaytype": "LC-MS",
+      "category": "bulk",
+      "modality": "Proteomics"
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": "MxNF",
+    "assaytypes": [
+      "IMC3D_pyramid",
+      "IMC3D"
+    ],
+    "dataset_type": "3D Imaging Mass Cytometry",
+    "fig2": {
+      "aggregated_assaytype": "LC-MS",
+      "category": "bulk",
+      "modality": "Proteomics"
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": null,
+    "assaytypes": [
+      "4i"
+    ],
+    "dataset_type": "4i",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": null,
+      "modality": null
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": "ATAC Sequencing",
+    "assaytypes": [
+      "sciATACseq",
+      "ATACseq-bulk",
+      "sn_atac_seq",
+      "SNARE-ATACseq2",
+      "snATACseq",
+      "sc_atac_seq_sci",
+      "sc_atac_seq_snare",
+      "sc_atac_seq_snare_lab",
+      "bulk_atacseq"
+    ],
+    "dataset_type": "ATACseq",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": "bulk",
+      "modality": "Epigenomics"
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": "ATAC Sequencing",
+    "assaytypes": [],
+    "dataset_type": "ATACseq (bulk)",
+    "fig2": {
+      "aggregated_assaytype": "ATACseq",
+      "category": "bulk",
+      "modality": "Epigenomics"
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": "Single-cycle Flourescence Microscopy",
+    "assaytypes": [
+      "AF",
+      "AF_pyramid"
+    ],
+    "dataset_type": "Auto-fluorescence",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": "imaging",
+      "modality": "Label free imaging"
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": "cell",
+    "assaytypes": [
+      "CODEX",
+      "codex_cytokit_v1",
+      "CODEX2"
+    ],
+    "dataset_type": "CODEX",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": "imaging",
+      "modality": "Antibody-based imaging"
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": null,
+    "assaytypes": [
+      "comet_assaytype"
+    ],
+    "dataset_type": "COMET",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": null,
+      "modality": null
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": "cell",
+    "assaytypes": [
+      "cell-dive",
+      "celldive_deepcell"
+    ],
+    "dataset_type": "Cell DIVE",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": "imaging",
+      "modality": "Antibody-based imaging"
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": "Single-cycle Flourescence Microscopy",
+    "assaytypes": [
+      "confocal_assaytype"
+    ],
+    "dataset_type": "Confocal",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": "imaging",
+      "modality": "Label free imaging"
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": null,
+    "assaytypes": [
+      "cosmx_proteomics"
+    ],
+    "dataset_type": "CosMx Proteomics",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": null,
+      "modality": null
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": null,
+    "assaytypes": [
+      "cosmx_transcriptomics"
+    ],
+    "dataset_type": "CosMx Transcriptomics",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": "imaging",
+      "modality": "Spatial Transcriptomics"
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": "cell",
+    "assaytypes": [
+      "cycif_assaytype"
+    ],
+    "dataset_type": "CyCIF",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": "imaging",
+      "modality": "Antibody-based imaging"
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": null,
+    "assaytypes": [
+      "cytof_assaytype"
+    ],
+    "dataset_type": "CyTOF",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": null,
+      "modality": null
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": null,
+    "assaytypes": [
+      "DART-FISH"
+    ],
+    "dataset_type": "DART-FISH",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": null,
+      "modality": null
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": null,
+    "assaytypes": [],
+    "dataset_type": "DARTFish",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": "imaging",
+      "modality": "Spatial Transcriptomics"
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": null,
+    "assaytypes": [],
+    "dataset_type": "DBiT",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": "single-cell",
+      "modality": "Single-cell multiomics"
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": null,
+    "assaytypes": [
+      "dbit-seq_assaytype"
+    ],
+    "dataset_type": "DBiT-seq",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": null,
+      "modality": null
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": "IMS",
+    "assaytypes": [
+      "DESI-IMS",
+      "NanoDESI_pyramid",
+      "NanoDESI",
+      "DESI_pyramid",
+      "DESI"
+    ],
+    "dataset_type": "DESI",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": "imaging",
+      "modality": "MS-based imaging"
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": null,
+    "assaytypes": [
+      "dicom-mri_assaytype"
+    ],
+    "dataset_type": "DICOM-MRI",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": null,
+      "modality": null
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": null,
+    "assaytypes": [
+      "dna-methylation"
+    ],
+    "dataset_type": "DNA Methylation",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": null,
+      "modality": null
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": null,
+    "assaytypes": [
+      "enhanced-srs"
+    ],
+    "dataset_type": "Enhanced Stimulated Raman Spectroscopy (SRS)",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": "imaging",
+      "modality": "Label free imaging"
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": null,
+    "assaytypes": [
+      "facs_assaytype"
+    ],
+    "dataset_type": "FACS",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": null,
+      "modality": null
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": null,
+    "assaytypes": [
+      "geomx_ngs"
+    ],
+    "dataset_type": "GeoMx (NGS)",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": "imaging",
+      "modality": "Spatial Transcriptomics"
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": null,
+    "assaytypes": [],
+    "dataset_type": "GeoMx (nCounter)",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": "imaging",
+      "modality": "Spatial Transcriptomics"
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": null,
+    "assaytypes": [],
+    "dataset_type": "HiFi-Slide",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": "imaging",
+      "modality": "Spatial Transcriptomics"
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": null,
+    "assaytypes": [
+      "gen_histology",
+      "AB-PAS",
+      "h-and-e",
+      "PAS",
+      "pas_ftu_segmentation",
+      "PAS_pyramid"
+    ],
+    "dataset_type": "Histology",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": "imaging",
+      "modality": "Brightfield microscopy"
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": null,
+    "assaytypes": [
+      "illumina_spatial_ver0"
+    ],
+    "dataset_type": "Illumina Spatial ver0",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": null,
+      "modality": null
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": null,
+    "assaytypes": [
+      "LC-MS",
+      "MS_top_down",
+      "LC-MS_top_down",
+      "MS_bottom_up",
+      "LC-MS_bottom_up",
+      "TMT-LC-MS",
+      "Targeted-Shotgun-LC-MS",
+      "LC-MS-untargeted",
+      "lc-ms-ms_labeled",
+      "lc-ms-ms_label-free",
+      "lc-ms_labeled",
+      "lc-ms_label-free"
+    ],
+    "dataset_type": "LC-MS",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": "bulk",
+      "modality": "Proteomics"
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": "Single-cycle Flourescence Microscopy",
+    "assaytypes": [
+      "Lightsheet"
+    ],
+    "dataset_type": "Light Sheet",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": "imaging",
+      "modality": "Antibody-based imaging"
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": null,
+    "assaytypes": [
+      "macsima_assaytype"
+    ],
+    "dataset_type": "MACSima",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": null,
+      "modality": null
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": "IMS",
+    "assaytypes": [
+      "MALDI-IMS",
+      "MALDI-IMS_pyramid"
+    ],
+    "dataset_type": "MALDI",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": "imaging",
+      "modality": "MS-based imaging"
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": "cell",
+    "assaytypes": [
+      "merfish_assaytype"
+    ],
+    "dataset_type": "MERFISH",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": "imaging",
+      "modality": "Spatial Transcriptomics"
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": "MxNF",
+    "assaytypes": [
+      "MIBI",
+      "mibi_deepcell"
+    ],
+    "dataset_type": "MIBI",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": "imaging",
+      "modality": "Antibody-based imaging"
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": null,
+    "assaytypes": [
+      "mplex_assaytype"
+    ],
+    "dataset_type": "MPLEx",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": null,
+      "modality": null
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": null,
+    "assaytypes": [
+      "MS"
+    ],
+    "dataset_type": "MS Lipidomics",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": null,
+      "modality": null
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": "RNA Sequencing",
+    "assaytypes": [
+      "music_assaytype"
+    ],
+    "dataset_type": "MUSIC",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": "bulk",
+      "modality": "Transcriptomics"
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": null,
+    "assaytypes": [
+      "molecular-cartography"
+    ],
+    "dataset_type": "Molecular Cartography",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": "imaging",
+      "modality": "Spatial Transcriptomics"
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": null,
+    "assaytypes": [
+      "object-x-analyte"
+    ],
+    "dataset_type": "Object x Analyte",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": null,
+      "modality": null
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": null,
+    "assaytypes": [
+      "olink_assaytype"
+    ],
+    "dataset_type": "Olink",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": null,
+      "modality": null
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": null,
+    "assaytypes": [
+      "paired-tag_assaytype"
+    ],
+    "dataset_type": "Paired-Tag",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": null,
+      "modality": null
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": "cell",
+    "assaytypes": [
+      "phenocycler_assaytype"
+    ],
+    "dataset_type": "PhenoCycler",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": "imaging",
+      "modality": "Antibody-based imaging"
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": null,
+    "assaytypes": [
+      "pixel-seqv2_assaytype"
+    ],
+    "dataset_type": "Pixel-seqV2",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": null,
+      "modality": null
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": "RNA Sequencing",
+    "assaytypes": [
+      "snRNAseq-Parse-Evercode",
+      "salmon_rnaseq_10x",
+      "multiome-snare-seq2",
+      "bulk-RNA",
+      "snRNAseq-10xGenomics-v3",
+      "scRNAseq-10xGenomics-v3",
+      "snRNAseq-10xGenomics-v2",
+      "scRNAseq-10xGenomics-v2",
+      "rnaseq-visium-no-probes",
+      "SNARE-RNAseq2",
+      "sciRNAseq",
+      "salmon_sn_rnaseq_10x",
+      "salmon_rnaseq_sciseq",
+      "salmon_rnaseq_snareseq",
+      "sc_rna_seq_snare_lab",
+      "salmon_rnaseq_bulk"
+    ],
+    "dataset_type": "RNAseq",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": "bulk",
+      "modality": "Transcriptomics"
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": "RNA Sequencing",
+    "assaytypes": [],
+    "dataset_type": "RNAseq (bulk)",
+    "fig2": {
+      "aggregated_assaytype": "RNAseq",
+      "category": "bulk",
+      "modality": "Transcriptomics"
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": "RNA Sequencing",
+    "assaytypes": [
+      "10x-flex",
+      "rna_with_probes",
+      "scRNAseq-with-probes",
+      "geomx-rnaseq-with-probes",
+      "scRNAseq-visium-with-probes"
+    ],
+    "dataset_type": "RNAseq (with probes)",
+    "fig2": {
+      "aggregated_assaytype": "RNAseq",
+      "category": "bulk",
+      "modality": "Transcriptomics"
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": null,
+    "assaytypes": [
+      "raman-imaging"
+    ],
+    "dataset_type": "Raman Imaging",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": null,
+      "modality": null
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": "IMS",
+    "assaytypes": [
+      "SIMS-IMS"
+    ],
+    "dataset_type": "SIMS",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": null,
+      "modality": null
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": "RNA Sequencing",
+    "assaytypes": [
+      "multiome-snare-seq2"
+    ],
+    "dataset_type": "SNARE-seq2",
+    "fig2": {
+      "aggregated_assaytype": "sc/snATAC+RNA-seq (SNARE)",
+      "category": "single-cell",
+      "modality": "Single-cell multiomics"
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": null,
+    "assaytypes": [
+      "starmap_assaytype"
+    ],
+    "dataset_type": "STARmap",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": null,
+      "modality": null
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": "Single-cycle Flourescence Microscopy",
+    "assaytypes": [
+      "second-harmonic-generation"
+    ],
+    "dataset_type": "Second Harmonic Generation (SHG)",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": "imaging",
+      "modality": "Label free imaging"
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": null,
+    "assaytypes": [
+      "segmentation-mask"
+    ],
+    "dataset_type": "Segmentation Mask",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": "imaging",
+      "modality": null
+    },
+    "is_externally_processed": true
+  },
+  {
+    "PDR_category": null,
+    "assaytypes": [
+      "seq-scope_assaytype"
+    ],
+    "dataset_type": "Seq-Scope",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": null,
+      "modality": null
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": null,
+    "assaytypes": [
+      "singular-genomics-g4x"
+    ],
+    "dataset_type": "Singular Genomics G4X",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": null,
+      "modality": null
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": null,
+    "assaytypes": [
+      "salmon_rnaseq_slideseq",
+      "Slide-seq"
+    ],
+    "dataset_type": "Slideseq",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": "single-cell",
+      "modality": "Single-cell omics"
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": null,
+    "assaytypes": [
+      "stereo-seq_assaytype"
+    ],
+    "dataset_type": "Stereo-seq",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": null,
+      "modality": null
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": "Single-cycle Flourescence Microscopy",
+    "assaytypes": [
+      "thick-section-multiphoton-mxif"
+    ],
+    "dataset_type": "Thick section Multiphoton MxIF",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": "imaging",
+      "modality": "Antibody-based imaging"
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": null,
+    "assaytypes": [
+      "publication_ancillary",
+      "publication",
+      "MxIF_pyramid",
+      "MxIF",
+      "NanoPOTS_pyramid",
+      "NanoPOTS",
+      "image_pyramid"
+    ],
+    "dataset_type": "UNKNOWN",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": null,
+      "modality": null
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": "Spatial Transcriptomics",
+    "assaytypes": [
+      "visium-no-probes"
+    ],
+    "dataset_type": "Visium (no probes)",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": "imaging",
+      "modality": "Spatial Transcriptomics"
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": "Spatial Transcriptomics",
+    "assaytypes": [
+      "visium-with-probes"
+    ],
+    "dataset_type": "Visium (with probes)",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": "imaging",
+      "modality": "Spatial Transcriptomics"
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": null,
+    "assaytypes": [
+      "visium-hd"
+    ],
+    "dataset_type": "Visium HD",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": null,
+      "modality": null
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": null,
+    "assaytypes": [
+      "WGS"
+    ],
+    "dataset_type": "WGS",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": null,
+      "modality": null
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": null,
+    "assaytypes": [
+      "xenium_assaytype"
+    ],
+    "dataset_type": "Xenium",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": "imaging",
+      "modality": "Spatial Transcriptomics"
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": null,
+    "assaytypes": [],
+    "dataset_type": "epic",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": null,
+      "modality": null
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": null,
+    "assaytypes": [
+      "iclap_assaytype"
+    ],
+    "dataset_type": "iCLAP",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": null,
+      "modality": null
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": "LC-MS",
+    "assaytypes": [
+      "nano-splits"
+    ],
+    "dataset_type": "nanoSPLITS",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": "imaging",
+      "modality": "MS-based imaging"
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": "ATAC Sequencing",
+    "assaytypes": [],
+    "dataset_type": "scATACseq",
+    "fig2": {
+      "aggregated_assaytype": "sc/snATAC-seq",
+      "category": "single-cell",
+      "modality": "Single-cell omics"
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": "RNA Sequencing",
+    "assaytypes": [],
+    "dataset_type": "scRNAseq",
+    "fig2": {
+      "aggregated_assaytype": "sc/snRNA-seq",
+      "category": "single-cell",
+      "modality": "Single-cell omics"
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": null,
+    "assaytypes": [
+      "seqFish_lab_processed",
+      "seqFish_pyramid",
+      "seqFish_assaytype"
+    ],
+    "dataset_type": "seqFISH",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": null,
+      "modality": null
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": "RNA Sequencing",
+    "assaytypes": [],
+    "dataset_type": "snRNAseq",
+    "fig2": {
+      "aggregated_assaytype": "sc/snRNA-seq",
+      "category": "single-cell",
+      "modality": "Single-cell omics"
+    },
+    "is_externally_processed": false
+  },
+  {
+    "PDR_category": null,
+    "assaytypes": [
+      "snm3C-seq_assaytype"
+    ],
+    "dataset_type": "snm3C-seq",
+    "fig2": {
+      "aggregated_assaytype": null,
+      "category": null,
+      "modality": null
+    },
+    "is_externally_processed": false
+  }
+]

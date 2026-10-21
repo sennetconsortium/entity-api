@@ -1,72 +1,18 @@
 import ast
 import collections
-from datetime import datetime
-from typing import List
-
-from flask import Flask, Response, abort, current_app, g, jsonify, make_response, request
-from neo4j.exceptions import TransactionError
+import csv
+import json
+import logging
 import os
 import re
-import csv
+import urllib.parse
+from datetime import datetime
+from io import StringIO
+from pathlib import Path
+from typing import List
+
 import psutil
 import requests
-import urllib.parse
-from io import StringIO
-
-# Don't confuse urllib (Python native library) with urllib3 (3rd-party library, requests also uses urllib3)
-from urllib3.exceptions import InsecureRequestWarning
-from pathlib import Path
-import logging
-import json
-
-from lib.constraints import (
-    get_constraints_by_ancestor,
-    get_constraints_by_descendant,
-    build_constraint,
-    build_constraint_unit,
-)
-
-# pymemcache.client.base.PooledClient is a thread-safe client pool
-# that provides the same API as pymemcache.client.base.Client
-from pymemcache.client.base import PooledClient
-from pymemcache import serde
-
-# Local modules
-import app_neo4j_queries
-import provenance
-from schema import schema_manager, schema_validators, schema_triggers
-from schema import schema_errors
-from schema import schema_neo4j_queries
-from schema.schema_constants import SchemaConstants
-from schema.schema_constants import DataVisibilityEnum
-from schema.schema_constants import MetadataScopeEnum
-from schema.schema_constants import TriggerTypeEnum
-
-# HuBMAP commons
-from hubmap_commons import string_helper
-from hubmap_commons import file_helper as hm_file_helper
-from hubmap_commons import neo4j_driver
-from hubmap_commons.hm_auth import AuthHelper
-from hubmap_commons.exceptions import HTTPException
-
-# Atlas Consortia commons
-from atlas_consortia_commons.ubkg import initialize_ubkg
-from atlas_consortia_commons.rest import (
-    StatusCodes,
-    abort_bad_req,
-    abort_err_handler,
-    abort_forbidden,
-    abort_internal_err,
-    abort_not_found,
-    abort_unauthorized,
-    abort_unacceptable,
-    full_response,
-    get_http_exceptions_classes,
-    rest_bad_req,
-    rest_ok,
-)
-from atlas_consortia_commons.string import equals
-from atlas_consortia_commons.ubkg.ubkg_sdk import init_ontology
 from atlas_consortia_commons.decorator import (
     require_data_admin,
     require_json,
@@ -74,7 +20,75 @@ from atlas_consortia_commons.decorator import (
     strip_whitespace_id,
     suppress_reindex,
 )
+from atlas_consortia_commons.rest import (
+    StatusCodes,
+    abort_bad_req,
+    abort_err_handler,
+    abort_forbidden,
+    abort_internal_err,
+    abort_not_found,
+    abort_unacceptable,
+    abort_unauthorized,
+    full_response,
+    get_http_exceptions_classes,
+    rest_bad_req,
+    rest_ok,
+)
+from atlas_consortia_commons.string import equals
+
+# Atlas Consortia commons
+from atlas_consortia_commons.ubkg import initialize_ubkg
+from atlas_consortia_commons.ubkg.ubkg_sdk import init_ontology
+from flask import (
+    Flask,
+    Response,
+    abort,
+    current_app,
+    g,
+    jsonify,
+    make_response,
+    request,
+)
+
+# HuBMAP commons
+from hubmap_commons import file_helper as hm_file_helper
+from hubmap_commons import neo4j_driver, string_helper
+from hubmap_commons.exceptions import HTTPException
+from hubmap_commons.hm_auth import AuthHelper
+from markupsafe import escape
+from neo4j.exceptions import TransactionError
+from pymemcache import serde
+
+# pymemcache.client.base.PooledClient is a thread-safe client pool
+# that provides the same API as pymemcache.client.base.Client
+from pymemcache.client.base import PooledClient
+
+# Don't confuse urllib (Python native library) with urllib3 (3rd-party library, requests also uses urllib3)
+from urllib3.exceptions import InsecureRequestWarning
+
+# Local modules
+import app_neo4j_queries
+import provenance
+from lib.constraints import (
+    build_constraint,
+    build_constraint_unit,
+    get_constraints_by_ancestor,
+    get_constraints_by_descendant,
+)
 from lib.ontology import Ontology
+from schema import (
+    schema_errors,
+    schema_manager,
+    schema_neo4j_queries,
+    schema_triggers,
+    schema_validators,
+)
+from schema.schema_constants import (
+    DataVisibilityEnum,
+    MetadataScopeEnum,
+    SchemaConstants,
+    TriggerTypeEnum,
+)
 
 # Root logger configuration
 global logger
@@ -393,11 +407,11 @@ def flush_cache(id):
 
     if MEMCACHED_MODE:
         delete_cache(id)
-        msg = f"The cached data has been deleted from Memcached for entity {id}"
+        msg = f"The cached data has been deleted from Memcached for entity {escape(id)}"
     else:
         msg = "No caching is being used because Memcached mode is not enabled at all"
 
-    return msg
+    return Response(msg, mimetype="text/plain")
 
 
 """
@@ -420,13 +434,15 @@ def get_status():
             (Path(__file__).absolute().parent.parent / "VERSION").read_text().strip()
         )
     except Exception as e:
-        file_version_content = str(e)
+        logger.error(f"Error reading VERSION file: {e}", exc_info=True)
+        file_version_content = "unavailable"
         response_code = 500
 
     try:
         file_build_content = (Path(__file__).absolute().parent.parent / "BUILD").read_text().strip()
     except Exception as e:
-        file_build_content = str(e)
+        logger.error(f"Error reading BUILD file: {e}", exc_info=True)
+        file_build_content = "unavailable"
         response_code = 500
 
     status_data = {
@@ -465,8 +481,8 @@ def get_status():
                 }
             )
     except Exception as e:
-        response_code = 500
         logger.error(f"Error getting system usage: {str(e)}")
+        response_code = 500
 
     # check the neo4j connection
     service = {"name": "neo4j", "status": True}
@@ -475,8 +491,9 @@ def get_status():
         if is_connected is False:
             raise Exception(f"Cannot connect to Neo4j server at {current_app.config['NEO4J_URI']}")
     except Exception as e:
+        logger.error(f"Error checking Neo4j connection: {str(e)}", exc_info=True)
         service["status"] = False
-        service["message"] = str(e).replace("'", "")
+        service["message"] = "Unable to connect to Neo4j"
         response_code = 500
     status_data["services"].append(service)
 
@@ -486,8 +503,9 @@ def get_status():
             service = {"name": "memcached", "status": True}
             memcached_client_instance.stats()
         except Exception as e:
+            logger.error(f"Error checking Memcached connection: {str(e)}", exc_info=True)
             service["status"] = False
-            service["message"] = str(e).replace("'", "")
+            service["message"] = "Unable to connect to Memcached"
             response_code = 500
         status_data["services"].append(service)
 
@@ -512,8 +530,9 @@ def get_status():
                     f"Entity API DOI redirect URL {redirect_url} failed with status code {res.status_code}"
                 )
         except Exception as e:
+            logger.error(f"Error checking Entity API DOI redirect: {str(e)}", exc_info=True)
             service["status"] = False
-            service["message"] = str(e).replace("'", "")
+            service["message"] = "DOI redirect check failed"
             response_code = 500
         status_data["services"].append(service)
 
@@ -533,8 +552,9 @@ def get_status():
                     f"DOI redirect URL {redirect_url} failed with status code {res.status_code}"
                 )
         except Exception as e:
+            logger.error(f"Error checking DOI.org redirect: {str(e)}", exc_info=True)
             service["status"] = False
-            service["message"] = str(e).replace("'", "")
+            service["message"] = "doi.org redirect check failed"
             response_code = 500
         status_data["services"].append(service)
 
@@ -751,10 +771,12 @@ def get_entity_by_id(id):
                 )
 
                 entity_dict = app_neo4j_queries.get_entity(
-                    neo4j_driver_instance, 
-                    entity_dict['uuid'], data_access_level, 
+                    neo4j_driver_instance,
+                    entity_dict["uuid"],
+                    data_access_level,
                     properties=segregated_properties,
-                    is_include_action=properties_action,)
+                    is_include_action=properties_action,
+                )
 
                 complete_entities_list = schema_manager.get_complete_entities_list(
                     token,
@@ -774,8 +796,9 @@ def get_entity_by_id(id):
                 _final_result = schema_manager.remove_unauthorized_fields_from_response(
                     normalize_result, unauthorized=not authorized
                 )
-                if (len(_final_result) > 0):
+                if len(_final_result) > 0:
                     final_result = _final_result[0]
+
         return jsonify(final_result)
 
     normalized_entity_type = entity_dict["entity_type"]
@@ -885,7 +908,7 @@ def get_entity_by_id(id):
         return jsonify(final_result)
     else:
         # Response with the dict
-        if public_entity and not  authorized:
+        if public_entity and not authorized:
             final_result = schema_manager.exclude_properties_from_response(
                 fields_to_exclude, final_result
             )
@@ -1429,9 +1452,7 @@ def create_entity(entity_type: str, user_token: str, json_data_dict: dict, suppr
             # Left and right mammary gland
             if organ_code.upper() in ["FMA:57991", "FMA:57987"] and direct_ancestor_dict[
                 "source_type"
-            ] not in [
-                source_types.HUMAN
-            ]:
+            ] not in [source_types.HUMAN]:
                 abort_bad_req(
                     "The organ codes FMA:57991 and FMA:57987 are only valid for human source type"
                 )
@@ -1439,9 +1460,7 @@ def create_entity(entity_type: str, user_token: str, json_data_dict: dict, suppr
             if organ_code.upper() in ["UBERON:0001911"] and direct_ancestor_dict[
                 "source_type"
             ] not in [source_types.MOUSE]:
-                abort_bad_req(
-                    "The organ code UBERON:0001911 is only valid for mouse source type"
-                )
+                abort_bad_req("The organ code UBERON:0001911 is only valid for mouse source type")
 
         # Generate 'before_create_triiger' data and create the entity details in Neo4j
         merged_dict = create_entity_details(
@@ -7180,7 +7199,7 @@ def is_primary_dataset(normalized_entity_type, entity):
 
 if __name__ == "__main__":
     try:
-        app.run(host="0.0.0.0", port="5002")
+        app.run(host="0.0.0.0", port=5002)
         print("Flask app.run() done")
     except Exception as e:
         print("Error during starting debug server.")

@@ -1,0 +1,27 @@
+[
+  {
+    "code": "C050002",
+    "sab": "SENNET",
+    "term": "Dataset"
+  },
+  {
+    "code": "C050003",
+    "sab": "SENNET",
+    "term": "Sample"
+  },
+  {
+    "code": "C050004",
+    "sab": "SENNET",
+    "term": "Source"
+  },
+  {
+    "code": "C050021",
+    "sab": "SENNET",
+    "term": "Publication Entity"
+  },
+  {
+    "code": "C050022",
+    "sab": "SENNET",
+    "term": "Upload"
+  }
+]
