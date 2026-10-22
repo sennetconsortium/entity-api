@@ -1,0 +1,722 @@
+[
+  {
+    "dataset_type": {
+      "code": "C202382",
+      "name": "snm3C-seq"
+    },
+    "modalities": [
+      {
+        "analytes": [
+          {
+            "code": "C002046",
+            "name": "Chromatin"
+          }
+        ],
+        "code": "C046004",
+        "name": "Epigenomics"
+      }
+    ]
+  },
+  {
+    "dataset_type": {
+      "code": "C202362",
+      "name": "MACSima"
+    },
+    "modalities": [
+      {
+        "analytes": [
+          {
+            "code": "C020131",
+            "name": "Protein"
+          }
+        ],
+        "code": "C046012",
+        "name": "Spatial Proteomics"
+      }
+    ]
+  },
+  {
+    "dataset_type": {
+      "code": "C202352",
+      "name": "Paired-Tag"
+    },
+    "modalities": [
+      {
+        "analytes": [
+          {
+            "code": "C002046",
+            "name": "Chromatin"
+          }
+        ],
+        "code": "C046004",
+        "name": "Epigenomics"
+      },
+      {
+        "analytes": [
+          {
+            "code": "C002036",
+            "name": "RNA"
+          }
+        ],
+        "code": "C046011",
+        "name": "Transcriptomics"
+      }
+    ]
+  },
+  {
+    "dataset_type": {
+      "code": "C202322",
+      "name": "Illumina Spatial ver0"
+    },
+    "modalities": [
+      {
+        "analytes": [
+          {
+            "code": "C002036",
+            "name": "RNA"
+          }
+        ],
+        "code": "C046010",
+        "name": "Spatial Transcriptomics"
+      }
+    ]
+  },
+  {
+    "dataset_type": {
+      "code": "C202312",
+      "name": "DNA Methylation"
+    },
+    "modalities": [
+      {
+        "analytes": [
+          {
+            "code": "C002046",
+            "name": "Chromatin"
+          }
+        ],
+        "code": "C046004",
+        "name": "Epigenomics"
+      }
+    ]
+  },
+  {
+    "dataset_type": {
+      "code": "C202302",
+      "name": "COMET"
+    },
+    "modalities": [
+      {
+        "analytes": [
+          {
+            "code": "C020131",
+            "name": "Protein"
+          }
+        ],
+        "code": "C046012",
+        "name": "Spatial Proteomics"
+      }
+    ]
+  },
+  {
+    "dataset_type": {
+      "code": "C202292",
+      "name": "iCLAP"
+    },
+    "modalities": [
+      {
+        "analytes": [
+          {
+            "code": "C002036",
+            "name": "RNA"
+          }
+        ],
+        "code": "C046010",
+        "name": "Spatial Transcriptomics"
+      }
+    ]
+  },
+  {
+    "dataset_type": {
+      "code": "C202272",
+      "name": "STARmap"
+    },
+    "modalities": [
+      {
+        "analytes": [
+          {
+            "code": "C002036",
+            "name": "RNA"
+          }
+        ],
+        "code": "C046010",
+        "name": "Spatial Transcriptomics"
+      }
+    ]
+  },
+  {
+    "dataset_type": {
+      "code": "C202262",
+      "name": "Raman Imaging"
+    },
+    "modalities": [
+      {
+        "analytes": [
+          {
+            "code": "C002047",
+            "name": "Lipid + metabolite"
+          }
+        ],
+        "code": "C046002",
+        "name": "Microscopy"
+      }
+    ]
+  },
+  {
+    "dataset_type": {
+      "code": "C202251",
+      "name": "4i"
+    },
+    "modalities": [
+      {
+        "analytes": [
+          {
+            "code": "C020131",
+            "name": "Protein"
+          }
+        ],
+        "code": "C046012",
+        "name": "Spatial Proteomics"
+      }
+    ]
+  },
+  {
+    "dataset_type": {
+      "code": "C202242",
+      "name": "Pixel-seqV2"
+    },
+    "modalities": [
+      {
+        "analytes": [
+          {
+            "code": "C002036",
+            "name": "RNA"
+          }
+        ],
+        "code": "C046010",
+        "name": "Spatial Transcriptomics"
+      }
+    ]
+  },
+  {
+    "dataset_type": {
+      "code": "C202222",
+      "name": "Visium HD"
+    },
+    "modalities": [
+      {
+        "analytes": [
+          {
+            "code": "C002036",
+            "name": "RNA"
+          }
+        ],
+        "code": "C046010",
+        "name": "Spatial Transcriptomics"
+      }
+    ]
+  },
+  {
+    "dataset_type": {
+      "code": "C202192",
+      "name": "Seq-Scope"
+    },
+    "modalities": [
+      {
+        "analytes": [
+          {
+            "code": "C002036",
+            "name": "RNA"
+          }
+        ],
+        "code": "C046010",
+        "name": "Spatial Transcriptomics"
+      }
+    ]
+  },
+  {
+    "dataset_type": {
+      "code": "C202182",
+      "name": "Olink"
+    },
+    "modalities": [
+      {
+        "analytes": [
+          {
+            "code": "C020131",
+            "name": "Protein"
+          }
+        ],
+        "code": "C046009",
+        "name": "Proteomics"
+      }
+    ]
+  },
+  {
+    "dataset_type": {
+      "code": "C202152",
+      "name": "CosMx Proteomics"
+    },
+    "modalities": [
+      {
+        "analytes": [
+          {
+            "code": "C020131",
+            "name": "Protein"
+          }
+        ],
+        "code": "C046012",
+        "name": "Spatial Proteomics"
+      }
+    ]
+  },
+  {
+    "dataset_type": {
+      "code": "C202143",
+      "name": "Stereo-seq"
+    },
+    "modalities": [
+      {
+        "analytes": [
+          {
+            "code": "C002036",
+            "name": "RNA"
+          }
+        ],
+        "code": "C046010",
+        "name": "Spatial Transcriptomics"
+      }
+    ]
+  },
+  {
+    "dataset_type": {
+      "code": "C202102",
+      "name": "Singular Genomics G4X"
+    },
+    "modalities": [
+      {
+        "analytes": [
+          {
+            "code": "C002036",
+            "name": "RNA"
+          }
+        ],
+        "code": "C046010",
+        "name": "Spatial Transcriptomics"
+      }
+    ]
+  },
+  {
+    "dataset_type": {
+      "code": "C202092",
+      "name": "DBiT-seq"
+    },
+    "modalities": [
+      {
+        "analytes": [
+          {
+            "code": "C002046",
+            "name": "Chromatin"
+          }
+        ],
+        "code": "C046004",
+        "name": "Epigenomics"
+      },
+      {
+        "analytes": [
+          {
+            "code": "C002036",
+            "name": "RNA"
+          }
+        ],
+        "code": "C046010",
+        "name": "Spatial Transcriptomics"
+      }
+    ]
+  },
+  {
+    "dataset_type": {
+      "code": "C003067",
+      "name": "CyTOF"
+    },
+    "modalities": [
+      {
+        "analytes": [
+          {
+            "code": "C020131",
+            "name": "Protein"
+          }
+        ],
+        "code": "C046009",
+        "name": "Proteomics"
+      }
+    ]
+  },
+  {
+    "dataset_type": {
+      "code": "C003056",
+      "name": "CyCIF"
+    },
+    "modalities": [
+      {
+        "analytes": [
+          {
+            "code": "C020131",
+            "name": "Protein"
+          }
+        ],
+        "code": "C046012",
+        "name": "Spatial Proteomics"
+      }
+    ]
+  },
+  {
+    "dataset_type": {
+      "code": "C003070",
+      "name": "CosMx Transcriptomics"
+    },
+    "modalities": [
+      {
+        "analytes": [
+          {
+            "code": "C002036",
+            "name": "RNA"
+          }
+        ],
+        "code": "C046010",
+        "name": "Spatial Transcriptomics"
+      }
+    ]
+  },
+  {
+    "dataset_type": {
+      "code": "C006303",
+      "name": "Cell DIVE"
+    },
+    "modalities": [
+      {
+        "analytes": [
+          {
+            "code": "C020131",
+            "name": "Protein"
+          }
+        ],
+        "code": "C046012",
+        "name": "Spatial Proteomics"
+      }
+    ]
+  },
+  {
+    "dataset_type": {
+      "code": "C003053",
+      "name": "ATACseq"
+    },
+    "modalities": [
+      {
+        "analytes": [
+          {
+            "code": "C002046",
+            "name": "Chromatin"
+          }
+        ],
+        "code": "C046004",
+        "name": "Epigenomics"
+      }
+    ]
+  },
+  {
+    "dataset_type": {
+      "code": "C003078",
+      "name": "Xenium"
+    },
+    "modalities": [
+      {
+        "analytes": [
+          {
+            "code": "C020131",
+            "name": "Protein"
+          }
+        ],
+        "code": "C046012",
+        "name": "Spatial Proteomics"
+      },
+      {
+        "analytes": [
+          {
+            "code": "C002036",
+            "name": "RNA"
+          }
+        ],
+        "code": "C046010",
+        "name": "Spatial Transcriptomics"
+      }
+    ]
+  },
+  {
+    "dataset_type": {
+      "code": "C003077",
+      "name": "Visium (with probes)"
+    },
+    "modalities": [
+      {
+        "analytes": [
+          {
+            "code": "C002036",
+            "name": "RNA"
+          }
+        ],
+        "code": "C046010",
+        "name": "Spatial Transcriptomics"
+      }
+    ]
+  },
+  {
+    "dataset_type": {
+      "code": "C003076",
+      "name": "Visium (no probes)"
+    },
+    "modalities": [
+      {
+        "analytes": [
+          {
+            "code": "C002036",
+            "name": "RNA"
+          }
+        ],
+        "code": "C046010",
+        "name": "Spatial Transcriptomics"
+      }
+    ]
+  },
+  {
+    "dataset_type": {
+      "code": "C003054",
+      "name": "SNARE-seq2"
+    },
+    "modalities": [
+      {
+        "analytes": [
+          {
+            "code": "C002046",
+            "name": "Chromatin"
+          }
+        ],
+        "code": "C046004",
+        "name": "Epigenomics"
+      },
+      {
+        "analytes": [
+          {
+            "code": "C002036",
+            "name": "RNA"
+          }
+        ],
+        "code": "C046010",
+        "name": "Spatial Transcriptomics"
+      }
+    ]
+  },
+  {
+    "dataset_type": {
+      "code": "C003075",
+      "name": "RNAseq (with probes)"
+    },
+    "modalities": [
+      {
+        "analytes": [
+          {
+            "code": "C002036",
+            "name": "RNA"
+          }
+        ],
+        "code": "C046011",
+        "name": "Transcriptomics"
+      }
+    ]
+  },
+  {
+    "dataset_type": {
+      "code": "C003052",
+      "name": "RNAseq"
+    },
+    "modalities": [
+      {
+        "analytes": [
+          {
+            "code": "C002036",
+            "name": "RNA"
+          }
+        ],
+        "code": "C046011",
+        "name": "Transcriptomics"
+      }
+    ]
+  },
+  {
+    "dataset_type": {
+      "code": "C003055",
+      "name": "PhenoCycler"
+    },
+    "modalities": [
+      {
+        "analytes": [
+          {
+            "code": "C020131",
+            "name": "Protein"
+          }
+        ],
+        "code": "C046012",
+        "name": "Spatial Proteomics"
+      }
+    ]
+  },
+  {
+    "dataset_type": {
+      "code": "C007804",
+      "name": "MIBI"
+    },
+    "modalities": [
+      {
+        "analytes": [
+          {
+            "code": "C020131",
+            "name": "Protein"
+          }
+        ],
+        "code": "C046012",
+        "name": "Spatial Proteomics"
+      }
+    ]
+  },
+  {
+    "dataset_type": {
+      "code": "C003057",
+      "name": "MERFISH"
+    },
+    "modalities": [
+      {
+        "analytes": [
+          {
+            "code": "C002036",
+            "name": "RNA"
+          }
+        ],
+        "code": "C046010",
+        "name": "Spatial Transcriptomics"
+      }
+    ]
+  },
+  {
+    "dataset_type": {
+      "code": "C011902",
+      "name": "LC-MS"
+    },
+    "modalities": [
+      {
+        "analytes": [
+          {
+            "code": "C002034",
+            "name": "Peptide"
+          },
+          {
+            "code": "C020131",
+            "name": "Protein"
+          }
+        ],
+        "code": "C046009",
+        "name": "Proteomics"
+      }
+    ]
+  },
+  {
+    "dataset_type": {
+      "code": "C003073",
+      "name": "GeoMx (NGS)"
+    },
+    "modalities": [
+      {
+        "analytes": [
+          {
+            "code": "C020131",
+            "name": "Protein"
+          }
+        ],
+        "code": "C046012",
+        "name": "Spatial Proteomics"
+      },
+      {
+        "analytes": [
+          {
+            "code": "C002036",
+            "name": "RNA"
+          }
+        ],
+        "code": "C046010",
+        "name": "Spatial Transcriptomics"
+      }
+    ]
+  },
+  {
+    "dataset_type": {
+      "code": "C014004",
+      "name": "10X Multiome"
+    },
+    "modalities": [
+      {
+        "analytes": [
+          {
+            "code": "C002046",
+            "name": "Chromatin"
+          }
+        ],
+        "code": "C046004",
+        "name": "Epigenomics"
+      },
+      {
+        "analytes": [
+          {
+            "code": "C002036",
+            "name": "RNA"
+          }
+        ],
+        "code": "C046011",
+        "name": "Transcriptomics"
+      }
+    ]
+  },
+  {
+    "dataset_type": {
+      "code": "C003047",
+      "name": "Histology"
+    },
+    "modalities": [
+      {
+        "analytes": [
+          {
+            "code": "C020131",
+            "name": "Protein"
+          },
+          {
+            "code": "C002044",
+            "name": "RNA + protein"
+          },
+          {
+            "code": "C002040",
+            "name": "Carbohydrate"
+          }
+        ],
+        "code": "C046002",
+        "name": "Microscopy"
+      }
+    ]
+  }
+]
