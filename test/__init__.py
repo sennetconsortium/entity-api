@@ -6,9 +6,9 @@ def cwd_to_src():
     run tests from src directory.
     """
     cwd = os.getcwd()
-    if os.path.basename(cwd) != "src":
-        test_dir = os.path.dirname(os.path.abspath(__file__))
-        src_dir = os.path.join(test_dir, "..", "src")
+    test_dir = os.path.dirname(os.path.abspath(__file__))
+    src_dir = os.path.abspath(os.path.join(test_dir, "..", "src"))
+    if os.path.abspath(cwd) != src_dir:
         os.chdir(src_dir)
 
 
