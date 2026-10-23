@@ -13,6 +13,9 @@ from typing import List
 
 import psutil
 import requests
+
+# Don't confuse urllib (Python native library) with urllib3 (3rd-party library, requests also uses urllib3)
+import urllib3
 from atlas_consortia_commons.decorator import (
     require_data_admin,
     require_json,
@@ -62,8 +65,6 @@ from pymemcache import serde
 # pymemcache.client.base.PooledClient is a thread-safe client pool
 # that provides the same API as pymemcache.client.base.Client
 from pymemcache.client.base import PooledClient
-
-# Don't confuse urllib (Python native library) with urllib3 (3rd-party library, requests also uses urllib3)
 from urllib3.exceptions import InsecureRequestWarning
 
 # Local modules
@@ -105,7 +106,7 @@ logging.basicConfig(
 logger = logging.getLogger()
 
 # Suppress InsecureRequestWarning warning when requesting status on https with ssl cert verify disabled
-requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
+urllib3.disable_warnings(category=InsecureRequestWarning)
 
 # Specify the absolute path of the instance folder and use the config file relative to the instance path
 app = Flask(
@@ -263,6 +264,7 @@ try:
         entity_api_url=app.config["ENTITY_API_URL"],
         ingest_api_url=app.config["INGEST_API_URL"],
         search_api_url=app.config["SEARCH_API_URL"],
+        senotype_api_url=app.config["SENOTYPE_API_URL"],
         auth_helper_instance=auth_helper_instance,
         neo4j_driver_instance=neo4j_driver_instance,
         ubkg_instance=app.ubkg,
@@ -6788,7 +6790,7 @@ def verify_ubkg_properties(json_data_dict):
 
     # If the proposed Dataset dataset_type contains square brackets then no need to verify
     if "dataset_type" in json_data_dict:
-        ancillary = re.compile("\[.*\]$")
+        ancillary = re.compile(r"\[.*\]$")
         if ancillary.search(json_data_dict["dataset_type"]) is None:
             compare_property_against_ubkg(
                 DATASET_TYPE, {"dataset_type": json_data_dict["dataset_type"]}, "dataset_type"

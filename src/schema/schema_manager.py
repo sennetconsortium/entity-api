@@ -7,7 +7,6 @@ import yaml
 
 # Atlas Consortia commons
 from atlas_consortia_commons.rest import abort_bad_req
-from atlas_consortia_commons.string import equals
 from flask import Response
 from hubmap_commons.file_helper import ensureTrailingSlashURL
 
@@ -16,7 +15,6 @@ from hubmap_commons.file_helper import ensureTrailingSlashURL
 from urllib3.exceptions import InsecureRequestWarning
 
 from lib.commons import get_as_dict
-from lib.ontology import Ontology
 from lib.property_groups import PropertyGroups
 
 # Local modules
@@ -54,6 +52,7 @@ _uuid_api_url = None
 _entity_api_url = None
 _ingest_api_url = None
 _search_api_url = None
+_senotype_api_url = None
 _auth_helper = None
 _neo4j_driver = None
 _ubkg = None
@@ -86,6 +85,7 @@ def initialize(
     entity_api_url,
     ingest_api_url,
     search_api_url,
+    senotype_api_url,
     auth_helper_instance,
     neo4j_driver_instance,
     ubkg_instance,
@@ -98,6 +98,7 @@ def initialize(
     global _entity_api_url
     global _ingest_api_url
     global _search_api_url
+    global _senotype_api_url
     global _auth_helper
     global _neo4j_driver
     global _ubkg
@@ -112,6 +113,7 @@ def initialize(
     _uuid_api_url = uuid_api_url
     _ingest_api_url = ingest_api_url
     _search_api_url = search_api_url
+    _senotype_api_url = senotype_api_url
 
     if entity_api_url is not None:
         _entity_api_url = entity_api_url
@@ -449,7 +451,7 @@ def rearrange_datasets(results):
     :return:
     """
     if not isinstance(results[0], str) and "last_modified_timestamp" in results[0]:
-       results.sort(key=lambda d: d["last_modified_timestamp"], reverse=True)
+        results.sort(key=lambda d: d["last_modified_timestamp"], reverse=True)
 
         # We are modifying the response of /prov-info to return derived datasets simply by last modified timestamp.
         # We want to highlight QA datasets that were more recently touched over older published datasets.
@@ -946,11 +948,14 @@ def generate_triggered_data(
                             new_data_dict,
                             trigger_generated_data_dict,
                         )
-                    elif (
-                        "dependent_property" in properties[key]
-                    ):
+                    elif "dependent_property" in properties[key]:
                         target_key, target_value = trigger_method_to_call(
-                            key, normalized_class, user_token, existing_data_dict, new_data_dict, trigger_generated_data_dict
+                            key,
+                            normalized_class,
+                            user_token,
+                            existing_data_dict,
+                            new_data_dict,
+                            trigger_generated_data_dict,
                         )
                         if target_value is not None:
                             trigger_generated_data_dict[target_key] = target_value
@@ -2790,6 +2795,20 @@ def get_search_api_url():
     global _search_api_url
 
     return _search_api_url
+
+
+def get_senotype_api_url():
+    """
+    Get the senotype-api URL to be used by trigger methods
+
+    Returns
+    -------
+    str
+        The senotype-api URL
+    """
+    global _senotype_api_url
+
+    return _senotype_api_url
 
 
 def get_auth_helper_instance():

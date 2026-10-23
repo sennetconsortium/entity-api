@@ -44,6 +44,9 @@ ENTITY_API_URL = 'http://localhost:5002'
 # Works regardless of the trailing slash /
 SEARCH_API_URL = 'http://search-api:8080'
 
+# URL for talking to Senotype API
+SENOTYPE_API_URL = 'https://senotype-api.dev.sennetconsortium.org/'
+
 #The Base URL to the Globus transfer application site
 GLOBUS_APP_BASE_URL = 'https://app.globus.org'
 

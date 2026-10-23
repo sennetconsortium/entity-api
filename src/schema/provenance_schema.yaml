@@ -855,6 +855,10 @@ ENTITIES:
         type: string
         indexed: false
         description: "An open text field that holds the last error message that arose from pipeline validation or analysis."
+      has_senotypes:
+        type: boolean
+        description: "Whether this dataset has senotypes associated with it."
+        on_index_trigger: get_has_senotypes
 
   ############################################# Publication #############################################
   Publication:

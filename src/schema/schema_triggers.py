@@ -4470,6 +4470,46 @@ def get_has_visualization(
     return property_key, "False"
 
 
+def get_has_senotypes(
+    property_key, normalized_type, user_token, existing_data_dict, new_data_dict
+):
+    """Trigger event method that determines if a dataset has senotypes associated with it
+    Parameters
+    ----------
+    property_key : str
+        The target property key of the value to be generated
+    normalized_type : str
+        One of the types defined in the schema yaml: Sample
+    user_token: str
+        The user's globus nexus token
+    existing_data_dict : dict
+        A dictionary that contains all existing entity properties
+    new_data_dict : dict
+        A merged dictionary that contains all possible input data to be used
+
+    Returns
+    -------
+    Tuple[str, str]
+        str: The target property key
+        str: "True" or "False" if a dataset has senotypes associated with it
+    """
+    dataset_uuid = existing_data_dict.get("uuid", "").rstrip("/")
+    if not dataset_uuid:
+        return property_key, "False"
+
+    senotype_api_url = schema_manager.get_senotype_api_url()
+    q = {"dataset_uuid": dataset_uuid, "fields": "uuid", "limit": 1}
+    response = requests.get(f"{senotype_api_url}/senotypes", params=q, verify=False)
+    if not response.ok:
+        return property_key, "False"
+
+    senotypes = response.json().get("senotypes", [])
+    if senotypes:
+        return property_key, "True"
+    else:
+        return property_key, "False"
+
+
 def get_has_qa_published_derived_dataset(
     property_key, normalized_type, user_token, existing_data_dict, new_data_dict
 ):
