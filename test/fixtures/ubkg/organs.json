@@ -1,0 +1,539 @@
+[
+  {
+    "category": null,
+    "code": "C030024",
+    "laterality": null,
+    "organ_cui": "C0001527",
+    "organ_uberon": "UBERON:0001013",
+    "rui_code": "AD",
+    "rui_supported": false,
+    "sab": "SENNET",
+    "term": "Adipose Tissue"
+  },
+  {
+    "category": null,
+    "code": "C030025",
+    "laterality": null,
+    "organ_cui": "C0005767",
+    "organ_uberon": "UBERON:0000178",
+    "rui_code": "BD",
+    "rui_supported": false,
+    "sab": "SENNET",
+    "term": "Blood"
+  },
+  {
+    "category": null,
+    "code": "C030102",
+    "laterality": null,
+    "organ_cui": "C0262950",
+    "organ_uberon": "UBERON:0001474",
+    "rui_code": "BX",
+    "rui_supported": false,
+    "sab": "SENNET",
+    "term": "Bone"
+  },
+  {
+    "category": null,
+    "code": "C030101",
+    "laterality": null,
+    "organ_cui": "C0005953",
+    "organ_uberon": "UBERON:0002371",
+    "rui_code": "BM",
+    "rui_supported": false,
+    "sab": "SENNET",
+    "term": "Bone Marrow"
+  },
+  {
+    "category": null,
+    "code": "C030026",
+    "laterality": null,
+    "organ_cui": "C1269537",
+    "organ_uberon": "UBERON:0000955",
+    "rui_code": "BR",
+    "rui_supported": true,
+    "sab": "SENNET",
+    "term": "Brain"
+  },
+  {
+    "category": {
+      "organ_uberon": "UBERON:0003889",
+      "term": "Fallopian Tube"
+    },
+    "code": "C045007",
+    "laterality": "Left",
+    "organ_cui": "C0227902",
+    "organ_uberon": "UBERON:0001303",
+    "rui_code": "LF",
+    "rui_supported": true,
+    "sab": "SENNET",
+    "term": "Fallopian Tube (Left)"
+  },
+  {
+    "category": {
+      "organ_uberon": "UBERON:0003889",
+      "term": "Fallopian Tube"
+    },
+    "code": "C045008",
+    "laterality": "Right",
+    "organ_cui": "C0227900",
+    "organ_uberon": "UBERON:0001302",
+    "rui_code": "RF",
+    "rui_supported": true,
+    "sab": "SENNET",
+    "term": "Fallopian Tube (Right)"
+  },
+  {
+    "category": null,
+    "code": "C030070",
+    "laterality": null,
+    "organ_cui": "C0018787",
+    "organ_uberon": "UBERON:0000948",
+    "rui_code": "HT",
+    "rui_supported": true,
+    "sab": "SENNET",
+    "term": "Heart"
+  },
+  {
+    "category": null,
+    "code": "C030120",
+    "laterality": null,
+    "organ_cui": "C0021815",
+    "organ_uberon": "UBERON:0001066",
+    "rui_code": "ID",
+    "rui_supported": true,
+    "sab": "SENNET",
+    "term": "Intervertebral Disc"
+  },
+  {
+    "category": {
+      "organ_uberon": "UBERON:0002113",
+      "term": "Kidney"
+    },
+    "code": "C030029",
+    "laterality": "Left",
+    "organ_cui": "C0227614",
+    "organ_uberon": "UBERON:0004538",
+    "rui_code": "LK",
+    "rui_supported": true,
+    "sab": "SENNET",
+    "term": "Kidney (Left)"
+  },
+  {
+    "category": {
+      "organ_uberon": "UBERON:0002113",
+      "term": "Kidney"
+    },
+    "code": "C030030",
+    "laterality": "Right",
+    "organ_cui": "C0227613",
+    "organ_uberon": "UBERON:0004539",
+    "rui_code": "RK",
+    "rui_supported": true,
+    "sab": "SENNET",
+    "term": "Kidney (Right)"
+  },
+  {
+    "category": {
+      "organ_uberon": "UBERON:0001465",
+      "term": "Knee"
+    },
+    "code": "C045010",
+    "laterality": "Left",
+    "organ_cui": "C0230432",
+    "organ_uberon": "FMA:24978",
+    "rui_code": "LZ",
+    "rui_supported": true,
+    "sab": "SENNET",
+    "term": "Knee (Left)"
+  },
+  {
+    "category": {
+      "organ_uberon": "UBERON:0001465",
+      "term": "Knee"
+    },
+    "code": "C045012",
+    "laterality": "Right",
+    "organ_cui": "C0230431",
+    "organ_uberon": "FMA:24977",
+    "rui_code": "RN",
+    "rui_supported": true,
+    "sab": "SENNET",
+    "term": "Knee (Right)"
+  },
+  {
+    "category": null,
+    "code": "C030031",
+    "laterality": null,
+    "organ_cui": "C0021851",
+    "organ_uberon": "UBERON:0000059",
+    "rui_code": "LI",
+    "rui_supported": true,
+    "sab": "SENNET",
+    "term": "Large Intestine"
+  },
+  {
+    "category": null,
+    "code": "C045013",
+    "laterality": null,
+    "organ_cui": "C0023078",
+    "organ_uberon": "UBERON:0001737",
+    "rui_code": "LA",
+    "rui_supported": true,
+    "sab": "SENNET",
+    "term": "Larynx"
+  },
+  {
+    "category": null,
+    "code": "C030032",
+    "laterality": null,
+    "organ_cui": "C0023884",
+    "organ_uberon": "UBERON:0002107",
+    "rui_code": "LV",
+    "rui_supported": true,
+    "sab": "SENNET",
+    "term": "Liver"
+  },
+  {
+    "category": {
+      "organ_uberon": "UBERON:0002048",
+      "term": "Lung"
+    },
+    "code": "C030034",
+    "laterality": "Left",
+    "organ_cui": "C0225730",
+    "organ_uberon": "UBERON:0002168",
+    "rui_code": "LL",
+    "rui_supported": true,
+    "sab": "SENNET",
+    "term": "Lung (Left)"
+  },
+  {
+    "category": {
+      "organ_uberon": "UBERON:0002048",
+      "term": "Lung"
+    },
+    "code": "C030035",
+    "laterality": "Right",
+    "organ_cui": "C0225706",
+    "organ_uberon": "UBERON:0002167",
+    "rui_code": "RL",
+    "rui_supported": true,
+    "sab": "SENNET",
+    "term": "Lung (Right)"
+  },
+  {
+    "category": null,
+    "code": "C030052",
+    "laterality": null,
+    "organ_cui": "C0024204",
+    "organ_uberon": "UBERON:0000029",
+    "rui_code": "LY",
+    "rui_supported": true,
+    "sab": "SENNET",
+    "term": "Lymph Node"
+  },
+  {
+    "category": {
+      "organ_uberon": "UBERON:0002182",
+      "term": "Main Bronchus"
+    },
+    "code": "C045015",
+    "laterality": "Left",
+    "organ_cui": "C0225630",
+    "organ_uberon": "UBERON:0002178",
+    "rui_code": "LB",
+    "rui_supported": true,
+    "sab": "SENNET",
+    "term": "Main Bronchus (Left)"
+  },
+  {
+    "category": {
+      "organ_uberon": "UBERON:0002182",
+      "term": "Main Bronchus"
+    },
+    "code": "C045016",
+    "laterality": "Right",
+    "organ_cui": "C0225608",
+    "organ_uberon": "UBERON:0002177",
+    "rui_code": "RB",
+    "rui_supported": true,
+    "sab": "SENNET",
+    "term": "Main Bronchus (Right)"
+  },
+  {
+    "category": null,
+    "code": "C045003",
+    "laterality": null,
+    "organ_cui": "C0929301",
+    "organ_uberon": "UBERON:0001911",
+    "rui_code": "MM",
+    "rui_supported": false,
+    "sab": "SENNET",
+    "term": "Mammary Gland"
+  },
+  {
+    "category": null,
+    "code": "C030082",
+    "laterality": "Left",
+    "organ_cui": "C5886936",
+    "organ_uberon": "FMA:57991",
+    "rui_code": "ML",
+    "rui_supported": true,
+    "sab": "SENNET",
+    "term": "Mammary Gland (Left)"
+  },
+  {
+    "category": null,
+    "code": "C030083",
+    "laterality": "Right",
+    "organ_cui": "C5886935",
+    "organ_uberon": "FMA:57987",
+    "rui_code": "MR",
+    "rui_supported": true,
+    "sab": "SENNET",
+    "term": "Mammary Gland (Right)"
+  },
+  {
+    "category": null,
+    "code": "C045017",
+    "laterality": null,
+    "organ_cui": "C0024764",
+    "organ_uberon": "UBERON:2001553",
+    "rui_code": "MB",
+    "rui_supported": true,
+    "sab": "SENNET",
+    "term": "Manubrium"
+  },
+  {
+    "category": null,
+    "code": "C045018",
+    "laterality": null,
+    "organ_cui": "C0226898",
+    "organ_uberon": "UBERON:0000165",
+    "rui_code": "MH",
+    "rui_supported": true,
+    "sab": "SENNET",
+    "term": "Mouth"
+  },
+  {
+    "category": null,
+    "code": "C030036",
+    "laterality": null,
+    "organ_cui": "C4083049",
+    "organ_uberon": "UBERON:0005090",
+    "rui_code": "MU",
+    "rui_supported": false,
+    "sab": "SENNET",
+    "term": "Muscle"
+  },
+  {
+    "category": null,
+    "code": "C050008",
+    "laterality": null,
+    "organ_cui": "C0029250",
+    "organ_uberon": "NCI:C172259",
+    "rui_code": "OR",
+    "rui_supported": false,
+    "sab": "SENNET",
+    "term": "Organoid"
+  },
+  {
+    "category": null,
+    "code": "C030039",
+    "laterality": null,
+    "organ_cui": "UBERON:0010000 CUI",
+    "organ_uberon": "UBERON:0010000",
+    "rui_code": "OT",
+    "rui_supported": false,
+    "sab": "SENNET",
+    "term": "Other"
+  },
+  {
+    "category": {
+      "organ_uberon": "UBERON:0000992",
+      "term": "Ovary"
+    },
+    "code": "C030038",
+    "laterality": "Left",
+    "organ_cui": "C0227874",
+    "organ_uberon": "UBERON:0002119",
+    "rui_code": "LO",
+    "rui_supported": true,
+    "sab": "SENNET",
+    "term": "Ovary (Left)"
+  },
+  {
+    "category": {
+      "organ_uberon": "UBERON:0000992",
+      "term": "Ovary"
+    },
+    "code": "C030041",
+    "laterality": "Right",
+    "organ_cui": "C0227873",
+    "organ_uberon": "UBERON:0002118",
+    "rui_code": "RO",
+    "rui_supported": true,
+    "sab": "SENNET",
+    "term": "Ovary (Right)"
+  },
+  {
+    "category": null,
+    "code": "C030054",
+    "laterality": null,
+    "organ_cui": "C0030274",
+    "organ_uberon": "UBERON:0001264",
+    "rui_code": "PA",
+    "rui_supported": true,
+    "sab": "SENNET",
+    "term": "Pancreas"
+  },
+  {
+    "category": null,
+    "code": "C045019",
+    "laterality": null,
+    "organ_cui": "C0448168",
+    "organ_uberon": "UBERON:0001270",
+    "rui_code": "PV",
+    "rui_supported": true,
+    "sab": "SENNET",
+    "term": "Pelvis"
+  },
+  {
+    "category": null,
+    "code": "C030055",
+    "laterality": null,
+    "organ_cui": "C0032043",
+    "organ_uberon": "UBERON:0001987",
+    "rui_code": "PL",
+    "rui_supported": true,
+    "sab": "SENNET",
+    "term": "Placenta"
+  },
+  {
+    "category": null,
+    "code": "C045020",
+    "laterality": null,
+    "organ_cui": "C0017422",
+    "organ_uberon": "UBERON:0000079",
+    "rui_code": "PR",
+    "rui_supported": true,
+    "sab": "SENNET",
+    "term": "Prostate"
+  },
+  {
+    "category": null,
+    "code": "C030040",
+    "laterality": null,
+    "organ_cui": "C1123023",
+    "organ_uberon": "UBERON:0002097",
+    "rui_code": "SK",
+    "rui_supported": true,
+    "sab": "SENNET",
+    "term": "Skin"
+  },
+  {
+    "category": null,
+    "code": "C045022",
+    "laterality": null,
+    "organ_cui": "C0021852",
+    "organ_uberon": "UBERON:0002108",
+    "rui_code": "SI",
+    "rui_supported": true,
+    "sab": "SENNET",
+    "term": "Small Intestine"
+  },
+  {
+    "category": null,
+    "code": "C03081",
+    "laterality": null,
+    "organ_cui": "C0037925",
+    "organ_uberon": "UBERON:0002240",
+    "rui_code": "SC",
+    "rui_supported": true,
+    "sab": "SENNET",
+    "term": "Spinal Cord"
+  },
+  {
+    "category": null,
+    "code": "C030076",
+    "laterality": null,
+    "organ_cui": "C0037993",
+    "organ_uberon": "UBERON:0002106",
+    "rui_code": "SP",
+    "rui_supported": true,
+    "sab": "SENNET",
+    "term": "Spleen"
+  },
+  {
+    "category": null,
+    "code": "C045023",
+    "laterality": null,
+    "organ_cui": "C0038293",
+    "organ_uberon": "UBERON:0000975",
+    "rui_code": "ST",
+    "rui_supported": true,
+    "sab": "SENNET",
+    "term": "Sternum"
+  },
+  {
+    "category": null,
+    "code": "C030072",
+    "laterality": null,
+    "organ_cui": "C0040113",
+    "organ_uberon": "UBERON:0002370",
+    "rui_code": "TH",
+    "rui_supported": true,
+    "sab": "SENNET",
+    "term": "Thymus"
+  },
+  {
+    "category": {
+      "organ_uberon": "UBERON:0002372",
+      "term": "Tonsil"
+    },
+    "code": "C030084",
+    "laterality": "Left",
+    "organ_cui": "C0229868",
+    "organ_uberon": "FMA:54974",
+    "rui_code": "LT",
+    "rui_supported": true,
+    "sab": "SENNET",
+    "term": "Tonsil (Left)"
+  },
+  {
+    "category": {
+      "organ_uberon": "UBERON:0002372",
+      "term": "Tonsil"
+    },
+    "code": "C030085",
+    "laterality": "Right",
+    "organ_cui": "C0229867",
+    "organ_uberon": "FMA:54973",
+    "rui_code": "RT",
+    "rui_supported": true,
+    "sab": "SENNET",
+    "term": "Tonsil (Right)"
+  },
+  {
+    "category": null,
+    "code": "C030079",
+    "laterality": null,
+    "organ_cui": "C0040578",
+    "organ_uberon": "UBERON:0003126",
+    "rui_code": "TR",
+    "rui_supported": true,
+    "sab": "SENNET",
+    "term": "Trachea"
+  },
+  {
+    "category": null,
+    "code": "C045024",
+    "laterality": null,
+    "organ_cui": "C0042149",
+    "organ_uberon": "UBERON:0000995",
+    "rui_code": "UT",
+    "rui_supported": true,
+    "sab": "SENNET",
+    "term": "Uterus"
+  }
+]

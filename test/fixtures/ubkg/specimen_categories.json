@@ -1,0 +1,22 @@
+[
+  {
+    "code": "C000008",
+    "sab": "SENNET",
+    "term": "Organ"
+  },
+  {
+    "code": "C020079",
+    "sab": "SENNET",
+    "term": "Suspension"
+  },
+  {
+    "code": "C020078",
+    "sab": "SENNET",
+    "term": "Section"
+  },
+  {
+    "code": "C020077",
+    "sab": "SENNET",
+    "term": "Block"
+  }
+]
