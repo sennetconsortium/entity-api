@@ -2,6 +2,8 @@ from test.helpers.auth import AUTH_TOKEN
 from test.helpers.database import create_provenance, get_activity_for_entity, get_entity
 from test.helpers.response import mock_response
 
+import pytest
+
 # Update Entity Tests
 
 
@@ -343,3 +345,47 @@ def test_update_dataset_no_auth(app, database):
         )
 
         assert res.status_code == 401
+
+
+@pytest.mark.parametrize(
+    "description",
+    [
+        "Central Nervous System (CNS)",
+        "Central Nervous Exec (CNS)",
+        "Central Nervous Eval (CNS)",
+    ],
+)
+def test_update_upload(app, requests, database, description):
+    # Create provenance in test database
+    _, db_session = database
+    test_entities = create_provenance(db_session, ["upload"])
+    test_upload = test_entities["upload"]
+
+    # uuid and search api mock responses
+    uuid_api_url = app.config["UUID_API_URL"]
+    search_api_url = app.config["SEARCH_API_URL"]
+    requests.add_response(
+        f"{uuid_api_url}/uuid/{test_upload['uuid']}",
+        "get",
+        mock_response(200, {k: test_upload[k] for k in ["uuid", "sennet_id", "base_id"]}),
+    )
+    requests.add_response(
+        f"{search_api_url}/reindex/{test_upload['uuid']}", "put", mock_response(202)
+    )
+
+    with app.test_client() as client:
+        data = {
+            "description": description,
+        }
+
+        res = client.put(
+            f"/entities/{test_upload['uuid']}?return_all_properties=true",
+            json=data,
+            headers={"Authorization": f"Bearer {AUTH_TOKEN}"},
+        )
+
+        assert res.status_code == 200
+
+        # check database
+        db_entity = get_entity(test_upload["uuid"], db_session)
+        assert db_entity["description"] == data["description"]
