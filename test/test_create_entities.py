@@ -446,6 +446,50 @@ def test_create_dataset_no_auth(app):
         assert res.status_code == 401
 
 
+@pytest.mark.parametrize(
+    "description",
+    [
+        "Central Nervous System (CNS)",
+        "Central Nervous Exec (CNS)",
+        "Central Nervous Eval (CNS)",
+    ],
+)
+def test_create_upload(app, requests, database, description):
+    entities = [
+        generate_entity(),  # upload
+        generate_entity(),  # activity
+    ]
+
+    # uuid and search api mock responses
+    uuid_api_url = app.config["UUID_API_URL"]
+    search_api_url = app.config["SEARCH_API_URL"]
+    requests.add_response(f"{uuid_api_url}/uuid", "post", mock_response(200, [entities[0]]))
+    requests.add_response(f"{uuid_api_url}/uuid", "post", mock_response(200, [entities[1]]))
+    requests.add_response(
+        f"{search_api_url}/reindex/{entities[0]['uuid']}", "put", mock_response(202)
+    )
+
+    with app.test_client() as client:
+        data = {
+            "title": "Test Upload",
+            "description": description,
+            "intended_dataset_type": "Visium (no probes)",
+            "intended_organ": "UBERON:0000955",
+            "intended_source_type": "Human",
+        }
+
+        res = client.post(
+            "/entities/upload?return_all_properties=true",
+            json=data,
+            headers={
+                "Authorization": f"Bearer {AUTH_TOKEN}",
+                "X-SenNet-Application": "portal-ui",
+            },
+        )
+
+        assert res.status_code == 200
+
+
 @pytest.mark.parametrize("invalid_ancestor_type", ["organ", "block", "section", "dataset"])
 def test_create_organ_invalid_constraints(database, app, requests, invalid_ancestor_type):
     # Create provenance in test database
