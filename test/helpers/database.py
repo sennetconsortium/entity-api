@@ -236,6 +236,17 @@ def create_provenance(db_session, provenance):
                     "status": "New",
                 }
             )
+        elif entity_type == "upload":
+            data.update(
+                {
+                    "title": "Test upload title.",
+                    "description": "Test upload description.",
+                    "entity_type": "Upload",
+                    "intended_dataset_type": "Visium (no probes)",
+                    "intended_organ": "UBERON:0000955",
+                    "intended_source_type": "Human",
+                }
+            )
         else:
             raise ValueError(f"Unknown entity type: {entity_type}")
 
